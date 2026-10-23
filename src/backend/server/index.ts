@@ -14,6 +14,7 @@ import { getRoot } from "../ioc.ts";
 import { parseBool } from "../utils.ts";
 import { getAddress } from "../utils/NetworkUtils.ts";
 import { setupApi } from "./api.ts";
+import { errorHandlerMiddleware, safeModeMiddleware, WebFault } from "./middleware.ts";
 import type ScrobbleSources from '../sources/ScrobbleSources.ts';
 import type ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
 import { qsOptions } from '../../core/Atomic.ts';
@@ -29,6 +30,7 @@ export interface ServerOptions {
     appLoggerStream?: PassThrough
     initialOutput?: LogDataPretty[]
     testMode?: boolean
+    webFault?: WebFault
 }
 
 export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Promise<[Express, ReturnType<typeof createTypedRouter>, Server?]> => {
@@ -46,6 +48,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
     } = opts;
 
     const logger = childLogger(parentLogger, 'API');
+    const webFault = opts.webFault ?? new WebFault(logger);
 
 
     const router = createTypedRouter().onValidationFailure((info) => {
@@ -64,6 +67,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
 
         // mount API routes under the same prefix the frontend's relative
         // `api/...` fetches resolve against
+        app.use(basePath, safeModeMiddleware(webFault));
         app.use(basePath, router.getRouter());
         app.use(bodyParser.json());
         app.use(
@@ -85,7 +89,8 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
             return [app, router];
         }
 
-        setupApi({app, router, scrobbleSources: sources, scrobbleClients: clients}, {...opts, logger});
+        setupApi({app, router, scrobbleSources: sources, scrobbleClients: clients}, {...opts, logger, webFault});
+        app.use(errorHandlerMiddleware(logger));
 
         if(opts.testMode === true) {
             return [app, router];
@@ -167,9 +172,18 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
                 if(localDefined) {
                     logger.info(`User-defined base URL for UI and redirect URLs (spotify, deezer, lastfm): ${local}`)
                 }
+                // startup is done, any server-level error from here on happens during nominal operation
+                s.off('error', onStartupError);
+                s.on('error', (err) => webFault.report(new Error('Server encountered an error', {cause: err})));
+                s.on('close', () => {
+                    if(!webFault.closing) {
+                        webFault.report(new Error('Server closed unexpectedly'));
+                    }
+                });
                 resolve(s);
             });
-            s.once('error', (err) => reject(new Error('Server encountered unrecoverable error', {cause: err})));
+            const onStartupError = (err: Error) => reject(new Error('Server encountered unrecoverable error', {cause: err}));
+            s.once('error', onStartupError);
         });
         return [app, router, server];
 

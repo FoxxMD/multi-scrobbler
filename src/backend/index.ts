@@ -15,6 +15,9 @@ import { appLogger, initLogger as getInitLogger } from "./common/logging.ts";
 import { getRoot } from "./ioc.ts";
 import { parseVersion } from "./version.ts";
 import { initServer } from "./server/index.ts";
+import { WebFault } from "./server/middleware.ts";
+import MemorySource from "./sources/MemorySource.ts";
+import { SOURCE_SOT } from "../core/Atomic.ts";
 import { isDebugMode, parseBool, sleep } from "./utils.ts";
 import { readJson } from './utils/DataUtils.ts';
 import ScrobbleClients from './scrobblers/ScrobbleClients.ts';
@@ -58,6 +61,8 @@ let msCache: MSCache | undefined;
 let server: Server | undefined;
 let scrobbleSources: ScrobbleSources | undefined;
 let scrobbleClients: ScrobbleClients | undefined;
+let notifiers: Notifiers | undefined;
+let webFault: WebFault | undefined;
 
 // synchronous so it is safe to call from uncaughtExceptionMonitor
 const closeResources = () => {
@@ -81,15 +86,15 @@ process.on('uncaughtExceptionMonitor', (err, origin) => {
 // docker stop and k8s default grace periods are 10s/30s before SIGKILL
 const SHUTDOWN_TIMEOUT = 8000;
 let shuttingDown = false;
-const cleanShutdown = async (signal: NodeJS.Signals) => {
+const shutdown = async (reason: string, exitCode: number = 0) => {
     const log = logger ?? initLogger;
     if(shuttingDown) {
         // npm forwards SIGINT on top of the one the tty sends, so a repeat is expected and not a request to force exit
-        log.verbose(`Received ${signal} but already shutting down`);
+        log.verbose(`${reason} but already shutting down`);
         return;
     }
     shuttingDown = true;
-    log.info(`Received ${signal}, shutting down...`);
+    log.info(`${reason}, shutting down...`);
 
     const forceExit = setTimeout(() => {
         log.warn(`Graceful shutdown did not finish within ${SHUTDOWN_TIMEOUT / 1000}s, exiting now`);
@@ -97,12 +102,15 @@ const cleanShutdown = async (signal: NodeJS.Signals) => {
         process.exit(1);
     }, SHUTDOWN_TIMEOUT);
 
+    if(webFault !== undefined) {
+        webFault.closing = true;
+    }
     // stop accepting new connections (ingress, UI) but let existing requests finish while components stop
     server?.close();
     scheduler.stop();
     // sources first so no new plays are discovered while clients are finishing up
     for(const [kind, components] of [['Source', scrobbleSources?.sources ?? []], ['Client', scrobbleClients?.clients ?? []]] as const) {
-        const results = await Promise.allSettled(components.map(c => c.stop({reason: `Received ${signal}`})));
+        const results = await Promise.allSettled(components.map(c => c.stop({reason})));
         results.forEach((r, i) => {
             if(r.status === 'rejected') {
                 log.warn(new Error(`${kind} ${components[i].name} did not stop cleanly`, {cause: r.reason}));
@@ -112,10 +120,11 @@ const cleanShutdown = async (signal: NodeJS.Signals) => {
     server?.closeAllConnections();
     closeResources();
     clearTimeout(forceExit);
-    process.exit(0);
+    process.exit(exitCode);
 }
-process.on('SIGINT', cleanShutdown);
-process.on('SIGTERM', cleanShutdown);
+// wrapped since node passes the signal number as a second arg, which would become the exit code
+process.on('SIGINT', (signal) => shutdown(`Received ${signal}`));
+process.on('SIGTERM', (signal) => shutdown(`Received ${signal}`));
 
 
 const configDir = getConfigDir();
@@ -207,7 +216,21 @@ const dataDir = getDataDir();
         msCache = root.items.cache();
         await msCache.init(true);
 
-        [, , server] = await initServer({sources: scrobbleSources, clients: scrobbleClients},{logger, appLoggerStream, initialOutput: output});
+        webFault = new WebFault(logger, (err) => {
+            // ingress sources (webscrobbler, endpointlz, endpointlfm) receive plays through the web server so it is load-bearing for scrobbling
+            if(scrobbleSources?.sources.some(s => s instanceof MemorySource && s.playerSourceOfTruth === SOURCE_SOT.INGRESS)) {
+                logger.error('Ingress sources depend on the web server, shutting down so multi-scrobbler can be restarted');
+                void shutdown('Web server fault', 1);
+                return;
+            }
+            void notifiers?.notify({
+                identifier: 'multi-scrobbler',
+                title: 'Web server error',
+                message: `Web server entered safe mode and multi-scrobbler must be restarted to restore the API and dashboard. Scrobbling continues. Error: ${err.message}`,
+                priority: 'error'
+            });
+        });
+        [, , server] = await initServer({sources: scrobbleSources, clients: scrobbleClients},{logger, appLoggerStream, initialOutput: output, webFault});
 
         if(process.env.IS_LOCAL === 'true') {
             logger.info('multi-scrobbler can be run as a background service! See: https://docs.multi-scrobbler.app/installation/service');
@@ -218,7 +241,7 @@ const dataDir = getDataDir();
             logger.warn(appConfigFail);
         }
 
-        const notifiers = new Notifiers(root.get('notifierEmitter'), root.get('clientEmitter'), root.get('sourceEmitter'), root.get('logger')); //root.get('notifiers');
+        notifiers = new Notifiers(root.get('notifierEmitter'), root.get('clientEmitter'), root.get('sourceEmitter'), root.get('logger')); //root.get('notifiers');
         await notifiers.buildWebhooks(webhooks);
 
         await root.items.transformerManager.parseFromEnv();

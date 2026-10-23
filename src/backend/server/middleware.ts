@@ -1,7 +1,7 @@
 import type {Logger} from "@foxxmd/logging";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
-import type {Request, Response, NextFunction} from "express";
+import type {Request, Response, NextFunction, ErrorRequestHandler, RequestHandler} from "express";
 import type AbstractSource from "../sources/AbstractSource.ts";
 import type AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";
 import type { TypedMiddleware } from "@minisylar/express-typed-router";
@@ -112,4 +112,59 @@ export const makeClientNextMiddle = (clients: ScrobbleClients): TypedMiddleware<
     (req as ClientAwareRequest).component = component;
 
     next();
+}
+/**
+ * Tracks a server-level fault (an error whose effect on the web server is unknown).
+ * Once faulted the server falls back to safe mode: a small, known scope of behavior until restart.
+ *
+ * Code that can handle its own errors should do so and never report here.
+ * */
+export class WebFault {
+    fault?: {error: Error, at: Date};
+    /** set during app shutdown so the server closing is not mistaken for a fault */
+    closing: boolean = false;
+
+    protected logger: Logger;
+    protected onFault?: (err: Error) => void;
+
+    constructor(logger: Logger, onFault?: (err: Error) => void) {
+        this.logger = logger;
+        this.onFault = onFault;
+    }
+
+    report = (err: Error) => {
+        if(this.fault !== undefined) {
+            this.logger.error(new Error('Web server encountered another error while in safe mode', {cause: err}));
+            return;
+        }
+        this.fault = {error: err, at: new Date()};
+        this.logger.error(new Error('Web server encountered an unrecoverable error and has entered safe mode. multi-scrobbler must be restarted to restore the API and dashboard.', {cause: err}));
+        this.onFault?.(err);
+    }
+}
+
+const SAFE_MODE_ALLOWED = ['/api/health', '/health', '/api/version'];
+
+export const safeModeMiddleware = (webFault: WebFault): RequestHandler => (req, res, next) => {
+    if(webFault.fault === undefined || SAFE_MODE_ALLOWED.includes(req.path)) {
+        next();
+        return;
+    }
+    res.status(503).json({
+        error: 'Web server encountered an unrecoverable error. multi-scrobbler must be restarted. Scrobbling from non-ingress sources continues.',
+        cause: webFault.fault.error.message,
+        at: webFault.fault.at.toISOString()
+    });
+}
+
+/** Replaces express's default handler (console.error) so request errors reach the app logger */
+export const errorHandlerMiddleware = (logger: Logger): ErrorRequestHandler => (err, req, res, next) => {
+    logger.error(new Error(`Unhandled error during ${req.method} ${req.path}`, {cause: err}));
+    if(res.headersSent) {
+        // response is partially written and can't be completed, same as express's default handler
+        // (not calling next(err) since that would log again via console.error)
+        req.socket.destroy();
+        return;
+    }
+    res.status(500).json({error: 'An unexpected error occurred while handling this request'});
 }

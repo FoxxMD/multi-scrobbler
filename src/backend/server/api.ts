@@ -4,6 +4,7 @@ import { createChannel, createSession, type DefaultChannelState } from 'better-s
 import bodyParser from "body-parser";
 import { FixedSizeList } from 'fixed-size-list';
 import { PassThrough } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import {
     type LogEvent,
     type LogOutputConfig,
@@ -24,7 +25,7 @@ import { setupAuthRoutes } from "./auth.ts";
 import { setupDeezerRoutes } from "./deezerRoutes.ts";
 import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes.ts";
 import {setupLastfmEndpointRoutes} from "./endpointLastfmRoutes.ts";
-import { makeComponentMiddle } from "./middleware.ts";
+import { makeComponentMiddle, type WebFault } from "./middleware.ts";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.ts";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
@@ -80,6 +81,7 @@ export interface ApiOptions {
     appLoggerStream?: PassThrough
     initialLogOutput?: LogDataPretty[]
     testMode?: boolean
+    webFault?: WebFault
 }
 
 export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
@@ -93,7 +95,8 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         logger = loggerTest,
         appLoggerStream = new PassThrough(),
         initialLogOutput = [],
-        testMode
+        testMode,
+        webFault
     } = opts;
     
     for(const level of Object.keys(logger.levels.labels)) {
@@ -117,18 +120,34 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     // tab is a client-generated connection id, logs is opt-in so log events are only pushed to clients actually rendering them
     const eventsChannel = createChannel<DefaultChannelState, {tab?: string, logs: boolean}>();
 
+    // runs synchronously inside source/client emit() calls so it must never throw back into them
     const forwardEvent = (eventName: string, payload: any) => {
         if(payload !== undefined && payload.from !== undefined) {
-            eventsChannel.broadcast({event: eventName, ...payload}, eventName);
+            try {
+                eventsChannel.broadcast({event: eventName, ...payload}, eventName);
+            } catch (e) {
+                logger.warn(new Error(`Failed to forward '${eventName}' event to SSE clients`, {cause: e}));
+            }
         }
     };
     scrobbleSources.emitter.onAny(forwardEvent);
     scrobbleClients.emitter.onAny(forwardEvent);
 
+    // only warn on the first failure until forwarding succeeds again
+    // otherwise the warning is itself a log line that fails to forward, logging another warning, forever
+    let logForwardFailing = false;
     appLoggerStream.on('data', (log: LogDataPretty) => {
-        addToLogBuffer(log);
-        if(log.level >= logger.levels.values[logConfig.level]) {
-            eventsChannel.broadcast({message: log.line, level: log.level, levelLabel: logger.levels.labels[log.level]} satisfies LogEvent, 'log', {filter: (s) => s.state.logs});
+        try {
+            addToLogBuffer(log);
+            if(log.level >= logger.levels.values[logConfig.level]) {
+                eventsChannel.broadcast({message: log.line, level: log.level, levelLabel: logger.levels.labels[log.level]} satisfies LogEvent, 'log', {filter: (s) => s.state.logs});
+            }
+            logForwardFailing = false;
+        } catch (e) {
+            if(!logForwardFailing) {
+                logForwardFailing = true;
+                logger.warn(new Error('Failed to forward log line to SSE clients, further failures will not be logged until forwarding recovers', {cause: e}));
+            }
         }
     });
 
@@ -401,9 +420,16 @@ Note: this is only supported by some components.`
             const [stream, contentType] = await component.getExternalArt(query);
             res.writeHead(200, {'Content-Type': contentType});
             try {
-                return stream.pipe(res);
+                // pipeline, unlike pipe, propagates source stream errors instead of leaving them unhandled
+                await pipeline(stream, res);
+                return;
             } catch (e) {
                 logger.error(new Error(`Error occurred while trying to stream art for Component ${component.componentId}`, {cause: e}));
+                if(res.headersSent) {
+                    // response is partially written, can't send an error body
+                    res.destroy();
+                    return;
+                }
                 return res.status(500).json({message: 'Error during art retrieval'});
             }
         }
@@ -805,7 +831,11 @@ Note: this is only supported by some components.`
         const [clientsReady, clientMessages] = await scrobbleClients.getStatusSummary(type, name);
 
 
-        return res.status((clientsReady && sourcesReady) ? 200 : 500).json({messages: sourceMessages.concat(clientMessages)});
+        const messages = sourceMessages.concat(clientMessages);
+        if(webFault?.fault !== undefined) {
+            return res.status(503).json({messages: [`Web server is in safe mode and must be restarted: ${webFault.fault.error.message}`, ...messages]});
+        }
+        return res.status((clientsReady && sourcesReady) ? 200 : 500).json({messages});
     });
 
     if(testMode !== true) {
