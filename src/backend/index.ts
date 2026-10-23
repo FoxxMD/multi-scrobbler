@@ -53,7 +53,12 @@ output = output.slice(0, 301);
 let logger!: FoxLogger;
 
 let db!: DbConcrete;
-const dbConnectionsClosed = false;
+const closeDb = () => {
+    if(db !== undefined && db.$client.isOpen) {
+        db.$client.close();
+        logger?.info('Closed Database');
+    }
+}
 
 process.on('uncaughtExceptionMonitor', (err, origin) => {
     const appError = new Error(`Uncaught exception is crashing the app! :( Type: ${origin}`, {cause: err});
@@ -62,30 +67,14 @@ process.on('uncaughtExceptionMonitor', (err, origin) => {
     } else {
         initLogger.error(appError);
     }
-    if(!dbConnectionsClosed) {
-        const parts = [];
-        if(db !== undefined && !db.$client.isOpen) {
-            db.$client.close();
-            parts.push('Database');
-        }
-        if(parts.length > 0 && logger !== undefined) {
-            logger.info(`Closed ${parts.join(' and ')}`);
-        }
-    }
+    closeDb();
 });
-process.on('SIGINT', async () => {
-    if(!dbConnectionsClosed) {
-        const parts = [];
-        if(db !== undefined && !db.$client.isOpen) {
-            db.$client.close();
-            parts.push('Database');
-        }
-        if(parts.length > 0 && logger !== undefined) {
-            logger.info(`Closed ${parts.join(' and ')}`);
-        }
-    }
+const cleanShutdown = () => {
+    closeDb();
     process.exit(0);
-})
+}
+process.on('SIGINT', cleanShutdown);
+process.on('SIGTERM', cleanShutdown);
 
 
 const configDir = getConfigDir();
@@ -151,7 +140,7 @@ const dataDir = getDataDir();
         logger = childLogger(aLogger, 'App');
         
         const dbPath = getDbPath('ms');
-        logger.info(`Using database at ${db}`);
+        logger.info(`Using database at ${dbPath}`);
         const [migratedDb, _] = await getMigratedDb(dbPath, {logger});
         db = migratedDb;
 
@@ -278,16 +267,7 @@ const dataDir = getDataDir();
         } else {
             initLogger.error(appError);
         }
-        if(!dbConnectionsClosed) {
-            const parts = [];
-            if(db !== undefined && !db.$client.isOpen) {
-                db.$client.close();
-                parts.push('Database');
-            }
-            if(parts.length > 0 && logger !== undefined) {
-                logger.info(`Closed ${parts.join(' and ')}`);
-            }
-        }
+        closeDb();
         process.exit(1);
     }
 }());
