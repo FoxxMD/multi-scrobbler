@@ -4,6 +4,7 @@ import { childLogger, loggerTest, type LogDataPretty, type Logger } from "@foxxm
 import bodyParser from 'body-parser';
 import { stripIndents } from "common-tags";
 import session from 'express-session';
+import type { Server } from "node:http";
 import type { PassThrough } from "node:stream";
 import passport from 'passport';
 import path from "path";
@@ -30,7 +31,7 @@ export interface ServerOptions {
     testMode?: boolean
 }
 
-export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Promise<[Express, ReturnType<typeof createTypedRouter>]> => {
+export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Promise<[Express, ReturnType<typeof createTypedRouter>, Server?]> => {
 
     const app = express();
 
@@ -155,8 +156,8 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
         }
 
         ViteExpress.config(viteExpressOptions);
-        try {
-            ViteExpress.listen(app, port, () => {
+        const server = await new Promise<Server>((resolve, reject) => {
+            const s = ViteExpress.listen(app, port, () => {
                 const start = stripIndents`\n
         Server started:
         ${addresses.join('\n')}${dockerHint !== '' ? `\n${dockerHint}` : ''}`
@@ -166,13 +167,11 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
                 if(localDefined) {
                     logger.info(`User-defined base URL for UI and redirect URLs (spotify, deezer, lastfm): ${local}`)
                 }
-            }).on('error', (err) => {
-                throw new Error('Server encountered unrecoverable error', {cause: err});
+                resolve(s);
             });
-            return [app, router];
-        } catch (e) {
-            throw new Error('Server encountered unrecoverable error', {cause: e});
-        }
+            s.once('error', (err) => reject(new Error('Server encountered unrecoverable error', {cause: err})));
+        });
+        return [app, router, server];
 
     } catch (e) {
         throw new Error('Server crashed with uncaught exception', {cause: e});

@@ -23,10 +23,11 @@ import { Notifiers } from './notifier/Notifiers.ts';
 import { type DbConcrete } from './common/database/drizzle/drizzleUtils.ts';
 import { getDbPath } from './common/database/Database.ts';
 import { createRetentionCleanupTask } from './tasks/retentionCleanup.ts';
-import { parseUserConfig } from './common/Cache.ts';
+import { type MSCache, parseUserConfig } from './common/Cache.ts';
 import { nonEmptyStringOrDefault } from '../core/StringUtils.ts';
 import { createDir, fileExists } from './utils/FSUtils.ts';
 import { getMigratedDb } from "./common/database/appMigrator.ts";
+import type { Server } from 'node:http';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -53,7 +54,14 @@ output = output.slice(0, 301);
 let logger!: FoxLogger;
 
 let db!: DbConcrete;
-const closeDb = () => {
+let msCache: MSCache | undefined;
+let server: Server | undefined;
+let scrobbleSources: ScrobbleSources | undefined;
+let scrobbleClients: ScrobbleClients | undefined;
+
+// synchronous so it is safe to call from uncaughtExceptionMonitor
+const closeResources = () => {
+    msCache?.flush();
     if(db !== undefined && db.$client.isOpen) {
         db.$client.close();
         logger?.info('Closed Database');
@@ -67,10 +75,43 @@ process.on('uncaughtExceptionMonitor', (err, origin) => {
     } else {
         initLogger.error(appError);
     }
-    closeDb();
+    closeResources();
 });
-const cleanShutdown = () => {
-    closeDb();
+
+// docker stop and k8s default grace periods are 10s/30s before SIGKILL
+const SHUTDOWN_TIMEOUT = 8000;
+let shuttingDown = false;
+const cleanShutdown = async (signal: NodeJS.Signals) => {
+    const log = logger ?? initLogger;
+    if(shuttingDown) {
+        // npm forwards SIGINT on top of the one the tty sends, so a repeat is expected and not a request to force exit
+        log.verbose(`Received ${signal} but already shutting down`);
+        return;
+    }
+    shuttingDown = true;
+    log.info(`Received ${signal}, shutting down...`);
+
+    const forceExit = setTimeout(() => {
+        log.warn(`Graceful shutdown did not finish within ${SHUTDOWN_TIMEOUT / 1000}s, exiting now`);
+        closeResources();
+        process.exit(1);
+    }, SHUTDOWN_TIMEOUT);
+
+    // stop accepting new connections (ingress, UI) but let existing requests finish while components stop
+    server?.close();
+    scheduler.stop();
+    // sources first so no new plays are discovered while clients are finishing up
+    for(const [kind, components] of [['Source', scrobbleSources?.sources ?? []], ['Client', scrobbleClients?.clients ?? []]] as const) {
+        const results = await Promise.allSettled(components.map(c => c.stop({reason: `Received ${signal}`})));
+        results.forEach((r, i) => {
+            if(r.status === 'rejected') {
+                log.warn(new Error(`${kind} ${components[i].name} did not stop cleanly`, {cause: r.reason}));
+            }
+        });
+    }
+    server?.closeAllConnections();
+    closeResources();
+    clearTimeout(forceExit);
     process.exit(0);
 }
 process.on('SIGINT', cleanShutdown);
@@ -160,12 +201,13 @@ const dataDir = getDataDir();
              version: root.get('version')
              };
 
-        const scrobbleClients = new ScrobbleClients(root.get('clientEmitter'), root.get('sourceEmitter'), internalConfigOptional, root.get('logger'));
-        const scrobbleSources = new ScrobbleSources(root.get('sourceEmitter'), internalConfigOptional, root.get('logger'));
+        scrobbleClients = new ScrobbleClients(root.get('clientEmitter'), root.get('sourceEmitter'), internalConfigOptional, root.get('logger'));
+        scrobbleSources = new ScrobbleSources(root.get('sourceEmitter'), internalConfigOptional, root.get('logger'));
 
-        await root.items.cache().init(true);
+        msCache = root.items.cache();
+        await msCache.init(true);
 
-        initServer({sources: scrobbleSources, clients: scrobbleClients},{logger, appLoggerStream, initialOutput: output});
+        [, , server] = await initServer({sources: scrobbleSources, clients: scrobbleClients},{logger, appLoggerStream, initialOutput: output});
 
         if(process.env.IS_LOCAL === 'true') {
             logger.info('multi-scrobbler can be run as a background service! See: https://docs.multi-scrobbler.app/installation/service');
@@ -267,7 +309,7 @@ const dataDir = getDataDir();
         } else {
             initLogger.error(appError);
         }
-        closeDb();
+        closeResources();
         process.exit(1);
     }
 }());

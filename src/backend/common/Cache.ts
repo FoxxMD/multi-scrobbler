@@ -53,6 +53,7 @@ export class MSCache {
     cacheClientScrobbles: Cacheable;
     cacheApi: Cacheable;
     hasInit: boolean = false;
+    protected fileCaches: FlatCache[] = [];
 
     logger: Logger;
 
@@ -118,6 +119,13 @@ export class MSCache {
 
         if(enableCollectors) {
             this.enableCollectors();
+        }
+    }
+
+    /** Write file caches to disk now instead of waiting for persistInterval */
+    flush = () => {
+        for(const fc of this.fileCaches) {
+            fc.save();
         }
     }
 
@@ -274,7 +282,10 @@ export class MSCache {
             logger.debug(`Building file cache from ${path.join(config.connection ?? confDir, `${namespace}.cache`)}`);
 
             try {
-                const [keyvFile] = await initFileCache({ ...config, cacheDir: config.connection ?? confDir, cacheId: `${namespace}.cache` }, {ttl: config.ttl}, logger);
+                const [keyvFile, flatCache] = await initFileCache({ ...config, cacheDir: config.connection ?? confDir, cacheId: `${namespace}.cache` }, {ttl: config.ttl}, logger);
+                if(flatCache !== undefined) {
+                    this.fileCaches.push(flatCache);
+                }
                 return keyvFile;
             } catch (e) {
                 throw e;
