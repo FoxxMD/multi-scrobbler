@@ -4,7 +4,7 @@
 // Load this with a native require (see docusaurus.config.ts): Docusaurus loads its config with jiti,
 // which transpiles Shiki's lazy theme/grammar import()s to CJS and breaks them.
 import { createHash } from 'node:crypto';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import rehypeExpressiveCode, { createRenderer, MetaOptions } from 'rehype-expressive-code';
 import { bundledLanguagesInfo } from 'shiki/langs';
 import { pluginCodeblocks } from 'starlight-codeblocks/expressive-code';
@@ -14,10 +14,19 @@ import { pluginCodeblocks } from 'starlight-codeblocks/expressive-code';
 const codeblocksOptions = {
   // allow `// [!code ...]` notation in plain json blocks
   // and `<-- [!ref] ...` or `# [!ref] ...` annotations in plain text blocks
-  notation: { comments: { json: ['//'], text: ['<--', '#'] } },
+  notation: { comments: { json: ['//'], text: ['<--', '#'], caddyfile: ['#'] } },
   placeholders: {
     storage: 'session'
   }
+};
+
+// Caddyfile grammar from https://github.com/caddyserver/vscode-caddyfile (MIT, see caddyfile.LICENSE).
+// Shiki has no bundled Caddyfile language. The grammar's heredoc rules include css/js/json/html/xml;
+// those are not declared as embeddedLangs (Shiki would require them preloaded), so heredoc bodies render unhighlighted.
+const caddyfile = {
+  ...JSON.parse(readFileSync(new URL('./caddyfile.tmLanguage.json', import.meta.url), 'utf8')),
+  name: 'caddyfile',
+  aliases: ['Caddyfile', 'caddy'],
 };
 
 // Expressive Code's own options (defaultProps, styleOverrides, frames, ...) go here.
@@ -28,6 +37,7 @@ export const ecOptions = {
   // follow Docusaurus' <html data-theme="dark|light"> instead of prefers-color-scheme
   themeCssSelector: (theme) => `[data-theme='${theme.type}']`,
   useDarkModeMediaQuery: false,
+  shiki: { langs: [caddyfile] },
   plugins: pluginCodeblocks(codeblocksOptions),
 };
 

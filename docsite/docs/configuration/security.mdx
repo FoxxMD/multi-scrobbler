@@ -170,7 +170,7 @@ Below are examples of protecting all non-ingress and callback routes with basic 
     The above could also be done using [docker provider labels](https://doc.traefik.io/traefik/reference/install-configuration/providers/docker/).
     </TabItem>
     <TabItem value="caddy" label="Caddy">
-    ```text brackets wrap
+    ```caddyfile wrap brackets
     multi-scrobbler.domain.tld {
       @if-not-scrobble {
         not path /1/* /api/listenbrainz* /api/webscrobbler* /2.0/* /api/lastfm* # [!ref] remove any paths you are NOT using. Order: LZ, LZ, WebScrobbler, LFM, LFM
