@@ -15,16 +15,19 @@ A **Source** is a data source that contains information about tracks you are pla
 ## Sources
 
 <CapabilityLegend>
-    TODO explain levels
+    * <Cap level="yes"/> Supported - The Source has this feature and MS also supports it
+    * <Cap level="config"/> Supported with configuration - The Source has this feature but MS needs explicit configuration for it
+    * <Cap level="na"/> Not applicable - This feature is not applicable to this Source
+    * <Cap level="no"/> Not available - The Source has this feature but MS **does not** support it yet.
 </CapabilityLegend>
 
 <div className="capability-matrix" style={{'--cols': 6}}>
 
 | Name                                                                    | Networking                                               | Scrobble SOT                                        | [Multi Device/User](#multi-deviceuser) | [Scrobble Destination](#limiting-scrobble-destination) | [Thresholds](#scrobble-thresholds) | [Auto Monitoring](#monitoring-activity) |
 | :---------------------------------------------------------------------- | :------------------------------------------------------- | :-------------------------------------------------- | :------------------------------------- | :----------------------------------------------------- | :--------------------------------- | :-------------------------------------- |
-| [Apple Music](/configuration/sources/applemusic)                        | [Active](./?sourceComm=active#by-communication-method)   | [History](./?sot=history#by-data-source-of-truth)   | <Cap level="no"/> | <Cap level="yes"/> | <Cap level="no"/> | <Cap level="yes"/> |
+| [Apple Music](/configuration/sources/applemusic)                        | [Active](./?sourceComm=active#by-communication-method)   | [History](./?sot=history#by-data-source-of-truth)   | <Cap level="no"/> | <Cap level="yes"/> | <Cap level="na"/> | <Cap level="yes"/> |
 | [Azuracast](/configuration/sources/azuracast)                           | [Active](./?sourceComm=active#by-communication-method)   | [Activity](./?sot=activity#by-data-source-of-truth) | <Cap level="na"/> | <Cap level="yes"/> | <Cap level="yes"/> | <Cap level="config"/> |
-| [Deezer](/configuration/sources/deezer)                                 | [Active](./?sourceComm=active#by-communication-method)   | [History](./?sot=history#by-data-source-of-truth)   | <Cap level="yes"/> | <Cap level="yes"/> | <Cap level="no"/> | <Cap level="yes"/> |
+| [Deezer](/configuration/sources/deezer)                                 | [Active](./?sourceComm=active#by-communication-method)   | [History](./?sot=history#by-data-source-of-truth)   | <Cap level="yes"/> | <Cap level="yes"/> | <Cap level="na"/> | <Cap level="yes"/> |
 | [Google Cast (Chromecast)](/configuration/sources/google-cast)          | [Active](./?sourceComm=active#by-communication-method)   | [Activity](./?sot=activity#by-data-source-of-truth) | <Cap level="yes"/> | <Cap level="yes"/> | <Cap level="yes"/> | <Cap level="yes"/> |
 | [Icecast](/configuration/sources/icecast)                               | [Active](./?sourceComm=active#by-communication-method)   | [Activity](./?sot=activity#by-data-source-of-truth) | <Cap level="na"/> | <Cap level="yes"/> | <Cap level="yes"/> | <Cap level="config"/> |
 | [Jellyfin](/configuration/sources/jellyfin)                             | [Active](./?sourceComm=active#by-communication-method)   | [Activity](./?sot=activity#by-data-source-of-truth) | <Cap level="yes"/> | <Cap level="yes"/> | <Cap level="yes"/> | <Cap level="yes"/> |
@@ -33,9 +36,9 @@ A **Source** is a data source that contains information about tracks you are pla
 | [Koito](/configuration/sources/koito-source)                            | [Active](./?sourceComm=active#by-communication-method)   | [History](./?sot=history#by-data-source-of-truth)   | <Cap level="na"/> | <Cap level="yes"/> | <Cap level="na"/> | <Cap level="yes"/> |
 | [Last.fm](/configuration/sources/lastfm-source)                         | [Active](./?sourceComm=active#by-communication-method)   | [History](./?sot=history#by-data-source-of-truth)   | <Cap level="na"/> | <Cap level="yes"/> | <Cap level="na"/> | <Cap level="yes"/> |
 | [Libre.fm](/configuration/sources/librefm-source)                       | [Active](./?sourceComm=active#by-communication-method)   | [History](./?sot=history#by-data-source-of-truth)   | <Cap level="na"/> | <Cap level="yes"/> | <Cap level="na"/> | <Cap level="yes"/> |
-| [Last.fm (Endpoint)](/configuration/sources/lastfm-endpoint)            | [Ingress](./?sourceComm=ingress#by-communication-method) | [History](./?sot=history#by-data-source-of-truth)   | <Cap level="no"/> | <Cap level="yes"/> | <Cap level="na"/> | <Cap level="yes"/> |
+| [Last.fm (Endpoint)](/configuration/sources/lastfm-endpoint)            | [Ingress](./?sourceComm=ingress#by-communication-method) | [History](./?sot=history#by-data-source-of-truth)   | <Cap level="na"/> | <Cap level="yes"/> | <Cap level="na"/> | <Cap level="yes"/> |
 | [ListenBrainz](/configuration/sources/listenbrainz-source)              | [Active](./?sourceComm=active#by-communication-method)   | [History](./?sot=history#by-data-source-of-truth)   | <Cap level="na"/> | <Cap level="yes"/> | <Cap level="na"/> | <Cap level="yes"/> |
-| [ListenBrainz (Endpoint)](/configuration/sources/listenbrainz-endpoint) | [Ingress](./?sourceComm=ingress#by-communication-method) | [History](./?sot=history#by-data-source-of-truth)   | <Cap level="no"/> | <Cap level="yes"/> | <Cap level="na"/> | <Cap level="yes"/> |
+| [ListenBrainz (Endpoint)](/configuration/sources/listenbrainz-endpoint) | [Ingress](./?sourceComm=ingress#by-communication-method) | [History](./?sot=history#by-data-source-of-truth)   | <Cap level="na"/> | <Cap level="yes"/> | <Cap level="na"/> | <Cap level="yes"/> |
 | [Maloja](/configuration/sources/maloja)                                 | [Active](./?sourceComm=active#by-communication-method)   | [History](./?sot=history#by-data-source-of-truth)   | <Cap level="na"/> | <Cap level="yes"/> | <Cap level="na"/> | <Cap level="yes"/> |
 | [Mixcloud](/configuration/sources/mixcloud)                             | [Active](./?sourceComm=active#by-communication-method)   | [History](./?sot=history#by-data-source-of-truth)   | <Cap level="na"/> | <Cap level="yes"/> | <Cap level="na"/> | <Cap level="yes"/> |
 | [Mopidy](/configuration/sources/mopidy)                                 | [Active](./?sourceComm=active#by-communication-method)   | [Activity](./?sot=activity#by-data-source-of-truth) | <Cap level="no"/> | <Cap level="yes"/> | <Cap level="yes"/> | <Cap level="yes"/> |
@@ -47,11 +50,11 @@ A **Source** is a data source that contains information about tracks you are pla
 | [Spotify](/configuration/sources/spotify)                               | [Active](./?sourceComm=active#by-communication-method)   | [Activity](./?sot=activity#by-data-source-of-truth) | <Cap level="yes"/> | <Cap level="yes"/> | <Cap level="yes"/> | <Cap level="yes"/> |
 | [Subsonic-compatible APIs](/configuration/sources/subsonic)             | [Active](./?sourceComm=active#by-communication-method)   | [Activity](./?sot=activity#by-data-source-of-truth) | <Cap level="yes"/> | <Cap level="yes"/> | <Cap level="yes"/> | <Cap level="yes"/> |
 | [teal.fm](/configuration/sources/tealfm-source)                         | [Active](./?sourceComm=active#by-communication-method)   | [History](./?sot=history#by-data-source-of-truth)   | <Cap level="na"/> | <Cap level="yes"/> | <Cap level="na"/> | <Cap level="yes"/> |
-| [WebScrobbler](/configuration/sources/webscrobbler)                     | [Ingress](./?sourceComm=active#by-communication-method)  | [History](./?sot=history#by-data-source-of-truth)   | <Cap level="no"/> | <Cap level="yes"/> | <Cap level="na"/> | <Cap level="yes"/> |
+| [WebScrobbler](/configuration/sources/webscrobbler)                     | [Ingress](./?sourceComm=active#by-communication-method)  | [History](./?sot=history#by-data-source-of-truth)   | <Cap level="na"/> | <Cap level="yes"/> | <Cap level="na"/> | <Cap level="yes"/> |
 | [VLC](/configuration/sources/vlc)                                       | [Active](./?sourceComm=active#by-communication-method)   | [Activity](./?sot=activity#by-data-source-of-truth) | <Cap level="na"/> | <Cap level="yes"/> | <Cap level="yes"/> | <Cap level="yes"/> |
 | [Yamaha MusicCast](/configuration/sources/yamaha-musiccast)             | [Active](./?sourceComm=active#by-communication-method)   | [Activity](./?sot=activity#by-data-source-of-truth) | <Cap level="na"/> | <Cap level="yes"/> | <Cap level="yes"/> | <Cap level="yes"/> |
 | [Yandex Music](/configuration/sources/yandex-music)                     | [Active](./?sourceComm=active#by-communication-method)   | [Activity](./?sot=activity#by-data-source-of-truth) | <Cap level="na"/> | <Cap level="yes"/> | <Cap level="yes"/> | <Cap level="yes"/> |
-| [Youtube Music](/configuration/sources/youtube-music)                   | [Active](./?sourceComm=active#by-communication-method)   | [History](./?sot=history#by-data-source-of-truth)   | <Cap level="no"/> | <Cap level="yes"/> | <Cap level="no"/> | <Cap level="yes"/> |
+| [Youtube Music](/configuration/sources/youtube-music)                   | [Active](./?sourceComm=active#by-communication-method)   | [History](./?sot=history#by-data-source-of-truth)   | <Cap level="no"/> | <Cap level="yes"/> | <Cap level="na"/> | <Cap level="yes"/> |
 
 </div>
 
