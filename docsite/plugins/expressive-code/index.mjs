@@ -13,8 +13,8 @@ import { pluginCodeblocks } from 'starlight-codeblocks/expressive-code';
 // See https://ewels.github.io/starlight-codeblocks/reference/configuration/
 const codeblocksOptions = {
   // allow `// [!code ...]` notation in plain json blocks
-  // and `<-- [!ref] ...` annotations in plain text blocks
-  notation: { comments: { json: ['//'], text: ['<--'] } },
+  // and `<-- [!ref] ...` or `# [!ref] ...` annotations in plain text blocks
+  notation: { comments: { json: ['//'], text: ['<--', '#'] } },
   placeholders: {
     storage: 'session'
   }
