@@ -91,7 +91,7 @@ To configure MS to use Musicbrainz with your Plex metadata use one of the method
 <Tabs groupId="configType" queryString>
     <TabItem value="env" label="ENV">
     Add to your multi-scrobbler docker compose file `environment` section for [Musicbrainz ENV Configuration](/configuration/transforms/musicbrainz#env-configuration):
-    ```yaml
+    ```yaml title="docker-compose.yml"
     - MB_PRESETS=id,default
     - PLEX_TRANSFORMS=musicbrainz
     ```
@@ -100,9 +100,11 @@ To configure MS to use Musicbrainz with your Plex metadata use one of the method
     <TabItem value="file" label="File">
     Your [AIO Config](/configuration?configType=aio#configuration-types):
 
-    ```json5 title="config.json"
+    :::code-tabs
+    ```json5 label="config" title="config.json" brackets
     {
-      // ...
+      // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+      // ...your AIO Config
       "transformers": [
         {
           "type": "musicbrainz",
@@ -118,21 +120,22 @@ To configure MS to use Musicbrainz with your Plex metadata use one of the method
       ]
     }
     ```
-
-    In your [File Config](/configuration?configType=file#configuration-types):
-
-    ```json5 title="plex.json"
+    ```json5 label="plex" title="plex.json" brackets
     [
       { 
+        // [!link /Plex/ /configuration/sources/plex]
+        // [!link /File Config/ /configuration?configType=file#configuration-types]
+        // ...your Plex File Config
         "name": "MyPlex",
         "data": { /* ... */},
+        // [!code focus:11]
         "options": {
           "playTransform": {
             "preCompare": [
               {
                 "type": "musicbrainz",
-                "name": "MyMB"
-                "searchOrder": ["mbidrecording", "basicOrIds", "basic"]
+                "name": "MyMB",
+                "searchOrder": ["mbidrecording", "basicOrIds", "basic"] // [!code highlight]
               }
             ]
           }
@@ -140,13 +143,15 @@ To configure MS to use Musicbrainz with your Plex metadata use one of the method
       }
     ]
     ```
+    :::
     </TabItem>
     <TabItem value="aio" label="File AIO">
     Your [AIO Config](/configuration?configType=aio#configuration-types):
 
-    ```json5 title="config.json"
+    ```json5 title="config.json" brackets
     {
-      // ...
+      // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+      // ...your AIO Config
       "transformers": [
         {
           "type": "musicbrainz",
@@ -154,7 +159,6 @@ To configure MS to use Musicbrainz with your Plex metadata use one of the method
           "data": {
             "apis": [
               {
-                // a real email that Musicbrainz can use to contact you in case of issues
                 "enable": true
               }
             ]
@@ -174,7 +178,7 @@ To configure MS to use Musicbrainz with your Plex metadata use one of the method
                 {
                   "type": "musicbrainz",
                   "name": "MyMB",
-                  "searchOrder": ["mbidrecording", "basicOrIds", "basic"]
+                  "searchOrder": ["mbidrecording", "basicOrIds", "basic"] // [!code highlight]
                 }
               ]
             }

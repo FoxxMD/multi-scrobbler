@@ -124,12 +124,16 @@ services:
 ```
 </TabItem>
 <TabItem value="file" label="File">
-```json5 title="rocksky.json"
+```json5 title="rocksky.json" brackets
 [
   { 
+    // [!link /Rocksky/ /configuration/clients/rocksky]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Rocksky File Config
     "name": "Rocky",
     "configureAs": "client",
     "data": { /* ... */},
+    // [!code focus:10]
     "options": {
       "playTransform": {
         "preCompare": [
@@ -145,24 +149,24 @@ services:
 ```
 </TabItem>
 <TabItem value="aio" label="AIO">
-```json5 title="config.json"
+```json5 title="config.json" brackets
 {
     "sources": [/* ... */],
     "clients": [
         { 
             "name": "Rocky",
-            "type": "rocksky"
+            "type": "rocksky",
             "configureAs": "client",
             "data": { /* ... */},
             "options": {
             "playTransform": {
                 "preCompare": [
-                {
-                    "type": "rocksky",
-                    "name": "MSDefault"
-                }
+                  {
+                      "type": "rocksky",
+                      "name": "MSDefault"
+                  }
                 ]
-            }
+              }
             }
         }
     ]

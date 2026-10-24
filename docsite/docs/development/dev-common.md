@@ -31,7 +31,7 @@ Clone this repository somewhere and then install from the working directory
 ```shell
 git clone https://github.com/FoxxMD/multi-scrobbler.git .
 cd multi-scrobbler
-nvm use # optional, sets correct node version when running without devcontainer
+nvm use # [!ref] optional, sets correct node version when running without devcontainer
 npm install
 npm run docs:install && npm run build
 npm run start
@@ -201,13 +201,13 @@ From the opened DevTools window use Performance or Memory to profile the running
 
 To profile/inspect the production docker image use `NODE_ARGS` env:
 
-```yaml
+```yaml title="docker-compose.yml"
 services:
   multi-scrobbler:
     # ...
     environment:
       # ...
-      - NODE_ARGS=--inspect=0.0.0.0:9229 --heap-prof
+      - NODE_ARGS=--inspect=0.0.0.0:9229 --heap-prof # [!code highlight]
 ```
 :::
 
@@ -221,13 +221,13 @@ To develop MS *with [devcontainer](#vscode)* for the Discord IPC Client all that
 
 If you are developing MS locally without the devcontainer then you will need to modify the `kasmcord` service's volume to instead bind-mount the `run` directory to your host and make sure permissions match, EX
 
-```yaml
+```yaml title="docker-compose.yml"
 services:
   kasmcord:
     # ..
     volumes:
-      # comment this out
+      # [!code --] comment this out
       # - kasm_run:/run/user/1000
-      # replace with this
+      # [!code ++] replace with this
       - /host/dir/for/run:/run/user/1000
 ```

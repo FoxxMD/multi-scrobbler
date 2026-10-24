@@ -14,6 +14,9 @@ import { pluginCodeblocks } from 'starlight-codeblocks/expressive-code';
 const codeblocksOptions = {
   // allow `// [!code ...]` notation in plain json blocks
   notation: { comments: { json: ['//'] } },
+  placeholders: {
+    storage: 'session'
+  }
 };
 
 // Expressive Code's own options (defaultProps, styleOverrides, frames, ...) go here.

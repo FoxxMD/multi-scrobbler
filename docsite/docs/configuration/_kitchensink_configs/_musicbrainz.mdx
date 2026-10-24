@@ -50,7 +50,8 @@ Using [File Config](/configuration/?configType=file#configuration-types)
 
 For non-ENV config, [Musicbrainz Transformer](/configuration/transforms/musicbrainz/#api-setup) must be setup using the [AIO Config](/configuration/?configType=aio#configuration-types) `config.json` file. This configuration uses the [sensible defaults](/configuration/transforms/musicbrainz/#sensible-default) in the `defaults` property. This is a suggestion and can be removed if not desired.
 
-```json5 title="CONFIG_DIR/config.json"
+:::code-tabs
+```json5 label="config" title="CONFIG_DIR/config.json" brackets
 {
   "transformers": [
     {
@@ -82,8 +83,7 @@ For non-ENV config, [Musicbrainz Transformer](/configuration/transforms/musicbra
   ]
 }
 ```
-
-```json5 title="CONFIG_DIR/spotify.json" placeholder="YOUR_MS_DOMAIN"
+```json5 label="spotify" title="CONFIG_DIR/spotify.json" placeholder="YOUR_MS_DOMAIN" brackets
 [
   {
     "id": "foxxSpotify",
@@ -97,8 +97,7 @@ For non-ENV config, [Musicbrainz Transformer](/configuration/transforms/musicbra
   }
 ]
 ```
-
-```json5 title="CONFIG_DIR/endpointlz.json"
+```json5 label="endpointlz" title="CONFIG_DIR/endpointlz.json" brackets
 [
   {
     "id": "myLzNavidrome",
@@ -108,10 +107,11 @@ For non-ENV config, [Musicbrainz Transformer](/configuration/transforms/musicbra
     },
     "options": {
       "playTransform": {
+        // [!code highlight:6]
         "preCompare": [
           {
             "type": "musicbrainz",
-            "name": "MyMB"
+            "name": "MyMB" // [!ref] uses the musicbrainz Stage named `MyMB` from `config.json`
           }
         ]
       }
@@ -119,9 +119,7 @@ For non-ENV config, [Musicbrainz Transformer](/configuration/transforms/musicbra
   }
 ]
 ```
-
-
-```json5 title="CONFIG_DIR/lastfm.json" placeholder="YOUR_MS_DOMAIN"
+```json5 label="lastfm" title="CONFIG_DIR/lastfm.json" placeholder="YOUR_MS_DOMAIN" brackets
 [
   {
     "id": "myLFM",
@@ -135,6 +133,7 @@ For non-ENV config, [Musicbrainz Transformer](/configuration/transforms/musicbra
   }
 ]
 ```
+:::
 
 </TabItem>
 

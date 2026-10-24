@@ -105,7 +105,7 @@ You want to send Now Playing data to a client like [Discord](/configuration/clie
 
 <summary>Configuration</summary>
 
-```json5 file="discord.json"
+```json5 title="discord.json" brackets
 [
     {
         "name": "Discord",
@@ -119,23 +119,21 @@ You want to send Now Playing data to a client like [Discord](/configuration/clie
             "playTransform": {
                 "preCompare": [
                     {
-                        // try rocksky first
+                        // [!ref] try rocksky first
                         "type": "rocksky",
-                        // but only if we don't already have art
+                        // [!ref] but only if we don't already have art
                         "when": [
                             {
                                 "art": ""
                             }
                         ],
-                        // if matched, only add mbid and/or art
+                        // [!ref] if matched, only add mbid and/or art
                         "title": false,
                         "artists": false,
                         "album": false,
                         "meta": true,
                         "art": true,
-                        // if rocksky fails to match
-                        // keep trying later stages
-                        // but if does match then we have art so stop early
+                        // [!ref] if rocksky fails to match keep trying later stages, but if it does match then we have art so stop early
                         "onSucess": "stop",
                         "onFailure": "continue"
                     },
@@ -149,11 +147,11 @@ You want to send Now Playing data to a client like [Discord](/configuration/clie
                         "title": false,
                         "artists": false,
                         "album": false,
-                        // we get album/release-group mbid needed for cover art
+                        // [!ref] we get album/release-group mbid needed for cover art
                         "meta": true
                     },
                     {
-                        // uses mbids from previous stage to find album art
+                        // [!ref] uses mbids from previous stage to find album art
                         "type": "coverartarchive",
                         "when": [
                             {
@@ -176,7 +174,7 @@ If your data already has art but it's not from a public source and you want to e
 
 <summary>Configuration</summary>
 
-```json5 file="discord.json"
+```json5 title="discord.json" brackets
 [
     {
         "name": "Discord",
@@ -190,18 +188,16 @@ If your data already has art but it's not from a public source and you want to e
             "playTransform": {
                 "preCompare": [
                     {
-                        // try rocksky first
+                        // [!ref] try rocksky first
                         "type": "rocksky",
                         "forceSearch": true,
-                        // if matched, only add mbid and/or art
+                        // [!ref] if matched, only add mbid and/or art
                         "title": false,
                         "artists": false,
                         "album": false,
                         "meta": true,
                         "art": true,
-                        // if rocksky fails to match
-                        // keep trying later stages
-                        // but if does match then we have art so stop early
+                        // [!ref] if rocksky fails to match keep trying later stages, but if it does match then we have art so stop early
                         "onSucess": "stop",
                         "onFailure": "continue"
                     },
@@ -211,11 +207,11 @@ If your data already has art but it's not from a public source and you want to e
                         "title": false,
                         "artists": false,
                         "album": false,
-                        // we get album/release-group mbid needed for cover art
+                        // [!ref] we get album/release-group mbid needed for cover art
                         "meta": true
                     },
                     {
-                        // uses mbids from previous stage to find album art
+                        // [!ref] uses mbids from previous stage to find album art
                         "type": "coverartarchive",
                         "forceSearch": true
                     }

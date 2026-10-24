@@ -100,9 +100,8 @@ Allowed Values: `online` `idle` `dnd` `invisible`
 Only allow presence updating when all of your "real" sessions are either online or idle.
 
 
-In File/AIO:
-
-```json
+:::code-tabs{sync="discord-config"}
+```json label="File/AIO" title="discord.json" brackets
 [
     {
       "name": "MS",
@@ -110,17 +109,15 @@ In File/AIO:
       "data": {
         "token": "Ma7XBvzRERK3gQdkX4dkb3OQ.6aaGmJ.rvFiiVrzG4VXHHL3LyhZYhpWdG3Ph_if9aKz5E",
         "applicationId": "8190211179716453570",
-        "statusOverrideAllow": ["online", "idle"]
+        "statusOverrideAllow": ["online", "idle"] // [!code highlight]
       }
     }
   ]
 ```
-
-In ENV:
-
-```
+```ini label="ENV"
 DISCORD_STATUS_OVERRIDE_ALLOW=online,idle
 ```
+:::
 
 </details>
 
@@ -149,9 +146,8 @@ Configure the names of **other** listening activities that MS **is allowed** to 
 
 You want to allow MS to update presence even if Spotify is also broadcasting a listening activity.
 
-In File/AIO:
-
-```json
+:::code-tabs{sync="discord-config"}
+```json label="File/AIO" title="discord.json" brackets
 [
     {
       "name": "MS",
@@ -159,17 +155,15 @@ In File/AIO:
       "data": {
         "token": "Ma7XBvzRERK3gQdkX4dkb3OQ.6aaGmJ.rvFiiVrzG4VXHHL3LyhZYhpWdG3Ph_if9aKz5E",
         "applicationId": "8190211179716453570",
-        "listeningActivityAllow": ["spotify"]
+        "listeningActivityAllow": ["spotify"] // [!code highlight]
       }
     }
   ]
 ```
-
-In ENV:
-
-```
+```ini label="ENV"
 DISCORD_LISTENING_ACTIVITY_ALLOW=spotify
 ```
+:::
 </details>
 
 ### Discord Application
@@ -239,14 +233,14 @@ The order in which multi-scrobbler determines what image to use is the same as t
 
         None of the below URLs will **ever** be used because they are not `https`
 
-        ```
+        ```text error={1-2} wrap
         http://foobar.com/cool.jpg <-- NOT allowed, not http
         http://192.168.0.112/fun.png <-- NOT allowed, not http
         ```
 
         When `DISCORD_ARTWORK` is not set:
 
-        ```
+        ```text success={1-2} error={3-4} wrap
         https://archive.org/download/dir/myimage.jpg <-- allowed, is https and known service
         https://spotify.com/assets/cover.png?size=1000 <-- allowed, is https and known service
         https://example.com/cool.jpg <-- NOT allowed, is https but not a known service and DISCORD_ARTWORK is not set
@@ -255,7 +249,7 @@ The order in which multi-scrobbler determines what image to use is the same as t
 
         Setting `DISCORD_ARTWORK=true`
 
-        ```
+        ```text success={1,3-4} error={2} wrap
         https://archive.org/my/dir/myimage.jpg <-- allowed, is https and known service
         http://foobar.com/cool.jpg <-- NOT allowed, not http
         https://example.com/cool.jpg <-- allowed, is https
@@ -264,7 +258,7 @@ The order in which multi-scrobbler determines what image to use is the same as t
 
         Setting `DISCORD_ARTWORK=mycdn,jellyfin`
 
-        ```
+        ```text success={1,4} error={2-3} wrap
         https://archive.org/my/dir/myimage.jpg <-- allowed, is https and known service
         http://foobar.com/cool.jpg <-- NOT allowed, not http
         https://example.com/cool.jpg <-- NOT allowed, is https but does not contain "mycdn" or "jellyfin"

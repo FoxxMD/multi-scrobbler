@@ -35,7 +35,7 @@ If any part of this URL is missing multi-scrobbler will use a default value. Thi
 
 Make sure the hostname and port number match what is found in the Mopidy configuration file `mopidy.conf`:
 
-```ini
+```ini title="mopidy.conf" {2-3}
 [http]
 hostname = localhost
 port = 6680
@@ -86,14 +86,16 @@ For certain sources (Soundcloud) Mopidy does not have all track info (Album) and
     }
     ```
 
-    If a track would be scrobbled like
-    ```
+    A track that would be scrobbled like `Before` is instead scrobbled like `After`:
+
+    :::code-tabs
+    ```text label="Before"
     Album: Soundcloud, Track: My Cool Track, Artist: A Cool Artist
     ```
-    then multi-scrobbler will instead scrobble
-    ```
+    ```text label="After"
     Track: My Cool Track, Artist: A Cool Artist
     ```
+    :::
 </details>
 
 ## Configuration

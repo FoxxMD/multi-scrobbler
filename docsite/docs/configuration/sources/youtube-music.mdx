@@ -42,13 +42,13 @@ Only one of these methods needs to be used.
 
         Add the cookie to your `ytmusic.json` config in `data` or as an ENV: 
 
-        ```json
+        ```json title="ytmusic.json" brackets
             {
             "type": "ytmusic",
             "enable": true,
             "name": "MyYTM",
             "data": {
-                "cookie": "__Secure-1PSIDTS=sidts-CjEB3EgAEvCd-......"
+                "cookie": "__Secure-1PSIDTS=sidts-CjEB3EgAEvCd-......" // [!code highlight]
             },
             "options": {
                 "logAuthUpdateChanges": true,
@@ -89,14 +89,14 @@ Only one of these methods needs to be used.
                 * Create
                     * In the newly created client popup save the **Client ID** and **Client Secret**, then copy them into `ytmusic.json` or appropriate ENVs:
 
-        ```json
+        ```json title="ytmusic.json" brackets
         {
             "type": "ytmusic",
             "enable": true,
             "name": "MyYTM",
             "data": {
-                "clientId": "8910....6jqupl.apps.googleusercontent.com",
-                "clientSecret": "GOCSPX-WGXL6BSuQ343..."
+                "clientId": "8910....6jqupl.apps.googleusercontent.com", // [!code highlight]
+                "clientSecret": "GOCSPX-WGXL6BSuQ343..." // [!code highlight]
             },
             "options": {
                 "logAuthUpdateChanges": true,

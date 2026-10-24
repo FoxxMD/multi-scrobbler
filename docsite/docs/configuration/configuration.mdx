@@ -54,6 +54,7 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
               multi-scrobbler:
                   image: foxxmd/multi-scrobbler
                   environment:
+                      # [!link /JELLYFIN_URL/ /configuration/sources/jellyfin]
                       - JELLYFIN_URL=192.168.0.110:8096
                       - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56b
                       - JELLYFIN_USER=MyUser
@@ -64,7 +65,7 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
 
           For a local/node installation export variables before running...
 
-          ```shell
+          ```shell placeholder="yourId,yourSecret"
           SPOTIFY_CLIENT_ID=yourId SPOTIFY_CLIENT_SECRET=yourSecret npm run start
           ```
         </details>
@@ -107,7 +108,7 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
         <details>
             <summary>Config Example</summary>
 
-            ```yaml title="jellyfin.json"
+            ```json title="jellyfin.json" brackets
             [
               {
                 "name": "Foxx JF Server",
@@ -125,7 +126,7 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
         <details>
             <summary>Multiple of Same Config Example</summary>
 
-            ```yaml title="jellyfin.json"
+            ```json title="jellyfin.json"
             [
               {
                 "name": "Foxx JF Server",
@@ -136,7 +137,7 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
                   "apiKey": "c9fae8756fbf481ebd9c5bb56bd6540c"
                 }
               },
-              # [!code highlight:9]
+              // [!code highlight:9]
               {
                 "name": "Foo's JF Server",
                 "id": "fooJf",
@@ -191,13 +192,13 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
 
         Compared to their [File](./?configType=file#configuration-types) equivalent, Sources/Clients configured using AIO require an additional `type` property.
 
-        ```yaml title="config.json"
+        ```json title="config.json"
         {
           "sources": [
             {
               "name": "Foxx JF Server",
-              # [!code highlight]
-              "type: "jellyfin",
+              // [!code highlight]
+              "type": "jellyfin",
               "id": "foxxJf",
               "data": {
                 "url": "http://localhost:8096",
@@ -389,14 +390,15 @@ services:
 
 <TabItem value="aio" label="AIO">
 
-```json5 title="config.json"
+```json5 title="config.json" brackets
 {
+    // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+    // ...your AIO Config
     "cache": {
         "auth": {
-            "provider": "valkey"
+            "provider": "valkey" // [!code highlight]
         }
     },
-    // ...
 }
 ```
 </TabItem>
@@ -464,7 +466,7 @@ Use `redis://valkey:6379` as the connection string in the configurations below.
 
 The connection string used by multi-scrobbler to connect to your Valkey instance must be in the form:
 
-```
+```text placeholder="HOST_IP,HOST_PORT"
 redis://HOST_IP:HOST_PORT
 ```
 
@@ -488,12 +490,13 @@ services:
 
 Example
 
-```json5 title="config.json"
+```json5 title="config.json" brackets
 {
+    // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+    // ...your AIO Config
     "cache": {
-        "valkey": "redis://192.168.0.120:6379"
+        "valkey": "redis://192.168.0.120:6379" // [!code highlight]
     },
-    // ...
 }
 ```
 
@@ -617,11 +620,11 @@ Each value in the configuration properties below can be either
 Example
 
 ```ini
-# only delete input when compacting
+; [!ref] only delete input when compacting
 COMPACT_PROPERTIES=input
-# compact all plays after 3 days 
+; [!ref] compact all plays after 3 days
 RETENTION_COMPACT_AFTER=3 days
-# specifically compact completed plays after 30 minutes
+; [!ref] specifically compact completed plays after 30 minutes
 RETENTION_COMPACT_COMPLETED_AFTER=30 minutes
 ```
 
@@ -630,12 +633,12 @@ RETENTION_COMPACT_COMPLETED_AFTER=30 minutes
 
 Compacting all Play types and deleting both input and transform: 
 
-```json title="config.json"
+```json title="config.json" brackets
 {
   "database": {
     "retention": {
-      "compactAfter": "3 days",
-      "compact": [
+      "compactAfter": "3 days", // [!ref] compact all Play types after 3 days
+      "compact": [ // [!ref] delete both input and transform when compacting
         "input",
         "transform"
       ]
@@ -644,19 +647,16 @@ Compacting all Play types and deleting both input and transform:
 }
 ```
 
-* Delete only input during compacting
-* Compact all after 3 days except completed which compacts after 30 minutes
-
-```json title="config.json"
+```json title="config.json" brackets
 {
   "database": {
     "retention": {
-      "compactAfter": {
-        "completed": "30 minutes",
+      "compactAfter": { // [!ref] compact all after 3 days except completed which compacts after 30 minutes
+        "completed": "30 minutes", // [!code highlight]
         "duped": "3 days",
         "failed": "3 days"
       },
-      "compact": [
+      "compact": [ // [!ref] delete only input during compacting
         "input"
       ]
     }
@@ -721,10 +721,10 @@ Each value in the configuration properties below can be either
 Example
 
 ```ini
-# delete all plays after 3 days 
+; [!ref] delete all plays after 3 days
 RETENTION_DELETE_AFTER=3 days
-# specifically, delete completed plays after 30 minutes
-RETENTIOND_DELETE_COMPLETED_AFTER=30 minutes
+; [!ref] specifically, delete completed plays after 30 minutes
+RETENTION_DELETE_COMPLETED_AFTER=30 minutes
 ```
 
 </TabItem>
@@ -732,24 +732,22 @@ RETENTIOND_DELETE_COMPLETED_AFTER=30 minutes
 
 Deleting all Play types after 3 days: 
 
-```json title="config.json"
+```json title="config.json" brackets
 {
   "database": {
     "retention": {
-      "deleteAfter": "3 days"
+      "deleteAfter": "3 days" // [!code highlight]
     }
   }
 }
 ```
 
-* Delete all after 3 days except completed which are deleted after 30 minutes
-
-```json title="config.json"
+```json title="config.json" brackets
 {
   "database": {
     "retention": {
-      "deleteAfter": {
-        "completed": "30 minutes",
+      "deleteAfter": { // [!ref] delete all after 3 days except completed which are deleted after 30 minutes
+        "completed": "30 minutes", // [!code highlight]
         "duped": "3 days",
         "failed": "3 days"
       },
@@ -779,11 +777,12 @@ Use this as a shortcut for enabling output that can be used for troubleshooting 
 
 To set debug mode either add it to [AIO `config.json`](./?configType=aio#configuration-types)
 
-```json5 title="config.json"
+```json5 title="config.json" brackets
 {
-    "debugMode": true,
+    // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+    // ...your AIO Config
+    "debugMode": true, // [!code highlight]
     "sources": [...],
-    // ...
 }
 ```
 
@@ -835,7 +834,7 @@ Webhooks are configured in the AIO [config.json](#configuration-types) file unde
 
     <summary>Example</summary>
 
-    ```json5 title="config.json"
+    ```json5 title="config.json" brackets
     {
       "sources": [
         //...
@@ -843,6 +842,7 @@ Webhooks are configured in the AIO [config.json](#configuration-types) file unde
       "clients": [
         //...
       ],
+      // [!code focus:19]
       "webhooks": [
         {
           "name": "FirstGotifyServer",
@@ -850,7 +850,7 @@ Webhooks are configured in the AIO [config.json](#configuration-types) file unde
           "url": "http://192.168.0.100:8070",
           "token": "abcd"
         },
-        {
+        { // [!ref] multiple webhooks of the same type can be configured
           "name": "SecondGotifyServer",
           "type": "gotify",
           //...
@@ -877,13 +877,13 @@ multi-scrobbler optionally supports setting message notification priority via `i
 
     <summary>Example</summary>
 
-    ```json title="config.json"
+    ```json title="config.json" brackets
     {
       "type": "gotify",
       "name": "MyGotifyFriendlyNameForLogs",
       "url": "http://192.168.0.100:8070",
       "token": "AQZI58fA.rfSZbm",
-      "priorities": {
+      "priorities": { // [!callout /priorities/] optional, maps `info` `warn` `error` events to Gotify message priorities
         "info": 5,
         "warn": 7,
         "error": 10
@@ -903,7 +903,7 @@ multi-scrobbler optionally supports setting message notification priority via `i
 
     <summary>Example</summary>
 
-    ```json title="config.json"
+    ```json title="config.json" brackets
     {
       "type": "ntfy",
       "name": "MyNtfyFriendlyNameForLogs",
@@ -911,7 +911,7 @@ multi-scrobbler optionally supports setting message notification priority via `i
       "topic": "RvOwKJ1XtIVMXGLR",
       "username": "Optional",
       "password": "Optional",
-      "priorities": {
+      "priorities": { // [!callout /priorities/] optional, maps `info` `warn` `error` events to ntfy message priorities
         "info": 3,
         "warn": 4,
         "error": 5
@@ -931,13 +931,13 @@ multi-scrobbler supports [stateless](https://github.com/caronc/apprise-api?tab=r
 
     <summary>Example</summary>
 
-    ```json5 title="config.json"
+    ```json5 title="config.json" brackets
     {
       "type": "apprise",
       "name": "MyAppriseFriendlyNameForLogs",
       "host": "http://192.168.0.100:8080",
-      "urls": ["gotify://192.168.0.101:8070/MyToken"], // stateless endpoints
-      "keys": ["e90b20526808373353afad7fb98a201198c0c3e0555bea19f182df3388af7b17"], //persistent storage endpoints
+      "urls": ["gotify://192.168.0.101:8070/MyToken"], // [!ref] [stateless](https://github.com/caronc/apprise-api?tab=readme-ov-file#stateless-solution) endpoints
+      "keys": ["e90b20526808373353afad7fb98a201198c0c3e0555bea19f182df3388af7b17"], // [!ref] [persistent storage](https://github.com/caronc/apprise-api?tab=readme-ov-file#persistent-storage-solution) endpoints
       "tags": ["my","optional","tags"]
     }
     ```

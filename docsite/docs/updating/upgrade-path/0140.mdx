@@ -35,7 +35,7 @@ services:
   multi-scrobbler:
   # ...
   environment:
-    - KOTIO_TOKEN=...
+    - KOITO_TOKEN=...
     # ...more koito config
   # [!code highlight]
     - KOITO_ID=myKoitoID
@@ -173,7 +173,7 @@ Metadata caching remains the same but the config has been simplified. If you wer
 
 Remove `cache.metadata` and add a new string key `valkey` to the `cache` object, containing your valkey connection string:
 
-```diff
+```diff lang="json" title="config.json"
   "cache": {
 +    "valkey": "redis://valkey:6379"
 -    "metadata": {
@@ -203,7 +203,7 @@ Auth caching remains the same but the config has been simplified. The connection
 
 Remove the `connection` property from the `auth` object. If using `file` the entire `auth` object can be removed.
 
-```diff
+```diff lang="json" title="config.json"
   "cache": {
 +   "valkey": "redis://valkey:6379",
     "auth": {
@@ -234,7 +234,7 @@ services:
   multi-scrobbler:
   # ...
   environment:
-    - KOTIO_TOKEN=...
+    - KOITO_TOKEN=...
     # ...
     - KOITO_ID=myKoitoID
   # [!code highlight]

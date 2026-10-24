@@ -85,7 +85,7 @@ Choose your preferred method below:
 
         Once you have your token, add it to your configuration file along with the origin header:
 
-        ```json title="applemusic.json"
+        ```json title="applemusic.json" brackets
         {
             "data": {
                 "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiIsIm...",
@@ -116,7 +116,7 @@ Choose your preferred method below:
 
         Add these details to your config:
 
-        ```json title="applemusic.json"
+        ```json title="applemusic.json" brackets
         {
             "data": {
                 "key": {
@@ -178,40 +178,38 @@ Here is an example of creating a User Stage to only strip suffixes for a specifi
 
 <summary>Example</summary>
 
-```json5 title="config.json"
+:::code-tabs
+```json5 label="config" title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "user",
       "name": "AppleAlbumStip",
       "defaults": {
         "album": [
-          "/ - (EP|Single)$/i"
+          "/ - (EP|Single)$/i" // [!ref] removes ` - EP` or ` - Single` from the end of the album name
         ]
       }
     }
   ]
 }
 ```
-
-```json5 title="applemusic.json"
+```json5 label="applemusic" title="applemusic.json" brackets
 {
-  {
-    "id": "myAppleMusic",
-    "name": "My Apple Music",
-    "data": {
-      // ...
-    },
-    // [!code highlight:3]
-    "options": {
-      "normalizeAlbum": false
-    }
+  "id": "myAppleMusic",
+  "name": "My Apple Music",
+  "data": {
+    // ...
+  },
+  // [!code highlight:3]
+  "options": {
+    "normalizeAlbum": false
   }
 }
 ```
-
-```json5 title="lastfm.json" placeholder="YOUR_MS_DOMAIN"
+```json5 label="lastfm" title="lastfm.json" placeholder="YOUR_MS_DOMAIN" brackets
 [
   {
     "name": "Foxx LFM Client",
@@ -237,6 +235,7 @@ Here is an example of creating a User Stage to only strip suffixes for a specifi
   }
 ]
 ```
+:::
 
 </details>
 

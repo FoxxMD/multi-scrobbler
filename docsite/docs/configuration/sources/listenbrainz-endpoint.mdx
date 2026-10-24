@@ -187,33 +187,33 @@ Create a Listenbrainz Endpoint Source config that includes both a [Token](#token
         # ...
         environment:
           # ...
-          - LZE_TOKEN=tidal-hifi-scrobbles-2025
-          - LZE_SLUG=tidal
+          - LZE_TOKEN=tidal-hifi-scrobbles-2025 # [!code highlight]
+          - LZE_SLUG=tidal # [!code highlight]
     ```
     </TabItem>
     <TabItem value="file" label="File">
-    ```json title="endpointlz.json"
+    ```json title="endpointlz.json" brackets
     [
       {
         "name": "tidal-hifi-endpoint",
         "data": {
-          "token": "tidal-hifi-scrobbles-2025",
-          "slug": "tidal"
+          "token": "tidal-hifi-scrobbles-2025", // [!code highlight]
+          "slug": "tidal" // [!code highlight]
         }
       }
     ]
     ```
     </TabItem>
     <TabItem value="aio" label="AIO">
-    ```json title="endpointlz.json"
+    ```json title="config.json" brackets
     {
       "sources": [
         {
           "name": "tidal-hifi-endpoint",
           "type": "endpointlz",
           "data": {
-            "token": "tidal-hifi-scrobbles-2025",
-            "slug": "tidal"
+            "token": "tidal-hifi-scrobbles-2025", // [!code highlight]
+            "slug": "tidal" // [!code highlight]
           }
         }
       ]

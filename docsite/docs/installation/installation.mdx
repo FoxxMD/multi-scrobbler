@@ -289,10 +289,10 @@ After installation see [As a Service](/installation/service) to configure multi-
 
 Clone this repository somewhere using the latest [git tag](/updating#git) and then install from the working directory.
 
-```shell
+```shell placeholder="<LATEST_RELEASE_TAG>"
 git clone --branch <LATEST_RELEASE_TAG> https://github.com/FoxxMD/multi-scrobbler.git
 cd multi-scrobbler
-nvm use # optional, to set correct Node version
+nvm use # [!ref] optional, to set correct Node version
 npm install
 npm run docs:install && npm run build
 npm run start
@@ -319,12 +319,13 @@ JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56bd6540c JELLYFIN_URL=192.168.0.101:8096
 <details>
     <summary>`./config/config.json`</summary>
 
-    ```json title="./config/config.json"
+    ```json title="./config/config.json" brackets
     {
         "sources": [
             {
                 "type": "jellyfin",
-                "clients": ["myConfig"],
+                // [!link /clients/ /configuration/sources#limiting-scrobble-destination]
+                "clients": ["myConfig"], // [!callout /myConfig/] only scrobbles to the Client with this `name`
                 "name": "myJellyfinSource",
                 "data": {
                     "apiKey": "a89cba1569901a0671d5a9875fed4be1",
@@ -492,7 +493,7 @@ Use one of the common methods below to disable buffering for search-related rout
 
 Set [`flush_interval -1`](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy#streaming) to disable response buffering.
 
-```Caddyfile
+```Caddyfile {10}
 multi-scrobbler.domain.tld {
   reverse_proxy multi-scrobbler:9078
 
@@ -513,7 +514,7 @@ multi-scrobbler.domain.tld {
 
 <h3>NGINX</h3>
 
-```nginx
+```nginx {3} placeholder="/your-route,http://your_backend"
 location /your-route {
     proxy_pass http://your_backend;
     proxy_buffering off;

@@ -64,23 +64,25 @@ Common joiners and patterns are detected in artist/track strings and the artists
 
 Example 1
 
-```
+:::code-tabs
+```text label="Before"
 Melendi, Ryan Lewis, The Righteous Brothers (featuring Joan Jett & The Blackhearts, Robin Schulz)
-
-becomes
-
+```
+```text label="After"
 Melendi, Ryan Lewis, The Righteous Brothers, Joan Jett, The Blackhearts, Robin Schulz
 ```
+:::
 
 Example 2
 
-```
+:::code-tabs
+```text label="Before"
 Childish Gambino - 12.38 (feat. 21 Savage, Ink & Kadhja Bonet)
-
-becomes
-
+```
+```text label="After"
 Childish Gambino, 21 Savage, Ink, Kadhja Bonet - 12.38
 ```
+:::
 
 :::note
 
@@ -127,14 +129,14 @@ Finally, all of the above comparison/normalization techniques are combined when 
 
 <summary>Match Scoring Example</summary>
 
-```
+```text wrap
 Frédéric Chopin - Ballade No. 4 in F Minor, Op. 52 @ 2026-05-04T13:01:51-04:00 <-- New scrobble
 Frédéric Chopin / Krystian Zimerman - Ballade No. 4 in F Minor, Op. 52 @ 2026-05-04T13:01:48-04:00 <-- Existing scrobble from client
 ```
 
 After comparing against all existing scrobbles from the client, in a timerange around the new scrobble, MS finds a match and logs the match along with the score breakdown of the consistuent parts:
 
-```
+```text wrap success={11}
 Source: 
 Frédéric Chopin - Ballade No. 4 in F Minor, Op. 52 @ 2026-05-04T13:01:51-04:00 (S) 
 

@@ -107,10 +107,10 @@ Some Sources report which User is playing a track and/or on what device the trac
 
 To limit which Clients a Source will scrobble to use the `clients` property in a Source's [File/AIO configuration](/configuration?configType=file#configuration-types) to specify the **id** property of the Clients that it should scrobble to:
 
-```json5 title="jellyfin.json"
+```json5 title="jellyfin.json" brackets
 {
     "name": "MyJellyfin",
-    "clients": ["myMaloja","koitoA","listenbrainzFoo"]
+    "clients": ["myMaloja","koitoA","listenbrainzFoo"], // [!code highlight]
     "data": {
         // ...
     },

@@ -44,9 +44,9 @@ Enable [Debug Mode](/configuration#debug-mode) using `DEBUG_MODE=true`
 </TabItem>
 <TabItem value="file" label="File">
 
-Enable `logPayload` and `logFitlerFailure` in your `sonos.json`, or AIO file, config:
+Enable `logPayload` and `logFilterFailure` in your `sonos.json`, or AIO file, config:
 
-```json
+```json title="sonos.json" brackets
 [
   {
     "enable": true,
@@ -55,8 +55,8 @@ Enable `logPayload` and `logFitlerFailure` in your `sonos.json`, or AIO file, co
       "host": "192.168.0.150"
     },
     "options": {
-      "logFilterFailure":  "warn",
-      "logPayload": true
+      "logFilterFailure":  "warn", // [!code highlight]
+      "logPayload": true // [!code highlight]
      }
   }
 ]

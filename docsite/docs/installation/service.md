@@ -29,7 +29,7 @@ touch ~/.config/systemd/user/multi-scrobbler.service
 
 In a text editor add contents below to the file you created, `multi-scrobbler.service`:
 
-```ini
+```ini title="multi-scrobbler.service" placeholder="/path/to/multi-scrobbler/directory"
 [Unit]
 Description=multi-scrobbler
 After=network.target
