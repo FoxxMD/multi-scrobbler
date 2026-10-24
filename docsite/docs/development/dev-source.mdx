@@ -84,9 +84,8 @@ In [`sources.ts`](https://github.com/FoxxMD/multi-scrobbler/blob/master/src/back
 export const sourceConfigSchema = z.union([
     // ...
     appleMusicSourceConfigSchema,
-    // highlight-start
+    // [!code highlight]
     coolPlaySourceConfigSchema
-    // highlight-end
 ]);
 
 export type SourceConfig = z.infer<typeof sourceConfigSchema>;
@@ -94,9 +93,8 @@ export type SourceConfig = z.infer<typeof sourceConfigSchema>;
 export const sourceAIOConfigSchema = z.union([
     // ...
     appleMusicSourceAIOConfigSchema,
-    // highlight-start
+    // [!code highlight]
     coolPlayerSourceAIOConfigSchema
-    // highlight-end
 ]);
 ```
 
@@ -106,21 +104,19 @@ In [`sourcesMap.ts`](https://github.com/FoxxMD/multi-scrobbler/blob/master/src/b
 // ...
 export interface SourceTypeConfigMap extends Record<SourceType, [CommonSourceConfig, SourceAIOConfig, Partial<Pick<CommonSourceConfig, 'data' | 'options'>>]> {
   // ...
-  // highlight-start
+  // [!code highlight]
   coolplayer: [CoolPlayerSourceConfig, CoolPlayerSourceAIOConfig, Partial<Pick<CoolPlayerSourceConfig, 'data' | 'options'>>];
-  // highlight-end
 }
 
 // ...
 
 export const sourceConfigSchemaMapAsync: { [K in keyof SourceTypeConfigMap]: () => Promise<[ZodType<SourceTypeConfigMap[K][0]>, ZodType<SourceTypeConfigMap[K][1]>, EnvSourceSchema<ZodObject, SourceTypeConfigMap[K][0]>]> } = {
     // ...
-    // highlight-start
+    // [!code highlight:4]
     coolplayer: async () => {
         const {coolPlayerSourceConfigSchema, coolPlayerSourceAIOConfigSchema, envSchemas } = (await import('./coolplayer.ts'));
         return [coolPlayerSourceConfigSchema, coolPlayerSourceAIOConfigSchema, envSchemas]
     },
-    // highlight-end
 }
 ```
 
@@ -240,13 +236,12 @@ export default class ScrobbleSources {
           case 'spotify':
           // ...
           //
-          // highlight-start
+          // [!code highlight:5]
           // add a dynamic import for CoolPlayersource
           case 'coolplayer': {
               const CoolPlayerSource = (await import('./CoolPlayerSource.ts')).default;
               await this.instantiateSources('coolplayer', strongConfigs, defaults, CoolPlayerSource);
           } break;
-          // highlight-end
           default:
               break;
       }
@@ -277,8 +272,8 @@ import {
 // ...
 export default class CoolPlayerSource extends MemorySource {
 
-  // tell MS it should try to get backlogged tracks on startup
-  override canBacklog: boolean = true;
+  // [!ref] tell MS it should try to get backlogged tracks on startup
+  override canBacklog: boolean = true; // [!code highlight]
 
   constructor(/* ... */) {
     super(/* ... */);
@@ -287,14 +282,13 @@ export default class CoolPlayerSource extends MemorySource {
 
   // ...
 
-  protected getBackloggedPlays = async (options: RecentlyPlayedOptions): Promise<PlayObject[]> => {
+  protected getBackloggedPlays = async (options: RecentlyPlayedOptions): Promise<PlayObject[]> => { // [!code highlight]
     try {
       const resp = await request
               .get(`${this.urlData.url.toString()}/history`)
               .set('Authorization', `Token ${this.config.token}`);
 
-      // assuming list from body looks like track info returned in 
-      // "Implement Play Object Transform" section
+      // [!ref] assuming list from body looks like track info returned in [Implement Play Object Transform](#implement-play-object-transform)
       const {
         body = []
       } = resp;
@@ -325,8 +319,8 @@ import { SOURCE_SOT } from "../../core/Atomic.js";
 // ...
 export default class CoolPlayerSource extends MemorySource {
 
-  // tell MS it should immediately scrobble any new, unseen tracks from the upstream service
-  override playerSourceofTruth = SOURCE_SOT.HISTORY;
+  // [!ref] tell MS it should immediately scrobble any new, unseen tracks from the upstream service
+  override playerSourceofTruth = SOURCE_SOT.HISTORY; // [!code highlight]
 
   constructor(/* ... */) {
     super(/* ... */);
@@ -360,9 +354,8 @@ A Source keeps track of all the "plays" that are determined to be valid for scro
 ```ts title="src/backend/sources/MyBasicSource.ts"
 export default class MyBasicSource extends AbstractSource {
   handle(somePlay: PlayObject) {
-    // if the track is "new" and not seen before it is returned in the discovered list
-    // we then know it is OK to be sent to Clients for scrobbling
-    const discovered: PlayObject[] = this.discover([somePlay]);
+    // [!ref] if the track is "new" and not seen before it is returned in the discovered list. We then know it is OK to be sent to Clients for scrobbling
+    const discovered: PlayObject[] = this.discover([somePlay]); // [!code highlight]
   }
 }
 ```
@@ -377,8 +370,8 @@ After a play is verified to be discovered we can then scrobble it. This will emi
 export default class MyBasicSourceSource extends AbstractSource {
   handle(somePlay: PlayObject) {
     const discovered: PlayObject[] = this.discover([somePlay]);
-    // emit plays that can be scrobbled by clients
-    this.scrobble(discovered);
+    // [!ref] emit plays that can be scrobbled by clients
+    this.scrobble(discovered); // [!code highlight]
   }
 }
 ```

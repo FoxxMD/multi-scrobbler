@@ -12,17 +12,28 @@ A **Client** is an application that stores the historical information about what
 
 ## Clients
 
+<CapabilityLegend>
+  * <Cap level="yes"/> Supported - The Source has this feature and MS also supports it
+  * <Cap level="config"/> Supported with configuration - The Source has this feature but MS needs explicit configuration for it
+  * <Cap level="na"/> Not applicable - This feature is not applicable to this Source
+  * <Cap level="no"/> Not available - The Source has this feature but MS **does not** support it yet.
+</CapabilityLegend>
+
+<div className="capability-matrix" style={{'--cols': 1}}>
+
 | Name                                                | Now Playing |
 | :-------------------------------------------------- | :---------- |
-| [Discord](/configuration/clients/discord)           | ✅          |
-| [Last.fm](/configuration/clients/lastfm)            | ✅          |
-| [Libre.fm](/configuration/clients/librefm)          | ✅          |
-| [Listenbrainz](/configuration/clients/listenbrainz) | ✅          |
-| [Koito](/configuration/clients/koito)               | ✅          |
-| [Maloja](/configuration/clients/maloja)             | ❌          |
-| [Rocksky](/configuration/clients/rocksky)           | ✅          |
-| [Teal.fm](/configuration/clients/tealfm)            | ✅          |
-| [Tuneshine](/configuration/clients/tuneshine)       | ✅          |
+| [Discord](/configuration/clients/discord)           | <Cap level="yes"/> |
+| [Last.fm](/configuration/clients/lastfm)            | <Cap level="yes"/> |
+| [Libre.fm](/configuration/clients/librefm)          | <Cap level="yes"/> |
+| [Listenbrainz](/configuration/clients/listenbrainz) | <Cap level="yes"/> |
+| [Koito](/configuration/clients/koito)               | <Cap level="yes"/> |
+| [Maloja](/configuration/clients/maloja)             | <Cap level="na"/> |
+| [Rocksky](/configuration/clients/rocksky)           | <Cap level="yes"/> |
+| [Teal.fm](/configuration/clients/tealfm)            | <Cap level="yes"/> |
+| [Tuneshine](/configuration/clients/tuneshine)       | <Cap level="yes"/> |
+
+</div>
 
 ## Features
 
@@ -64,24 +75,41 @@ The behavior multi-scrobbler uses for determining Now Playing reporting:
 
 Clients can customize the Now Playing behavior individually using [File or AIO source configs:](/configuration?configType=file#configuration-types)
 
-```json5 title="CONFIG_DIR/lastfm.json"
+:::code-tabs
+```json5 label="Enable/Disable" brackets
 [
   {
+    // [!link /Last.fm/ /configuration/clients/lastfm]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Last.fm File Config
     "name": "myLastFmClient",
     "configureAs": "client",
     "data": {
       // ...
     },
     "options": {
-        // disable or enable
-        //"nowPlaying": true
-        //
-        // OR define a list of Source *config* names that should be allowed to report Now Playing
-        // order of the list determines priority for reporting Now Playing
-        //"nowPlaying": ["mySpotify1","myJellyfin2"]
+        "nowPlaying": true // [!code highlight] [!ref] `true` to enable or `false` to disable Now Playing for this Client
     }
   },
 ]
 ```
+```json5 label="Allowed Sources" brackets
+[
+  {
+    // [!link /Last.fm/ /configuration/clients/lastfm]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Last.fm File Config
+    "name": "myLastFmClient",
+    "configureAs": "client",
+    "data": {
+      // ...
+    },
+    "options": {
+        "nowPlaying": ["mySpotify1","myJellyfin2"] // [!code highlight] [!ref] list of Source *config* names allowed to report Now Playing. The order of the list determines priority for reporting Now Playing
+    }
+  },
+]
+```
+:::
 
 <Monitoring/>

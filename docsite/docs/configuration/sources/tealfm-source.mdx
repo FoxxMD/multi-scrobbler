@@ -52,9 +52,8 @@ If you are unsure what services are being used for your scrobbles you can check 
 
 <summary>Examples</summary>
 
-Allowing only scrobbles from [plyr.fm](https://plyr.fm/):
-
-```json title="tealfm.json"
+:::code-tabs
+```json label="Allow only plyr.fm" brackets
 [
     {
         "name": "myTealSource",
@@ -63,15 +62,12 @@ Allowing only scrobbles from [plyr.fm](https://plyr.fm/):
             "identifier": "alice.bsky.social",
             "appPassword": "twog-phu7-4dhe-y4j3",
 
-            "serviceAllow": ["plyr"],
+            "serviceAllow": ["plyr"], // [!code highlight]
         }
     }
 ]
 ```
-
-Deny scrobbles from last.fm:
-
-```json title="tealfm.json"
+```json label="Deny last.fm" brackets
 [
     {
         "name": "myTealSource",
@@ -80,15 +76,12 @@ Deny scrobbles from last.fm:
             "identifier": "alice.bsky.social",
             "appPassword": "twog-phu7-4dhe-y4j3",
 
-            "serviceDeny": ["last"],
+            "serviceDeny": ["last"], // [!code highlight]
         }
     }
 ]
 ```
-
-Allow scrobbles from plyr.fm and unknown services:
-
-```json title="tealfm.json"
+```json label="Allow plyr.fm and unknown services" brackets
 [
     {
         "name": "myTealSource",
@@ -97,11 +90,12 @@ Allow scrobbles from plyr.fm and unknown services:
             "identifier": "alice.bsky.social",
             "appPassword": "twog-phu7-4dhe-y4j3",
 
-            "serviceAllow": ["plyr", "unknown"],
+            "serviceAllow": ["plyr", "unknown"], // [!code highlight]
         }
     }
 ]
 ```
+:::
 
 </details>
 

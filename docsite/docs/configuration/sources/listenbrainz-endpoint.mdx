@@ -97,8 +97,8 @@ Multi-scrobbler emulates some [Listenbrainz API](https://listenbrainz.readthedoc
 
 Most importantly, the scrobble endpoint is:
 
-```
-http://myMultiScrobblerIP:9078/1/submit-listens
+```text placeholder="YOUR_MS_DOMAIN"
+http://YOUR_MS_DOMAIN/1/submit-listens
 ```
 
 All available endpoints are found in the API documentation section [**Listenbrainz Ingress**](/api/accept-a-listenbrainz-scrobble-standard/).
@@ -127,9 +127,9 @@ LZE_SLUG=foobar
 
 MS will accept requests for `submit-listens` (scrobble submissions and now playing) at 
 
-```
-http://myMultiScrobblerIP:9078/api/listenbrainz/foobar
-http://myMultiScrobblerIP:9078/api/listenbrainz/foobar/submit-listens
+```text placeholder="YOUR_MS_DOMAIN"
+http://YOUR_MS_DOMAIN/api/listenbrainz/foobar
+http://YOUR_MS_DOMAIN/api/listenbrainz/foobar/submit-listens
 ```
 
 [**See API documentation for the slug endpoint for more information.**](/api/accept-a-listenbrainz-scrobble-slug/)
@@ -187,33 +187,33 @@ Create a Listenbrainz Endpoint Source config that includes both a [Token](#token
         # ...
         environment:
           # ...
-          - LZE_TOKEN=tidal-hifi-scrobbles-2025
-          - LZE_SLUG=tidal
+          - LZE_TOKEN=tidal-hifi-scrobbles-2025 # [!code highlight]
+          - LZE_SLUG=tidal # [!code highlight]
     ```
     </TabItem>
     <TabItem value="file" label="File">
-    ```json title="endpointlz.json"
+    ```json title="endpointlz.json" brackets
     [
       {
         "name": "tidal-hifi-endpoint",
         "data": {
-          "token": "tidal-hifi-scrobbles-2025",
-          "slug": "tidal"
+          "token": "tidal-hifi-scrobbles-2025", // [!code highlight]
+          "slug": "tidal" // [!code highlight]
         }
       }
     ]
     ```
     </TabItem>
     <TabItem value="aio" label="AIO">
-    ```json title="endpointlz.json"
+    ```json title="config.json" brackets
     {
       "sources": [
         {
           "name": "tidal-hifi-endpoint",
           "type": "endpointlz",
           "data": {
-            "token": "tidal-hifi-scrobbles-2025",
-            "slug": "tidal"
+            "token": "tidal-hifi-scrobbles-2025", // [!code highlight]
+            "slug": "tidal" // [!code highlight]
           }
         }
       ]

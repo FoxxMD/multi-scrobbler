@@ -35,13 +35,15 @@ Set up [Valkey Caching](/configuration?cachedThings=metadata#caching) to cache S
 
 This Stage uses Spotify's API to search/lookup the Spotify catalog. This does **not** require a user to log in -- only an app `clientId`/`clientSecret` is needed. [Create a Spotify application](https://developer.spotify.com/documentation/web-api/concepts/apps) if you don't already have one (the same application used for the [Spotify Source](/configuration/sources/spotify) can be reused here).
 
-```json5 title="config.json"
+```json5 title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "spotify",
       "name": "MySpotify",
+      // [!code highlight:4]
       "data": {
         "clientId": "787c921a2a2ab42320831aba0c8f2fc2",
         "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a"
@@ -57,19 +59,18 @@ This Stage uses Spotify's API to search/lookup the Spotify catalog. This does **
 
 `rate` can be used to configure how many requests are made to the Spotify API, defined by **max number of requests** within **timespan of N seconds** (default `10 req/1s`):
 
-```json5
+```json5 brackets
 {
   "type": "spotify",
   "name": "MySpotify",
   "data": {
     "clientId": "787c921a2a2ab42320831aba0c8f2fc2",
     "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
-    // highlight-start
+    // [!code highlight:4]
     "rate": {
       "requests": 10,
       "perTime": 1
     }
-    // highlight-end
   },
 }
 ```
@@ -82,9 +83,10 @@ All of the properties found in [**Matching with Spotify**](#matching-with-spotif
 
 These are all also **optional** so you can use the Spotify Transform stage without configuring any of this.
 
-```json5 title="config.json"
+```json5 title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "spotify",
@@ -93,12 +95,11 @@ These are all also **optional** so you can use the Spotify Transform stage witho
         "clientId": "787c921a2a2ab42320831aba0c8f2fc2",
         "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a"
       },
-      // highlight-start
+      // [!code highlight:4]
       "defaults": {
         "score": 0.6,
         "deprioritizeCompilations": true
       }
-      // highlight-end
     }
   ]
 }
@@ -108,11 +109,15 @@ These are all also **optional** so you can use the Spotify Transform stage witho
 
 [Add your Stage](/configuration/transforms/#stage) to a Source or Client by specifying it in a [Hook](/configuration/transforms/#hook):
 
-```json5 title="subsonic.json"
+```json5 title="subsonic.json" brackets
 [
   {
+    // [!link /Subsonic/ /configuration/sources/subsonic]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Subsonic File Config
     "name": "MySubsonic",
     "data": { /* ... */},
+    // [!code focus:10]
     "options": {
       "playTransform": {
         "preCompare": [
@@ -167,11 +172,8 @@ services:
       # ...
       - SPOTIFY_CLIENT_ID=787c921a2a2ab42320831aba0c8f2fc2
       - SPOTIFY_CLIENT_SECRET=ec42e09d5ae0ee0f0816ca151008412a
-      // highlight-start
-      # only runs transform if album, artists, title, duration, or art are missing in data
-      # and only searches by isrc
-      - SPOTIFY_TRANSFORMS_PRESETS=missingArt,missingFields,searchIsrc
-      // highlight-end
+      # [!code highlight] [!ref] only runs transform if album, artists, title, duration, or art are missing in data and only searches by isrc
+      - SPOTIFY_TRANSFORM_PRESETS=missingArt,missingFields,searchIsrc
     # ...
 ```
 
@@ -188,28 +190,23 @@ The `*` stands for the prefix used for each Source/Client's ENV keys. Refer to t
 
 <summary>Example Full Docker Deploy with ENV Configuration</summary>
 
-```yaml
+```yaml title="docker-compose.yml"
 services:
   multi-scrobbler:
     image: foxxmd/multi-scrobbler
     container_name: multi-scrobbler
     environment:
-      // highlight-start
-      # only runs transform if art or fields are missing in data
-      # and only searches by isrc
-      - SPOTIFY_TRANSFORMS_PRESETS=missingArt,missingFields,searchIsrc
+      # [!code highlight:3] [!ref] only runs transform if art or fields are missing in data and only searches by isrc
+      - SPOTIFY_TRANSFORM_PRESETS=missingArt,missingFields,searchIsrc
       - SPOTIFY_CLIENT_ID=787c921a2a2ab42320831aba0c8f2fc2
       - SPOTIFY_CLIENT_SECRET=ec42e09d5ae0ee0f0816ca151008412a
-      // highlight-end
       - JELLYFIN_URL=192.168.0.110:8096
       - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56b
       - JELLYFIN_USER=MyUser
-      // highlight-start
-      # applies spotify Stage to preCompare of Jellyfin source
+      # [!code highlight] [!ref] applies spotify Stage to preCompare of Jellyfin source
       - JELLYFIN_TRANSFORMS=spotify
-      // highlight-end
 
-      # maloja receives enhanced scrobble from Jellyfin
+      # [!ref] maloja receives enhanced scrobble from Jellyfin
       - MALOJA_URL=http://192.168.0.100:42010
       - MALOJA_API_KEY=myApiKey
 
@@ -259,8 +256,9 @@ Define which data types are required using:
 
 Multi-scrobbler searches for a Spotify match using, in order, up to two methods. Use `searchOrder` to control which methods run and in what order:
 
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
     "searchOrder": ["isrc", "basic"]
   }
@@ -323,7 +321,7 @@ A failed Stage never modifies your play data unless you eplicitly configure it t
   "data": {/* */},
   "defaults": {
     // ...
-    "market": "US"
+    "market": "US" // [!code highlight]
   }
 }
 ```
@@ -343,7 +341,7 @@ A failed Stage never modifies your play data unless you eplicitly configure it t
   "data": {/* */},
   "defaults": {
     // ...
-    "locale": "en_US"
+    "locale": "en_US" // [!code highlight]
   }
 }
 
@@ -385,14 +383,15 @@ Each candidate is scored between `0` and `1` based on how similar its title/arti
 ```json5
 {
   // ...
-  "score": 0.6 // matches must score 0.6 or higher to be considered
+  "score": 0.6 // [!ref] matches must score 0.6 or higher to be considered
 }
 ```
 
 You can bias which of title/artist/album contributes most to a candidate's score with `titleWeight`, `artistWeight`, and `albumWeight` (defaults are `0.4`/`0.3`/`0.3`, respectively):
 
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
     "titleWeight": 0.4,
     "artistWeight": 0.3,
@@ -404,8 +403,9 @@ You can bias which of title/artist/album contributes most to a candidate's score
 
 Spotify catalogs many recordings across multiple compilation albums (Greatest Hits, movie soundtracks that reuse a song, etc...) in addition to their "proper" studio album. If you'd prefer matches to avoid compilation albums when a better alternative exists, enable `deprioritizeCompilations`:
 
-```json5
-// ...
+```json5 brackets
+// [!link /Stage Configuration/ /configuration/transforms#configuring-stages]
+// ...your Stage Configuration
 "defaults": {
     "deprioritizeCompilations": true
   }
@@ -433,17 +433,22 @@ With these Rules IDs are added to the title, album, and artists your Play alread
 
 <summary>Example</summary>
 
-```json5 title="subsonic.json"
+```json5 title="subsonic.json" brackets
 [
   {
+    // [!link /Subsonic/ /configuration/sources/subsonic]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Subsonic File Config
     "name": "MySubsonic",
     "data": { /* ... */},
+    // [!code focus:15]
     "options": {
       "playTransform": {
         "preCompare": [
           {
             "type": "spotify",
             "name": "MySpotify",
+            // [!code highlight:5]
             "title": false,
             "artists": false,
             "album": false,

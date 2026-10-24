@@ -27,6 +27,7 @@
     "@mdx-js/react": "^3.0.0",
     "ajv": "^8.18.0",
     "ajv-formats": "^3.0.1",
+    "astro-expressive-code": "^0.44.2",
     "cf-json-schema-viz": "^0.3.0",
     "clsx": "^2.0.0",
     "docusaurus-plugin-sass": "^0.2.6",
@@ -43,7 +44,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
-    "sass": "^1.97.0"
+    "sass": "^1.97.0",
+    "starlight-codeblocks": "^1.2.0"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.10.2",

@@ -6,12 +6,13 @@ import TabItem from '@theme/TabItem';
 
 Using [File Config](/configuration/?configType=file#configuration-types)
 
-```json5 title="CONFIG_DIR/jellyin.json"
+:::code-tabs
+```json5 label="jellyin" title="CONFIG_DIR/jellyin.json" brackets
 [
   {
     "id": "fredJf",
     "name": "Freds Jellyfin",
-    "clients": ["fredLFM"],
+    "clients": ["fredLFM"], // [!code highlight] [!ref] only scrobbles to Fred's Last.fm
     "data": {
       "url": "https://jellyfin.fred.com",
       "user": "Fred",
@@ -21,7 +22,7 @@ Using [File Config](/configuration/?configType=file#configuration-types)
   {
     "id": "maryJf",
     "name": "Marys Jellyfin",
-    "clients": ["maryLFM"],
+    "clients": ["maryLFM"], // [!code highlight] [!ref] only scrobbles to Mary's Last.fm
     "data": {
       "url": "https://jellyfin.mary.com",
       "user": "Mary",
@@ -30,13 +31,12 @@ Using [File Config](/configuration/?configType=file#configuration-types)
   }
 ]
 ```
-
-```json5 title="CONFIG_DIR/plex.json"
+```json5 label="plex" title="CONFIG_DIR/plex.json" brackets
 [
   {
     "id": "foxxPlex",
     "name": "Foxx Plex",
-    "clients": ["foxxKoi"],
+    "clients": ["foxxKoi"], // [!code highlight] [!ref] only scrobbles to Foxx's Koito
     "data": {
       "token": "JtRnwQWD__XMJF8sT3jc",
       "url": "192.168.0.233:32400"
@@ -44,8 +44,7 @@ Using [File Config](/configuration/?configType=file#configuration-types)
   }
 ]
 ```
-
-```json5 title="CONFIG_DIR/lastfm.json"
+```json5 label="lastfm" title="CONFIG_DIR/lastfm.json" placeholder="YOUR_MS_DOMAIN" brackets
 [
   {
     "id": "maryLFM",
@@ -54,7 +53,7 @@ Using [File Config](/configuration/?configType=file#configuration-types)
     "data": {
       "apiKey": "maryApiKey",
       "secret": "marySecret",
-      "redirectUri": "http://localhost:9078/lastfm/callback"
+      "redirectUri": "http://YOUR_MS_DOMAIN/lastfm/callback"
     }
   },
   {
@@ -64,13 +63,12 @@ Using [File Config](/configuration/?configType=file#configuration-types)
     "data": {
       "apiKey": "fredApiKey",
       "secret": "fredSecret",
-      "redirectUri": "http://localhost:9078/lastfm/callback"
+      "redirectUri": "http://YOUR_MS_DOMAIN/lastfm/callback"
     }
   }
 ]
 ```
-
-```json5 title="CONFIG_DIR/koito.json"
+```json5 label="koito" title="CONFIG_DIR/koito.json" brackets
 [
   {
     "id": "foxxKoi",
@@ -84,6 +82,7 @@ Using [File Config](/configuration/?configType=file#configuration-types)
   }
 ]
 ```
+:::
 
 </TabItem>
 
@@ -91,7 +90,7 @@ Using [File Config](/configuration/?configType=file#configuration-types)
 
 Using [AIO Config](/configuration/?configType=aio#configuration-types)
 
-```json5 title="CONFIG_DIR/config.json"
+```json5 title="CONFIG_DIR/config.json" placeholder="YOUR_MS_DOMAIN"
 {
   "sources": [
     {
@@ -145,7 +144,7 @@ Using [AIO Config](/configuration/?configType=aio#configuration-types)
       "data": {
         "apiKey": "maryApiKey",
         "secret": "marySecret",
-        "redirectUri": "http://localhost:9078/lastfm/callback"
+        "redirectUri": "http://YOUR_MS_DOMAIN/lastfm/callback"
       }
     },
     {
@@ -156,7 +155,7 @@ Using [AIO Config](/configuration/?configType=aio#configuration-types)
       "data": {
         "apiKey": "fredApiKey",
         "secret": "fredSecret",
-        "redirectUri": "http://localhost:9078/lastfm/callback"
+        "redirectUri": "http://YOUR_MS_DOMAIN/lastfm/callback"
       }
     },
     {

@@ -48,10 +48,9 @@ You **should** bind a host directory into the container for storing configuratio
 services:
   multi-scrobbler:
   # ...
-  // highlight-start
+  # [!code highlight:2]
   volumes:
     - "./config:/config"
-  // highlight-end
 ```
 
 Optionally, use a separate directory for data (database, cache, etc...) by mounting an additional directory and setting the `DATA_DIR` ENV to the directory that should be used inside the container:
@@ -62,14 +61,12 @@ services:
   # ...
   environment:
     # ...
-    // highlight-start
+    # [!code highlight]
     - DATA_DIR=/msData
-    // highlight-end
   volumes:
     - "./config:/config" # used for config files
-  // highlight-start
+  # [!code highlight]
     - "./my/host/folder:/msData" # used for data files
-  // highlight-end
 ```
 
 </TabItem>
@@ -80,10 +77,9 @@ If you are using a [bridge network](https://www.appsdeveloperblog.com/docker-net
 services:
   multi-scrobbler:
   # ...
-  // highlight-start
+  # [!code highlight:2]
   ports:
     - "9078:9078"
-  // highlight-end
 ```
 
 :::important
@@ -114,23 +110,21 @@ services:
   multi-scrobbler:
   # ...
   environment:
-    // highlight-start
+    # [!code highlight]
     - BASE_URL=http://hostMachineIP
-    // highlight-end
 ```
 </TabItem>
 <TabItem value="subpath" label="Deploying MS with a Subpath">
 When deploying MS to a domain where it will be served under a **subpath**, like `http://mydomain.com/multiscrobbler`, you **must** define `BASE_URL`:
 
-```yaml title="docker-compose.yml"
+```yaml title="docker-compose.yml" placeholder="YOUR_MS_DOMAIN"
 services:
   multi-scrobbler:
     # ...
     environment:
-      // highlight-start
+      # [!code highlight:2]
       # multi-scrobbler served under this subpath
-      - BASE_URL=https://mydomain.com/multiscrobbler
-      // highlight-end
+      - BASE_URL=https://YOUR_MS_DOMAIN/multiscrobbler
 ```
 
 This is **not required** when the root path is `/`, like `https://my-scrobbler.com` or `scrobbler.mydomain.com`.
@@ -145,25 +139,23 @@ This build step is *optional* and not required for MS to run with a subpath, you
 
 To build MS with self-hosted docs, provide the same `BASE_URL` used above as a build arg:
 
-```yaml title="docker-compose.yml"
+```yaml title="docker-compose.yml" placeholder="YOUR_MS_DOMAIN"
 services:
   multi-scrobbler:
-  // highlight-start
+  # [!code highlight:7]
   ## remove/comment out official image
   # image: docker.io/foxxmd/multi-scrobbler:latest
   ## add build spec
     build:
       context: https://github.com/FoxxMD/multi-scrobbler.git
       args:
-        - BASE_URL=https://mydomain.com/multiscrobbler
-  // highlight-end
+        - BASE_URL=https://YOUR_MS_DOMAIN/multiscrobbler
   # ...
     environment:
         # ...
-        // highlight-start
+        # [!code highlight:2]
         # multi-scrobbler served under this subpath
-        - BASE_URL=https://mydomain.com/multiscrobbler
-        // highlight-end
+        - BASE_URL=https://YOUR_MS_DOMAIN/multiscrobbler
 ```
 
 </DetailsAdmo>
@@ -180,9 +172,8 @@ services:
   # ...
   environment:
     # Specify timezone from TZ Database name found here https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-    // highlight-start
+    # [!code highlight]
     - TZ=America/New_York
-    // highlight-end
 ```
 
 </TabItem>
@@ -202,12 +193,11 @@ services:
   multi-scrobbler:
     image: foxxmd/multi-scrobbler
     # ...
-    // highlight-start
+    # [!code highlight:4]
     read_only: true
     tmpfs:
       - /run:exec
       - /tmp:noexec    
-    // highlight-end    
 ```
 
 </TabItem>
@@ -221,12 +211,11 @@ services:
     # ...
     environment:
       # ...
-      // highlight-start
+      # [!code highlight]
       CACHE_VALKEY=redis://valkey:6379
-      // highlight-end
     # ...
 
-  // highlight-start
+  # [!code highlight:8]
   valkey:
     image: valkey/valkey
     volumes:
@@ -235,7 +224,6 @@ services:
 volumes:
   valkeydata:
     driver: local
-  // highlight-end
 ```
 
 </TabItem>
@@ -261,7 +249,7 @@ The example scenario:
 
 See [`docker-compose.yml`](#docker) sample above for more options and annotations.
 
-```yaml title="docker-compose.yml"
+```yaml title="docker-compose.yml" placeholder="YOUR_MS_DOMAIN"
 services:
   multi-scrobbler:
     image: foxxmd/multi-scrobbler
@@ -271,7 +259,7 @@ services:
       - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56bd6540c
       - JELLYFIN_URL=192.168.0.101:8096
       - JELLYFIN_USER=MyUser
-      - BASE_URL=http://192.168.0.100:9078
+      - BASE_URL=http://YOUR_MS_DOMAIN
       - MALOJA_URL=http://domain.tld:42010
       - MALOJA_API_KEY=1234
       - PUID=1000
@@ -301,10 +289,10 @@ After installation see [As a Service](/installation/service) to configure multi-
 
 Clone this repository somewhere using the latest [git tag](/updating#git) and then install from the working directory.
 
-```shell
+```shell placeholder="<LATEST_RELEASE_TAG>"
 git clone --branch <LATEST_RELEASE_TAG> https://github.com/FoxxMD/multi-scrobbler.git
 cd multi-scrobbler
-nvm use # optional, to set correct Node version
+nvm use # [!ref] optional, to set correct Node version
 npm install
 npm run docs:install && npm run build
 npm run start
@@ -331,12 +319,13 @@ JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56bd6540c JELLYFIN_URL=192.168.0.101:8096
 <details>
     <summary>`./config/config.json`</summary>
 
-    ```json title="./config/config.json"
+    ```json title="./config/config.json" brackets
     {
         "sources": [
             {
                 "type": "jellyfin",
-                "clients": ["myConfig"],
+                // [!link /clients/ /configuration/sources#limiting-scrobble-destination]
+                "clients": ["myConfig"], // [!callout /myConfig/] only scrobbles to the Client with this `name`
                 "name": "myJellyfinSource",
                 "data": {
                     "apiKey": "a89cba1569901a0671d5a9875fed4be1",
@@ -504,7 +493,7 @@ Use one of the common methods below to disable buffering for search-related rout
 
 Set [`flush_interval -1`](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy#streaming) to disable response buffering.
 
-```Caddyfile
+```Caddyfile {10}
 multi-scrobbler.domain.tld {
   reverse_proxy multi-scrobbler:9078
 
@@ -525,7 +514,7 @@ multi-scrobbler.domain.tld {
 
 <h3>NGINX</h3>
 
-```nginx
+```nginx {3} placeholder="/your-route,http://your_backend"
 location /your-route {
     proxy_pass http://your_backend;
     proxy_buffering off;

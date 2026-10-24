@@ -12,12 +12,12 @@ These sources are **ingress-based** which means that multi-scrobbler waits for t
 
 multi-scrobbler will log information about any server that connects to it for these services. In the logs it looks something like this:
 
-```
+```text wrap
 [2025-07-10 12:32:21.417 -0400] INFO   : [App] [API] [Ingress] [WebScrobbler] [Ingress] [WebScrobbler] Received request from a new remote address: ::ffff:127.0.0.1 (192.168.0.100) (UA: Mozilla/5.0 (X11; Linux x86_64; rv:139.0) Gecko/20100101 Firefox/139.0)
 [2025-07-10 12:32:21.418 -0400] INFO   : [App] [API] [Ingress] [WebScrobbler] [Ingress] [WebScrobbler] ::ffff:127.0.0.1 (192.168.0.100) (UA: Mozilla/5.0 (X11; Linux x86_64; rv:139.0) Gecko/20100101 Firefox/139.0) Received data for API URL slug '(none)' for the first time.
 ```
 It also logs if a server tries to connect to a URL that it does not recognize:
-```
+```text wrap
 2023-02-22T11:16:12-05:00 debug  : [App             ] Server received POST request from ::ffff:192.168.0.100 (UA: PlexMediaServer/1.24.5.5173-8dcc73a59) to unknown route: /plkex
 ```
 **So, if you do not see either of these in your logs then the Source is not able to connect to your multi-scrobbler instance at all.**
@@ -177,13 +177,13 @@ If you experience scrobble detection issues you can help improve MS's YTM heurei
 In your YTM configuration (`ytmusic.json`) add `logDiff` under `options` like this:
 
 
-```json
+```json title="ytmusic.json" brackets
 {
     "type": "ytmusic",
     "name": "MyYTM",
     "data": { ... },
     "options": {
-        "logDiff": true
+        "logDiff": true // [!code highlight]
     }
 }
 ```
@@ -211,14 +211,14 @@ Which are essential to troubleshooting this behavior.
 
 Optionally, if your logs are busy due to many other sources, you can log **only** YTM logs to a file. Turn this on with the `logToFile` config option:
 
-```json
+```json title="ytmusic.json" brackets
 {
     "type": "ytmusic",
     "name": "MyYTM",
     "data": { ... },
     "options": {
         "logDiff": true,
-        "logToFile": true
+        "logToFile": true // [!code highlight]
     }
 }
 ```

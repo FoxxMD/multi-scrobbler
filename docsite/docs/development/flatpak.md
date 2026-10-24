@@ -30,7 +30,7 @@ A convenience bash script is provided that automates generating offline sources 
 
 Located in the project at [`flatpak/setup.sh`](https://github.com/FoxxMD/multi-scrobbler/blob/master/flatpak/setup.sh), run it from the `flatpak` directory with this syntax:
 
-```shell
+```shell placeholder="/path/to/flatpak/build/dir"
 ./setup.sh -o -b /path/to/flatpak/build/dir
 ```
 
@@ -74,7 +74,7 @@ Move `generated-sources.json` into `PROJECT_DIR/flatpak` and rename `generated-s
 
 In the below command replace `/home/yourUser/multi-scrobbler-flatpak` with a directory to use for storing flatpak build/artifacts.
 
-```shell title="PROJECT_DIR/flatpak"
+```shell title="PROJECT_DIR/flatpak" placeholder="/home/yourUser/multi-scrobbler-flatpak" wrap
 flatpak-builder --repo=/home/yourUser/multi-scrobbler-flatpak/repo --state-dir=/home/yourUser/multi-scrobbler-flatpak/state /home/yourUser/multi-scrobbler-flatpak/build io.github.foxxmd.multiscrobbler.yml --force-clean
 ```
 

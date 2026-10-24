@@ -11,6 +11,7 @@ import AIOType from "@site/src/components/snippets/_aio-config.mdx";
 import Config from "@site/src/components/GenericConfiguration.mdx";
 import Button from '../components/Button';
 import ButtonGroup from '../components/ButtonGroup';
+import { Cap, CapabilityLegend } from '../components/Capability';
 
 export default {
   // Re-use the default mapping
@@ -24,5 +25,7 @@ export default {
   Config,
   DetailsAdmo,
   Button,
-  ButtonGroup
+  ButtonGroup,
+  Cap,
+  CapabilityLegend
 };

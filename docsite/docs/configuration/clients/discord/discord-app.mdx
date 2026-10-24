@@ -96,19 +96,17 @@ services:
       # ...
       - DISCORD_APPLICATION_ID=12345678
       # add below line
-      // highlight-start
+      # [!code highlight]
       - DISCORD_IPC_LOCATIONS=/run/discord-ipc-0
-      // highlight-end
     volumes:
       # ...
       # add below line
-      // highlight-start
+      # [!code highlight]
       - kasm_run:/run
-      // highlight-end
     # ...
 
   # .. add discord service below
-  // highlight-start
+  # [!code highlight:27]
   kasmcord:
     container_name: kasmcord
     image: kasmweb/discord:1.19.0
@@ -136,7 +134,6 @@ volumes:
     name: kasm_run
   kasm_config:
     name: kasm_config
-  // highlight-end
 ```
 
 </details>
@@ -147,7 +144,7 @@ Then re-deploy your stack.
 
 Navigate in your browser to the IP/host Multi-Scrobbler/Discord are running on. Use the `port` set in the `kasmcord` service:
 
-```
+```text placeholder="192.168.MY.HOST"
 # basic auth login
 # user: kasm_user
 # pass is what was set in env VNC_PW
@@ -187,7 +184,7 @@ On Linux, Discord uses a [Unix Socket](https://en.wikipedia.org/wiki/Unix_domain
 
 With Discord running, run this command:
 
-```
+```shell "/run/user/1000/discord-ipc-0"
 $ sudo netstat -apeen | grep discord
 
 unix  2      [ ACC ]     STREAM     LISTENING     11026149 1641787/Discord      /home/foxx/.var/app/com.discordapp.Discord/cache/scoped_dirnnxNIn/SingletonSocket
@@ -208,7 +205,7 @@ On MacOS, Discord uses a [Unix Socket](https://en.wikipedia.org/wiki/Unix_domain
 
 With Discord running, run this command:
 
-```
+```shell "/run/user/1000/discord-ipc-0"
 $ sudo netstat -apeen | grep discord
 
 unix  2      [ ACC ]     STREAM     LISTENING     11026149 1641787/Discord      /home/foxx/.var/app/com.discordapp.Discord/cache/scoped_dirnnxNIn/SingletonSocket
@@ -269,11 +266,11 @@ After [finding your IPC connection path](#find-ipc-connection) you will need to 
 
   In your MS docker compose file add the `host:port` of the host running Discord/`socat` to `DISCORD_IPC_LOCATIONS` `environment:`
 
-  ```yaml title="docker-compose.yaml"
+  ```yaml title="docker-compose.yaml" placeholder="192.168.DISCORD_HOST.IP"
 
       environment:
         # ...
-        DISCORD_IPC_LOCATIONS=192.168.DISCORD_HOST.IP:6655
+        DISCORD_IPC_LOCATIONS=192.168.DISCORD_HOST.IP:6655 # [!code highlight]
   ```
   </TabItem>
   <TabItem value="local-docker" label="MS on Same Host (Docker)">
@@ -284,9 +281,9 @@ After [finding your IPC connection path](#find-ipc-connection) you will need to 
 
       environment:
         # ...
-        DISCORD_IPC_LOCATIONS=/run/discord-ipc-0
+        DISCORD_IPC_LOCATIONS=/run/discord-ipc-0 # [!code highlight]
       volumes:
-        - /run/user/1000/discord-ipc-0:/run/discord-ipc-0
+        - /run/user/1000/discord-ipc-0:/run/discord-ipc-0 # [!code highlight]
   ```
 
   </TabItem>
@@ -347,11 +344,11 @@ After [finding your IPC connection path](#find-ipc-connection) you will need to 
 
   In your MS docker compose file add the `host:port` of the host running Discord/`socat` to `DISCORD_IPC_LOCATIONS` `environment:`
 
-  ```yaml title="docker-compose.yaml"
+  ```yaml title="docker-compose.yaml" placeholder="192.168.DISCORD_HOST.IP"
 
       environment:
         # ...
-        DISCORD_IPC_LOCATIONS=192.168.DISCORD_HOST.IP:6655
+        DISCORD_IPC_LOCATIONS=192.168.DISCORD_HOST.IP:6655 # [!code highlight]
   ```
   </TabItem>
   <TabItem value="local-docker" label="MS on Same Host (Docker)">
@@ -362,9 +359,9 @@ After [finding your IPC connection path](#find-ipc-connection) you will need to 
 
       environment:
         # ...
-        DISCORD_IPC_LOCATIONS=/discord-ipc-0
+        DISCORD_IPC_LOCATIONS=/run/discord-ipc-0 # [!code highlight]
       volumes:
-        - /run/user/1000/discord-ipc-0:/run/discord-ipc-0
+        - /run/user/1000/discord-ipc-0:/run/discord-ipc-0 # [!code highlight]
   ```
 
   </TabItem>
@@ -416,7 +413,7 @@ After [finding your IPC connection path](#find-ipc-connection) you will need to 
 
       environment:
         # ...
-        DISCORD_IPC_LOCATIONS=192.168.0.100:6655
+        DISCORD_IPC_LOCATIONS=192.168.0.100:6655 # [!code highlight]
   ```
   
   </TabItem>
@@ -486,36 +483,36 @@ MS will use your artwork URLs only if:
 
 None of the below URLs will **ever** be used because they are not `https`
 
-```
-http://foobar.com/cool.jpg <-- NOT allowed, not http
-http://192.168.0.112/fun.png <-- NOT allowed, not http
+```text
+http://foobar.com/cool.jpg <-- [!error] not used [!ref] NOT allowed, not http
+http://192.168.0.112/fun.png <-- [!error]not used [!ref] NOT allowed, not http
 ```
 
 When `DISCORD_ARTWORK` is not set:
 
-```
-https://archive.org/download/dir/myimage.jpg <-- allowed, is https and known service
-https://spotify.com/assets/cover.png?size=1000 <-- allowed, is https and known service
-https://example.com/cool.jpg <-- NOT allowed, is https but not a known service and DISCORD_ARTWORK is not set
-https://anything.com/neat.jpg <-- NOT allowed, is https but not a known service and DISCORD_ARTWORK is not set
+```text
+https://archive.org/download/dir/myimage.jpg <-- [!ref] allowed, is https and known service
+https://spotify.com/assets/cover.png?size=1000 <-- [!ref] allowed, is https and known service
+https://example.com/cool.jpg <-- [!error] not used [!ref] NOT allowed, is https but not a known service and DISCORD_ARTWORK is not set
+https://anything.com/neat.jpg <-- [!error] not used [!ref] NOT allowed, is https but not a known service and DISCORD_ARTWORK is not set
 ```
 
 Setting `DISCORD_ARTWORK=true`
 
-```
-https://archive.org/my/dir/myimage.jpg <-- allowed, is https and known service
-http://foobar.com/cool.jpg <-- NOT allowed, not http
-https://example.com/cool.jpg <-- allowed, is https
-https://anything.com/neat.jpg <-- allowed, is https
+```text
+https://archive.org/my/dir/myimage.jpg <-- [!ref] allowed, is https and known service
+http://foobar.com/cool.jpg <-- [!error] not used [!ref] NOT allowed, not http
+https://example.com/cool.jpg <-- [!ref] allowed, is https
+https://anything.com/neat.jpg <-- [!ref] allowed, is https
 ```
 
 Setting `DISCORD_ARTWORK=mycdn,jellyfin`
 
-```
-https://archive.org/my/dir/myimage.jpg <-- allowed, is https and known service
-http://foobar.com/cool.jpg <-- NOT allowed, not http
-https://example.com/cool.jpg <-- NOT allowed, is https but does not contain "mycdn" or "jellyfin"
-https://jellyfin.mydomain.com/neat.jpg <-- allowed, is https and contains "jellyfin"
+```text
+https://archive.org/my/dir/myimage.jpg <-- [!ref] allowed, is https and known service
+http://foobar.com/cool.jpg <-- [!error] not used [!ref] NOT allowed, not http
+https://example.com/cool.jpg <-- [!error] not used [!ref] NOT allowed, is https but does not contain "mycdn" or "jellyfin"
+https://jellyfin.mydomain.com/neat.jpg <-- [!ref] allowed, is https and contains "jellyfin"
 ```
 
 </details>

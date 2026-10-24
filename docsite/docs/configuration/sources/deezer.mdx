@@ -53,7 +53,7 @@ import ENVConfig from "@site/docs/configuration/sources/_env_configs/_deezer.md"
 
             <summary>deezer.json example</summary>
 
-            ```json title="deezer.json"
+            ```json title="deezer.json" brackets
             [
                 {
                     "name": "MyDeezer",
@@ -61,7 +61,7 @@ import ENVConfig from "@site/docs/configuration/sources/_env_configs/_deezer.md"
                         "arl": "UOsRPjT3U5Dhaaup3x...",
                     },
                     "options": {
-                        "fuzzyDiscoveryIgnore": "aggressive"
+                        "fuzzyDiscoveryIgnore": "aggressive" // [!code highlight]
                     }
                 }
             ]
@@ -82,7 +82,7 @@ import ENVConfig from "@site/docs/configuration/sources/_env_configs/_deezer.md"
 
         In the logs look for **Linked Accounts** associated with the Deezer Source. It will look something like this:
 
-        ```
+        ```text "896225281"
         VERBOSE: [App] [Sources] [Deezer - MyDeezer] Linked Accounts:
         Name: Joe | ID: 166276334 | Private?: Yes
         Name: Mary | ID: 48475231 | Private?: Yes
@@ -96,13 +96,13 @@ import ENVConfig from "@site/docs/configuration/sources/_env_configs/_deezer.md"
             <TabItem value="env" label="ENV">
             Set in your docker compose `environment` section:
 
-            ```yaml
+            ```yaml title="docker-compose.yml" "896225281"
             - DEEZER_ACCOUNT_ID=896225281
             ```
             </TabItem>
             <TabItem value="file" label="File or AIO">
                 Add an `accountId` property to the `data` section
-                ```json
+                ```json title="deezer.json" "896225281" brackets
                 [
                     {
                         "name": "DeezerARL",

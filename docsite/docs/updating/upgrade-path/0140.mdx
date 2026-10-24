@@ -35,17 +35,15 @@ services:
   multi-scrobbler:
   # ...
   environment:
-    - KOTIO_TOKEN=...
+    - KOITO_TOKEN=...
     # ...more koito config
-  // highlight-start
+  # [!code highlight]
     - KOITO_ID=myKoitoID
-  // highlight-end
 
     - JELLYFIN_URL=...
     # ...more jellyin config
-  // highlight-start
+  # [!code highlight]
     - JELLYFIN_ID=myJellyfinID
-  // highlight-end    
 ```
 
 </TabItem>
@@ -58,9 +56,8 @@ Add an `id` to the top-level for each Source/Client configuration, next to `data
   {
     "name": "koito-source",
     "configureAs": "source",
-    // highlight-start
+    // [!code highlight]
     "id": "myKoitoID",
-    // highlight-end   
     "data": {
       "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
       "username": "admin",
@@ -82,9 +79,8 @@ Add an `id` to the top-level for each Source/Client configuration, next to `data
       "name": "koito-source",
       "configureAs": "source",
       "type": "koito",
-      // highlight-start
+      // [!code highlight]
       "id": "myKoitoID",
-      // highlight-end    
       "data": {
         "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
         "username": "admin",
@@ -177,7 +173,7 @@ Metadata caching remains the same but the config has been simplified. If you wer
 
 Remove `cache.metadata` and add a new string key `valkey` to the `cache` object, containing your valkey connection string:
 
-```diff
+```diff lang="json" title="config.json"
   "cache": {
 +    "valkey": "redis://valkey:6379"
 -    "metadata": {
@@ -207,7 +203,7 @@ Auth caching remains the same but the config has been simplified. The connection
 
 Remove the `connection` property from the `auth` object. If using `file` the entire `auth` object can be removed.
 
-```diff
+```diff lang="json" title="config.json"
   "cache": {
 +   "valkey": "redis://valkey:6379",
     "auth": {
@@ -238,19 +234,17 @@ services:
   multi-scrobbler:
   # ...
   environment:
-    - KOTIO_TOKEN=...
+    - KOITO_TOKEN=...
     # ...
     - KOITO_ID=myKoitoID
-  // highlight-start
+  # [!code highlight]
     - KOITO_NAME=Koito A
-  // highlight-end
 
     - JELLYFIN_URL=...
     # ..
     - JELLYFIN_ID=myJellyfinID
-  // highlight-start
+  # [!code highlight]
     - JELLYFIN_NAME=Foxx Jelly
-  // highlight-end    
 ```
 
 :::important

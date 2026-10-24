@@ -21,9 +21,10 @@ All [Stage Configuration](/configuration/transforms#configuring-stages) is done 
 
 <summary>Example</summary>
 
-```json5 title="config.json"
+```json5 title="config.json" brackets
 {
-  // ...
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
   "transformers": [
     {
       "type": "user",
@@ -53,21 +54,22 @@ This can be used by omitting the `name` in your [modification Stage](/configurat
 
 <summary>Example</summary>
 
-In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
-
-```json5 title="subsonic.json"
+```json5 title="subsonic.json" brackets
 [
   { 
+    // [!link /Subsonic/ /configuration/sources/subsonic]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Subsonic File Config
     "name": "MySubsonic",
     "data": { /* ... */},
+    // [!code focus:12]
     "options": {
       "playTransform": {
         "preCompare": [
           {
             "type": "user",
             "title": [
-                // removes badterm from track title
-                "badterm"
+                "badterm" // [!ref] removes badterm from track title
             ]
           }
         ]
@@ -100,8 +102,8 @@ Or it may be an object that specifies what to match (using either plain string o
 
 ```json5
 {
-    "search": "anotherBadTerm", // match all instances of 'anotherBadTerm'
-    "replace": "goodTerm" // replace with the string 'goodTerm'
+    "search": "anotherBadTerm", // [!ref] match all instances of 'anotherBadTerm'
+    "replace": "goodTerm" // [!ref] replace with the string 'goodTerm'
 }
 ```
 
@@ -111,8 +113,8 @@ Or it may be an object that specifies what to match (using either plain string o
 
 ```json5
 {
-    "search": "/^\(\w+.com)/i", // matches any string that starts with EX '(YourMusic.com)'
-    "replace": "[MySite.com]" // replace with the string '[MySite.com]'
+    "search": "/^\(\w+.com)/i", // [!ref] matches any string that starts with EX '(YourMusic.com)'
+    "replace": "[MySite.com]" // [!ref] replace with the string '[MySite.com]'
 }
 ```
 
@@ -126,24 +128,27 @@ The `replace` property uses javascript's [`replace()` function and so can use an
 
 Each [Rule](/configuration/transforms#stage-rules) must be an array of [search-and-replace expressions](#search-and-replace-expression):
 
-```json5 title="lastfm.json"
+```json5 title="lastfm.json" brackets
 [
   {
+    // [!link /Last.fm/ /configuration/sources/lastfm-source]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Last.fm File Config
     "name": "myLastFm",
     "configureAs": "source",
     "data": {
       // ...
     },
+    // [!code focus:16]
     "options": {
       "playTransform": {
         "preCompare": [
             {
                 "type": "user",
                 "title": [
-                    // removes "badTerm" from title
-                    "badTerm",
+                    "badTerm", // [!ref] removes "badTerm" from title
+                    // [!ref] removes "fooTerm" from title and replaces it with "barTerm"
                     {
-                        // removes "fooTerm" from title and replaces it with "barTerm"
                         "search": "fooTerm",
                         "replace": "barTerm"
                     }
@@ -172,24 +177,21 @@ Using `when` for [Conditional Modification](/configuration/transforms#conditiona
 
 <summary>Example</summary>
 
-```json5
-//   On search-replace in title...
-//     IF artist matches "Elephant Gym"
-//     THEN Run regex search-replace ELSE skip this rule
-//
-//   Run live|remastered regex remove on title
+```json5 brackets
 {
     "type": "user",
     "title": [
         {
             "search": "/\\s\\-\\s滾石40\\s滾石撞樂隊\\s40團拚經典(.+)$/i",
             "replace": "",
+            // [!callout /when/] Only run this search-replace if artist matches `Elephant Gym`, else skip it
             "when": [
                 {
                     "artist": "/Elephant Gym/"
                 }
             ]
         },
+        // [!callout] Always run live|remastered regex remove on title
         "/(\\s\\-\\s|\\s)(feat\\.(.+)|live|remastered(.+))$/i"
     ],
 }
@@ -305,7 +307,7 @@ Removes the phrase `(Album Version)` from the Title of a Play
     "type": "user",
     "artists": [
         {
-            "search": "(.*?)(?<delim>\\s*\\/\\s*)(.*$)",
+            "search": "(.*?)(?<delim>\\s*\\/\\s*)(.*$)", // [!callout /delim/] replace the contents of this group with the delimiter for your use case
             "replace": "$1"
         }
     ]
