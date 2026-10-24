@@ -9,9 +9,18 @@ export interface LocalStorateTextProps {
     storageKey: string
     initialValue?: string
     placeholder?: string
-    stylePreset?: 'inline' | 'bold'
+    stylePreset?: 'inline' | 'bold' | 'placeholder'
     sensitive?: boolean
 }
+
+// dashed box like starlight-codeblocks fill-in placeholders, so readers can tell it is the same value
+const placeholderStyle: React.CSSProperties = {
+    border: '1px dashed color-mix(in srgb, currentColor 60%, transparent)',
+    borderRadius: '3px',
+    padding: '1px 3px',
+    background: 'color-mix(in srgb, currentColor 10%, transparent)',
+    fontFamily: 'var(--ifm-font-family-monospace)',
+};
 
 export type FixedStorageProps = Omit<LocalStorateTextProps, 'storageKey'>;
 
@@ -59,12 +68,21 @@ const InternalLocalStorageText: FC<LocalStorateTextProps> = (props) => {
                     return <CodeInline className={sensitiveClass}>{roVal}</CodeInline>;
                 case 'bold':
                     return <strong className={sensitiveClass}>{roVal}</strong>;
+                case 'placeholder':
+                    return <span className={sensitiveClass} style={placeholderStyle}>{roVal}</span>;
                 default:
                     return <span className={sensitiveClass}>{roVal}</span>;
             }
         }
 
-        return <input type="text" className={sensitiveClass} placeholder={placeholder} onChange={handleInputChange} value={inputValue}/>
+        // same sizing as starlight-codeblocks placeholders: as wide as the value (or placeholder text), in monospace ch
+        const inputPlaceholderStyle: React.CSSProperties = {
+            ...placeholderStyle,
+            boxSizing: 'content-box',
+            width: `${Math.max(1, (placeholder ?? '').length, inputValue.length)}ch`,
+        };
+
+        return <input type="text" className={sensitiveClass} placeholder={placeholder} onChange={handleInputChange} value={inputValue} style={stylePreset === 'placeholder' ? inputPlaceholderStyle : undefined}/>
 }
 
 export const LocalStorageText:  FC<LocalStorateTextProps> = (props) => {
