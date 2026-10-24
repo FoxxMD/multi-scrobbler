@@ -5,17 +5,18 @@ sidebar_position: 2
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import {LocalStorageText} from '@site/src/components/Storage/Text';
 
 This guide will get you up and running with multi-scrobbler using [Docker](https://www.docker.com/) and [`docker compose`](https://docs.docker.com/compose/). At the end of the guide you will have:
 
-* the dashboard served on port `9078` of a host machine which has an IP of `192.168.0.100`
+* the dashboard served on port `9078` of a host machine which has an IP/domain of <LocalStorageText initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>
 * data saved to the same directory as the `docker-compose.yml` file
 * multi-scrobbler monitoring [Spotify](/configuration/sources/spotify), [Jellyfin](/configuration/sources/jellyfin), Navidrome, [Plex](/configuration/sources/plex), and/or [Last.fm](/configuration/sources/lastfm-source) for listening activity
 * multi-scrobbler scrobbling to [Lastfm](/configuration/clients/lastfm), [Maloja](/configuration/clients/maloja), and/or [Koito](/configuration/clients/koito)
 
 :::note
 
-If the multi-scrobbler container is on the same machine you will be viewing the dashboard from (IE `localhost`) you can remove and ignore `BASE_URL` usage below. Additionally, replace usage of `192.168.0.100` with `localhost`.
+If the multi-scrobbler container is on the same machine you will be viewing the dashboard from (IE `localhost`) you can remove and ignore `BASE_URL` usage below. Additionally, replace usage of <LocalStorageText initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/> with `localhost`.
 
 :::
 
@@ -72,7 +73,7 @@ services:
         - SPOTIFY_ID=mySpotify
         ```
 
-        Later, after [starting multi-scrobbler](#start-multi-scrobbler), visit the dashboard at `http://192.168.0.100:9078` and click **(Re)authenticate** on the Spotify card to authorize multi-scrobbler to use your account. Monitoring will begin automatically after authorization is complete.
+        Later, after [starting multi-scrobbler](#start-multi-scrobbler), visit the dashboard at <code><LocalStorageText readOnly initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078</code> and click **(Re)authenticate** on the Spotify card to authorize multi-scrobbler to use your account. Monitoring will begin automatically after authorization is complete.
     </TabItem>
     <TabItem value="navidrome" label="Navidrome">
         Navidrome supports [scrobbling using Listenbrainz](https://www.navidrome.org/docs/usage/scrobbling/#listenbrainz). You should use this, rather than a [Subsonic Source](/configuration/sources/subsonic) because Navidrome's internal scrobbling functionality supports providing multiple artists and offline scrobbling while the Subsonic Source does not.
@@ -139,7 +140,7 @@ services:
         - SOURCE_LASTFM_ID=myLFMSource
         ```
 
-        Later, after [starting multi-scrobbler](#start-multi-scrobbler), visit the dashboard at `http://192.168.0.100:9078` and click **(Re)authenticate** on the **Last.fm (Source)** card to authorize multi-scrobbler to use your account. Monitoring will begin automatically after authorization is complete.
+        Later, after [starting multi-scrobbler](#start-multi-scrobbler), visit the dashboard at <code>http://<LocalStorageText initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078</code> and click **(Re)authenticate** on the **Last.fm (Source)** card to authorize multi-scrobbler to use your account. Monitoring will begin automatically after authorization is complete.
     </TabItem>
 </Tabs>
 
@@ -328,7 +329,7 @@ docker compose up -d
 
 You're done! Multi-scrobbler is now running. It will monitor the sources you configured and scrobble to clients you set up.
 
-Visit `http://192.168.0.100:9078` to see the dashboard where
+Visit <code>http://<LocalStorageText initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078</code> to see the dashboard where
 
 * configured Sources/Clients
   * show current status and authentication options
