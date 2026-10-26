@@ -11,7 +11,7 @@ The left-hand (or top) **Config Structure** is an interactive tree of the config
 <details>
 <summary>Example</summary>
 
-<img src={import.meta.env.BASE_URL + "img/config_structure.jpg"}/>
+<img src={withBase("img/config_structure.jpg")}/>
 
 This is the **Config Structure** for a Client. It indicates that each object representing one config for this Client, in an array, *can* contain:
 
@@ -45,15 +45,15 @@ When using AIO you will need to manually select the **type** for the `source` or
 
 Select the dropdown for the component you are configuring (Source or Client)
 
-<img src={import.meta.env.BASE_URL + "img/aio_type_preopen.jpg"}/>
+<img src={withBase("img/aio_type_preopen.jpg")}/>
 
 Find the component type from the dropdown list
 
-<img src={import.meta.env.BASE_URL + "img/aio_type_open.jpg"}/>
+<img src={withBase("img/aio_type_open.jpg")}/>
 
 **Click** the component name (`sources` or `clients`) after selecting to open the structure for it.
 
-<img src={import.meta.env.BASE_URL + "img/aio_type_selected.jpg"}/>
+<img src={withBase("img/aio_type_selected.jpg")}/>
 
 </details>
 
@@ -69,7 +69,7 @@ You can use this as a starting point for your configuration. Use the **Interativ
 
 <summary>Example</summary>
 
-<img src={import.meta.env.BASE_URL + "img/config_example.jpg"}/>
+<img src={withBase("img/config_example.jpg")}/>
 
 <kbd>(1)</kbd> shows the name of the file this example content would go in. <kbd>(2)</kbd> Is the example config that is valid based on the Config Structure. Use <kbd>(3)</kbd> to switch between interactive and plain example mode.
 
@@ -89,15 +89,15 @@ When using AIO you will need to manually select the **type** for the `source` or
 
 Select the dropdown for the component you are configuring (Source or Client)
 
-<img src={import.meta.env.BASE_URL + "img/aio_type_preopen.jpg"}/>
+<img src={withBase("img/aio_type_preopen.jpg")}/>
 
 Find the component type from the dropdown list
 
-<img src={import.meta.env.BASE_URL + "img/aio_type_open.jpg"}/>
+<img src={withBase("img/aio_type_open.jpg")}/>
 
 **Click** the component name (`sources` or `clients`) after selecting to open the structure for it.
 
-<img src={import.meta.env.BASE_URL + "img/aio_type_selected.jpg"}/>
+<img src={withBase("img/aio_type_selected.jpg")}/>
 
 </details>
 
@@ -115,7 +115,7 @@ Alternatively, **ask an LLM (AI).** This documentation site is well-indexed by a
 
 Multi-scrobbeler has a real-time log that is accessible from anywhere in the app. These are the same logs you would find in docker logs. Use the <kbd>Terminal</kbd> icon in the top-right of the app to open the floating log window.
 
-<img src={import.meta.env.BASE_URL + "img/logs.png"}/>
+<img src={withBase("img/logs.png")}/>
 
 The <kbd>Copy</kbd> icon in the top-right of the log window will copy all logs to your clipboard. Alternatively, you can select and copy any logs.
 
@@ -133,7 +133,7 @@ Open the details page for the Source/Client experiencing an issue. Then, search 
 
 Click on the Debug icon to copy debugging data relevant to that Play. This data should be included in any issue you create.
 
-<img src={import.meta.env.BASE_URL + "img/debug_button.jpg"}/>
+<img src={withBase("img/debug_button.jpg")}/>
 
 To include this data in an issue either paste the copied data into a text file and save as `debugdata.json`, attaching to the issue.
 
@@ -161,7 +161,7 @@ Thank you for your time.
 
 If the issue is occurring with a Source/Client itself, or there is an Error/Warning available, click the icon shown below to copy the error data to your clipboard.
 
-<img src={import.meta.env.BASE_URL + "img/error_copy.png"}/>
+<img src={withBase("img/error_copy.png")}/>
 
 Include this in your issue using the code blocks, like shown in the Debug Data section above:
 

@@ -12,7 +12,7 @@ import JsonConfig from '@site/../config/discord-local.json.example?raw';
 
 This scrobbler uses **[Now Playing](/configuration/clients#now-playing)** functionality to set your Discord [Rich Presence](https://docs.discord.com/developers/rich-presence/overview) to the music you are currently monitoring with multi-scrobbler.
 
-<img src={import.meta.env.BASE_URL + "img/discord_presence_art.png"} height="127"/>
+<img src={withBase("img/discord_presence_art.png")} height="127"/>
 
 This integration uses an **existing Discord application** to set your Rich Presence.
 
@@ -46,7 +46,7 @@ This integration uses an existing, running Discord application to communicate wi
 
 [Kasm Workspaces](https://kasm.com) provides a self-hostable [Discord container image](https://hub.docker.com/r/kasmweb/discord). This image provides a desktop-like experience, through browser-based VNC, to use the official Discord application.
 
-<img src={import.meta.env.BASE_URL + "img/discord_kasm.png"} height="400"/>
+<img src={withBase("img/discord_kasm.png")} height="400"/>
 
 This containerized approach can be used instead of configuring MS to use a [Native Discord](./?discordType=native#discord-connection) application on a specific machine.
 
@@ -455,7 +455,7 @@ The order in which multi-scrobbler determines what image to use is the same as t
 <TabItem label="External URLs" value="external">
 MS can use external URLs for artwork.
 
-<img src={import.meta.env.BASE_URL + "img/discord_presence_art.png"} height="127"/>
+<img src={withBase("img/discord_presence_art.png")} height="127"/>
 
 External URLs that are not from known music services are **disabled by default.** This is to preserve *your* privacy because Discord does not host images, it only links to them and the URL is visible to other users.
 
@@ -524,7 +524,7 @@ https://jellyfin.mydomain.com/neat.jpg <-- [!ref] allowed, is https and contains
 <TabItem label="Musicbrainz/Cover Art Achive" value="caa">
 MS can try to use [Cover Art Archive](http://coverartarchive.org/) to get album art. The URL it retrieves is public which means it acts like an External URL that is always available for you.
 
-<img src={import.meta.env.BASE_URL + "img/discord_presence_art.png"} height="127"/>
+<img src={withBase("img/discord_presence_art.png")} height="127"/>
 
 MS will try to use Cover Art Archive if:
 
@@ -548,7 +548,7 @@ The status artwork will use a default URL instead of your artwork URL.
 
 Without any other configuration, the default URL is an icon from the [multi-scrobbler repository](https://github.com/FoxxMD/multi-scrobbler/blob/master/assets/default-artwork.png):
 
-<img src={import.meta.env.BASE_URL + "img/discord_presence_ms_default.png"} height="127"/>
+<img src={withBase("img/discord_presence_ms_default.png")} height="127"/>
 
 This default image can be customized:
 

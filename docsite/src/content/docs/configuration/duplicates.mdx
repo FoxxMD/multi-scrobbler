@@ -177,7 +177,7 @@ IE Same inputs in -> same inputs out.
 
 **Even this scenario with multiple, mixed Sources is OK:**
 
-<img class='image-center' src={import.meta.env.BASE_URL + "img/diagrams/unidirectional-flow.png"}/>
+<img class='image-center' src={withBase("img/diagrams/unidirectional-flow.png")}/>
 
 Because the scrobbles coming from each **Source** are **independent** of each other. And they end up in Clients that are not *also* used as Sources.
 
@@ -193,7 +193,7 @@ This is a common scenario when scrobbles are *backlogged* from a Source IE on st
 
 In this scenario your device using Spotify is configured in MS as a Spotify **Source** but it **also** is scrobbling to Last.fm (via Pano Scrobbler, as an example).
 
-<img class='image-center' src={import.meta.env.BASE_URL + "img/diagrams/dupe sources.png"}/>
+<img class='image-center' src={withBase("img/diagrams/dupe sources.png")}/>
 
 
 ❌ **Time Race Condition**: Potentially, the scrobbles arrive in Multi-scrobbler at exactly the same time. There are no existing scrobbles in Koito to check against, yet. So Multi-scrobbler scrobbles both to Koito, resulting in duplicate scrobbles.
@@ -204,7 +204,7 @@ In this scenario your device using Spotify is configured in MS as a Spotify **So
 
 In this scenario, you have a **Client** that is also a **Source** and that Source is feeding scrobbles to a different Client that receives scrobbles from everywhere (or has some overlap with the original Client).
 
-<img class='image-center' src={import.meta.env.BASE_URL + "img/diagrams/duped client source.png"}/>
+<img class='image-center' src={withBase("img/diagrams/duped client source.png")}/>
 
 ❌ **Different Scrobble Data**: [Last.fm may modify the scrobble data.](#lastfm) When MS recieves the scrobble from Last.fm it may be *just different enough* that it does not get detected as a duplicate.
 
@@ -216,7 +216,7 @@ In this scenario, you have a **Client** that is also a **Source** and that Sourc
 
 Use a configuration mentioned in [Configurations Where Duplicates DO NOT Occur](#valid-configs): make sure all of your Sources are **independent**. The activity/scrobbles from each Source do not have any upstream duplicates of activity.
 
-<img class='image-center' src={import.meta.env.BASE_URL + "img/diagrams/independent source.png"}/>
+<img class='image-center' src={withBase("img/diagrams/independent source.png")}/>
 
 ### Alternative Sources
 
@@ -224,7 +224,7 @@ Imagine you have a scenario where a device/player can **only** scrobble to Last.
 
 Instead of using the same Last.fm account for all activity and potentially having [dependent client/sources](#dependent-source-client), create an *additional* last.fm account that is used *only for the device that needs it*. This ensures the scrobbles from that device are isolated from the main account and do not prevent duplicates, so you can continue to use the main account as an MS Client:
 
-<img class='image-center' src={import.meta.env.BASE_URL + "img/diagrams/alt source.png"}/>
+<img class='image-center' src={withBase("img/diagrams/alt source.png")}/>
 
 ### Mirror-Only Clients or Limiting Scrobble Destination {#isolated-sources}
 
@@ -232,7 +232,7 @@ In Multi-scrobbler, by default, all Sources scrobble to all Clients. Using [Limi
 
 Here is an example where all Sources only scrobble to a *dependent* Last.fm Client, and then the *dependent* Last.fm Source only scrobbles to a "mirror-only" (backup) Koito Client:
 
-<img class='image-center' src={import.meta.env.BASE_URL + "img/diagrams/mirror source.png"}/>
+<img class='image-center' src={withBase("img/diagrams/mirror source.png")}/>
 
 ### Normalize All Scrobbles
 
@@ -248,7 +248,7 @@ In this scenario you still have [dependent Source/Clients](#dependent-source-cli
 
 </Aside>
 
-<img class='image-center' src={import.meta.env.BASE_URL + "img/diagrams/normalized dupes.png"}/>
+<img class='image-center' src={withBase("img/diagrams/normalized dupes.png")}/>
 
 ## The Last.fm Problem {#lastfm}
 

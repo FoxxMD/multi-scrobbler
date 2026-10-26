@@ -13,6 +13,7 @@ import { Mode, ReactJsonEditor, createAjvValidator, type Content  } from 'modern
 import f from "ajv-formats"
 import Ajv2020 from 'ajv/dist/2020';
 import DetailsAdmo from "./DetailsAdmo";
+import { withBase } from "../withBase";
 
 const validator = createAjvValidator({
      schema: Schema,
@@ -45,7 +46,7 @@ function PlaygroundInner(): JSX.Element {
             <div className="schemaWrapper2">
                 <div style={{ padding: '0 1em 0 1em', flexBasis: 'min-content', flexGrow: 2}}>
                 <DetailsAdmo type="note" summary="Config Structure">
-                    <p>This displays the <strong>structure</strong> of the <a href={`${import.meta.env.BASE_URL}configuration/?configType=aio#configuration-types`}>all-in-one (<code>config.json</code>) configuration</a> with all possible properties, their shape, and descriptions/types.</p>
+                    <p>This displays the <strong>structure</strong> of the <a href={withBase("configuration/?configType=aio#configuration-types")}>all-in-one (<code>config.json</code>) configuration</a> with all possible properties, their shape, and descriptions/types.</p>
                     
                     <p>Use this to understand how to write a valid config.</p>
                 </DetailsAdmo>
@@ -65,7 +66,7 @@ function PlaygroundInner(): JSX.Element {
                     <div className="fileEditor2">
                     <DetailsAdmo type="note" summary="Config Example">
                     <p>
-                        This displays an <strong>example config file</strong> of a <a href={`${import.meta.env.BASE_URL}configuration/?configType=aio#configuration-types`}>all-in-one (<code>config.json</code>) configuration</a>  that adheres to the shown <strong>Config Structure.</strong>
+                        This displays an <strong>example config file</strong> of a <a href={withBase("configuration/?configType=aio#configuration-types")}>all-in-one (<code>config.json</code>) configuration</a>  that adheres to the shown <strong>Config Structure.</strong>
                     </p>
 
                     <ul>
@@ -85,7 +86,7 @@ function PlaygroundInner(): JSX.Element {
                 <div className="fileEditorMobile2">
                 <DetailsAdmo type="warning" summary="Config Example Mobile Experience">
                     <p>
-                        This displays an <strong>example config file</strong> of a <a href={`${import.meta.env.BASE_URL}configuration/?configType=aio#configuration-types`}>all-in-one (<code>config.json</code>) configuration</a>  that adheres to the shown <strong>Config Structure.</strong>
+                        This displays an <strong>example config file</strong> of a <a href={withBase("configuration/?configType=aio#configuration-types")}>all-in-one (<code>config.json</code>) configuration</a>  that adheres to the shown <strong>Config Structure.</strong>
                     </p>
                     <p>
                         The example config file editor is meant for a larger screen experience so <strong>only the read-only example is shown.</strong> Please use this site on a tablet/laptop/desktop to enable file editor features.
