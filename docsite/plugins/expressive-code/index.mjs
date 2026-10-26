@@ -21,7 +21,8 @@ const codeblocksOptions = {
   notation: { comments: { json: ['//'], text: ['<--', '#'], caddyfile: ['#'] } },
   placeholders: {
     storage: 'session'
-  }
+  },
+  expandable: { lines: 12, auto: 30 }
 };
 
 // Caddyfile grammar from https://github.com/caddyserver/vscode-caddyfile (MIT, see caddyfile.LICENSE).
