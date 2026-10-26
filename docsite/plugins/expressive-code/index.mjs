@@ -5,7 +5,11 @@
 // which transpiles Shiki's lazy theme/grammar import()s to CJS and breaks them.
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { fromHtml } from 'hast-util-from-html';
+import { toHtml } from '@expressive-code/core/hast';
 import rehypeExpressiveCode, { createRenderer, MetaOptions } from 'rehype-expressive-code';
+import { rolldown } from 'rolldown';
 import { bundledLanguagesInfo } from 'shiki/langs';
 import { pluginCodeblocks } from 'starlight-codeblocks/expressive-code';
 
@@ -107,6 +111,71 @@ function codeTabs(node, path) {
   };
 }
 
+// Port of starlight-codeblocks' <CodeWalkthrough> (src/components/CodeWalkthrough.astro). Its build step
+// (steps.ts `codeWalkthrough()`) and client (walkthrough-client.ts) are reused as-is, but the package only ships
+// them as TypeScript source, which Node will not strip types from inside node_modules, so rolldown bundles them.
+// `<CodeWalkthrough>` in MDX needs no import: the rehype plugin below replaces it at compile time.
+const scbSrc = createRequire(import.meta.url).resolve('starlight-codeblocks').replace(/dist\/index\.mjs$/, 'src/');
+const walkthroughDir = new URL('../../.docusaurus/expressive-code-walkthrough/', import.meta.url).pathname;
+const bundle = async (input, platform, output) => (await rolldown({
+  input: scbSrc + input,
+  platform,
+  // server bundle keeps packages external, they resolve from the docsite's node_modules
+  ...(platform === 'node' && { external: (id) => !id.startsWith('.') && !id.startsWith('/') }),
+})).write(output);
+let walkthroughSteps;
+const loadWalkthroughSteps = () => walkthroughSteps ??= bundle('components/steps.ts', 'node', { file: `${walkthroughDir}steps.mjs` })
+  .then(() => import(`${walkthroughDir}steps.mjs`));
+
+const walkthroughCss = `${readFileSync(createRequire(import.meta.url).resolve('@shikijs/magic-move/style.css'), 'utf8')}
+.scb-steps { container-type: inline-size; margin-bottom: var(--ifm-leading); }
+.scb-steps > .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media screen and (scripting: enabled) {
+  .scb-steps > .expressive-code { margin-top: 0; }
+  .scb-steps > .expressive-code:not(.scb-steps-current) { display: none; }
+}
+`;
+
+// React escapes <script> children, which would break the steps' JSON, so set it with dangerouslySetInnerHTML instead
+const jsonScript = (json) => ({
+  type: 'mdxJsxFlowElement',
+  name: 'script',
+  attributes: [
+    { type: 'mdxJsxAttribute', name: 'type', value: 'application/json' },
+    {
+      type: 'mdxJsxAttribute',
+      name: 'dangerouslySetInnerHTML',
+      value: {
+        type: 'mdxJsxAttributeValueExpression',
+        value: `{__html: ${JSON.stringify(json)}}`,
+        data: { estree: { type: 'Program', sourceType: 'module', body: [{ type: 'ExpressionStatement', expression: { type: 'ObjectExpression', properties: [
+          { type: 'Property', kind: 'init', method: false, shorthand: false, computed: false, key: { type: 'Identifier', name: '__html' }, value: { type: 'Literal', value: json } },
+        ] } }] } },
+      },
+    },
+  ],
+  children: [],
+});
+
+const rehypeCodeWalkthrough = () => async (tree) => {
+  const found = [];
+  const visit = (node) => node.children?.forEach((child, i) => {
+    if (child.type === 'mdxJsxFlowElement' && child.name === 'CodeWalkthrough') found.push([node, i]);
+    else visit(child);
+  });
+  visit(tree);
+  if (found.length === 0) return;
+  const { codeWalkthrough, plainSteps } = await loadWalkthroughSteps();
+  const transform = codeblocksOptions.walkthrough === false ? plainSteps : codeWalkthrough;
+  for (const [parent, i] of found) {
+    const root = fromHtml(transform(toHtml({ type: 'root', children: parent.children[i].children })), { fragment: true });
+    const steps = root.children.find((node) => node.properties?.dataScbSteps !== undefined);
+    const script = steps?.children.findIndex((node) => node.tagName === 'script') ?? -1;
+    if (script !== -1) steps.children[script] = jsonScript(steps.children[script].children[0]?.value ?? '[]');
+    parent.children.splice(i, 1, ...root.children);
+  }
+};
+
 export const remarkPlugins = [remarkCodeTabs];
 
 export const rehypePlugins = [
@@ -114,6 +183,7 @@ export const rehypePlugins = [
     ...ecOptions,
     customCreateRenderer: async () => ({ ...(await renderer), baseStyles: '', themeStyles: '', jsModules: [] }),
   }],
+  rehypeCodeWalkthrough,
   rehypeEcExplicitJsx,
 ];
 
@@ -123,7 +193,9 @@ export const ecStaticDir = new URL('../../.docusaurus/expressive-code/', import.
 // Writes the page-level CSS/JS once as content-hashed static files that every page links to
 export async function expressiveCodePlugin(context) {
   const { baseStyles, themeStyles, jsModules } = await renderer;
-  const files = { css: baseStyles + themeStyles, js: jsModules.join('\n') };
+  const walkthroughJs = codeblocksOptions.walkthrough === false ? ''
+    : (await bundle('components/walkthrough-client.ts', 'browser', { format: 'iife', minify: true, file: `${walkthroughDir}client.js` })).output[0].code;
+  const files = { css: baseStyles + themeStyles + walkthroughCss, js: [...jsModules, walkthroughJs].join('\n') };
   rmSync(ecStaticDir, { recursive: true, force: true });
   mkdirSync(`${ecStaticDir}ec`, { recursive: true });
   const urls = {};
