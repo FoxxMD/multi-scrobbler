@@ -30,7 +30,7 @@ services:
     image: foxxmd/multi-scrobbler
     container_name: multi-scrobbler
     environment:
-      - TZ=Etc/GMT # Specify timezone from TZ Database name found here https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+      - TZ=Etc/GMT # [!ref] Specify timezone from [TZ Database **TZ identifier**](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)
       - BASE_URL=http://YOUR_MS_DOMAIN
       # all Environmental Variables in below examples go here!
 

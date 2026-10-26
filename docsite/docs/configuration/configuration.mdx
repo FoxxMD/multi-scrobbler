@@ -460,7 +460,13 @@ services:
 
 </Tabs>
 
-Use `redis://valkey:6379` as the connection string in the configurations below.
+Use 
+
+```
+redis://valkey:6379
+```
+
+as the connection string in the configurations below.
 
 </details>
 
@@ -474,13 +480,13 @@ redis://HOST_IP:HOST_PORT
 
 <TabItem value="env" label="ENV">
 
-```yaml title="compose.yaml"
+```yaml title="compose.yaml" placeholder="HOST_IP,HOST_PORT"
 services:
   multi-scrobbler:
   # ...
   environment:
   # [!code highlight]
-    - CACHE_VALKEY=redis://192.168.0.120:6379
+    - CACHE_VALKEY=redis://HOST_IP:HOST_PORT
     # ...
 ```
 
@@ -490,12 +496,12 @@ services:
 
 Example
 
-```json5 title="config.json" brackets
+```json5 title="config.json" brackets placeholder="HOST_IP,HOST_PORT"
 {
     // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
     // ...your AIO Config
     "cache": {
-        "valkey": "redis://192.168.0.120:6379" // [!code highlight]
+        "valkey": "redis://HOST_IP:HOST_PORT" // [!code highlight]
     },
 }
 ```

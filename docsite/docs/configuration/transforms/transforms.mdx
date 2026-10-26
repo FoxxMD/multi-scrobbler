@@ -476,11 +476,8 @@ The default behaviors for Flow Control are the same as you would intuitively thi
 
 Specifying Flow Control is only necessary if the above assumptions are not true for your scenario.
 
-<details>
-
-<summary>Default Flow Control Example</summary>
-
-```json5 title="subsonic.json" brackets
+:::code-tabs
+```json5 title="subsonic.json (Default Flow Control Example)" label="default-example" brackets expandable={5}
     // ...
     "options": {
       "playTransform": {
@@ -498,17 +495,7 @@ Specifying Flow Control is only necessary if the above assumptions are not true 
       }
     }
 ```
-
-</details>
-
-:::
-
-<details>
-
-<summary>Customized Flow Control Example</summary>
-
-
-```json5 title="subsonic.json" brackets
+```json5 title="subsonic.json (Customized Example)" label="customized-example" brackets expandable={5}
     // ...
     "options": {
       "playTransform": {
@@ -527,8 +514,7 @@ Specifying Flow Control is only necessary if the above assumptions are not true 
       }
     }
 ```
-
-</details>
+:::
 
 ### Conditionally Run {#conditional-modification}
 
@@ -602,20 +588,17 @@ More succinctly:
 * All parts (`artist` `album` `albumArtist` `duration` `meta` `title` `art`) of a `when` are `AND` conditions
 * All part-objects in the `when` array are `OR` conditions
 
-<details>
-
-<summary>Example of Stage with `when` condition</summary>
-
-```json5
+:::code-tabs
+```json5 label="Stage with 'when' condition" expandable={8}
 {
   "playTransform": {
     "preCompare": [
       {
         "type": "native",
-        // [!callout /when/] Only run `native` if these conditions are true...
+        // [!ref] Only run `native` if these conditions are true...
         "when": [
           {
-            "artist": "/Elephant Gym/" // [!callout /Elephant/] if artist is `Elephant Gym` 
+            "artist": "/Elephant Gym/" // [!ref] if artist is `Elephant Gym` 
           }
         ]
       }
@@ -623,21 +606,14 @@ More succinctly:
   }
 }
 ```
-
-</details>
-
-<details>
-
-<summary>Example of individual rule with when condition</summary>
-
-```json5
+```json5 label="Individual Rule with 'when' condition" expandable={8}
 {
   "playTransform": {
     "preCompare": {
-      "type": "native", // [!callout /native/] Always run `native` stage since no `when` at this level
+      "type": "native", // [!ref] Always run `native` stage since no `when` at this level
       "artists": 
         {
-          "when": [  // [!callout /when/] Only apply `artists` if Play artist was *originally* `Elephant Gym`
+          "when": [  // [!ref] Only apply `artists` if Play artist was *originally* `Elephant Gym`
             {
               "artist": "/Elephant Gym/"
             }
@@ -647,8 +623,7 @@ More succinctly:
   }
 }
 ```
-
-</details>
+:::
 
 ## Logging
 
