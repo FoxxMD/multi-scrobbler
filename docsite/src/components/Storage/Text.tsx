@@ -1,4 +1,4 @@
-import React, { Fragment, useState, useEffect, FC } from "react"
+import React, { Fragment, useState, useEffect, useLayoutEffect, useRef, FC } from "react"
 import { useDebounce } from "use-debounce";
 import { useTypedCodeblocksStorage } from "../useCodeblocksStorage";
 import CodeInline from '@theme/CodeInline';
@@ -19,7 +19,11 @@ const placeholderStyle: React.CSSProperties = {
     borderRadius: '3px',
     padding: '1px 3px',
     background: 'color-mix(in srgb, currentColor 10%, transparent)',
-    fontFamily: 'var(--ifm-font-family-monospace)',
+    fontFamily: 'var(--sl-font-mono, var(--sl-font-system-mono))',
+    // form controls don't inherit font by default; keep the input and its measuring mirror on the same font
+    fontSize: 'inherit',
+    lineHeight: 'inherit',
+    letterSpacing: 'inherit',
 };
 
 export type FixedStorageProps = Omit<LocalStorateTextProps, 'storageKey'>;
@@ -42,6 +46,12 @@ const InternalLocalStorageText: FC<LocalStorateTextProps> = (props) => {
             setStorageVal(value);
         }, [value, setStorageVal]);
     
+        const mirrorRef = useRef<HTMLSpanElement>(null);
+        const [textWidth, setTextWidth] = useState<number | undefined>(undefined);
+        useLayoutEffect(() => {
+            if (mirrorRef.current) setTextWidth(mirrorRef.current.getBoundingClientRect().width);
+        }, [inputValue, placeholder]);
+
         const handleInputChange = (event) => {
             setInputValue(event.target.value);
         }
@@ -75,14 +85,22 @@ const InternalLocalStorageText: FC<LocalStorateTextProps> = (props) => {
             }
         }
 
-        // same sizing as starlight-codeblocks placeholders: as wide as the value (or placeholder text), in monospace ch
+        // as wide as the value (or placeholder text). `ch` alone is not reliable: the rendered glyphs can be wider than the
+        // `0` that `ch` measures (font fallback, sub-pixel rounding, caret), so measure the real text with a hidden mirror.
+        const mirrorText = inputValue || placeholder || ' ';
         const inputPlaceholderStyle: React.CSSProperties = {
             ...placeholderStyle,
             boxSizing: 'content-box',
-            width: `${Math.max(1, (placeholder ?? '').length, inputValue.length)}ch`,
+            width: textWidth === undefined ? `${Math.max(1, mirrorText.length)}ch` : `${Math.ceil(textWidth) + 2}px`,
         };
 
-        return <input type="text" className={sensitiveClass} placeholder={placeholder} onChange={handleInputChange} value={inputValue} style={stylePreset === 'placeholder' ? inputPlaceholderStyle : undefined}/>
+        if (stylePreset !== 'placeholder') {
+            return <input type="text" className={sensitiveClass} placeholder={placeholder} onChange={handleInputChange} value={inputValue}/>
+        }
+        return <>
+            <span ref={mirrorRef} aria-hidden="true" style={{...placeholderStyle, position: 'absolute', visibility: 'hidden', whiteSpace: 'pre', padding: 0, border: 0}}>{mirrorText}</span>
+            <input type="text" className={sensitiveClass} placeholder={placeholder} onChange={handleInputChange} value={inputValue} style={inputPlaceholderStyle}/>
+        </>
 }
 
 export const LocalStorageText:  FC<LocalStorateTextProps> = (props) => {

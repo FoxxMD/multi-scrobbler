@@ -1,4 +1,4 @@
-import React, { Fragment, useMemo } from "react"
+import React, { Fragment, useMemo, useRef, useEffect } from "react"
 import CodeBlock, { Props as CodeBlockProps } from '@theme/CodeBlock';
 import ErrorBoundary from "@docusaurus/ErrorBoundary"
 import { useTypedLocalStorage } from "./useLocalStorage";
@@ -7,6 +7,12 @@ import EditorFetch from '@site/src/components/Schema/SchemaEditorFetch';
 import {useWindowSize} from '@docusaurus/theme-common';
 
 export interface FileProps extends Omit<CodeBlockProps, 'children'> {
+    /**
+     * The plain code block is rendered at build time next to this island (inside a `.file-example` wrapper)
+     * instead of by React. The island only toggles `data-mode` on the wrapper.
+     * (Island children can't be used: Starlight's <Tabs> drops <template> slot content.)
+     */
+    externalPlain?: boolean
     data: string | object
     filePathName?: string
     schemaName?: string
@@ -23,6 +29,7 @@ const FileExample = (props: FileProps) => {
         schemaName,
         filePathName,
         readOnlyAtWidth = 1,
+        externalPlain = false,
         ...rest
     } = props;
 
@@ -71,11 +78,18 @@ const FileExample = (props: FileProps) => {
         return data;
     }, [interactive, fileExampleShow, data]);
 
-    return (<Fragment>
+    const ref = useRef<HTMLDivElement>(null);
+    const showInteractive = isInteractive && fileExampleShow === 'interactive';
+    useEffect(() => {
+        const wrapper = ref.current?.closest<HTMLElement>('.file-example');
+        if (externalPlain && wrapper) wrapper.dataset.mode = showInteractive ? 'interactive' : 'plain';
+    }, [externalPlain, showInteractive]);
+
+    return (<div ref={ref}>
         {header}
-        {!isInteractive || fileExampleShow === 'plain' ? <CodeBlock title={filePathName} language="json5">{codeBlockContent}</CodeBlock> : null}
+        {!externalPlain && (!isInteractive || fileExampleShow === 'plain') ? <CodeBlock title={filePathName} language="json5">{codeBlockContent}</CodeBlock> : null}
         {isInteractive && fileExampleShow === 'interactive' ? <EditorFetch configContent={data} schemaName={schemaName}/> : null}
-        </Fragment>
+        </div>
     );
 }
 

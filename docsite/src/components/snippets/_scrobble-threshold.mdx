@@ -1,4 +1,4 @@
-import CodeBlock from '@theme/CodeBlock';
+
 
 A **Source** that monitors Listening Activity uses one of two metrics to determine if a Song is scrobbable based on your listening:
 
@@ -8,10 +8,7 @@ A **Source** that monitors Listening Activity uses one of two metrics to determi
 These default values are based on [last.fm's scrobble guidance.](https://www.last.fm/api/scrobbling#when-is-a-scrobble-a-scrobble)
 
 These values can be customized in the `options` of Source's [file or aio config](/configuration#configuration-types):
-<CodeBlock
-language="json5"
-title={`${props.filename}.json`}>
-{`{
+<Code code={(`{
     "data": {
         // ...
     },
@@ -23,5 +20,4 @@ title={`${props.filename}.json`}>
         }
         // highlight-end
     }
-}`}
-</CodeBlock>
+}`).trim()} lang="json5" title={`${props.filename}.json`} />

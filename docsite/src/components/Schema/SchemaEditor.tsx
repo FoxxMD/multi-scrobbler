@@ -58,6 +58,7 @@ function SchemaEditorInner(props: SchemaEditorProps): JSX.Element {
 
     //const val = typeof props.config === 'object' ? STRINGIFY_JSON(props.config) : props.config;
     return (
+<div className="not-content">
             <ReactJsonEditor
                 validator={validator}
                 theme={colorMode}
@@ -65,6 +66,7 @@ function SchemaEditorInner(props: SchemaEditorProps): JSX.Element {
                 content={initialData}
                 style={{height: 'initial'}}
             />
+            </div>
     )
 }
 

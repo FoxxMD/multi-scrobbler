@@ -16,6 +16,7 @@ export default function Explorer(props: ExplorerProps): JSX.Element {
 
     return (
         <div>
+<div className="not-content">
             <JsonSchemaViewer
   schema={props.schema}
   renderRootTreeLines={true}
@@ -24,6 +25,7 @@ export default function Explorer(props: ExplorerProps): JSX.Element {
   skipTopLevelDescription={false}
   markup
 />
+            </div>
         </div>
     )
 }

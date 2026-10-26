@@ -132,7 +132,7 @@ ENV NODE_ENV=production
 
 # Optional, only affects the self-hosted docs site (/docs)
 #
-# Docusaurus bakes its baseUrl in at build time, unlike the main app frontend, which resolves
+# Astro bakes its base path in at build time, unlike the main app frontend, which resolves
 # its own base path at container runtime and needs nothing set here. Pass the
 # same value here and as the runtime BASE_URL env var, e.g.
 # --build-arg BASE_URL=http://example.com/myapp, to keep docs working under a subpath.

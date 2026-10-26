@@ -2,7 +2,7 @@
     "mochaExplorer.timeout": 1200000,
     "mochaExplorer.exit": true,
     "search.exclude": {
-        "**/.docusaurus": true,
+        "**/.astro": true,
         "**/build": true,
         "**/schema": true
     },

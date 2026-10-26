@@ -64,7 +64,7 @@ const defaultRules = {
 export default defineConfig([
     globalIgnores([
         'docsite/build',
-        'docsite/.docusaurus',
+        'docsite/.astro',
         'public/mockServiceWorker.js',
         'dist'
     ]),

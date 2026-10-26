@@ -1,6 +1,0 @@
-node_modules/
-dist/
-dist-*/
-.astro/
-public/schemas/*.json
-public/openapi.json

@@ -47,7 +47,7 @@ export const getOpenApiDoc = async () => {
 
 export const writeOpenApiDoc = async () => {
     const spec = await getOpenApiDoc();
-    writeFileSync(resolve(projectRootDir, 'docsite/static/openapi.json'), JSON.stringify(spec));
+    writeFileSync(resolve(projectRootDir, 'docsite/public/openapi.json'), JSON.stringify(spec));
 }
 
 await writeOpenApiDoc();
