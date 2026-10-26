@@ -25,7 +25,22 @@ const caddyfile = {
 // POC switch: MD_PROCESSOR=unified to compare against the default Sätteri pipeline
 const useUnified = process.env.MD_PROCESSOR === 'unified';
 
-const site = process.env.BASE_SITE || 'https://docs.multi-scrobbler.app';
+// same precedence as the Docusaurus config: explicit env, then Netlify / Cloudflare Pages deploy URLs
+const site =
+  [process.env.BASE_SITE, process.env.DEPLOY_PRIME_URL, process.env.CF_PAGES_URL].find((x) => x !== undefined && x.trim() !== '') ??
+  'https://foxxmd.github.io';
+
+// analytics + search console verification, only when configured
+const head = [];
+if (process.env.GSITEVERIFICATION?.trim()) {
+  head.push({ tag: 'meta', attrs: { name: 'google-site-verification', content: process.env.GSITEVERIFICATION } });
+}
+if (process.env.RY_ANALYTICS?.trim()) {
+  head.push({
+    tag: 'script',
+    attrs: { src: process.env.RY_ANALYTICS, defer: true, ...(process.env.RY_ANALYTICS_SITEID ? { 'data-site-id': process.env.RY_ANALYTICS_SITEID } : {}) },
+  });
+}
 const base = process.env.DOCS_BASE !== undefined && process.env.DOCS_BASE !== '' ? process.env.DOCS_BASE : '/docs';
 
 const comp = (p) => `./src/components/${p}`;
@@ -84,6 +99,7 @@ export default defineConfig({
     }),
     starlight({
       title: 'Multi-Scrobbler',
+      head,
       logo: { src: './src/assets/icon.svg' },
       favicon: '/img/favicon.ico',
       social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/foxxmd/multi-scrobbler' }],
@@ -94,6 +110,8 @@ export default defineConfig({
       components: {
         // POC: default to dark theme when the reader hasn't picked one
         ThemeProvider: './src/components/overrides/ThemeProvider.astro',
+        SocialIcons: './src/components/overrides/SocialIcons.astro',
+        Footer: './src/components/overrides/Footer.astro',
       },
       plugins: [
         codeblocks({

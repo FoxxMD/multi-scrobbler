@@ -1,0 +1,86 @@
+---
+// Starlight footer (edit link, pagination) plus the Docusaurus footer link columns
+import Default from '@astrojs/starlight/components/Footer.astro';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const columns = [
+	{
+		title: 'Docs',
+		items: [
+			{ label: 'Overview', href: `${base}/` },
+			{ label: 'Installation', href: `${base}/installation/` },
+			{ label: 'Configuration', href: `${base}/configuration/` },
+			{ label: 'Development', href: `${base}/development/dev-common/` },
+		],
+	},
+	{
+		title: 'More',
+		items: [
+			{ label: 'GitHub', href: 'https://github.com/foxxmd/multi-scrobbler' },
+			{ label: 'Website', href: 'https://multi-scrobbler.app' },
+		],
+	},
+];
+const netlify = process.env.NETLIFY === 'true';
+---
+
+<Default />
+<div class="site-footer">
+	<div class="columns">
+		{columns.map((c) => (
+			<div>
+				<p class="title">{c.title}</p>
+				<ul>{c.items.map((i) => <li><a href={i.href}>{i.label}</a></li>)}</ul>
+			</div>
+		))}
+		{netlify && (
+			<div>
+				<p class="title">Docs Powered By</p>
+				<a href="https://www.netlify.com">
+					<img src="https://www.netlify.com/assets/badges/netlify-badge-color-accent.svg" alt="Deploys by Netlify" />
+				</a>
+			</div>
+		)}
+	</div>
+	<p class="copyright">Copyright © {new Date().getFullYear()} Multi-Scrobbler. Built with Starlight.</p>
+</div>
+
+<style>
+	.site-footer {
+		margin-top: 2rem;
+		padding-top: 1.5rem;
+		border-top: 1px solid var(--sl-color-hairline);
+		font-size: var(--sl-text-sm);
+	}
+	.columns {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1.5rem 4rem;
+	}
+	.title {
+		font-weight: 600;
+		color: var(--sl-color-white);
+		margin-bottom: 0.5rem;
+	}
+	ul {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+	a {
+		color: var(--sl-color-gray-2);
+		text-decoration: none;
+	}
+	a:hover {
+		color: var(--sl-color-white);
+	}
+	.copyright {
+		margin-top: 1.5rem;
+		text-align: center;
+		color: var(--sl-color-gray-3);
+		font-size: var(--sl-text-xs);
+	}
+</style>

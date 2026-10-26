@@ -10,4 +10,15 @@ export const onRequest = defineRouteMiddleware((context) => {
 	const ogUrl = new URL(`${import.meta.env.BASE_URL.replace(/\/$/, '')}/og/${route.id || 'index'}.png`, context.site);
 	route.head.push({ tag: 'meta', attrs: { property: 'og:image', content: ogUrl.href } });
 	route.head.push({ tag: 'meta', attrs: { name: 'twitter:image', content: ogUrl.href } });
+
+	// Replaces canonical-replace.ts: point canonical/alternate <link>s at the real docs domain so search engines
+	// prefer it over the GitHub Pages URL the site is built for (e.g. foxxmd.github.io/multi-scrobbler -> docs.multi-scrobbler.app)
+	const canonical = process.env.CANONICAL_HREF?.replace(/\/$/, '');
+	if (canonical && context.site) {
+		const builtFor = new URL(import.meta.env.BASE_URL, context.site).href.replace(/\/$/, '');
+		for (const tag of route.head) {
+			const href = tag.attrs?.href;
+			if (tag.tag === 'link' && typeof href === 'string' && href.startsWith(builtFor)) tag.attrs!.href = canonical + href.slice(builtFor.length);
+		}
+	}
 });

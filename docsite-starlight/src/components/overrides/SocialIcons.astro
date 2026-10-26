@@ -1,0 +1,42 @@
+---
+// Docusaurus navbar items. Rendered before the social icons, which Starlight shows in the desktop
+// header and in the mobile menu footer, so one override covers both.
+import Default from '@astrojs/starlight/components/SocialIcons.astro';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const links = [
+	{ label: 'Docs', href: `${base}/` },
+	{ label: 'Config Playground', href: `${base}/playground/` },
+	{ label: 'API', href: `${base}/api/` },
+	{ label: 'Website', href: 'https://multi-scrobbler.app' },
+];
+const path = Astro.url.pathname;
+const current = (href: string) =>
+	href.startsWith('http') ? false : href === `${base}/` ? !/\/(playground|api)\//.test(path) : path.startsWith(href);
+---
+
+<nav class="nav-links" aria-label="Site">
+	{links.map((l) => <a href={l.href} aria-current={current(l.href) ? 'page' : undefined}>{l.label}</a>)}
+</nav>
+<Default />
+
+<style>
+	.nav-links {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem 1rem;
+		font-size: var(--sl-text-sm);
+	}
+	.nav-links a {
+		color: var(--sl-color-gray-2);
+		text-decoration: none;
+		white-space: nowrap;
+	}
+	.nav-links a:hover,
+	.nav-links a[aria-current='page'] {
+		color: var(--sl-color-white);
+	}
+	.nav-links a[aria-current='page'] {
+		font-weight: 600;
+	}
+</style>

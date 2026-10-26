@@ -125,6 +125,29 @@ function transformAdmonitions(body) {
 	return out.join('\n');
 }
 
+// Starlight syncs tabs by *label* (Docusaurus synced by value), so labels in a synced group must be identical per value
+const SYNCED_LABELS = { configType: { env: 'ENV', file: 'File', aio: 'AIO' } };
+
+function normalizeSyncedTabLabels(body) {
+	const groups = [];
+	return body.replace(/<Tabs\b[^>]*>|<\/Tabs>|<TabItem\b[^>]*>/g, (tag) => {
+		if (tag === '</Tabs>') {
+			groups.pop();
+			return tag;
+		}
+		if (tag.startsWith('<Tabs')) {
+			groups.push(/groupId="([^"]+)"/.exec(tag)?.[1]);
+			return tag;
+		}
+		const labels = SYNCED_LABELS[groups.at(-1)];
+		const value = /value="([^"]+)"/.exec(tag)?.[1];
+		const label = labels?.[value];
+		if (!label || tag.includes(`label="${label}"`)) return tag;
+		count('synced tab labels normalized');
+		return tag.replace(/label="[^"]*"/, `label="${label}"`);
+	});
+}
+
 function transformBody(body, oldFile, rel, isMdx) {
 	let b = body;
 
@@ -156,6 +179,8 @@ function transformBody(body, oldFile, rel, isMdx) {
 	b = b.replace(/require\((['"])\/(.+?)\1\)\.default/g, (_, q, p) => (count('require() static assets'), `import.meta.env.BASE_URL + ${JSON.stringify(p)}`));
 
 	b = transformAdmonitions(b);
+
+	b = normalizeSyncedTabLabels(b);
 
 	// `## Heading {#custom-id}` is left as-is: Sätteri's `headingAttributes` feature parses it, even in .mdx
 
