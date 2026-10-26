@@ -711,3 +711,191 @@ See **Examples** sections in specific Stage docs (also in the sidebar):
 * [User Stage](/configuration/transforms/user#examples)
 * [Native Stage](/configuration/transforms/native#examples)
 * [Musicbrainz Stage](/configuration/transforms/musicbrainz#examples)
+
+These examples use all of the features described above. They walk you through the entire process of building configuration to transform your scrobble data, from start to end, in one usecase.
+
+## Walkthrough - Remove Something from Title {#walkthrough-user}
+
+You want to use the [User Stage](/configuration/transforms/user) to remove instances of `(Album Version)` in track titles from Navidrome.
+
+<CodeWalkthrough>
+
+```json title="config.json" step="Decide on Stage"
+{
+  "type": "user" // [!ref] Set the [Stage type](#configuring-stages)
+}
+```
+
+```json title="config.json" step="Decide on Rule"
+{
+  "type": "user",
+  "title": [ // [!ref] Define which [Rule](#stage-rules) this Stage will apply. This equates to the part of the scrobble data you want to modify
+
+  ]
+}
+```
+
+```json title="config.json" step="Define Stage Behavior" brackets
+{
+  "type": "user",
+  "title": [ 
+    { // [!ref] Add the [behavior](/configuration/transforms/user/#search-and-replace-expression) for the chosen Stage to that Rule
+      "search": "(Album Version)",
+      "replace": "" // [!ref] Replacing with an empty string ("") [removes the value](/configuration/transforms/user/#rules) found in `search`
+    }
+  ]
+}
+```
+
+```json title="config.json" step="Decide When Stage should Run" brackets
+{
+  "preCompare": [ // [!ref] Run this behavior [when scrobble data is **first seen**](#lifecycle-hooks)
+    {
+      "type": "user",
+      "title": [ 
+        { 
+          "search": "(Album Version)",
+          "replace": ""
+        }
+      ]
+    }
+  ]
+}
+```
+
+```json title="config.json" step="Add everything to a Source/Client" brackets
+{
+  "sources": [
+    {
+      "type": "subsonic",
+      "id": "myNavidrome",
+      "data": {},
+      // [!code focus:15]
+      "options": {
+        "playTransform": { // [!ref] Defined on the Navidrome source scrobble data comes from
+          "preCompare": [ 
+            {
+              "type": "user",
+              "title": [ 
+                { 
+                  "search": "(Album Version)",
+                  "replace": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
+```
+
+</CodeWalkthrough>
+
+## Walkthrough - Using Musicbrainz on Many Sources/Clients
+
+You want to use the [Musicbrainz Stage](/configuration/transforms/musicbrainz), with specific behavior, to correct/enrich your scrobble data. It should do this for both Navidrome and Jellyfin.
+
+<CodeWalkthrough>
+
+```json title="config.json" step="Decide on Stage"
+{
+  // [!ref] Add to [`transformers` in AIO config](#configuring-stages). This is where Stages with **reusable** configuration are defined
+  "transformers": [
+    {
+      "type": "musicbrainz", // [!ref] Set the [Musicbrainz Stage](#configuring-stages)
+      "name": "myMB" // [!ref] Give it a [unique name](#stage-names-and-default-stages) so we can reference it in Client/Sources later
+    }
+  ]
+}
+```
+
+```json title="config.json" step="Decide on Rules"
+{
+  "transformers": [
+    {
+      "type": "musicbrainz",
+      "name": "myMB"
+      // [!ref] You want **all** [Rules](#stage-rules) from this Stage to apply. All rules default to `true` when not defined, so defining **nothing** here is the same as "apply everything".
+      //"title": true,
+      //"artists": true,
+      //"album": true,
+      //...
+    }
+  ]
+}
+```
+
+```json title="config.json" step="Set Stage Default" brackets
+{
+  "transformers": [
+    {
+      "type": "musicbrainz",
+      "name": "myMB",
+      // [!ref] Unlike [the User Stage Walkthrough](#walkthrough-user) which sets behavior directly in the Rule, we want the behavior we set to apply to *all* Sources/Clients that use it, so we set behavior in [`defaults`](#configuring-stages)
+      "defaults": {}
+    }
+  ]
+}
+```
+
+```json title="config.json" step="Set Stage Default Behavior" brackets
+{
+  "transformers": [
+    {
+      "type": "musicbrainz",
+      "name": "myMB",
+      // [!ref] Add our stage behvior to [`defaults`](#configuring-stages)
+      "defaults": {
+        // [!ref] Prioritize [releases](/configuration/transforms/musicbrainz/#release-attributes) and country for releases
+        "releaseGroupPrimaryTypePriority": ["single", "ep", "album"],
+        "releaseCountryPriority": ["US"],    
+      }
+      // [!ref] Now our stage is ready to be used in Sources/Clients
+    }
+  ]
+}
+```
+
+```json title="config.json" step="Add Stage to Sources/Clients" brackets
+{
+  "transformers": [...],
+  // [!code focus:32]
+  "sources": [
+    {
+      "type": "subsonic",
+      "id": "myNavidrome",
+      "data": {},
+      "options": {
+        "playTransform": { // [!ref] Defined on the Navidrome source scrobble data comes from
+          "preCompare": [ // [!ref] Run this behavior [when scrobble data is **first seen**](#lifecycle-hooks
+            {
+              "type": "musicbrainz",
+              "name": "myMB", // [!ref] Referencing Stage [by name](#stage-names-and-default-stages) means "use the `defaults` in the Stage in `transformers` with this `name`"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "jellyfin",
+      "id": "myJellyfin",
+      "data": {},
+      "options": {
+        "playTransform": { // [!ref] Defined on the jellyfin source scrobble data comes from
+          "preCompare": [ 
+            {
+              "type": "musicbrainz",
+              "name": "myMB",
+            }
+          ]
+        }
+      }
+    },    
+  ],
+  "clients": [...]
+}
+```
+
+</CodeWalkthrough>
