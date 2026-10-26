@@ -7,6 +7,7 @@ toc_max_heading_level: 5
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
+import {LocalStorageText} from '@site/src/components/Storage/Text';
 import LastfmEndpointConfig from '!!raw-loader!@site/../config/endpointlfm.json.example';
 import ENVConfig from "@site/docs/configuration/sources/_env_configs/_endpointlfm.md"
 
@@ -93,9 +94,9 @@ Use **one** of the scenarios below based on how on your service(s) (things "scro
 
 When setting up your Last.fm client to communicate with Multi-Scrobbler replace the Last.fm domain with your Multi-Scrobbler domain:
 
-https://**last.fm** => https://**yourMSDomain**
+https://**last.fm** => https://<LocalStorageText initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>
 
-MS accepts Last.fm API calls with the same **url base** and structure as the [last.fm api](https://www.last.fm/api/intro), IE `http://yourMSDomain/2.0/`
+MS accepts Last.fm API calls with the same **url base** and structure as the [last.fm api](https://www.last.fm/api/intro), IE <code>http://<LocalStorageText initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>/2.0/</code>
 
 See: API Documentation for [**Lastfm Ingress (Standard)**](/api/accept-a-last-fm-scrobble-standard/)
 
@@ -107,7 +108,7 @@ If you are only setting up **one** Lastfm Endpoint Source then you do not need t
 
 Currently, Multi-Scrobbler only supports the [**Mobile Application**](https://www.last.fm/api/mobileauth) auth flow. If your client requires one of the other authentication flows please [open an issue](https://github.com/FoxxMD/multi-scrobbler/issues/new?template=02-feature-request.yml).
 
-**Note:** Your client does not **need** to implement any auth in order to use a Lastfm Endpoint Source. You can directly make [`track.scrobble`](https://www.last.fm/api/show/track.scrobble) or [`track.updateNowPlaying`](https://www.last.fm/api/show/track.updateNowPlaying) api calls to `http://yourMSDomain/2.0/` with any fake auth data you want.
+**Note:** Your client does not **need** to implement any auth in order to use a Lastfm Endpoint Source. You can directly make [`track.scrobble`](https://www.last.fm/api/show/track.scrobble) or [`track.updateNowPlaying`](https://www.last.fm/api/show/track.updateNowPlaying) api calls to <code>http://<LocalStorageText readOnly initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>/2.0/</code> with any fake auth data you want.
 
 </DetailsAdmo>
 
@@ -132,7 +133,7 @@ slug: "mySlug"
 http://YOUR_MS_DOMAIN/api/lastfm/mySlug
 ```
 
-The above url base is equivalent to making calls to `http://yourMSDomain/2.0/`
+The above url base is equivalent to making calls to <code>http://<LocalStorageText readOnly initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>/2.0/</code>
 
 See: API Documentation for [**Lastfm Ingress (Slug)**](/api/accept-a-last-fm-scrobble-slug/)
 
@@ -144,7 +145,7 @@ If you think your service should be able to use the [standard base URL](#standar
 
 #### Verify URL Format
 
-Some service may require `http/https` in the URL format (`http://myMSDomainOrIp:9078`) while others may not (`myDomainOrIp:9078`). Check the docs for your service to see if they specify this or have an example. Try both versions, if possible, to see if one works.
+Some service may require `http/https` in the URL format (<code>http://<LocalStorageText readOnly initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078</code>) while others may not (<code><LocalStorageText readOnly initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078</code>). Check the docs for your service to see if they specify this or have an example. Try both versions, if possible, to see if one works.
 
 <DetailsAdmo type="note" summary="Some Services Require HTTPS">
 

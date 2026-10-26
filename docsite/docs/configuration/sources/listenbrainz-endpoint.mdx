@@ -7,6 +7,7 @@ toc_max_heading_level: 5
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
+import {LocalStorageText} from '@site/src/components/Storage/Text';
 import ListenbrainzEndpointConfig from '!!raw-loader!@site/../config/endpointlz.json.example';
 import ENVConfig from "@site/docs/configuration/sources/_env_configs/_endpointlz.md"
 import ArtistMatch from "@site/src/components/snippets/_lz_artist_match.mdx"
@@ -88,8 +89,8 @@ Use **one** of the scenarios below based on how on your service(s) (things "scro
 
 In most scenarios you should use one of the following as the **base URL** when configuring your service to scrobble to multi-scrobbler:
 
-* `http://myMultiScrobblerIP:9078`
-* `http://myMultiScrobblerIP:9078/1/`
+* <code>http://<LocalStorageText initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078</code>
+* <code>http://<LocalStorageText initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078/1/</code>
 
 <DetailsAdmo type="tip" summary="Standard Endpoints">
 
@@ -142,7 +143,7 @@ http://YOUR_MS_DOMAIN/api/listenbrainz/foobar/submit-listens
 
 <details>
 
-Set the [**ListenBrainz.BaseURL**](https://www.navidrome.org/docs/usage/configuration-options/#advanced-configuration) (env `ND_LISTENBRAINZ_BASEURL`) to `http://myMultiScrobblerIP:9078/1/`
+Set the [**ListenBrainz.BaseURL**](https://www.navidrome.org/docs/usage/configuration-options/#advanced-configuration) (env `ND_LISTENBRAINZ_BASEURL`) to <code>http://<LocalStorageText readOnly initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078/1/</code>
 
 </details>
 
@@ -160,7 +161,7 @@ Set the [**ListenBrainz.BaseURL**](https://www.navidrome.org/docs/usage/configur
 * In the ListenBrainz Scrobbler configuration screen:
   * User Token is the [Token](#token) you configured
   * Toggle **Show advanced settings**
-    * Base URL is the [URL](#standard-base-url) you can configured, or the equivalent of `http://myMultiScrobblerIP:9078` for your MS instance
+    * Base URL is the [URL](#standard-base-url) you can configured, or the equivalent of <code>http://<LocalStorageText readOnly initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078</code> for your MS instance
 * Save the configuration and you are ready to scrobble
 
 To troubleshoot any errors, and assuming you are using Home Assistant, view the Logs in the Music Assistant Add-ons. Please include these logs in any reported issue.
@@ -237,7 +238,7 @@ If you think your service should be able to use the [standard base URL](#standar
 
 #### Verify URL Format
 
-Some service may require `http/https` in the URL format (`http://myMSDomainOrIp:9078`) while others may not (`myDomainOrIp:9078`). Check the docs for your service to see if they specify this or have an example. Try both versions, if possible, to see if one works.
+Some service may require `http/https` in the URL format (<code>http://<LocalStorageText readOnly initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078</code>) while others may not (<code><LocalStorageText readOnly initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078</code>). Check the docs for your service to see if they specify this or have an example. Try both versions, if possible, to see if one works.
 
 <DetailsAdmo type="note" summary="Some Services Require HTTPS">
 

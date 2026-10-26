@@ -93,7 +93,7 @@ services:
 
         #### Configure Navidrome
 
-        Set the [**ListenBrainz.BaseURL**](https://www.navidrome.org/docs/usage/configuration-options/#advanced-configuration) (env `ND_LISTENBRAINZ_BASEURL`) to `http://myMultiScrobblerIP:9078/1/` in your Navidrome installation. Assuming you are using the [docker installation](https://www.navidrome.org/docs/installation/docker/), modify `environment` to add:
+        Set the [**ListenBrainz.BaseURL**](https://www.navidrome.org/docs/usage/configuration-options/#advanced-configuration) (env `ND_LISTENBRAINZ_BASEURL`) to <code>http://<LocalStorageText initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078/1/</code> in your Navidrome installation. Assuming you are using the [docker installation](https://www.navidrome.org/docs/installation/docker/), modify `environment` to add:
 
         ```yaml title="docker-compose.yml" placeholder="YOUR_MS_DOMAIN"
         - ND_LISTENBRAINZ_BASEURL=http://YOUR_MS_DOMAIN/1/
@@ -239,10 +239,10 @@ Modify the `lastfm.json` file you created in the [Setup Sources](#setup-sources)
           * From your Koito server dashboard navigate to **Settings** (bottom-left icon) => **API Keys**
           * Create a new Key (or use an existing) and Copy the key using the copy icon to the right of the key
             * EX `pM195xPV98CDpk0QW47FIIOR8AKATAX5DblBF-Jq0t1MbbKL`
-        * Take note of your Koito username (used below as `myUser`)
+        * Take note of your Koito username (used below as <LocalStorageText initialValue="myUser" stylePreset="placeholder" storageKey="myUser"/>)
         * Determine your Koito URL
           * This is the URL you use to access your Koito dashboard OR whatever URL is accessible from your multi-scrobbler instance.
-          * EX dashboard at `http://192.168.0.100:4110` => replace `myURL` below with `http://192.168.0.100:4110`
+          * EX dashboard at `http://192.168.0.100:4110` => replace <LocalStorageText initialValue="myURL" stylePreset="placeholder" storageKey="myURL"/> below with `http://192.168.0.100:4110`
           * [More info on the URL to use is the full docs](/configuration/clients/koito)
 
         Add/Substitute values above into these examples values and add them to the `environment` section in the [`docker-compose.yml` you created for multi-scrobbler earlier.](#create-docker-compose-file)
