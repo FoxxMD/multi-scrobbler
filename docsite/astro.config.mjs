@@ -8,6 +8,7 @@ import { satteri } from '@astrojs/markdown-satteri';
 import { unified } from '@astrojs/markdown-remark';
 import codeblocks from 'starlight-codeblocks';
 import starlightAutoSidebar from 'starlight-auto-sidebar';
+import starlightThemeGalaxy from 'starlight-theme-galaxy';
 import starlightOpenAPI, { openAPISidebarGroups } from 'starlight-openapi';
 import AutoImport from 'astro-auto-import';
 import { satteriBaseLinks } from './plugins/satteriBaseLinks.mjs';
@@ -86,6 +87,7 @@ export default defineConfig({
     AutoImport({
       imports: [
         { '@astrojs/starlight/components': ['Code'] },
+        { './src/withBase.ts': ['withBase'] },
         { 'starlight-codeblocks/components': ['CodeWalkthrough'] },
         { [comp('Tabs.astro')]: [['default', 'Tabs']] },
         { [comp('TabItem.astro')]: [['default', 'TabItem']] },
@@ -120,6 +122,7 @@ export default defineConfig({
         Footer: './src/components/overrides/Footer.astro',
       },
       plugins: [
+        starlightThemeGalaxy(),
         codeblocks({
           notation: { comments: { json: ['//'], text: ['<--', '#'], caddyfile: ['#'] } },
           placeholders: { storage: 'session' },

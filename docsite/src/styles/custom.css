@@ -1,29 +1,25 @@
-/* Aside colors per type, matching the Docusaurus palette roles (note grey, tip green, info/important blue, warning yellow) */
-.starlight-aside--note {
-	--sl-color-asides-text-accent: var(--sl-color-gray-2);
-	--sl-color-asides-border: var(--sl-color-gray-4);
-	background-color: var(--sl-color-gray-6);
-}
-.starlight-aside--tip {
-	--sl-color-asides-text-accent: var(--sl-color-green-high);
-	--sl-color-asides-border: var(--sl-color-green);
-	background-color: var(--sl-color-green-low);
-}
-.starlight-aside--info,
-.starlight-aside--important {
-	--sl-color-asides-text-accent: var(--sl-color-blue-high);
-	--sl-color-asides-border: var(--sl-color-blue);
-	background-color: var(--sl-color-blue-low);
+/* Colors for our extra aside types (Aside.astro / DetailsAdmo), using the Galaxy theme's aside variables:
+   info = note (blue), important = Galaxy's "premium" purple, warning = caution (amber) */
+.starlight-aside--info {
+	--galaxy-aside-accent: #3b82f6;
+	--galaxy-aside-bg: rgba(59, 130, 246, 0.05);
 }
 .starlight-aside--important {
-	--sl-color-asides-text-accent: var(--sl-color-purple-high);
-	--sl-color-asides-border: var(--sl-color-purple);
-	background-color: var(--sl-color-purple-low);
+	--galaxy-aside-accent: #8b5cf6;
+	--galaxy-aside-bg: rgba(139, 92, 246, 0.05);
 }
 .starlight-aside--warning {
-	--sl-color-asides-text-accent: var(--sl-color-orange-high);
-	--sl-color-asides-border: var(--sl-color-orange);
-	background-color: var(--sl-color-orange-low);
+	--galaxy-aside-accent: #f59e0b;
+	--galaxy-aside-bg: rgba(245, 158, 11, 0.05);
+}
+:root[data-theme='dark'] .starlight-aside--info {
+	--galaxy-aside-bg: rgba(59, 130, 246, 0.08);
+}
+:root[data-theme='dark'] .starlight-aside--important {
+	--galaxy-aside-bg: rgba(139, 92, 246, 0.08);
+}
+:root[data-theme='dark'] .starlight-aside--warning {
+	--galaxy-aside-bg: rgba(245, 158, 11, 0.08);
 }
 
 /* collapsible asides */
@@ -35,8 +31,8 @@ details.details-admo[open] > summary {
 	margin-bottom: 0.5rem;
 }
 details.details-admo--plain {
-	--sl-color-asides-border: var(--sl-color-gray-5);
-	--sl-color-asides-text-accent: var(--sl-color-white);
+	--galaxy-aside-accent: var(--sl-color-gray-3);
+	--galaxy-aside-bg: transparent;
 }
 
 /** https://stackoverflow.com/a/79808430/1469797 */
@@ -72,4 +68,11 @@ img.image-center {
 /* Source/Client config pages: a wider content column so the explorer and example editor fit side by side on large screens */
 :root:has(.schemaWrapper) {
 	--sl-content-width: 58rem;
+}
+
+/* Galaxy sets `.expressive-code code { display: block; width: 100% }` for the code body, which also hits inline
+   `code` in starlight-codeblocks footnotes, callouts and annotations. Keep those inline. */
+.expressive-code code:not(pre > code) {
+	display: inline;
+	width: auto;
 }

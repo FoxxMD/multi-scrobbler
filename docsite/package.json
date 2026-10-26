@@ -36,6 +36,7 @@
     "starlight-auto-sidebar": "^0.4.1",
     "starlight-codeblocks": "^1.2.0",
     "starlight-openapi": "^0.27.0",
+    "starlight-theme-galaxy": "^1.0.0",
     "use-debounce": "^10.1.1"
   },
   "engines": {
