@@ -1,0 +1,129 @@
+/* Capability tables (sources/clients overview), modeled on https://forges.link/reference/capability-matrix */
+.capability-swatch {
+  display: inline-block;
+  width: 1.125rem;
+  height: 1.125rem;
+  vertical-align: middle;
+  flex: none;
+}
+.capability-swatch[data-level='yes'] {
+  background: var(--sl-color-accent);
+}
+.capability-swatch[data-level='config'] {
+  background: repeating-linear-gradient(135deg, var(--sl-color-accent) 0 1.5px, transparent 1.5px 3.5px);
+  box-shadow: inset 0 0 0 1px var(--sl-color-accent);
+}
+.capability-swatch[data-level='na'] {
+  background:
+    linear-gradient(to top right, transparent calc(50% - 1px), var(--sl-color-gray-3) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)),
+    var(--sl-color-gray-6);
+  box-shadow: inset 0 0 0 1px var(--sl-color-gray-5);
+}
+.capability-swatch[data-level='no'] {
+  background: var(--sl-color-gray-5);
+}
+
+.capability-legend {
+  margin-bottom: 1rem;
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    list-style: none;
+    padding: 0;
+    margin-bottom: 0.5rem;
+  }
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+/* wrapper is the scroll container so both the header and first column can be sticky */
+.capability-matrix {
+  max-height: calc(100vh - var(--sl-nav-height) - 2rem);
+  overflow: auto;
+  margin-bottom: 1rem;
+
+  table {
+    display: table;
+    overflow: visible;
+    margin: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  th, td {
+    border-width: 0 1px 1px 0;
+    background: var(--sl-color-bg);
+  }
+  tr > :first-child {
+    border-left-width: 1px;
+  }
+  thead th {
+    border-top-width: 1px;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+  tbody tr:nth-child(2n) > * {
+    background: linear-gradient(var(--sl-color-gray-7, var(--sl-color-gray-6)), var(--sl-color-gray-7, var(--sl-color-gray-6))), var(--sl-color-bg);
+  }
+  tr > :first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+  }
+  thead tr > :first-child {
+    z-index: 3;
+  }
+}
+
+/* mobile: component name becomes a full-width row "header" with features below it */
+@media (max-width: 996px) {
+  .capability-matrix {
+    max-height: none;
+    overflow: visible;
+
+    table {
+      display: block;
+    }
+    thead {
+      display: block;
+      position: sticky;
+      top: var(--sl-nav-height);
+      z-index: 2;
+    }
+    tbody {
+      display: block;
+    }
+    tr {
+      display: grid;
+      grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    }
+    th, td {
+      display: block;
+      padding: 0.25rem;
+      font-size: 0.875rem;
+      border-width: 0 0 1px 0;
+    }
+    thead th {
+      position: static;
+      font-size: 0.7rem;
+      hyphens: auto;
+      border-top-width: 0;
+    }
+    thead tr > :first-child {
+      display: none;
+    }
+    tbody tr > :first-child {
+      position: static;
+      grid-column: 1 / -1;
+      border-bottom-width: 0;
+      font-weight: 600;
+    }
+    tr > :first-child {
+      border-left-width: 0;
+    }
+  }
+}

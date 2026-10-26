@@ -1,0 +1,132 @@
+import ExplorerFetch from './Schema/ExplorerFetch';
+import FileConfigExample from './FileConfigExample';
+import { transformConfig, toJson } from './configTransform';
+import './GenericConfiguration.scss';
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+    <EnvType>
+        {props.children}
+
+        _**Bold/Italic**_ = Required
+    </EnvType>
+    </TabItem>
+    <TabItem value="file" label="File">
+    <FileType>
+            <div class="schemaWrapper" style={{display: "flex"}}>
+            <div style={{ padding: '0 1em 0 1em', flexBasis: 'min-content', flexGrow: 2}}>
+            <DetailsAdmo type="note" summary="Config Structure">
+                This displays the **structure** of the [File Configuration](/configuration?configType=aio#configuration-types) for a <strong>{props.name}</strong> type <strong>{props.client ? 'Client' : 'Source'}</strong> with all possible properties, their shape, and descriptions/types. Use this to understand how to write a valid config.
+            </DetailsAdmo>
+                <ExplorerFetch client:only="react" name={`schemas/${props.name}-${props.client ? 'client' : 'source'}`} />
+            </div>
+            <div style={{ flexBasis: 'auto', flexGrow: 3 }}>
+            <div class="fileEditor">
+            <DetailsAdmo type="note" summary="Config Example">
+                This displays an **example config file** of a <strong>{props.name}</strong> <span>{props.client ? 'Client' : 'Source'}</span> [File Configuration](/configuration?configType=aio#configuration-types) that adheres to the shown **Config Structure**.
+
+                * **text** mode lets you edit the JSON directly.
+                * **tree** mode gives you a guided point-and-click editing experience that always keeps the JSON *syntax* valid.
+
+                Both modes **validate** that the configuration is correct. Any errors show up as squiggly lines.
+
+                <div style={{display: props.ambiguous === true ? 'inherit' : 'none'}}>
+                <Aside type="important">
+
+                Only <strong>{props.client ? 'client' : 'source'}</strong> <span>{props.name}</span> configs will validate correctly in the editor but *both* **source** and **client**  <span>{props.name}</span> configs are allowed in the real <code>CONFIG/<span>{props.name}</span>.json</code>
+
+                </Aside>
+                </div>
+
+                After you finish editing, switch to **text** and then copy all text to get a completed config.
+            </DetailsAdmo>
+            <DetailsAdmo type="important" summary="configureAs Required" render={props.configureAs === true}>
+                When configuring a <span>{props.name}</span> **Source** in a **File** Config you **must** set
+
+                ```
+                "configureAs": "source"
+                ```
+
+                Without this property, Multi-Scrobbler will assume the config is for a <span>{props.name}</span> **Client** config.
+
+                This requirement does not apply to **AIO** <span>{props.name}</span> configs.
+            </DetailsAdmo >
+            </div>
+            <div class="fileEditorMobile">
+                <DetailsAdmo type="warning" summary="Config Example Mobile Experience">
+                    This displays an **example config file** of a <strong>{props.name}</strong> <span>{props.client ? 'Client' : 'Source'}</span> [File Configuration](/configuration?configType=aio#configuration-types) that adheres to the shown **Config Structure**.
+
+                    The example config file editor is meant for a larger screen experience so **only the read-only example is shown.** Please use this site on a tablet/laptop/desktop to enable file editor features.
+                </DetailsAdmo>
+            </div>
+            <div class="file-example" data-mode="plain">
+            <FileConfigExample
+                client:only="react"
+                filePathName={`CONFIG/${props.name}.json`}
+                configureAs={props.client ? 'client' : 'source'}
+                data={props.fileContent}
+                schemaName={`${props.name}-${props.client ? 'client' : 'source'}`}
+                name={props.name}
+                readOnlyAtWidth={500}
+                externalPlain
+             />
+            <div class="file-example__plain">
+                <Code code={toJson(transformConfig(props.fileContent, props.client ? 'client' : 'source', false, props.name))} lang="json5" title={`CONFIG/${props.name}.json`} />
+            </div>
+            </div>
+            </div>
+        </div>
+    </FileType>
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+    <AIOType>
+            <div class="schemaWrapper" style={{display: "flex"}}>
+            <div style={{ padding: '0 1em 0 1em', flexBasis: 'min-content', flexGrow: 2}}>
+            <DetailsAdmo type="note" summary="Config Structure">
+                This displays the **structure** of the [all-in-one (`config.json`) configuration](/configuration?configType=aio#configuration-types) with all possible properties, their shape, and descriptions/types. Use this to understand how to write a valid config.
+
+                Select the <strong>{props.name}</strong> type from the respective <code>{props.client ? 'clients' : 'sources'}</code> node below, then expand it.
+            </DetailsAdmo>
+                <ExplorerFetch client:only="react" name={`schemas/aio`} />
+            </div>
+             <div style={{ flexBasis: 'auto', flexGrow: 3 }}>
+             <div class="fileEditor">
+                <DetailsAdmo type="note" summary="Config Example">
+                    This displays an **example config file** of a [all-in-one (`config.json`) configuration](/configuration?configType=aio#configuration-types) that includes a <strong>{props.name}</strong> <span>{props.client ? 'Client' : 'Source'}</span> that adheres to the shown **Config Structure**.
+
+                    * **text** mode lets you edit the JSON directly.
+                    * **tree** mode gives you a guided point-and-click editing experience that always keeps the JSON *syntax* valid.
+
+                    Both modes **validate** that the configuraion is correct. Any errors show up as squiggly lines.
+
+                    After you finish editing, switch to **text** and then copy all text to get a completed config.
+                </DetailsAdmo>
+            </div>
+            <div class="fileEditorMobile">
+                <DetailsAdmo type="warning" summary="Config Example Mobile Experience">
+                    This displays an **example config file** of a [all-in-one (`config.json`) configuration](/configuration?configType=aio#configuration-types) that includes a <strong>{props.name}</strong> <span>{props.client ? 'Client' : 'Source'}</span> that adheres to the shown **Config Structure**.
+
+                    The example config file editor is meant for a larger screen experience so **only the read-only example is shown.** Please use this site on a tablet/laptop/desktop to enable file editor features.
+                </DetailsAdmo>
+            </div>
+                <div class="file-example" data-mode="plain">
+                <FileConfigExample
+                    client:only="react"
+                    filePathName={`CONFIG/config.json`}
+                    configureAs={props.client ? 'client' : 'source'}
+                    data={props.fileContent}
+                    schemaName="aio"
+                    name={props.name}
+                    readOnlyAtWidth={500}
+                    externalPlain
+                    aio
+                />
+                <div class="file-example__plain">
+                    <Code code={toJson(transformConfig(props.fileContent, props.client ? 'client' : 'source', true, props.name))} lang="json5" title="CONFIG/config.json" />
+                </div>
+                </div>
+            </div>
+             </div>
+        </AIOType>
+    </TabItem>
+</Tabs>

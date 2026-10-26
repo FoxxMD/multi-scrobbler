@@ -1,0 +1,41 @@
+{
+  "name": "multi-scrobbler-docs-starlight",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "migrate": "node scripts/migrate.mjs",
+    "dev": "astro dev --host 0.0.0.0 --port 3001",
+    "build": "astro build",
+    "preview": "astro preview --host 0.0.0.0 --port 3001",
+    "postinstall": "patch-package"
+  },
+  "dependencies": {
+    "@astrojs/markdown-remark": "^7.3.4",
+    "@astrojs/mdx": "^8.1.1",
+    "@astrojs/react": "^7.1.1",
+    "@astrojs/starlight": "^0.42.7",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "astro": "^7.4.2",
+    "astro-auto-import": "^0.6.0",
+    "astro-og-canvas": "^0.13.2",
+    "cf-json-schema-viz": "^0.3.0",
+    "clsx": "^2.1.1",
+    "embla-carousel": "^9.0.0-rc02",
+    "embla-carousel-react": "^9.0.0-rc02",
+    "gray-matter": "^4.0.3",
+    "js-yaml": "^4.3.2",
+    "json5": "^2.2.3",
+    "modern-react-json-editor": "^1.0.2",
+    "patch-package": "^8.0.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-markdown": "^10.1.0",
+    "sass": "^1.106.1",
+    "starlight-auto-sidebar": "^0.4.1",
+    "starlight-codeblocks": "^1.2.0",
+    "starlight-openapi": "^0.27.0",
+    "use-debounce": "^10.1.1"
+  }
+}

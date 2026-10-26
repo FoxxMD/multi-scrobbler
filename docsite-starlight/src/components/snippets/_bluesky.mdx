@@ -1,0 +1,14 @@
+import CodeInline from '@theme/CodeInline';
+
+Your [**Atmosphere Account**](https://atmosphereaccount.com) consists of social data (it's just JSON) stored in a personal [repository](https://atproto.com/guides/data-repos) on a [PDS (Personal Data Server)](https://github.com/Bluesky-social/pds), all of which is standardized under the [**AT Protocol**](https://atproto.com).
+
+The AT Protocol defines how your data is stored, how you authenticate to write to it, and how indpendent apps share and consume it. Critically, each layer (data storage, app, communication) of the AT Protocol can be operated by *indpendent* entities so your data and experience not locked behind a walled garden.
+
+Although each layer can be implemented separately (you can self-host everything!), it is normally a *simple* process for an end-user to create and start using an Atmosphere Account as many apps can do everything for you. The most common example being a [Bluesky](https://bsky.social/about), but there are other [public account providers](https://atmosphereaccount.com/explore).
+
+When Multi-Scrobbler uses the AT Protocol...
+
+* multi-scrobbler "scrobbles" (writes) your plays to your repository
+  * in a JSON data structure which includes [{props.name}'s data type and structure](https://atproto.com/specs/lexicon)
+  * at a [known location for {props.name}'s data](https://atproto.com/guides/glossary#collection) (<CodeInline>{props.lexicon}</CodeInline>), in a list that is appended to as you continue to scrobble
+* when accessing {props.name}, or another application that knows how to read it, your data is pulled from the repository to render their app

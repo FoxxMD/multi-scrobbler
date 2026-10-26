@@ -1,0 +1,40 @@
+---
+title: Rocksky
+description: Rocksky (Source)
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 5
+---
+
+
+
+
+import JsonConfig from '@site/../config/rocksky.json.example?raw';
+import ENVConfig from "@site/src/content/docs/configuration/sources/_env_configs/_rocksky.md";
+
+:::tip[Other Uses]
+
+* To **scrobble to** Rocksky, create a [Rocksky (Client)](/configuration/clients/rocksky)
+
+:::
+
+[**Rocksky**](https://rocksky.app/) is music tracking and discovery platform built on the AT Protocol (Bluesky).
+
+This Source monitors the Rocksky scrobbles in your PDS and then re-scrobbles discovered tracks to configured clients.
+
+Learn more about how Rocksky scrobbles work in the [Rocksky (Client)](/configuration/clients/rocksky) docs. 
+
+## Setup
+
+Follow the **Setup** instructions in the [Rocksky (Client)](/configuration/clients/rocksky#setup) docs to get access to your Bluesky PDS repository and scrobble data.
+
+## Configuration
+
+See the [Rocksky (Client)](/configuration/clients/rocksky#setup) configuration for general setup. The only difference for **Source** configuration:
+
+* [File/AIO config](/configuration?configType=file#configuration-types) must include `"configureAs": "source"`
+* **App Password** and/or **Access Token** are **not** required
+
+<Config config="RockskySourceConfig" fileContent={JsonConfig} configureAs ambiguous name="rocksky">
+<ENVConfig/>
+</Config>

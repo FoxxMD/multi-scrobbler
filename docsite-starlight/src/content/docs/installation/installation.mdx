@@ -1,0 +1,538 @@
+---
+title: Overview
+description: Installation
+sidebar:
+  order: 0
+slug: installation
+---
+
+
+
+
+import ComposeStack from '@site/../docker-compose.yml?raw';
+
+:::tip
+
+For the difference between **ENV** and **File** examples in this document see [Configuration Types](/configuration/#configuration-types).
+
+:::
+
+## Docker
+
+Cross-platform images are built for x86 (Intel/AMD) and ARM64 (IE Raspberry Pi)
+
+<Aside type="info" title="Available Images">
+
+
+<Tabs>
+    <TabItem value="docker" label="Dockerhub">
+        [Repository Page](https://hub.docker.com/r/foxxmd/multi-scrobbler)
+        ```
+        docker.io/foxxmd/multi-scrobbler:latest
+        ```
+    </TabItem>
+    <TabItem value="ghcr" label="Github Packages">
+        [Repository Page](https://github.com/FoxxMD/multi-scrobbler/pkgs/container/multi-scrobbler)
+        ```
+        ghcr.io/foxxmd/multi-scrobbler:latest
+        ```
+    </TabItem>
+</Tabs>
+
+
+</Aside>
+
+### Recommended Settings
+
+<Tabs groupId="dockerSetting" queryString>
+<TabItem value="storage" label="Storage">
+You **should** bind a host directory into the container for storing configurations, credentials, database, and other files. Otherwise, these will be lost when the container is updated.
+
+```yaml title="docker-compose.yml"
+services:
+  multi-scrobbler:
+  # ...
+  # [!code highlight:2]
+  volumes:
+    - "./config:/config"
+```
+
+Optionally, use a separate directory for data (database, cache, etc...) by mounting an additional directory and setting the `DATA_DIR` ENV to the directory that should be used inside the container:
+
+```yaml title="docker-compose.yml"
+services:
+  multi-scrobbler:
+  # ...
+  environment:
+    # ...
+    # [!code highlight]
+    - DATA_DIR=/msData
+  volumes:
+    - "./config:/config" # used for config files
+  # [!code highlight]
+    - "./my/host/folder:/msData" # used for data files
+```
+
+</TabItem>
+<TabItem value="networking" label="Networking">
+If you are using a [bridge network](https://www.appsdeveloperblog.com/docker-networking-bridging-host-and-overlay/) (default docker setup) you must map a port to the container in order to access the dashboard and use MS with some sources (Webscrobbler, LFM/LZ Endpoints). The default container port is `9078`.
+
+```yaml title="docker-compose.yml"
+services:
+  multi-scrobbler:
+  # ...
+  # [!code highlight:2]
+  ports:
+    - "9078:9078"
+```
+
+<Aside type="important">
+
+
+If your machine is accessible from the public internet consider installing multi-scrobbler on a different, private machine.
+
+**Read [Securing Multi-Scrobbler](/configuration/security)**
+
+
+</Aside>
+
+</TabItem>
+<TabItem value="baseUrl" label="Base URL">
+
+<Tabs groupId="baseUrlUsage">
+<TabItem value="redirect" label="Redirects">
+**Optionally**, when
+
+* using a [Source or Client](/configuration/) that has a "Redirect URI" that you have not explicitly defined
+* and
+  * using a bridge network or
+  * installing MS on a different machine than the one used to view the dashboard
+
+set the [Base URL](/configuration/#base-url) as the IP/domain of the host machine. (This is the IP you would use to view the dashboard in a browser)
+
+
+```yaml title="docker-compose.yml"
+services:
+  multi-scrobbler:
+  # ...
+  environment:
+    # [!code highlight]
+    - BASE_URL=http://hostMachineIP
+```
+</TabItem>
+<TabItem value="subpath" label="Deploying MS with a Subpath">
+When deploying MS to a domain where it will be served under a **subpath**, like `http://mydomain.com/multiscrobbler`, you **must** define `BASE_URL`:
+
+```yaml title="docker-compose.yml" placeholder="YOUR_MS_DOMAIN"
+services:
+  multi-scrobbler:
+    # ...
+    environment:
+      # [!code highlight:2]
+      # multi-scrobbler served under this subpath
+      - BASE_URL=https://YOUR_MS_DOMAIN/multiscrobbler
+```
+
+This is **not required** when the root path is `/`, like `https://my-scrobbler.com` or `scrobbler.mydomain.com`.
+
+<DetailsAdmo type="important" summary="Self-Hosted Docs">
+
+Multi-Scrobbler's docs are at [docs.multi-scrobbler.app](https://docs.multi-scrobbler.app/) but they are also generated and hosted on your instance.
+
+If you are using a **subpath** and need these self-hosted docs as well you will need to **build your own docker image.** This is a limitation of Docusaurus, the framework the docs are built on.
+
+This build step is *optional* and not required for MS to run with a subpath, you just won't have self-hosted docs and will need to use the official, hosted docs instead.
+
+To build MS with self-hosted docs, provide the same `BASE_URL` used above as a build arg:
+
+```yaml title="docker-compose.yml" placeholder="YOUR_MS_DOMAIN"
+services:
+  multi-scrobbler:
+  # [!code highlight:7]
+  ## remove/comment out official image
+  # image: docker.io/foxxmd/multi-scrobbler:latest
+  ## add build spec
+    build:
+      context: https://github.com/FoxxMD/multi-scrobbler.git
+      args:
+        - BASE_URL=https://YOUR_MS_DOMAIN/multiscrobbler
+  # ...
+    environment:
+        # ...
+        # [!code highlight:2]
+        # multi-scrobbler served under this subpath
+        - BASE_URL=https://YOUR_MS_DOMAIN/multiscrobbler
+```
+
+</DetailsAdmo>
+</TabItem>
+</Tabs>
+
+</TabItem>
+<TabItem value="tz" label="Timezone">
+Set the [timezone](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) for the container using the environmental variable `TZ`.
+
+```yaml title="docker-compose.yml"
+services:
+  multi-scrobbler:
+  # ...
+  environment:
+    # Specify timezone from TZ Database name found here https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+    # [!code highlight]
+    - TZ=America/New_York
+```
+
+</TabItem>
+<TabItem value="linuxHost" label="Linux Host">
+If you are running this container with **Docker** on a **Linux Host** you **should** specify `user:group` permissions of the user who owns the **configuration and data directories** on the host to avoid [docker file permission problems.](https://ikriv.com/blog/?p=4698) These can be specified using the [environmental variables **PUID** and **PGID**.](https://docs.linuxserver.io/general/understanding-puid-and-pgid)
+
+To get the UID and GID for the current user run these commands from a terminal:
+
+* `id -u` -- prints UID
+* `id -g` -- prints GID
+</TabItem>
+<TabItem value="ro" label="Read Only">
+MS can be hardended by setting the file system as read only with [`read_only`](https://docs.docker.com/reference/compose-file/services/#read_only), with a few exceptions:
+
+```yaml title="docker-compose.yml"
+services:
+  multi-scrobbler:
+    image: foxxmd/multi-scrobbler
+    # ...
+    # [!code highlight:4]
+    read_only: true
+    tmpfs:
+      - /run:exec
+      - /tmp:noexec    
+```
+
+</TabItem>
+<TabItem value="caching" label="Caching">
+**Optionally**, add a [Valkey](https://valkey.io/) service to your stack for [secondary caching](/configuration#secondary-caching) to take advantage of faster performance, reduced memory usage, and cached api calls to external services.
+
+```yaml title="docker-compose.yml"
+services:
+  multi-scrobbler:
+    image: foxxmd/multi-scrobbler
+    # ...
+    environment:
+      # ...
+      # [!code highlight]
+      CACHE_VALKEY=redis://valkey:6379
+    # ...
+
+  # [!code highlight:8]
+  valkey:
+    image: valkey/valkey
+    volumes:
+      - valkeydata:/data
+
+volumes:
+  valkeydata:
+    driver: local
+```
+
+</TabItem>
+</Tabs>
+
+### Docker Usage Example
+
+:::tip
+
+See the [**Quick Start Guide**](/quickstart) for another guided docker-compose example
+
+:::
+
+The example scenario:
+
+* [Jellyfin **Source**](/configuration/sources/jellyfin)
+* [Maloja **Client**](/configuration/sources/maloja)
+* Serving app on port `9078`
+* Docker container located on a different IP (`192.168.0.100`) so use [Base URL](/configuration#base-url)
+* Config/data directory on host machine in a directory next to `docker-compose.yml`
+* Linux uid/gid is `1000:1000`
+* Optional caching using valkey (after uncommenting)
+
+See [`docker-compose.yml`](#docker) sample above for more options and annotations.
+
+```yaml title="docker-compose.yml" placeholder="YOUR_MS_DOMAIN"
+services:
+  multi-scrobbler:
+    image: foxxmd/multi-scrobbler
+    container_name: multi-scrobbler
+    environment:
+      - TZ=Etc/GMT # Specify timezone from TZ Database name found here https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+      - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56bd6540c
+      - JELLYFIN_URL=192.168.0.101:8096
+      - JELLYFIN_USER=MyUser
+      - BASE_URL=http://YOUR_MS_DOMAIN
+      - MALOJA_URL=http://domain.tld:42010
+      - MALOJA_API_KEY=1234
+      - PUID=1000
+      - PGID=1000
+      # uncomment along with valkey service/volume below for better caching
+      #- CACHE_VALKEY=redis://valkey:6379
+    volumes:
+      - ./config:/config
+    ports:
+      - 9078:9078
+    restart: unless-stopped
+    
+    #valkey:
+    #    image: valkey/valkey
+    #    volumes:
+    #        - valkeydata:/data
+
+#volumes:
+#    valkeydata:
+#        driver: local
+```
+## Local Installation
+
+After installation see [As a Service](/installation/service) to configure multi-scrobbler to run automatically in the background.
+
+### Nodejs
+
+Clone this repository somewhere using the latest [git tag](/updating#git) and then install from the working directory.
+
+```shell placeholder="<LATEST_RELEASE_TAG>"
+git clone --branch <LATEST_RELEASE_TAG> https://github.com/FoxxMD/multi-scrobbler.git
+cd multi-scrobbler
+nvm use # [!ref] optional, to set correct Node version
+npm install
+npm run docs:install && npm run build
+npm run start
+```
+
+Pass ENVs directly to `node`/`npm`, or make a new `.env` (using `.env.example` as a reference), to configure MS for basic settings and [**Persistent Directories**](./?#persistent-directories) for config/data/log directories.
+
+#### Usage Examples
+
+:::note
+
+Regardless of the config type you are using, some settings must be set via ENV such as [**Persistent Directories**](./?#persistent-directories) for config/data/log directories.
+
+:::
+
+<Tabs groupId="configType" queryString>
+<TabItem value="env" label="ENV">
+```shell
+JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56bd6540c JELLYFIN_URL=192.168.0.101:8096 JELLYFIN_USER=MyUser MALOJA_URL="http://domain.tld" node src/index.js
+```
+</TabItem>
+<TabItem value="file" label="File">
+
+<details>
+    <summary>`./config/config.json`</summary>
+
+    ```json title="./config/config.json" brackets
+    {
+        "sources": [
+            {
+                "type": "jellyfin",
+                // [!link /clients/ /configuration/sources#limiting-scrobble-destination]
+                "clients": ["myConfig"], // [!callout /myConfig/] only scrobbles to the Client with this `name`
+                "name": "myJellyfinSource",
+                "data": {
+                    "apiKey": "a89cba1569901a0671d5a9875fed4be1",
+                    "url": "http://192.168.0.101:8096",
+                    "user": "MyUser"
+                 }
+            }
+        ],
+        "clients": [
+            {
+                "type": "maloja",
+                "name": "myConfig",
+                "data": {
+                    "url": "http://localhost:42010",
+                    "apiKey": "myMalojaKey"
+                }
+            }
+        ],
+    }
+    ```
+
+</details>
+
+```shell
+npm run start
+```
+</TabItem>
+</Tabs>
+
+:::tip
+
+The web UI and API is served on port `9078`. This can be modified using the `PORT` environmental variable.
+
+:::
+
+## Persistent Directories
+
+The directories MS uses for 
+
+* **Configuration** - `config.json`, `jellyfin.json`, etc...
+* **Data** - database, cache, etc...
+* **Logs**
+
+can be specified by environmental variables passed directly to `npm`/`node`, or set in an `.env` file in the working directory.
+
+Settings these paths is *optional.* If you do not set paths MS will try to use OS-standardized directories, falling back to subfolders in the working directory (`.config/`). **Note: These paths are automatically set for you when using Docker.**
+
+<DetailsAdmo type="note" summary="Relative and Absolute Paths Only">
+
+When parsing these ENVs MS will resolve relative directories but *not* bash expansions like `~` for home. Examples:
+
+* `CONFIG_DIR=/my/absolute/path` => sets directory to use for config files
+* `DATA_DIR=./relative/data` => sets directory relative to working directory for data files
+* `LOGS_DIR=~/myDir/logs` => ❌ cannot use this path!
+
+(The bash expansions shown below are for example only)
+
+</DetailsAdmo>
+
+<Tabs groupId="dirType" queryString>
+    <TabItem value="config" label="Config">
+
+      All of your configuration files, like `config.json`, `jellyfin.json`, etc... will be read from this directory.
+
+      Order of path acquisition:
+
+      * `$CONFIG_DIR` - user-defined (or auto defined in Docker image)
+      * `$CONFIGURATION_DIRECTORY` - defined by [systemd](/installation/service)
+      * OS-standardized directory from below...
+      
+      <Tabs>
+        <TabItem value="linux" label="Linux">
+            `$XDG_CONFIG_HOME/multi-scrobbler` or `~/.config/multi-scrobbler`
+        </TabItem>
+        <TabItem value="mac" label="MacOS">
+            `~/Library/Preferences/multi-scrobbler`
+        </TabItem>
+        <TabItem value="win" label="Windows">
+            `%APPDATA%\multi-scrobbler\Config`
+        </TabItem>
+      </Tabs>
+    </TabItem>
+    <TabItem value="data" label="Data">
+      All of the persistent data -- like the database (`ms.db`), cache, and credential files -- will be written to this directory.
+
+      Order of path acquisition:
+
+      * `$DATA_DIR` - user-defined (or auto defined in Docker image)
+      * `$STATE_DIRECTORY` - defined by [systemd](/installation/service)
+      * OS-standardized directory from below...
+      
+      <Tabs>
+        <TabItem value="linux" label="Linux">
+            `$XDG_DATA_HOME/multi-scrobbler` or `~/.local/share/multi-scrobbler`
+        </TabItem>
+        <TabItem value="mac" label="MacOS">
+            `~/Library/Application Support/multi-scrobbler`
+        </TabItem>
+        <TabItem value="win" label="Windows">
+            `%LOCALAPPDATA%\multi-scrobbler\Data`
+        </TabItem>
+      </Tabs>
+    </TabItem>
+    <TabItem value="logs" label="Logs">
+      Logs will be written to this directory.
+
+      Order of path acquisition:
+
+      * `$LOGS_DIR` - user-defined (or auto defined in Docker image)
+      * `$LOGS_DIRECTORY` - defined by [systemd](/installation/service)
+      * OS-standardized directory from below...
+      
+      <Tabs>
+        <TabItem value="linux" label="Linux">
+            `$XDG_STATE_HOME/multi-scrobbler` or `~/.local/state/multi-scrobbler`
+        </TabItem>
+        <TabItem value="mac" label="MacOS">
+            `~/Library/Logs/multi-scrobbler`
+        </TabItem>
+        <TabItem value="win" label="Windows">
+            `%LOCALAPPDATA%\multi-scrobbler\Log`
+        </TabItem>
+      </Tabs>
+    </TabItem>
+</Tabs>
+
+## Reverse Proxy Recommended
+
+Multi-Scrobbler's UI performs best when it is behind a reverse proxy, like NGINX (NPM) Traefik or Caddy.
+
+<details>
+
+<summary>Why: Security</summary>
+
+Most reverse proxies have easy ways to set up basic authentication [which a necessity](/configuration/security/) if you plan on running Multi-Scrobbler on a machine directly exposed to the internet.
+
+</details>
+
+<details>
+
+<summary>Why: Connection Pooling and Live Events</summary>
+
+For connections to domains using HTTP/1.1 (non-TLS `http:` addresses like `http://192.168.0.101`) all major browsers use a [shared connection pool per domain](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Connection_management_in_HTTP_1.x#domain_sharding), that is used across *all* tabs. **This connection pool is limited to 6 concurrent connections.**
+
+For non-TLS connections Multi-Scrobbler uses one, always-open [SSE connection](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) **per tab** to send live updates and logs to your browser.
+
+So, with HTTP/1.1, if you open more than 5 tabs of multi-scrobbler you will not be able to communciate to the server through your browser.
+
+Using TLS (like `https://ms.mydomain.com`), which reverse proxies make easy, removes this connection limit for the pool.
+
+Additionally, using TLS unlocks the ability for Multi-Scrobbler to share a *single* SSE connection between *all* tabs which reduces the bandwidth used by all tabs signficantly.
+
+</details>
+
+<DetailsAdmo type="tip" summary="Disable Buffering for Searches">
+
+When Multi-Scrobbler performs [metadata searches](/configuration/editing/#search-providers) for your Play data it streams results from providers as soon as they arrive, rather than waiting for all providers to respond. This can significantly speed up how soon you see search results in your browser.
+
+Some reverse proxies automatically enable *buffering* for requests which is usually a good thing but in this scenario prevents you from benefiting streaming results because buffering waits for the entire response before forwarding it to your browser.
+
+Use one of the common methods below to disable buffering for search-related routes. Note: these are not complete solutions, just examples as a jumping off point:
+
+<Tabs groupId="rp" queryString>
+<TabItem value="caddy" label="Caddy">
+
+Set [`flush_interval -1`](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy#streaming) to disable response buffering.
+
+```Caddyfile {10}
+multi-scrobbler.domain.tld {
+  reverse_proxy multi-scrobbler:9078
+
+  @search {
+    method POST GET
+    path /api/metadata/search/*
+  }
+
+  reverse_proxy @search multi-scrobbler:9078 {
+    flush_interval -1
+  }
+
+}
+```
+
+</TabItem>
+<TabItem value="NPM/NGINX" label="nginx">
+
+<h3>NGINX</h3>
+
+```nginx {3} placeholder="/your-route,http://your_backend"
+location /your-route {
+    proxy_pass http://your_backend;
+    proxy_buffering off;
+}
+```
+
+</TabItem>
+<TabItem value="traefik" label="Traefik">
+
+Traefik does not automatically enable buffering. If you use the [Buffering middleware](https://doc.traefik.io/traefik/reference/routing-configuration/http/middlewares/buffering/) then responses are automatically buffered and cannot be disabled, [yet.](https://github.com/traefik/traefik/issues/12869)
+
+</TabItem>
+</Tabs>
+
+</DetailsAdmo>

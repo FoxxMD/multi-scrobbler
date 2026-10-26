@@ -1,0 +1,19 @@
+---
+// Starlight-style aside that accepts any `type`. Colors per type live in src/styles/custom.css.
+import { asideIcons, asideTitles } from './asideIcons';
+
+interface Props {
+	type?: string;
+	title?: string;
+}
+
+const { type = 'note', title = asideTitles[type] ?? type } = Astro.props;
+const icon = asideIcons[type] ?? asideIcons.note;
+---
+
+<aside aria-label={title} class={`starlight-aside starlight-aside--${type}`}>
+	<p class="starlight-aside__title" aria-hidden="true">
+		<svg class="starlight-aside__icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d={icon} /></svg>{title}
+	</p>
+	<div class="starlight-aside__content"><slot /></div>
+</aside>

@@ -1,0 +1,4 @@
+Sitemap: https://docs.multi-scrobbler.app/sitemap.xml
+
+User-agent: *
+Allow: /

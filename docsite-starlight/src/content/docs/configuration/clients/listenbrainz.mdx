@@ -1,0 +1,34 @@
+---
+title: Listenbrainz
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 5
+---
+
+
+
+
+import JsonConfig from '@site/../config/listenbrainz.json.example?raw';
+import ENVConfig from "@site/src/content/docs/configuration/clients/_env_configs/_listenbrainz.md";
+import DeviceInfo from "@site/src/components/snippets/_device_allow_list.mdx";
+
+:::tip[Other Users]
+
+* To monitor and re-scrobble activity from a Listenbrainz account create a [Listenbrainz (Source)](/configuration/sources/listenbrainz-source)
+* To accept scrobbles from outside applications as if multi-scrobbler was a Listenbrainz server, create a [Listenbrainz (Endpoint)](/configuration/sources/listenbrainz-endpoint)
+
+:::
+
+You will need to run your own Listenbrainz server or have an account [on the official instance](https://listenbrainz.org/login/)
+
+On your [profile page](https://listenbrainz.org/profile/) find your **User Token** to use in the configuration.
+
+## Configuration
+
+<DetailsAdmo type="tip" summary="Scrobbling Device Data">
+<DeviceInfo name="LZ"/>
+</DetailsAdmo>
+
+<Config config="ListenBrainzClientConfig" fileContent={JsonConfig} client ambiguous name="listenbrainz">
+<ENVConfig/>
+</Config>

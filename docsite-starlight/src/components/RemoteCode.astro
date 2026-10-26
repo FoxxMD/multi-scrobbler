@@ -1,0 +1,36 @@
+---
+// Build-time replacement for docusaurus-theme-github-codeblock (```lang reference) and RemoteCodeBlock.tsx.
+// Fetches when the site is built, so the snapshot is as fresh as the build.
+import { Code } from '@astrojs/starlight/components';
+import { extractSnippet } from '../Utils';
+
+interface Props {
+	url: string;
+	lang?: string;
+	language?: string;
+	title?: string;
+	ranges?: [number, number][];
+	prefix?: string;
+	suffix?: string;
+	interstitial?: string;
+}
+
+const { url, lang, language, title, ranges, prefix, suffix, interstitial = '' } = Astro.props;
+
+// github.com/<o>/<r>/blob/<ref>/<path> -> raw.githubusercontent.com/<o>/<r>/<ref>/<path>
+const rawUrl = url.replace(/^https:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/, 'https://raw.githubusercontent.com/$1/$2/$3');
+
+let code: string;
+try {
+	const res = await fetch(rawUrl);
+	if (!res.ok || res.body === null) throw new Error(`${res.status} ${res.statusText}`);
+	const parts = ranges === undefined ? [await res.text()] : await extractSnippet(res.body, ranges);
+	code = [prefix, parts.join(interstitial === '' ? '\n' : `\n${interstitial}\n`), suffix].filter((x) => x !== undefined).join('\n');
+} catch (e) {
+	// offline builds (e.g. sandboxed docker) still produce a page
+	code = `# Could not fetch ${url} at build time: ${(e as Error).message}`;
+}
+---
+
+<Code code={code.trimEnd()} lang={lang ?? language} title={title} />
+<p class="remote-code-source"><a href={url}>View on GitHub</a></p>

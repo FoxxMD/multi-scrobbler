@@ -1,0 +1,119 @@
+---
+title: Overview
+description: Scrobble Clients
+sidebar:
+  order: 0
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 4
+slug: configuration/clients
+---
+
+import ScrobbleThreshold from "@site/src/components/snippets/_scrobble-threshold.mdx";
+import Monitoring from "@site/src/components/snippets/_monitoring.mdx";
+
+A **Client** is an application that stores the historical information about what songs you have played (scrobbles). Examples are **Maloja, Last.fm, Listenbrainz**...
+
+## Clients
+
+<CapabilityLegend>
+  * <Cap level="yes"/> Supported - The Source has this feature and MS also supports it
+  * <Cap level="config"/> Supported with configuration - The Source has this feature but MS needs explicit configuration for it
+  * <Cap level="na"/> Not applicable - This feature is not applicable to this Source
+  * <Cap level="no"/> Not available - The Source has this feature but MS **does not** support it yet.
+</CapabilityLegend>
+
+<div class="capability-matrix" style={{'--cols': 1}}>
+
+| Name                                                | Now Playing |
+| :-------------------------------------------------- | :---------- |
+| [Discord](/configuration/clients/discord)           | <Cap level="yes"/> |
+| [Last.fm](/configuration/clients/lastfm)            | <Cap level="yes"/> |
+| [Libre.fm](/configuration/clients/librefm)          | <Cap level="yes"/> |
+| [Listenbrainz](/configuration/clients/listenbrainz) | <Cap level="yes"/> |
+| [Koito](/configuration/clients/koito)               | <Cap level="yes"/> |
+| [Maloja](/configuration/clients/maloja)             | <Cap level="na"/> |
+| [Rocksky](/configuration/clients/rocksky)           | <Cap level="yes"/> |
+| [Teal.fm](/configuration/clients/tealfm)            | <Cap level="yes"/> |
+| [Tuneshine](/configuration/clients/tuneshine)       | <Cap level="yes"/> |
+
+</div>
+
+## Features
+
+### Duplicate Detection
+
+Before a Play is scrobbled to a client MS checks existing scrobbles from the Client's API to see if the Play has already been scrobbled.
+
+For each Play, MS fetches (cached) scrobbles from the Client in a time range inclusive of the Play's listening timestamp and then scores existing scrobbles against the Play based on:
+
+* Similarity of Title, Artists, and Album
+* Temporal closeness of the Play's timestamp to the existing scrobble's timestamp
+* Whether MS detected the Play as a repeat (applicable to Sources that report realtime Player data)
+
+Detailed scoring breakdowns against each existing scrobble are logged at the `TRACE` logging level or in the [debug data](/help#copy-play-debug-data) for a scrobble.
+
+See the [**Duplicate Scrobble Guidance**](/configuration/duplicates#how-duplicates-are-detected) page to learn how duplicates are detected and how you can ensure your configuration avoids possible duplicates.
+
+### Dead Scrobbles
+
+If multi-scrobbler is unable to submit a scrobble to a Client then it places the scrobble into a queue which is retried every 5 minutes for a number of times before it gives up.
+
+After it stops _automatically_ retrying the scrobble still exists and can be retried from the dashboard. Dead scrobbles persist between restart so you will never lose a scrobble that hasn't been successfully submitted yet.
+
+### Now Playing
+
+Multi-scrobbler can report the currently **playing** tracks it is monitoring to some Scrobble Clients via their individual **Now Playing** functionality.
+
+Now Playing is **default enabled** for all Clients that support it.
+
+The behavior multi-scrobbler uses for determining Now Playing reporting:
+
+* Now Playing can be explicitly enabled or disabled globally using ENV `NOW_PLAYING=true` or `NOW_PLAYING=false`
+    * This only affects Clients that don't have behavior set via File/AIO (below)
+* Now Playing will be only be reported to the same Clients a Source is configured to scrobble to
+* A Source's Player status must be **Playing**, IE **active**, for reporting to occur
+  * This status can be verified via Player UI on the Dashboard
+* If multiple Sources having active Players then the scrobble Client will default to reporting the track based on Source **configuration** name, alphabetically
+  * This is the `name` property set in [File or AIO source configs](/configuration?configType=file#configuration-types)
+
+Clients can customize the Now Playing behavior individually using [File or AIO source configs:](/configuration?configType=file#configuration-types)
+
+:::code-tabs
+```json5 label="Enable/Disable" brackets
+[
+  {
+    // [!link /Last.fm/ /configuration/clients/lastfm]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Last.fm File Config
+    "name": "myLastFmClient",
+    "configureAs": "client",
+    "data": {
+      // ...
+    },
+    "options": {
+        "nowPlaying": true // [!code highlight] [!ref] `true` to enable or `false` to disable Now Playing for this Client
+    }
+  },
+]
+```
+```json5 label="Allowed Sources" brackets
+[
+  {
+    // [!link /Last.fm/ /configuration/clients/lastfm]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Last.fm File Config
+    "name": "myLastFmClient",
+    "configureAs": "client",
+    "data": {
+      // ...
+    },
+    "options": {
+        "nowPlaying": ["mySpotify1","myJellyfin2"] // [!code highlight] [!ref] list of Source *config* names allowed to report Now Playing. The order of the list determines priority for reporting Now Playing
+    }
+  },
+]
+```
+:::
+
+<Monitoring/>

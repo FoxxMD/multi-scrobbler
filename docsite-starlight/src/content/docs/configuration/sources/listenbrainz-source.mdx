@@ -1,0 +1,32 @@
+---
+title: Listenbrainz
+description: Listenbrainz (Source)
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 5
+---
+
+
+
+
+import ListenbrainzConfig from '@site/../config/listenbrainz.json.example?raw';
+import ENVConfig from "@site/src/content/docs/configuration/sources/_env_configs/_listenbrainz.md";
+
+This Source monitors a Listenbrainz account's scrobble history and then re-scrobbles discovered tracks to configured clients.
+
+:::tip[Other Uses]
+
+* To **scrobble to** a Listenbrainz server, create a [Listenbrainz (Client)](/configuration/clients/listenbrainz)
+* To accept scrobbles from outside applications as if multi-scrobbler was a Listenbrainz server, create a [Listenbrainz (Endpoint)](/configuration/sources/listenbrainz-endpoint)
+
+:::
+
+You will need to run your own Listenbrainz server or have an account [on the official instance](https://listenbrainz.org/login/).
+
+On your [profile page](https://listenbrainz.org/profile/) find your **User Token** to use in the configuration.
+
+## Configuration
+
+<Config config="ListenBrainzSourceConfig" fileContent={ListenbrainzConfig} configureAs ambiguous name="listenbrainz">
+<ENVConfig/>
+</Config>

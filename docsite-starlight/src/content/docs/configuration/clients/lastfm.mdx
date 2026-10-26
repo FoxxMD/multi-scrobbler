@@ -1,0 +1,69 @@
+---
+title: Last.fm
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 5
+---
+
+
+
+
+import JsonConfig from '@site/../config/lastfm.json.example?raw';
+import ENVConfig from "@site/src/content/docs/configuration/clients/_env_configs/_lastfm.md";
+
+:::tip[Other Users]
+
+* To monitor and re-scrobble activity from your Last.fm/Libre.fm account create a [Last.fm (Source)](/configuration/sources/lastfm-source)
+* To accept scrobbles from outside applications as if multi-scrobbler was Last.fm, create a [Last.fm (Endpoint)](/configuration/sources/lastfm-endpoint)
+
+:::
+
+<DetailsAdmo type="warning" summary="Limits for Old Scrobbles">
+
+Last.fm will not accept scrobbles that are timestamped as **older than 2 weeks** from the current time.
+
+This is not officially documented but has been confirmed by multiple people/mods in the last.fm support forums: [[1]](https://support.last.fm/t/importing-listening-history-spotify-apple-music-and-itunes-wmp/1424/3) [[2]](https://support.last.fm/t/suggestion-allow-last-fm-pro-members-to-use-the-api-to-submit-scrobbles-older-than-2-weeks/69190/2) [[3]](https://support.last.fm/t/how-to-scrobble-complete-spotify-history/44558)
+
+Multi-scrobbler can queue scrobbles for you if the Last.fm service is unavailable, or if there is an issue with a specific scrobble. However, you are responsible for making sure these scrobbles are eventually sent to Last.fm (by retrying in the UI or retarting Last.fm client in UI) before the two week window has passed or else they will not be scrobblable *at all* unless the timestamp is changed.
+
+A future update to Multi-scrobbler will enable editing of unsent scrobble data and modifying the timestamp from the UI.
+
+If you have issues with specific scrobbles not being sent and retries/restarts do not fix it, please make sure to [create a new issue](https://github.com/FoxxMD/multi-scrobbler/issues/new?template=01-bug-report.yml) in a timely manner so that it can be resolved before the window has passed.
+
+</DetailsAdmo>
+
+You will need a [Last.fm](https://www.last.fm) account to use the Last.fm API.
+
+After creating your account, [register for an API account here.](https://www.last.fm/api/account/create)
+
+The callback URL in the API account form is not used, but to keep it consistent use the same value you set using the [Callback/Redirect URL](#callbackredirect-url) section.
+
+**Take note of your API Key and Secret after account creation.**
+
+### Callback/Redirect URL
+
+The Redirect (Callback) URL is used to redirect your **browser** to multi-scrobbler after authentication has completed.
+
+So, the *base of the URL* you use should be the *same* as the URL you would use to navigate to the multi-scrobbler dashboard.
+
+<details>
+
+<summary>Example</summary>
+
+If you can visit the multi-scrobbler dashboard by navigating to http://192.168.0.100:9078 in your web browser...
+
+then the ENV `LASTFM_REDIRECT_URI`, or `redirectUri` for last.fm/libre.fm json config, should be
+
+```text placeholder="YOUR_MS_DOMAIN"
+http://YOUR_MS_DOMAIN/lastfm/callback
+```
+
+</details>
+
+The Redirect URL can be explicitly specified in the configuration below, or by using the global [Base URL](/configuration#base-url) setting.
+
+## Configuration
+
+<Config config="LastfmClientConfig" fileContent={JsonConfig} client ambiguous name="lastfm">
+<ENVConfig/>
+</Config>

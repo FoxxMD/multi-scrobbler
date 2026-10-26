@@ -1,0 +1,58 @@
+---
+title: Jellyfin
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 5
+---
+
+
+
+
+import JellyfinConfig from '@site/../config/jellyfin.json.example?raw';
+import ENVConfig from "@site/src/content/docs/configuration/sources/_env_configs/_jellyfin.md";
+
+Must be using Jellyfin 10.7 or greater
+
+* Create an **API Key** for multi-scrobbler
+  * In the Jellyfin desktop web UI Navigate to -> Administration -> Dashboard -> API Keys (`http://YOUR_JELLYIN_URL/web/index.html#!/apikeys.html`)
+  * Click `+` button and create a new key with **App name** `multi-scrobbler`
+  * Copy the created API Key value for use in configuration below
+
+
+It is **recommended** to use API Key + username but if you are not an admin for your Jellyfin instance you can also authenticate with your Jellyfin username and **password.**
+
+<DetailsAdmo type="tip" summary="Important Defaults">
+
+By default...
+
+* multi-scrobbler will **only** scrobble for the user authenticated with the API. 
+  * Allowed Users (`usersAllow` or `JELLYFIN_USERS_ALLOW`) are only necessary if you want to scrobble for additional users.
+* multi-scrobbler will **only** scrobble media found in Jellyfin libraries that were labelled as **Music.**
+  * `librariesAllow` or `JELLYFIN_LIBRARIES_ALLOW` will override this
+  * OR use `additionalAllowedLibraryTypes` to allow more *library* types (like those labelled as `mixed` or `book` for audiobooks)
+* multi-scrobbler will **only** scrobble media Jellyfin detects as **Audio**.
+  * To allow other media types to be scrobbled set `allowMediaTypes` or `JELLYFIN_MEDIATYPES_ALLOW` with a list of [official types](https://github.com/jellyfin/jellyfin-sdk-typescript/blob/master/src/generated-client/models/media-type.ts#L22).
+    * One or more of: `Unknown`, `Video`, `Audio`, `Photo`, `Book`
+    * If you use this setting **you must explicitly specify `Audio`**, it will no longer be provided as a default
+
+</DetailsAdmo>
+
+<DetailsAdmo type="tip" summary="External Asset URL">
+
+If you use MS and Jellyfin on an internal or otherwise inaccessible network but still want album art assets used in the UI or for [Discord](/configuration/clients/discord) to be accessible you can specify a URL to replace your internal url.
+
+Use (file) `frontendUrlOverride` or (env) `JELLYFIN_FRONTEND_URL_OVERRIDE` to replace `url`/`JELLYFIN_URL`, respectively, when rendering links for the dashboard UI or other resources.
+
+Example:
+
+Your `JELLYFIN_URL` is `http://jellyfin:8096` but your Jellyfin instance is externally accessible (by MS or in general) at `https://jellyfin.mydomain.com`.
+
+Use `JELLYFIN_FRONTEND_URL_OVERRIDE=https://jellyfin.mydomain.com` in order for the MS dashboard to use `https://jellyfin.mydomain.com/art/1234.jpg` when linking to album art.
+
+</DetailsAdmo>
+
+#### Configuration
+
+<Config config="JellyApiSourceConfig" fileContent={JellyfinConfig} name="jellyfin">
+<ENVConfig/>
+</Config>
