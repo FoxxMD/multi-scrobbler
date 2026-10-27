@@ -8,7 +8,7 @@ export interface ExplorerFetchProps {
     name: string
 }
 
-export default function ExplorerFetchFunc(props: ExplorerFetchProps): JSX.Element {
+export default function ExplorerFetchFunc(props: ExplorerFetchProps): React.JSX.Element {
 
     const [schema, setSchema] = useState(undefined as undefined | Error | object);
 
@@ -37,7 +37,7 @@ export default function ExplorerFetchFunc(props: ExplorerFetchProps): JSX.Elemen
     )
 }
 
-// export default function ExplorerFetch(props: ExplorerFetchProps): JSX.Element {
+// export default function ExplorerFetch(props: ExplorerFetchProps): React.JSX.Element {
 //     return (
 //         <BrowserOnly fallback={<div>Loading...</div>}>
 //             {() => {

@@ -30,7 +30,7 @@ const validator = createAjvValidator({
     }
 });
 
-function PlaygroundInner(): JSX.Element {
+function PlaygroundInner(): React.JSX.Element {
 
       const {
     colorMode, // the "effective" color mode, never null
@@ -51,7 +51,7 @@ function PlaygroundInner(): JSX.Element {
                 </DetailsAdmo>
 <div className="not-content">
                 <JsonSchemaViewer
-                schema={Schema as JSONSchema}
+                schema={Schema as unknown as JSONSchema}
                 // expanded={false}
                 // hideTopBar={false}
                 renderRootTreeLines={true}
@@ -109,7 +109,7 @@ function PlaygroundInner(): JSX.Element {
     )
 }
 
-export default function PlaygroundComponent(): JSX.Element {
+export default function PlaygroundComponent(): React.JSX.Element {
     return (
         <PlaygroundInner />
     )

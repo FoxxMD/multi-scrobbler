@@ -50,7 +50,7 @@ const InternalLocalStorageText: FC<LocalStorateTextProps> = (props) => {
             if (mirrorRef.current) setTextWidth(mirrorRef.current.getBoundingClientRect().width);
         }, [inputValue, placeholder]);
 
-        const handleInputChange = (event) => {
+        const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
             setInputValue(event.target.value);
         }
 

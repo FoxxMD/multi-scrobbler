@@ -8,6 +8,7 @@ import caddyfileGrammar from './plugins/caddyfile.tmLanguage.json' with { type: 
 export const docsBase = process.env.DOCS_BASE !== undefined && process.env.DOCS_BASE !== '' ? process.env.DOCS_BASE : '/docs';
 
 /** shared with the starlight-codeblocks Starlight plugin in astro.config.mjs */
+/** @type {import('starlight-codeblocks').CodeblocksOptions} */
 export const codeblocksOptions = {
   notation: { comments: { json: ['//'], text: ['<--', '#'], caddyfile: ['#'] } },
   placeholders: { storage: 'session' },

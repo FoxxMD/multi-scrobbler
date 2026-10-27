@@ -43,12 +43,12 @@ const localTypedStorageHook = <T>(key: string, initialValue: T, json: boolean = 
 
 
   const updateValue = useCallback(
-    newValue => {
+    (newValue: T) => {
       setStoredValue(() => {
         if(json) {
            localStorage.setItem(key, JSON.stringify(newValue)) 
         } else {
-            localStorage.setItem(key, newValue)
+            localStorage.setItem(key, String(newValue))
         }
         return newValue
       })

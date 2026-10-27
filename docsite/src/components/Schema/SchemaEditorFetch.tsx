@@ -6,10 +6,10 @@ import json5 from 'json5';
 
 export interface SchemaEditorFetchProps {
     configContent: string | object
-    schemaName?: string
+    schemaName?: string | undefined
 }
 
-export default function ExplorerFetchFunc(props: SchemaEditorFetchProps): JSX.Element {
+export default function ExplorerFetchFunc(props: SchemaEditorFetchProps): React.JSX.Element {
 
     const {
         schemaName

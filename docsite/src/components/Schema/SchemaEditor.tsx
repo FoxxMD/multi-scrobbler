@@ -10,12 +10,12 @@ import json5 from 'json5';
 
 export interface SchemaEditorProps {
     config: object | string
-    schema?: object
+    schema?: object | undefined
     height?: string
 }
 
 // based on https://github.com/jy95/docusaurus-json-schema-plugin/blob/main/testsite/src/components/PlaygroundInner.tsx
-function SchemaEditorInner(props: SchemaEditorProps): JSX.Element {
+function SchemaEditorInner(props: SchemaEditorProps): React.JSX.Element {
 
     const validator: Validator | undefined = useMemo(() => {
         if(props.schema === undefined) {
@@ -69,7 +69,7 @@ function SchemaEditorInner(props: SchemaEditorProps): JSX.Element {
     )
 }
 
-export default function SchemaEditor(props: SchemaEditorProps): JSX.Element {
+export default function SchemaEditor(props: SchemaEditorProps): React.JSX.Element {
     return (
         <SchemaEditorInner {...props} />
     )

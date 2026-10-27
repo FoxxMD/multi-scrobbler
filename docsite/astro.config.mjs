@@ -29,6 +29,7 @@ const site =
   'https://foxxmd.github.io';
 
 // analytics + search console verification, only when configured
+/** @type {NonNullable<import('@astrojs/starlight/types').StarlightUserConfig['head']>} */
 const head = [];
 if (process.env.GSITEVERIFICATION?.trim()) {
   head.push({ tag: 'meta', attrs: { name: 'google-site-verification', content: process.env.GSITEVERIFICATION } });
@@ -41,7 +42,7 @@ if (process.env.RY_ANALYTICS?.trim()) {
 }
 const base = docsBase;
 
-const comp = (p) => `./src/components/${p}`;
+const comp = (/** @type {string} */ p) => `./src/components/${p}`;
 
 const specPath = new URL('./.astro/openapi.json', import.meta.url);
 const apiSlugs = prepareSpec(new URL('./public/openapi.json', import.meta.url), specPath, base);
@@ -137,13 +138,6 @@ export default defineConfig({
     mdx(),
   ],
   vite: {
-    resolve: {
-      alias: [
-        // `@site/..` in docusaurus content points at the repo root (config examples, etc.)
-        { find: /^@site\/\.\.\//, replacement: fileURLToPath(new URL('../', import.meta.url)) },
-        { find: /^@site\//, replacement: fileURLToPath(new URL('./', import.meta.url)) },
-      ],
-    },
     server: {
        fs: { allow: ['..'] },
        allowedHosts: true

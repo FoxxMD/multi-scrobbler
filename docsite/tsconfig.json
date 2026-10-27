@@ -6,6 +6,11 @@
     "jsx": "react-jsx",
     "jsxImportSource": "react",
     // ported components import types without `import type`; let the transpiler elide them
-    "verbatimModuleSyntax": false
+    "verbatimModuleSyntax": false,
+    "exactOptionalPropertyTypes": true,
+    // `@site/` is the docsite root (as in Docusaurus); `@site/../` reaches the repo root (config examples, etc.)
+    "paths": {
+      "@site/*": ["./*"]
+    }
   }
 }

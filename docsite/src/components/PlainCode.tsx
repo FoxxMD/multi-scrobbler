@@ -3,7 +3,7 @@ import React from 'react';
 
 export interface PlainCodeProps {
 	children?: string | null;
-	title?: string;
+	title?: string | undefined;
 	language?: string;
 	className?: string;
 }

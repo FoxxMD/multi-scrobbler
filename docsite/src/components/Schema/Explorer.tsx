@@ -9,7 +9,7 @@ export interface ExplorerProps {
 }
 
 // based on https://github.com/jy95/docusaurus-json-schema-plugin/blob/main/testsite/src/components/PlaygroundInner.tsx
-export default function Explorer(props: ExplorerProps): JSX.Element {
+export default function Explorer(props: ExplorerProps): React.JSX.Element {
 
     //injectStyles();
 
@@ -29,7 +29,7 @@ export default function Explorer(props: ExplorerProps): JSX.Element {
     )
 }
 
-// export default function PlaygroundComponent(): JSX.Element {
+// export default function PlaygroundComponent(): React.JSX.Element {
 //     return (
 //         <BrowserOnly fallback={<div>Loading...</div>}>
 //             {() => {

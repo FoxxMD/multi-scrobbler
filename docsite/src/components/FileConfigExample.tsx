@@ -26,12 +26,12 @@ const FileConfigExample = (props: FileConfigProps) => {
     let configObj;
     // eslint-disable-next-line prefer-const
     try {
-        configObj = json5.parse(data) as object[];
+        configObj = json5.parse(data) as { configureAs?: string }[];
     } catch (e) {
         console.error(new Error(`Unable to parse content for ${aio === true ? 'aio ' :''}${name}`, {cause: e}));
         return <Aside type="danger" title="Unexpected Error">
             <p>Example component crashed because of error!</p>
-            <PlainCode>{e.message}</PlainCode>
+            <PlainCode>{(e as Error).message}</PlainCode>
         </Aside>
     }
 
