@@ -14,6 +14,7 @@ import AutoImport from 'astro-auto-import';
 import starlightChangelogs, { makeChangelogsSidebarLinks } from 'starlight-changelogs';
 import { changelogsBase, changelogsEnabled } from './plugins/changelogs.mjs';
 import { satteriBaseLinks } from './plugins/satteriBaseLinks.mjs';
+import { satteriGithubAlerts } from './plugins/satteriGithubAlerts.mjs';
 import { docsBase, codeblocksOptions } from './ec.config.mjs';
 import { rootSidebar } from './plugins/rootSidebar.mjs';
 import { prepareSpec, apiRedirects } from './plugins/openapiSpec.mjs';
@@ -61,7 +62,7 @@ export default defineConfig({
       : satteri({
           // native `## Heading {#custom-id}` support, works unescaped in .mdx
           features: { headingAttributes: true },
-          hastPlugins: [satteriBaseLinks(base)],
+          hastPlugins: [satteriBaseLinks(base), satteriGithubAlerts()],
         }),
   },
   // Astro does not prefix redirect destinations with `base`, so do it here
