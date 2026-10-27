@@ -1,7 +1,6 @@
 import React, {useEffect, useState} from "react"
-import BrowserOnly from "@docusaurus/BrowserOnly"
-import {useColorMode, useWindowSize} from '@docusaurus/theme-common';
-import CodeBlock from '@theme/CodeBlock';
+import {useColorMode, useWindowSize} from './theme';
+import PlainCode from './PlainCode';
 
 import Schema from "@site/public/schemas/aio.json";
 import ConfigExample from "@site/public/configExample.json";
@@ -93,7 +92,7 @@ function PlaygroundInner(): JSX.Element {
                     </p>
                 </DetailsAdmo>
                 </div>
-                {windowSize === 'mobile' ? (<CodeBlock title={`CONFIG/config.json`} language="json5">{JSON.stringify(data, null, 2)}</CodeBlock>) : (
+                {windowSize === 'mobile' ? (<PlainCode title={`CONFIG/config.json`} language="json5">{JSON.stringify(data, null, 2)}</PlainCode>) : (
 <div className="not-content">
                         <ReactJsonEditor 
     validator={validator} 
@@ -112,10 +111,6 @@ function PlaygroundInner(): JSX.Element {
 
 export default function PlaygroundComponent(): JSX.Element {
     return (
-        <BrowserOnly fallback={<div>Loading...</div>}>
-            {() => {
-                return <PlaygroundInner />
-            }}
-        </BrowserOnly>
+        <PlaygroundInner />
     )
 }

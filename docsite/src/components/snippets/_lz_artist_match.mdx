@@ -1,4 +1,3 @@
-import CodeInline from '@theme/CodeInline';
 
 The Listenbrainz `listens` payload has many fields of varying granularity: (See [OpenAPI Spec](https://rain0r.github.io/listenbrainz-openapi) `listensForUser_payload_listens_inner` schema).
 
@@ -44,4 +43,4 @@ However, there are usecases where you may not want this additional processing to
 If your usecase meets this scenario, or you just generally don't want MS doing anything with artists, you can **disable artist extraction** using one of these options in your config:
 
 * File/AIO - use `"options": {"extractArtists": false }`
-* ENV - use <CodeInline>{props.name}_EXTRACT_ARTISTS=false</CodeInline>
+* ENV - use <code>{props.name}_EXTRACT_ARTISTS=false</code>

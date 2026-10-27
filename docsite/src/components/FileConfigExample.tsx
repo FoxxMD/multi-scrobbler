@@ -1,7 +1,7 @@
 import React, { Fragment, useMemo } from "react"
-import CodeBlock, {Props as CodeBlockProps} from '@theme/CodeBlock';
-import Admonition from '@theme/Admonition';
-import ErrorBoundary from "@docusaurus/ErrorBoundary"
+import PlainCode from './PlainCode';
+import Aside from './Aside';
+import ErrorBoundary from "./ErrorBoundary"
 import json5 from 'json5';
 import FileExample, { FileProps } from "./FileExample";
 import { transformConfig } from './configTransform';
@@ -29,10 +29,10 @@ const FileConfigExample = (props: FileConfigProps) => {
         configObj = json5.parse(data) as object[];
     } catch (e) {
         console.error(new Error(`Unable to parse content for ${aio === true ? 'aio ' :''}${name}`, {cause: e}));
-        return <Admonition type="danger" title="Unexpected Error">
+        return <Aside type="danger" title="Unexpected Error">
             <p>Example component crashed because of error!</p>
-            <CodeBlock>{e.message}</CodeBlock>
-        </Admonition>
+            <PlainCode>{e.message}</PlainCode>
+        </Aside>
     }
 
     const transformed = useMemo(() => transformConfig(data, configureAs, aio, name), [data, configureAs, aio, name])

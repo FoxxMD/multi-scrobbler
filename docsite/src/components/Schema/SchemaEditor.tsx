@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react"
-import BrowserOnly from "@docusaurus/BrowserOnly"
-import { useColorMode } from '@docusaurus/theme-common';
+import { useColorMode } from '../theme';
 
 const STRINGIFY_JSON = (json: unknown) => JSON.stringify(json, null, "\t");
 import "../modern-json-react-styles.css";
@@ -72,10 +71,6 @@ function SchemaEditorInner(props: SchemaEditorProps): JSX.Element {
 
 export default function SchemaEditor(props: SchemaEditorProps): JSX.Element {
     return (
-        <BrowserOnly fallback={<div>Loading...</div>}>
-            {() => {
-                return <SchemaEditorInner {...props} />
-            }}
-        </BrowserOnly>
+        <SchemaEditorInner {...props} />
     )
 }

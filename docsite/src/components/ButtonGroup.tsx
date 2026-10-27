@@ -1,6 +1,5 @@
 import React, { ReactNode, CSSProperties } from 'react';
 import clsx from 'clsx'; 
-import Link from '@docusaurus/Link';
 import Button, { ButtonProps } from './Button';
 
 const leftButton = {

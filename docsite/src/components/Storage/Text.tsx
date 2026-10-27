@@ -1,8 +1,6 @@
 import React, { Fragment, useState, useEffect, useLayoutEffect, useRef, FC } from "react"
 import { useDebounce } from "use-debounce";
 import { useTypedCodeblocksStorage } from "../useCodeblocksStorage";
-import CodeInline from '@theme/CodeInline';
-import BrowserOnly from '@docusaurus/BrowserOnly';
 
 export interface LocalStorateTextProps {
     readOnly?: boolean
@@ -75,7 +73,7 @@ const InternalLocalStorageText: FC<LocalStorateTextProps> = (props) => {
 
             switch(stylePreset) {
                 case 'inline':
-                    return <CodeInline className={sensitiveClass}>{roVal}</CodeInline>;
+                    return <code className={sensitiveClass}>{roVal}</code>;
                 case 'bold':
                     return <strong className={sensitiveClass}>{roVal}</strong>;
                 case 'placeholder':
@@ -104,5 +102,8 @@ const InternalLocalStorageText: FC<LocalStorateTextProps> = (props) => {
 }
 
 export const LocalStorageText:  FC<LocalStorateTextProps> = (props) => {
-    return <BrowserOnly>{() => <InternalLocalStorageText {...props}/>}</BrowserOnly>
+    // stored values only exist in the browser, so render nothing during SSR and the first hydration pass
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+    return mounted ? <InternalLocalStorageText {...props}/> : null;
 }

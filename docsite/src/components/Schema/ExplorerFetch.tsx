@@ -2,7 +2,7 @@ import React, {useEffect, useState, Fragment} from "react"
 //import BrowserOnly from "@docusaurus/BrowserOnly"
 
 import Explorer from './Explorer';
-import useBaseUrl from '@docusaurus/useBaseUrl';
+import { withBase } from '../../withBase';
 
 export interface ExplorerFetchProps {
     name: string
@@ -12,7 +12,7 @@ export default function ExplorerFetchFunc(props: ExplorerFetchProps): JSX.Elemen
 
     const [schema, setSchema] = useState(undefined as undefined | Error | object);
 
-    const url = useBaseUrl(`/${props.name}.json`);
+    const url = withBase(`/${props.name}.json`);
 
     useEffect( () => {
         fetch(

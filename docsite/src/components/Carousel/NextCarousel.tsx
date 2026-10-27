@@ -1,5 +1,4 @@
 import React, {useEffect} from 'react'
-import BrowserOnly from "@docusaurus/BrowserOnly"
 import './NextCarousel.scss';
 import { EmblaOptionsType } from 'embla-carousel'
 import useEmblaCarousel from 'embla-carousel-react'
@@ -91,9 +90,7 @@ const EmblaCarousel = (props: {options?: EmblaOptionsType}) => {
 
 const ClientCarousel = () => {
   return (
-    <BrowserOnly>{() => {
-      return <EmblaCarousel/>
-    }}</BrowserOnly>
+    <EmblaCarousel/>
   )
 }
 

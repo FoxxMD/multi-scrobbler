@@ -1,4 +1,4 @@
-// Stand-in for @docusaurus/ErrorBoundary
+// Error boundary for React islands (was @docusaurus/ErrorBoundary)
 import React, { Component, type ReactNode } from 'react';
 
 type Fallback = (p: { error: Error; tryAgain: () => void }) => ReactNode;

@@ -139,18 +139,6 @@ export default defineConfig({
   vite: {
     resolve: {
       alias: [
-        // POC shims so ported React components keep their Docusaurus imports unchanged
-        ...Object.entries({
-          '@docusaurus/BrowserOnly': 'BrowserOnly.tsx',
-          '@docusaurus/ErrorBoundary': 'ErrorBoundary.tsx',
-          '@docusaurus/ExecutionEnvironment': 'ExecutionEnvironment.ts',
-          '@docusaurus/useBaseUrl': 'useBaseUrl.ts',
-          '@docusaurus/Link': 'Link.tsx',
-          '@docusaurus/theme-common': 'theme-common/index.ts',
-          '@theme/CodeInline': 'CodeInline.tsx',
-          '@theme/CodeBlock': 'CodeBlock.tsx',
-          '@theme/Admonition': 'Admonition.tsx',
-        }).map(([find, file]) => ({ find: new RegExp(`^${find}$`), replacement: fileURLToPath(new URL(`./src/shims/${file}`, import.meta.url)) })),
         // `@site/..` in docusaurus content points at the repo root (config examples, etc.)
         { find: /^@site\/\.\.\//, replacement: fileURLToPath(new URL('../', import.meta.url)) },
         { find: /^@site\//, replacement: fileURLToPath(new URL('./', import.meta.url)) },

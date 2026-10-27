@@ -1,6 +1,6 @@
 import React, {useEffect, useState, Fragment} from "react"
 
-import useBaseUrl from '@docusaurus/useBaseUrl';
+import { withBase } from '../../withBase';
 import SchemaEditor from "./SchemaEditor";
 import json5 from 'json5';
 
@@ -18,7 +18,7 @@ export default function ExplorerFetchFunc(props: SchemaEditorFetchProps): JSX.El
     const [schema, setSchema] = useState(undefined as undefined | Error | object | false);
     const [config, setConfig] = useState(undefined as undefined | Error | object);
 
-    const schemaUrl = schemaName === undefined ? undefined : useBaseUrl(`schemas/${props.schemaName}.json`);
+    const schemaUrl = schemaName === undefined ? undefined : withBase(`schemas/${props.schemaName}.json`);
     //const configUrl = props.configName !== undefined ? useBaseUrl(`/${props.configName}.json`) : undefined;
     useEffect( () => {
         if(schemaUrl === undefined) {

@@ -1,5 +1,4 @@
 import React, {useEffect, useState} from "react"
-import BrowserOnly from "@docusaurus/BrowserOnly"
 
 //import './Explorer.scss';
 import { JsonSchemaViewer } from 'cf-json-schema-viz';

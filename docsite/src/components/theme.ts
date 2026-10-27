@@ -1,4 +1,4 @@
-// Stand-ins for the @docusaurus/theme-common hooks used by our components
+// Theme/viewport hooks for React islands (were @docusaurus/theme-common)
 import { useEffect, useState } from 'react';
 
 const readTheme = () =>

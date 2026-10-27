@@ -1,4 +1,3 @@
-import CodeInline from '@theme/CodeInline';
 
 Your [**Atmosphere Account**](https://atmosphereaccount.com) consists of social data (it's just JSON) stored in a personal [repository](https://atproto.com/guides/data-repos) on a [PDS (Personal Data Server)](https://github.com/Bluesky-social/pds), all of which is standardized under the [**AT Protocol**](https://atproto.com).
 
@@ -10,5 +9,5 @@ When Multi-Scrobbler uses the AT Protocol...
 
 * multi-scrobbler "scrobbles" (writes) your plays to your repository
   * in a JSON data structure which includes [{props.name}'s data type and structure](https://atproto.com/specs/lexicon)
-  * at a [known location for {props.name}'s data](https://atproto.com/guides/glossary#collection) (<CodeInline>{props.lexicon}</CodeInline>), in a list that is appended to as you continue to scrobble
+  * at a [known location for {props.name}'s data](https://atproto.com/guides/glossary#collection) (<code>{props.lexicon}</code>), in a list that is appended to as you continue to scrobble
 * when accessing {props.name}, or another application that knows how to read it, your data is pulled from the repository to render their app

@@ -1,14 +1,14 @@
-// Client-side fallback for @theme/CodeBlock inside React islands. Build-time code blocks use Starlight's <Code>.
+// Unhighlighted code block for React islands, styled like Expressive Code. Build-time code blocks use Starlight's <Code>.
 import React from 'react';
 
-export interface Props {
+export interface PlainCodeProps {
 	children?: string | null;
 	title?: string;
 	language?: string;
 	className?: string;
 }
 
-export default function CodeBlock({ children, title }: Props) {
+export default function PlainCode({ children, title }: PlainCodeProps) {
 	return (
 		<div className="expressive-code">
 			<figure className={title ? 'frame has-title' : 'frame'}>

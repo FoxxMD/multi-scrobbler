@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import ExecutionEnvironment from '@docusaurus/ExecutionEnvironment';
 
 const STORAGE_KEY = 'scb-placeholders';
 const CHANGE_EVENT = 'scb-placeholders-change';
@@ -15,7 +14,7 @@ const readPlaceholders = (): Record<string, string> => {
 }
 
 const readValue = (key: string, initialValue: string): string => {
-  if (!ExecutionEnvironment.canUseDOM) {
+  if (typeof window === 'undefined') {
     return initialValue;
   }
   return readPlaceholders()[key] ?? initialValue;

@@ -1,6 +1,6 @@
 import React, { ReactNode, CSSProperties } from 'react';
 import clsx from 'clsx'; 
-import Link from '@docusaurus/Link';
+import { withBase } from '../withBase';
 
 // Define the Button type to control the props that can be passed to the Button component.
 export type ButtonProps = {
@@ -59,7 +59,7 @@ export default function Button ({
     // If the button is disabled, set the destination to null.
     const destination = disabled ? null : link;
     return (
-        <Link to={destination}>
+        <a href={destination?.startsWith('/') ? withBase(destination) : destination ?? undefined}>
             <button
                 className={clsx(
                     'button',
@@ -81,6 +81,6 @@ export default function Button ({
             >
                 {label}
             </button>
-        </Link>
+        </a>
     );
 }
