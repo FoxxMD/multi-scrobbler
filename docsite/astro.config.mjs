@@ -12,16 +12,9 @@ import starlightThemeGalaxy from 'starlight-theme-galaxy';
 import starlightOpenAPI, { openAPISidebarGroups } from 'starlight-openapi';
 import AutoImport from 'astro-auto-import';
 import { satteriBaseLinks } from './plugins/satteriBaseLinks.mjs';
+import { docsBase, codeblocksOptions } from './ec.config.mjs';
 import { rootSidebar } from './plugins/rootSidebar.mjs';
-import { readFileSync } from 'node:fs';
 import { prepareSpec, apiRedirects } from './plugins/openapiSpec.mjs';
-
-// Caddyfile grammar from https://github.com/caddyserver/vscode-caddyfile (MIT, see plugins/caddyfile.LICENSE)
-const caddyfile = {
-  ...JSON.parse(readFileSync(new URL('./plugins/caddyfile.tmLanguage.json', import.meta.url), 'utf8')),
-  name: 'caddyfile',
-  aliases: ['Caddyfile', 'caddy'],
-};
 
 // POC switch: MD_PROCESSOR=unified to compare against the default Sätteri pipeline
 const useUnified = process.env.MD_PROCESSOR === 'unified';
@@ -46,12 +39,12 @@ if (process.env.RY_ANALYTICS?.trim()) {
     attrs: { src: process.env.RY_ANALYTICS, defer: true, ...(process.env.RY_ANALYTICS_SITEID ? { 'data-site-id': process.env.RY_ANALYTICS_SITEID } : {}) },
   });
 }
-const base = process.env.DOCS_BASE !== undefined && process.env.DOCS_BASE !== '' ? process.env.DOCS_BASE : '/docs';
+const base = docsBase;
 
 const comp = (p) => `./src/components/${p}`;
 
 const specPath = new URL('./.astro/openapi.json', import.meta.url);
-const apiSlugs = prepareSpec(new URL('./public/openapi.json', import.meta.url), specPath);
+const apiSlugs = prepareSpec(new URL('./public/openapi.json', import.meta.url), specPath, base);
 
 export default defineConfig({
   site,
@@ -112,7 +105,6 @@ export default defineConfig({
       favicon: '/img/favicon.ico',
       social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/foxxmd/multi-scrobbler' }],
       editLink: { baseUrl: 'https://github.com/FoxxMD/multi-scrobbler/blob/master/docsite/' },
-      expressiveCode: { shiki: { langs: [caddyfile] } },
       customCss: ['./src/styles/custom.css', './src/styles/capability.css'],
       routeMiddleware: './src/routeData.ts',
       components: {
@@ -123,11 +115,7 @@ export default defineConfig({
       },
       plugins: [
         starlightThemeGalaxy(),
-        codeblocks({
-          notation: { comments: { json: ['//'], text: ['<--', '#'], caddyfile: ['#'] } },
-          placeholders: { storage: 'session' },
-          expandable: { lines: 12, auto: 30 },
-        }),
+        codeblocks(codeblocksOptions),
         starlightAutoSidebar(),
         starlightOpenAPI([
           {

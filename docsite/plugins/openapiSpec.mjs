@@ -2,10 +2,11 @@
 // Give every operation the same slug docusaurus-plugin-openapi-docs derived from its summary, and redirect the old URLs.
 // (Long term: emit these operationIds in src/backend/utils/OpenApiUtils.ts instead.)
 import fs from 'node:fs';
+import { baseHref } from './satteriBaseLinks.mjs';
 
 const kebab = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-export function prepareSpec(src, dest) {
+export function prepareSpec(src, dest, base) {
 	const spec = JSON.parse(fs.readFileSync(src, 'utf8'));
 	const slugs = [];
 	for (const pathItem of Object.values(spec.paths ?? {})) {
@@ -16,7 +17,8 @@ export function prepareSpec(src, dest) {
 		}
 	}
 	fs.mkdirSync(new URL('.', dest), { recursive: true });
-	fs.writeFileSync(dest, JSON.stringify(spec));
+	// starlight-openapi renders descriptions itself, so root-relative Markdown links miss the base
+	fs.writeFileSync(dest, JSON.stringify(spec).replace(/\]\((\/[^)\s"]*)\)/g, (_, href) => `](${baseHref(href, base)})`));
 	return slugs;
 }
 
