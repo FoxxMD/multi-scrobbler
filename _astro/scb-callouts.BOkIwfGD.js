@@ -1,0 +1,1 @@
+const e=`data-scb-callout-select`;let t,n=!1;function r(){n||(n=!0,document.addEventListener(`pointerdown`,n=>{t?.removeAttribute(e),t=n.target.closest?.(`.scb-callout-bubble`)??void 0,t?.setAttribute(e,``)}))}export{r as default};
