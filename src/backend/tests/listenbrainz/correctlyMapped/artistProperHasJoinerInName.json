@@ -211,5 +211,83 @@
       ],
       "track": "Trashwang"
     }
+  },
+  {
+    "data": {
+      "listened_at": 1761500000,
+      "recording_msid": "00000000-0000-0000-0000-000000000760",
+      "track_metadata": {
+        "additional_info": {
+          "recording_msid": "00000000-0000-0000-0000-000000000760"
+        },
+        "artist_name": "K/DA, Wolftyla, Bea Miller",
+        "mbid_mapping": {
+          "artists": [
+            {
+              "artist_credit_name": "K/DA",
+              "artist_mbid": "00000000-0000-0000-0001-000000000001",
+              "join_phrase": ", "
+            },
+            {
+              "artist_credit_name": "Wolftyla",
+              "artist_mbid": "00000000-0000-0000-0001-000000000002",
+              "join_phrase": " & "
+            },
+            {
+              "artist_credit_name": "Bea Miller",
+              "artist_mbid": "00000000-0000-0000-0001-000000000003",
+              "join_phrase": ""
+            }
+          ],
+          "recording_mbid": "00000000-0000-0000-0000-000000000760",
+          "recording_name": "THE BADDEST"
+        },
+        "track_name": "THE BADDEST"
+      }
+    },
+    "expected": {
+      "artists": [
+        "K/DA",
+        "Wolftyla",
+        "Bea Miller"
+      ],
+      "track": "THE BADDEST"
+    }
+  },
+  {
+    "data": {
+      "listened_at": 1761500000,
+      "recording_msid": "00000000-0000-0000-0000-000000000761",
+      "track_metadata": {
+        "additional_info": {
+          "recording_msid": "00000000-0000-0000-0000-000000000761"
+        },
+        "artist_name": "EJAE, HUNTR/X",
+        "mbid_mapping": {
+          "artists": [
+            {
+              "artist_credit_name": "EJAE",
+              "artist_mbid": "00000000-0000-0000-0001-000000000004",
+              "join_phrase": ", "
+            },
+            {
+              "artist_credit_name": "HUNTR/X",
+              "artist_mbid": "00000000-0000-0000-0001-000000000005",
+              "join_phrase": ""
+            }
+          ],
+          "recording_mbid": "00000000-0000-0000-0000-000000000761",
+          "recording_name": "Golden"
+        },
+        "track_name": "Golden"
+      }
+    },
+    "expected": {
+      "artists": [
+        "EJAE",
+        "HUNTR/X"
+      ],
+      "track": "Golden"
+    }
   }
 ]

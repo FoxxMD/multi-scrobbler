@@ -92,6 +92,36 @@ Found    => ${parsed.join(' || ')}`)
         }
     });
 
+    it('Ignores empty artists from leading, trailing, or doubled delimiters', function () {
+
+        const data = [
+            {
+            str: `, Wolftyla, Bea Miller`,
+            expected: ['Wolftyla', 'Bea Miller']
+        },{
+            str: `EJAE, `,
+            expected: ['EJAE']
+        },{
+            str: `Wolftyla, , Bea Miller`,
+            expected: ['Wolftyla', 'Bea Miller']
+        },{
+            str: `, feat. Wolftyla, Bea Miller`,
+            expected: ['Wolftyla', 'Bea Miller']
+        },
+    ];
+
+        for(const d of data) {
+            const credits = parseArtistCredits(d.str);
+            const parsed = [credits!.primary].concat(credits!.secondary ?? [])
+            expect(d.expected).eql(parsed)
+        }
+    });
+
+    it('Returns undefined when artist string is only delimiters', function () {
+        expect(parseArtistCredits(', ')).to.be.undefined;
+        expect(parseArtistCredits(' / ')).to.be.undefined;
+    });
+
     it('Parses secondary free regex', function () {
 
         const data = [{

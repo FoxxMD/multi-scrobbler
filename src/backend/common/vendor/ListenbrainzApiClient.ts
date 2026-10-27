@@ -408,7 +408,8 @@ export const listenResponseToPlay = (listen: ListenResponse, opts?: ListenPayloa
                     // -- additionally remove joiner if mapped artists has one and it is present
                     filteredSubmittedArtistName = artistsWithJoinersInArtistName.reduce((acc, curr) => {
                         if(curr.join_phrase !== '') {
-                            const joinedName = `${curr.artist_credit_name} ${curr.join_phrase}`;
+                            // join_phrase already includes surrounding whitespace
+                            const joinedName = `${curr.artist_credit_name}${curr.join_phrase}`;
                             const index = acc.toLocaleLowerCase().indexOf(joinedName.toLocaleLowerCase());
                             if(index !== -1) {
                                 if(index === 0) {
@@ -437,7 +438,8 @@ export const listenResponseToPlay = (listen: ListenResponse, opts?: ListenPayloa
 
                     filteredSubmittedTrackName = artistsWithJoinersInTrackName.reduce((acc, curr) => {
                         if(curr.join_phrase !== '') {
-                            const joinedName = `${curr.artist_credit_name} ${curr.join_phrase}`;
+                            // join_phrase already includes surrounding whitespace
+                            const joinedName = `${curr.artist_credit_name}${curr.join_phrase}`;
                             const index = acc.toLocaleLowerCase().indexOf(joinedName.toLocaleLowerCase());
                             if(index !== -1) {
                                 return slice(acc, index, joinedName.length);
