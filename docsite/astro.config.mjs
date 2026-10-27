@@ -11,6 +11,8 @@ import starlightAutoSidebar from 'starlight-auto-sidebar';
 import starlightThemeGalaxy from 'starlight-theme-galaxy';
 import starlightOpenAPI, { openAPISidebarGroups } from 'starlight-openapi';
 import AutoImport from 'astro-auto-import';
+import starlightChangelogs, { makeChangelogsSidebarLinks } from 'starlight-changelogs';
+import { changelogsBase, changelogsEnabled } from './plugins/changelogs.mjs';
 import { satteriBaseLinks } from './plugins/satteriBaseLinks.mjs';
 import { docsBase, codeblocksOptions } from './ec.config.mjs';
 import { rootSidebar } from './plugins/rootSidebar.mjs';
@@ -125,12 +127,24 @@ export default defineConfig({
             sidebar: { label: 'API' },
           },
         ]),
+        starlightChangelogs(),
       ],
       sidebar: [
         ...rootSidebar(fileURLToPath(new URL('./src/content/docs', import.meta.url)), [
           { label: 'Config Playground', link: '/playground/', order: 5.5 },
           ...openAPISidebarGroups.map((group) => ({ ...group, order: 7.5 })),
-        ]),
+        ], {
+          updating: changelogsEnabled
+            ? [{
+                label: 'Changelog',
+                collapsed: true,
+                items: makeChangelogsSidebarLinks([
+                  { type: 'all', base: changelogsBase, label: 'All versions' },
+                  { type: 'recent', base: changelogsBase, count: 5 },
+                ]),
+              }]
+            : [],
+        }),
       ],
     }),
     react(),

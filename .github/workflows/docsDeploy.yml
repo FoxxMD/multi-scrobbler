@@ -42,6 +42,9 @@ jobs:
           DOCS_BASE: '/multi-scrobbler'
           # canonical <link>s point at the real docs domain instead of the GitHub Pages URL (see docsite/src/routeData.ts)
           CANONICAL_HREF: 'https://docs.multi-scrobbler.app'
+          # changelog pages fetch releases from the GitHub API; a token avoids the shared-runner rate limit
+          DOCS_CHANGELOGS: 'true'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build
         working-directory: ./docsite
 

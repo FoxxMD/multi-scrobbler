@@ -139,6 +139,10 @@ ENV NODE_ENV=production
 ARG BASE_URL=""
 ENV BASE_URL=$BASE_URL
 
+# Optional, include the docs' release notes pages (fetched from the GitHub API at build time)
+ARG DOCS_CHANGELOGS=false
+ENV DOCS_CHANGELOGS=$DOCS_CHANGELOGS
+
 RUN if [ -n "$BASE_URL" ]; then \
         export DOCS_BASE="$(node -e "console.log(new URL(process.env.BASE_URL).pathname.replace(/\/$/, '') + '/docs')")"; \
     fi; \

@@ -3,12 +3,13 @@
 // top-level pages become links, top-level directories become groups that autogenerate their contents.
 // Ordering uses `sidebar.order` frontmatter / `_meta.yml` `order`, like Docusaurus' sidebar_position / _category_.json.
 // `extra` items are explicit sidebar entries with an optional `order` that are sorted in alongside them.
+// `groupItems` appends explicit entries to a directory's group, keyed by directory name.
 import fs from 'node:fs';
 import path from 'node:path';
 import matter from 'gray-matter';
 import yaml from 'js-yaml';
 
-export function rootSidebar(docsDir, extra = []) {
+export function rootSidebar(docsDir, extra = [], groupItems = {}) {
 	const items = extra.map(({ order, ...item }) => ({ order: order ?? Number.MAX_VALUE, name: item.label ?? '', item }));
 	for (const entry of fs.readdirSync(docsDir, { withFileTypes: true })) {
 		if (entry.name.startsWith('_')) continue;
@@ -20,7 +21,7 @@ export function rootSidebar(docsDir, extra = []) {
 			items.push({
 				order: meta.order ?? Number.MAX_VALUE,
 				name: entry.name,
-				item: { label: meta.label ?? entry.name, collapsed: meta.collapsed ?? false, items: [{ autogenerate: { directory: entry.name } }] },
+				item: { label: meta.label ?? entry.name, collapsed: meta.collapsed ?? false, items: [{ autogenerate: { directory: entry.name } }, ...(groupItems[entry.name] ?? [])] },
 			});
 		} else if (/\.mdx?$/.test(entry.name)) {
 			const { data } = matter(fs.readFileSync(full, 'utf8'));
