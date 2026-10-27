@@ -1,0 +1,11 @@
+---
+import Default from '@astrojs/starlight/components/ThemeProvider.astro';
+---
+
+{/* Docusaurus used defaultMode: 'dark' and ignored the OS preference; seed the stored choice before Starlight reads it */}
+<script is:inline>
+	try {
+		if (!localStorage.getItem('starlight-theme')) localStorage.setItem('starlight-theme', 'dark');
+	} catch {}
+</script>
+<Default />

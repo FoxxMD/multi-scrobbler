@@ -132,12 +132,16 @@ ENV NODE_ENV=production
 
 # Optional, only affects the self-hosted docs site (/docs)
 #
-# Docusaurus bakes its baseUrl in at build time, unlike the main app frontend, which resolves
+# Astro bakes its base path in at build time, unlike the main app frontend, which resolves
 # its own base path at container runtime and needs nothing set here. Pass the
 # same value here and as the runtime BASE_URL env var, e.g.
 # --build-arg BASE_URL=http://example.com/myapp, to keep docs working under a subpath.
 ARG BASE_URL=""
 ENV BASE_URL=$BASE_URL
+
+# Optional, include the docs' release notes pages (fetched from the GitHub API at build time)
+ARG DOCS_CHANGELOGS=false
+ENV DOCS_CHANGELOGS=$DOCS_CHANGELOGS
 
 RUN if [ -n "$BASE_URL" ]; then \
         export DOCS_BASE="$(node -e "console.log(new URL(process.env.BASE_URL).pathname.replace(/\/$/, '') + '/docs')")"; \

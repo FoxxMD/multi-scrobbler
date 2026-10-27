@@ -1,3 +1,9 @@
+// Explorer + example side by side only when the *content column* is wide enough.
+// (Docusaurus used a viewport media query; Starlight's column is narrower at the same viewport width.)
+[role='tabpanel']:has(.schemaWrapper) {
+  container-type: inline-size;
+}
+
 .schemaWrapper {
     margin-top: 1em;
     display: flex;
@@ -10,7 +16,7 @@
   display: none;
 }
 
-@media screen and (max-width: 1378px) {
+@container (max-width: 800px) {
   .schemaWrapper {
     flex-direction: column;
   }

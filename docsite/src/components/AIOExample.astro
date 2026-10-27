@@ -1,0 +1,16 @@
+---
+// Build-time port of AIOExample.tsx: renders a source/client example as an AIO config.json
+import { Code } from '@astrojs/starlight/components';
+import { transformConfig, toJson } from './configTransform';
+
+interface Props {
+	data: string;
+	name: string;
+	client?: boolean;
+}
+
+const { data, name, client = false } = Astro.props;
+const code = toJson(transformConfig(data, client ? 'client' : 'source', true, name));
+---
+
+<Code code={code} lang="json5" title="CONFIG_DIR/config.json" />

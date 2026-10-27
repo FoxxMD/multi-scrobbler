@@ -1,0 +1,37 @@
+---
+title: Yamaha MusicCast
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 5
+---
+
+
+
+
+import JsonConfig from '@site/../config/musiccast.json.example?raw';
+import ENVConfig from "@site/src/content/docs/configuration/sources/_env_configs/_musiccast.md";
+
+Monitor [MusicCast](https://usa.yamaha.com/products/contents/audio_visual/musiccast/index.html) device/receivers for music played on Network/USB/CD inputs.
+
+:::tip[Scrobbling Threshold]
+
+Musiccast may not correctly report track length. If this is the case you should reduce the "listened to" **duration** using [Scrobble Thresholds](/configuration/sources#scrobble-thresholds) so that multi-scrobbler scrobbles correctly.
+
+:::
+
+##### URL
+
+If only a domain/IP:PORT is provided to multi-scrobbler it will automatically append the default Musiccast API path. If your Musiccast device is located behind a custom URL (or reverse proxy) you should explicitly provide the base path to use.
+
+EX
+
+    | `url`                                   | Transformed URL                                 |
+    | --------------------------------------- | :---------------------------------------------- |
+    | `http://192.168.0.101`                  | `http://192.168.0.101/YamahaExtendedControl/v1` |
+    | `http://mydomain.com/reverseProxy/cast` | `http://mydomain.com/reverseProxy/cast`         |
+
+## Configuration
+
+<Config config="MusicCastSourceConfig" fileContent={JsonConfig} name="musiccast">
+<ENVConfig/>
+</Config>

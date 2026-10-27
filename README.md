@@ -64,7 +64,7 @@ A dockerized app that monitors your music listening activity from *everywhere* a
 
 [**Quick Start Guide**](https://docs.multi-scrobbler.app//quickstart)
 
-<img src="/docsite/static/img/msDash.png" width="800">
+<img src="/docsite/public/img/msDash.png" width="800">
 
 <details>
 
@@ -73,16 +73,16 @@ A dockerized app that monitors your music listening activity from *everywhere* a
 <div align="center">
 
 <p>
-<img src="/docsite/static/img/msDetails.png" width="395">
-<img src="/docsite/static/img/msPlayDetails.png" width="395">
+<img src="/docsite/public/img/msDetails.png" width="395">
+<img src="/docsite/public/img/msPlayDetails.png" width="395">
 </p>
 <p>
-<img src="/docsite/static/img/msTransform.png" width="395">
-<img src="/docsite/static/img/msClientTimeline.png" width="395">
+<img src="/docsite/public/img/msTransform.png" width="395">
+<img src="/docsite/public/img/msClientTimeline.png" width="395">
 </p>
 <p>
-<img src="/docsite/static/img/msDashMobile.png" width="395">
-<img src="/docsite/static/img/msDetailsMobile.png" width="395">
+<img src="/docsite/public/img/msDashMobile.png" width="395">
+<img src="/docsite/public/img/msDetailsMobile.png" width="395">
 </p>
 
 </div>

@@ -1,82 +1,52 @@
 {
   "name": "multi-scrobbler-docs",
-  "version": "0.12.1",
+  "version": "0.0.1",
   "private": true,
+  "type": "module",
   "scripts": {
-    "start": "docusaurus start --host 0.0.0.0",
-    "build": "npm run -s prebuild && docusaurus build",
-    "swizzle": "docusaurus swizzle",
-    "deploy": "docusaurus deploy",
-    "clear": "docusaurus clear",
-    "serve": "docusaurus serve",
-    "write-translations": "docusaurus write-translations",
-    "write-heading-ids": "docusaurus write-heading-ids",
-    "typecheck": "tsc",
-    "postinstall": "patch-package",
-    "previews:build-renderer": "tsc --project tsconfig.client.json || exit 0",
-    "prebuild": "npm run -s previews:build-renderer && npm run -s openapi:generate",
-    "openapi:generate": "docusaurus clean-api-docs ms && docusaurus gen-api-docs ms"
+    "start": "astro dev --host 0.0.0.0 --port 3001",
+    "dev": "astro dev --host 0.0.0.0 --port 3001",
+    "build": "astro build",
+    "preview": "astro preview --host 0.0.0.0 --port 3001",
+    "postinstall": "patch-package"
   },
   "dependencies": {
-    "@bony_chops/docusaurus-og": "^1.0.3-beta.3",
-    "@docusaurus/core": "3.10.2",
-    "@docusaurus/faster": "3.10.2",
-    "@docusaurus/plugin-client-redirects": "^3.10.2",
-    "@docusaurus/preset-classic": "3.10.2",
-    "@easyops-cn/docusaurus-search-local": "0.51.1",
-    "@mdx-js/react": "^3.0.0",
-    "ajv": "^8.18.0",
+    "@astrojs/markdown-remark": "^7.3.4",
+    "@astrojs/mdx": "^8.1.1",
+    "@astrojs/react": "^7.1.1",
+    "@astrojs/starlight": "^0.42.7",
+    "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
-    "astro-expressive-code": "^0.44.2",
+    "astro": "^7.4.2",
+    "astro-auto-import": "^0.6.0",
+    "astro-og-canvas": "^0.13.2",
     "cf-json-schema-viz": "^0.3.0",
-    "clsx": "^2.0.0",
-    "docusaurus-plugin-sass": "^0.2.6",
-    "docusaurus-theme-github-codeblock": "^2.0.2",
-    "docusaurus-theme-openapi-docs": "^5.2.0",
+    "clsx": "^2.1.1",
     "embla-carousel": "^9.0.0-rc02",
     "embla-carousel-react": "^9.0.0-rc02",
+    "gray-matter": "^4.0.3",
+    "js-yaml": "^4.3.2",
     "json5": "^2.2.3",
-    "micromark-extension-directive": "^3.0.1",
     "modern-react-json-editor": "^1.0.2",
     "patch-package": "^8.0.1",
-    "prism-react-renderer": "^2.3.0",
-    "raw-loader": "^4.0.2",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "react-markdown": "^10.1.0",
-    "sass": "^1.97.0",
+    "sass": "^1.106.1",
+    "starlight-auto-sidebar": "^0.4.1",
+    "starlight-changelogs": "^0.7.1",
     "starlight-codeblocks": "^1.2.0",
+    "starlight-openapi": "^0.27.0",
+    "starlight-theme-galaxy": "^1.0.0",
     "use-debounce": "^10.1.1"
-  },
-  "devDependencies": {
-    "@docusaurus/module-type-aliases": "^3.10.2",
-    "@docusaurus/tsconfig": "^3.10.2",
-    "@docusaurus/types": "^3.10.2",
-    "@types/react": "^19.2.4",
-    "hast-util-from-html": "^2.0.3",
-    "rolldown": "^1.2.14",
-    "typescript": "~5.6.2"
-  },
-  "browserslist": {
-    "production": [
-      ">0.5%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 3 chrome version",
-      "last 3 firefox version",
-      "last 5 safari version"
-    ]
   },
   "engines": {
     "node": ">=24.14.0",
     "npm": ">=11.12.1"
   },
   "overrides": {
-    "lodash": "4.18.1",
-    "satori": "0.25.0",
-    "hast-util-to-jsx-runtime": "2.3.6",
-    "sharp": "0.35.3"
+    "@ascorbic/loader-utils": {
+      "astro": "$astro"
+    }
   }
 }

@@ -1,0 +1,22 @@
+---
+// Collapsible aside: same look/colors as Aside.astro but wrapped in <details>
+import { asideIcons } from './asideIcons';
+
+interface Props {
+	type?: string;
+	summary: string;
+	render?: boolean;
+}
+
+const { type, summary, render = true } = Astro.props;
+const icon = type === undefined ? undefined : asideIcons[type];
+---
+
+{render && (
+	<details class:list={['starlight-aside', 'details-admo', type ? `starlight-aside--${type}` : 'details-admo--plain']}>
+		<summary class="starlight-aside__title">
+			{icon && <svg class="starlight-aside__icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d={icon} /></svg>}{summary}
+		</summary>
+		<div class="starlight-aside__content"><slot /></div>
+	</details>
+)}

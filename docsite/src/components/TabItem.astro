@@ -1,0 +1,14 @@
+---
+// Docusaurus-compatible wrapper: `value` and `default` are accepted and ignored, Starlight keys tabs by `label`
+import { TabItem } from '@astrojs/starlight/components';
+
+interface Props {
+	label: string;
+	value?: string;
+	default?: boolean;
+}
+
+const { label, value } = Astro.props;
+---
+
+<TabItem label={label ?? value}><slot /></TabItem>

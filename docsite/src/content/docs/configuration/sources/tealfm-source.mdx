@@ -1,0 +1,105 @@
+---
+title: Teal.fm
+description: Teal.fm (Source)
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 5
+---
+
+
+
+
+import JsonConfig from '@site/../config/tealfm.json.example?raw';
+import ENVConfig from "@site/src/content/docs/configuration/sources/_env_configs/_tealfm.md";
+
+:::tip[Other Uses]
+
+* To **scrobble to** an ATProto PDS, create a [teal.fm (Client)](/configuration/clients/tealfm)
+
+:::
+
+[**teal.fm**](https://teal.fm/) is a social discovery and web viewing service for scrobbles stored/available on the ATProto network/your repository in a [PDS (Personal Data Server)](https://github.com/Bluesky-social/pds).
+
+This Source monitors the teal.fm scrobbles in your PDS and then re-scrobbles discovered tracks to configured clients.
+
+Learn more about how teal.fm scrobbles work in the [teal.fm (Client)](/configuration/clients/tealfm) docs. 
+
+## Setup
+
+Follow the **Setup** instructions in the [teal.fm (Client)](/configuration/clients/tealfm#setup) docs to get access to your Bluesky PDS repository and scrobble data.
+
+## Configuration
+
+See the [teal.fm (Client)](/configuration/clients/tealfm#setup) configuration for general setup. The main differences for **Source** configuration:
+
+* [File/AIO config](/configuration?configType=file#configuration-types) must include `"configureAs": "source"`
+* **App Password** is **not** required
+
+### Service Filtering
+
+`serviceAllow` and `serviceDeny` are lists that can be used to filter what Plays are scrobbles from teal.fm. These correspond to the base domain of the music service where the Play is from, originally. The values in the list can be a subset of the actual service name (they do not need to be exact matches).
+
+Only one filter can be used at a time. If `serviceAllow` is configured then `serviceDeny` will be ignored.
+
+If a Play does not have an associated music service it can be allowed/denied using the special keyword `unknown`.
+
+If you are unsure what services are being used for your scrobbles you can check this by:
+
+* use [atproto.at](https://atproto.at/) to lookup your DID/handle
+* View the **Raw Data** for the PDS Collection `fm.teal.alpha.feed.play`
+* Check the `musicServiceBaseDomain` property for each record
+
+<details>
+
+<summary>Examples</summary>
+
+:::code-tabs
+```json label="Allow only plyr.fm" brackets
+[
+    {
+        "name": "myTealSource",
+        "configureAs": "source",
+        "data": {
+            "identifier": "alice.bsky.social",
+            "appPassword": "twog-phu7-4dhe-y4j3",
+
+            "serviceAllow": ["plyr"], // [!code highlight]
+        }
+    }
+]
+```
+```json label="Deny last.fm" brackets
+[
+    {
+        "name": "myTealSource",
+        "configureAs": "source",
+        "data": {
+            "identifier": "alice.bsky.social",
+            "appPassword": "twog-phu7-4dhe-y4j3",
+
+            "serviceDeny": ["last"], // [!code highlight]
+        }
+    }
+]
+```
+```json label="Allow plyr.fm and unknown services" brackets
+[
+    {
+        "name": "myTealSource",
+        "configureAs": "source",
+        "data": {
+            "identifier": "alice.bsky.social",
+            "appPassword": "twog-phu7-4dhe-y4j3",
+
+            "serviceAllow": ["plyr", "unknown"], // [!code highlight]
+        }
+    }
+]
+```
+:::
+
+</details>
+
+<Config config="TealClientConfig" fileContent={JsonConfig} configureAs ambiguous name="tealfm">
+<ENVConfig/>
+</Config>

@@ -11,7 +11,7 @@ import { sourceAIOConfigSchema } from "../common/infrastructure/config/source/so
 import { sourceConfigSchemaMapAsync } from "../common/infrastructure/config/source/sourcesMap.ts";
 import { clientAIOConfigSchema } from "../common/infrastructure/config/client/clients.ts";
 
-mkdirSync(resolve(projectRootDir, 'docsite/static/schemas'), {recursive: true});
+mkdirSync(resolve(projectRootDir, 'docsite/public/schemas'), {recursive: true});
 
 const mdCols =  (cols: TableColumn[]): string[][] => cols.map((x) => {
     const name = `\`${x.title}\``;
@@ -58,7 +58,7 @@ const generateSchema = (schema: z.ZodType, reused: z.core.ToJSONSchemaParams['re
 const clientEntries = Object.entries(clientConfigSchemaMapAsync);
 for(const [k,v] of clientEntries) {
     const [fileSchema, aioSchema, envSchemas] = await v();
-    writeFileSync(resolve(projectRootDir, `docsite/static/schemas/${k}-client.json`), JSON.stringify(generateSchema(z.array(fileSchema))));
+    writeFileSync(resolve(projectRootDir, `docsite/public/schemas/${k}-client.json`), JSON.stringify(generateSchema(z.array(fileSchema))));
 
     const envSchema = envSchemas;
     const common = generateCommonComponentEnvConfigSchema(envSchema.prefix.toUpperCase());
@@ -68,13 +68,13 @@ for(const [k,v] of clientEntries) {
         ['Environmental Variable', 'Type', 'Default', 'Description'],
         ...mdCols(col)
     ]);
-    writeFileSync(resolve(projectRootDir, `docsite/docs/configuration/clients/_env_configs/_${k}.md`), tableContent);
+    writeFileSync(resolve(projectRootDir, `docsite/src/content/docs/configuration/clients/_env_configs/_${k}.md`), tableContent);
 }
 
 const sourcesEntries = Object.entries(sourceConfigSchemaMapAsync);
 for(const [k,v] of sourcesEntries) {
     const [fileSchema, aioSchema, envSchemas] = await v();
-    writeFileSync(resolve(projectRootDir, `docsite/static/schemas/${k}-source.json`), JSON.stringify(generateSchema(z.array(fileSchema))));
+    writeFileSync(resolve(projectRootDir, `docsite/public/schemas/${k}-source.json`), JSON.stringify(generateSchema(z.array(fileSchema))));
 
     const envSchema = envSchemas;
     const common = generateCommonComponentEnvConfigSchema(envSchema.prefix.toUpperCase());
@@ -84,7 +84,7 @@ for(const [k,v] of sourcesEntries) {
         ['Environmental Variable', 'Type', 'Default', 'Description'],
         ...mdCols(col)
     ]);
-    writeFileSync(resolve(projectRootDir, `docsite/docs/configuration/sources/_env_configs/_${k}.md`), tableContent);
+    writeFileSync(resolve(projectRootDir, `docsite/src/content/docs/configuration/sources/_env_configs/_${k}.md`), tableContent);
 }
 
 const aioStrongConfigSchema = aioConfigSchema.extend({
@@ -92,4 +92,4 @@ const aioStrongConfigSchema = aioConfigSchema.extend({
     clients: z.array(clientAIOConfigSchema).optional()
 })
 
-writeFileSync(resolve(projectRootDir, 'docsite/static/schemas/aio.json'), JSON.stringify(generateSchema(aioStrongConfigSchema, 'ref')));
+writeFileSync(resolve(projectRootDir, 'docsite/public/schemas/aio.json'), JSON.stringify(generateSchema(aioStrongConfigSchema, 'ref')));

@@ -1,10 +1,16 @@
 {
-  // This file is not used in compilation. It is here just for a nice editor experience.
-  "extends": "@docusaurus/tsconfig",
+  "extends": "astro/tsconfigs/strict",
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": ["build", "build-*"],
   "compilerOptions": {
     "jsx": "react-jsx",
-    "baseUrl": ".",
-    "resolveJsonModule": true,
-    "types": ["node", "@docusaurus/module-type-aliases", "@docusaurus/theme-classic","docusaurus-plugin-sass"]
+    "jsxImportSource": "react",
+    // ported components import types without `import type`; let the transpiler elide them
+    "verbatimModuleSyntax": false,
+    "exactOptionalPropertyTypes": true,
+    // `@site/` is the docsite root (as in Docusaurus); `@site/../` reaches the repo root (config examples, etc.)
+    "paths": {
+      "@site/*": ["./*"]
+    }
   }
 }

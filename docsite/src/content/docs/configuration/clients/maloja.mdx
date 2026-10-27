@@ -1,0 +1,42 @@
+---
+title: Maloja
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 5
+---
+
+
+
+
+import JsonConfig from '@site/../config/maloja.json.example?raw';
+import ENVConfig from "@site/src/content/docs/configuration/clients/_env_configs/_maloja.md";
+
+Setup a [Maloja server](https://github.com/krateng/maloja?tab=readme-ov-file#how-to-install) if you have not already done this.
+
+<details>
+
+    <summary>Maloja Setup Intructions</summary>
+
+    Using Maloja's example `docker-compose.yml`:
+
+    <RemoteCode url="https://github.com/krateng/maloja/blob/master/example-compose.yml" lang="yaml" title="~/malojaData/docker-compose.yml" />
+
+    Uncomment `environment` and add `MALOJA_FORCE_PASSWORD=CHANGE_ME` to set an admin password
+
+    Start the container:
+
+    ```shell title="~/malojaData"
+    docker compose up -d
+    ```
+</details>
+
+* Navigate to the Admin Panel (Cog in upper-right corner) -> API Keys (or at http://myMalojaServerIP/admin_apikeys)
+    * Create a **New Key** and then copy the generated key value
+
+Finally, add the Maloja server URL and API Key to the configuration type you choose to use, below.
+
+## Configuration
+
+<Config config="MalojaClientConfig" fileContent={JsonConfig} client ambiguous name="maloja">
+<ENVConfig/>
+</Config>

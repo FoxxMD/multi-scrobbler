@@ -1,14 +1,13 @@
 import React, { ReactNode, CSSProperties } from 'react';
 import clsx from 'clsx'; 
-import Link from '@docusaurus/Link';
 import Button, { ButtonProps } from './Button';
 
 const leftButton = {
-    borderRadius: 'var(--ifm-button-border-radius) 0 0 var(--ifm-button-border-radius)'
+    borderRadius: '0.25rem 0 0 0.25rem'
 }
 
 const rightButton = {
-    borderRadius: '0 var(--ifm-button-border-radius) var(--ifm-button-border-radius) 0'
+    borderRadius: '0 0.25rem 0.25rem 0'
 }
 
 const middleButton = {

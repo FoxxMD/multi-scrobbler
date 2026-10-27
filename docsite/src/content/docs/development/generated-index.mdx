@@ -1,0 +1,16 @@
+---
+title: "Development"
+slug: category/development
+description: "Developing for Multi-Scrobbler and tutorials"
+sidebar:
+  hidden: true
+---
+import { LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+Developing for Multi-Scrobbler and tutorials
+
+<CardGrid>
+  <LinkCard title="Common Development" href={withBase("development/dev-common/")} description="Common Development Knowledge" />
+  <LinkCard title="Source Development/Tutorial" href={withBase("development/dev-source/")} description="Developing a new Source" />
+  <LinkCard title="Flatpak" href={withBase("development/flatpak/")} description="Building Flatpak App" />
+</CardGrid>

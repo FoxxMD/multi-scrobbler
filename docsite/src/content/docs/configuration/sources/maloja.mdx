@@ -1,0 +1,28 @@
+---
+title: Maloja
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 5
+---
+
+
+
+
+import MalojaConfig from '@site/../config/maloja.json.example?raw';
+import ENVConfig from "@site/src/content/docs/configuration/sources/_env_configs/_maloja.md";
+
+:::tip[Other Uses]
+
+To  _scrobble to_ a Maloja server, create a [Maloja (Client)](/configuration/clients/maloja)
+
+:::
+
+See the [Maloja (Client)](/configuration/clients/maloja) configuration for general setup. The only difference for **Source** configuration:
+
+* [File/AIO config](/configuration?configType=file#configuration-types)  must include `"configureAs": "source"`
+
+## Configuration
+
+<Config config="MalojaSourceConfig" fileContent={MalojaConfig} configureAs ambiguous name="maloja">
+<ENVConfig/>
+</Config>

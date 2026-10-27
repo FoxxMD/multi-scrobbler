@@ -19,6 +19,9 @@ jobs:
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            docsite/package-lock.json
 
       - name: Install app dev dependencies
         run: npm ci
@@ -27,7 +30,7 @@ jobs:
       - name: Generate openapi docs
         run: npm run openapi:docs
 
-      - name: Install docusaurus dependencies
+      - name: Install docs dependencies
         run: npm ci
         working-directory: ./docsite
 
@@ -37,12 +40,13 @@ jobs:
           RY_ANALYTICS_SITEID: ${{ vars.RY_ANALYTICS_SITEID }}
           GSITEVERIFICATION: ${{ vars.GSITEVERIFICATION }}
           DOCS_BASE: '/multi-scrobbler'
+          # canonical <link>s point at the real docs domain instead of the GitHub Pages URL (see docsite/src/routeData.ts)
+          CANONICAL_HREF: 'https://docs.multi-scrobbler.app'
+          # changelog pages fetch releases from the GitHub API; a token avoids the shared-runner rate limit
+          DOCS_CHANGELOGS: 'true'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build
         working-directory: ./docsite
-
-      - name: Replace canonical
-        working-directory: ./docsite
-        run: node --experimental-strip-types canonical-replace.ts ./build
 
       # Popular action to deploy to GitHub Pages:
       # Docs: https://github.com/peaceiris/actions-gh-pages#%EF%B8%8F-docusaurus

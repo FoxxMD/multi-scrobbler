@@ -1,7 +1,6 @@
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
-import CodeBlock from '@theme/CodeBlock';
-import CodeInline from '@theme/CodeInline';
+
+
+
 
 Many Sources report device identifiers with their listening data which can be included in the scrobble data for this client.
 
@@ -22,18 +21,16 @@ In each of the examples configurations below, the resulting behavior for device 
 <Tabs groupId="configType">
 <TabItem value="env" label="ENV">
 
-Define a comma-delimited list of `match:label` entries to the env <CodeInline>{props.name}_ALLOW_DEVICE_LIST</CodeInline>
+Define a comma-delimited list of `match:label` entries to the env <code>{props.name}_ALLOW_DEVICE_LIST</code>
 
-<CodeBlock language="yaml">
-{`
+<Code code={(`
 services:
     multi-scrobbler:
       # ...
       environment:
         # ...
         - ${props.name}_ALLOW_DEVICE_LIST=iphone,roku,smithFamily-roku:familyRoku
-`}
-</CodeBlock>
+`).trim()} lang="yaml" />
 
 </TabItem>
 <TabItem value="file" label="File">
@@ -55,7 +52,7 @@ Define a dictionary of `allowDeviceList` entries. Entries without a label should
 }
 ```
 </TabItem>
-<TabItem value="aio" label="Aio">
+<TabItem value="aio" label="AIO">
 
 Define a dictionary of `allowDeviceList` entries. Entries without a label should use an empty string.
 

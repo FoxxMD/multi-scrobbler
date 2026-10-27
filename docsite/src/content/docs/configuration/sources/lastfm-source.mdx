@@ -1,0 +1,30 @@
+---
+title: Last.fm
+description: Last.fm (Source)
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 5
+---
+
+
+
+
+import LastfmConfig from '@site/../config/lastfm.json.example?raw';
+import ENVConfig from "@site/src/content/docs/configuration/sources/_env_configs/_lastfm.md";
+
+This Source **monitors your Last.fm scrobble history** and re-scrobbles new activity to configured [Clients.](/configuration/clients)
+
+:::tip[Other Uses]
+
+* To **scrobble to** Last.fm/Libre.fm, create a [Last.fm (Client)](/configuration/clients/lastfm)
+* To accept scrobbles from outside applications as if multi-scrobbler was Last.fm, create a [Last.fm (Endpoint)](/configuration/sources/lastfm-endpoint)
+
+:::
+
+To configure this Source use the same registration instructions and configuration data shown in [Last.fm (Client)](/configuration/clients/lastfm) with the difference being `"configureAs": "source"` defined in the File/AIO configuration below.
+
+## Configuration
+
+<Config config="LastfmSourceConfig" fileContent={LastfmConfig} configureAs ambiguous name="lastfm">
+<ENVConfig/>
+</Config>

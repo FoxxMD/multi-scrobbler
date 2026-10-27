@@ -1,0 +1,882 @@
+---
+title: Enhancing Scrobbles
+sidebar:
+  order: 0
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 5
+slug: configuration/transforms
+---
+
+Multi-scrobbler configs support the ability to enhance scrobble data in an automated fashion by matching and replacing strings in **title, artists, and album** at many different times in multi-scrobbler's lifecycle.
+
+<details>
+
+<summary>Why Would I Do This?</summary>
+
+You may need to "clean up" data from a Source or before sending to a scrobble Client due to any number of reasons:
+
+* ID3 tags in your music collection are dirty or have repeating garbage IE `[YourMusicSource.com] My Artist - My Title`
+* A Source's service often incorrectly adds data to some field IE `My Artist - My Title (Album Version)` when the title should just be `My Title`
+* An Artist you listen to often is spelled different between a Source and a Client which causes duplicate scrobbles
+
+In any scenario where a repeating pattern can be found in the data it would be nice to be able to fix it before the data gets downstream or to help prevent duplicate scrobbling. Multi-scrobbler can help you do this.
+
+</details>
+
+## Journey of a Scrobble
+
+First, let's recap the lifecycle of a scrobble in multi-scrobbler:
+
+**Sources** are the beginning of the journey for a **Play** (song you've listened to long enough to be scrobblable)
+
+* A Source finds a new valid **Play**
+* The Source **compares** this new Play to all the other Plays it has already seen, if the Play is unique (title/artist/album/listened datetime) then...
+* The Source **discovers** the Play, adds it to Plays it has seen already, and broadcasts the Play should be scrobbled to all Clients
+
+Scrobble **Clients** listen for discovered Plays from Sources, then...
+
+* A Client receives a **Play** from a Source
+* The Client **compares** this Play to all the other scrobbles it has already seen, if the Play is unique (title/artist/album/listened datetime) then...
+* The Client **scrobbles** the Play downstream to the scrobble service and adds it as a Scrobble it has seen already
+
+## Lifecycle Hooks
+
+You'll notice there is a pattern above that looks like this:
+
+* **Before** data is compared
+* Data is **compared**
+* **After** data is compared
+
+These points, during both Source and Client processes, are when you can hook into the scrobble lifecycle and modify it.
+
+##### TLDR
+
+In more concrete terms this is the structure of hooks within a configuration (can be used in any **Source** or **Client**):
+
+```json5 title="lastfm.json" {10-14} brackets
+[
+  {
+    "name": "myLastFm",
+    "enable": true,
+    "configureAs": "source",
+    "data": {
+      // ...
+    },
+    "options": {
+      "playTransform": {
+        "preCompare": [/* ... */],
+        "compare": [/* ... */],
+        "postCompare": [/* ... */]
+      }
+    }
+  }
+]
+```
+
+### Hook
+
+For **Sources**:
+
+* `preCompare` - modify Play data immediately when received
+* `compare` - temporarily modify Play data when it is being compared to see if Play was already discovered
+* `postCompare` - modify Play data before sending to scrobble **Clients**
+
+For **Clients**:
+
+* `preCompare` - modify Play data immediately when received
+* `compare` - temporarily modify Play data when it is being compared to see if it was already scrobbled
+* `postCompare` - modify Play data before scrobbling it to downstream service and adding to already seen scrobbles
+
+<DetailsAdmo type="tip" summary="Transformed Scrobbles Are Permanently Modified">
+
+Keep in mind that modifying Scrobble/Play data earlier in the lifecycle will affect that data at all times later in the lifecycle (except when using the **compare** hook).
+
+For example, to modify the track so it's the same anywhere it is processed in multi-scrobbler you only need to modify it in the **Source's** `preCompare` hook because all later processes will receive the data with the modified track.
+
+
+</DetailsAdmo>
+
+:::tip[TLDR]
+
+**To modify a scrobble coming from one of your Sources use the `preCompare` hook.**
+
+:::
+
+<details>
+
+<summary>Using `compare` hook</summary>
+
+The `compare` [hook](#hook) is slightly different than `preCompare` and `postCompare`. It consists of an object where you define which side(s) of the comparison should be modified. It also **does not modify downstream data!** Instead, the modifications are made only for use in the comparison.
+
+```json5 title="lastfm.json" brackets
+[
+  {
+    "name": "myLastFm",
+    // ...
+    "options": {
+      "playTransform": {
+        // [!code focus:6]
+        "compare": [
+          {
+            "candidate": {/* ... */}, // [!callout /candidate/] modify the "new" Play being compared
+            "existing": {/* ... */}, // [!callout /existing/] modify all "existing" Play/Scrobbles the new Play is being compared against
+          }
+        ],
+      }
+    }
+  }
+]
+```
+
+</details>
+
+## Modification Stage {#stage}
+
+Each [**hook**](#hook) is made up of one or more **Stages**. A Stage is a self-contained, unique way of enhancing or modifying the Play data. Some examples of a Stage:
+
+* The [User](/configuration/transforms/user) Stage allows a user to define search-and-replace terms for Artist/Title/Album
+* The [Native](/configuration/transforms/native) Stage uses MS's built-in heuristics to extract Artists from a single Artist string
+* The [Musicbrainz](/configuration/transforms/musicbrainz) Stage tries to match Play data with the Musicbrainz database and to standardize the Artist/Title/Album data
+* The [Rocksky](/configuration/transforms/rocksky) Stage tries to match Play data with the Rocksky metadata API to enrich meta IDs (like MBID, ISRC), duration, and artwork
+* The [Spotify](/configuration/transforms/spotify) Stage tries to match Play data with the Spotify catalog (prioritizing ISRC lookups) to standardize the Artist/Title/Album data
+* The [Cover Art Archive](/configuration/transforms/coverartarchive) Stage adds album art to your scrobble based on Musicbrainz Relase/Release-Group MBID
+
+Each Stage in a Hook receives Play data from the previous Stage.
+
+Within a hook, each Stage minimally consists of a `type` to identify what Stage it is along with any other data specific to that stage:
+
+```jsonc
+{
+  "type": "native"
+  // optional, stage specific data here...
+}
+```
+
+### Configuring Stages {#configuring-stages}
+
+Stages may be globally configured using [AIO Config](/configuration?configType=aio#configuration-types) `config.json` file in the top-level `transformers` block.
+
+Each Stage consists of:
+
+* `type` the type of Stage
+* `name` a unique name for the Stage, to be (potentially) used with hooks
+* `defaults` - An object defining default configuration for this stage, when used in a Hook.
+* `data` - An object containing any data required to initially configure the stage itself (Example: API URL, username, password, etc...)
+
+<details>
+
+<summary>Example</summary>
+
+Your [AIO Config](/configuration?configType=aio#configuration-types):
+
+:::code-tabs
+```jsonc label="config" title="config.json" brackets
+{
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
+  "transformers": [
+    {
+      "type": "native",
+      "name": "MyNativeTransformer",
+      "defaults": {
+        // [!ref] default delimiters when this Stage is used in a hook
+        "delimiters": [
+          "•"
+        ],
+        // [!ref] default artistsParseFrom when this Stage is used in a hook
+        "artistsParseFrom": ["artists"]
+      }
+    }
+  ]
+}
+```
+```jsonc label="subsonic" title="subsonic.json" brackets
+[
+  { 
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    // [!code focus:11]
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "native",
+            // [!ref] when `"name"` is not defined, uses first found `native` transformer
+            "name": "MyNativeTransformer"
+          }
+        ]
+      }
+    }
+  }
+]
+```
+:::
+
+</details>
+
+Multiple stages of the same type may be configured, allowing you to define several sets of default behavior.
+
+<details>
+
+<summary>Example</summary>
+
+Your [AIO Config](/configuration?configType=aio#configuration-types):
+
+:::code-tabs
+```json5 label="config" title="config.json" brackets
+{
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
+  "transformers": [
+    {
+      "type": "native",
+      "name": "DotTransformer",
+      "defaults": {
+        "delimiters": [
+          "•"
+        ],
+        "artistsParseFrom": ["artists"]
+      }
+    },
+    {
+      "type": "native",
+      "name": "TitleOnly",
+      "defaults": {
+        // [!ref] extracts and uses *only* artists found in title string
+        "artistsParseFrom": ["title"]
+      }
+    }
+  ]
+}
+```
+```json5 label="subsonic" title="subsonic.json" brackets
+[
+  { 
+    // [!link /Subsonic/ /configuration/sources/subsonic]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Subsonic File Config
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    // [!code focus:10]
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "native",
+            "name": "DotTransformer"
+          }
+        ]
+      }
+    }
+  }
+]
+```
+```json5 label="vlc" title="vlc.json" brackets
+[
+  { 
+    // [!link /VLC/ /configuration/sources/vlc]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your VLC File Config
+    "name": "MyVLC",
+    "data": { /* ... */},
+    // [!code focus:10]
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "native",
+            "name": "TitleOnly"
+          }
+        ]
+      }
+    }
+  }
+]
+```
+:::
+
+</details>
+
+#### Stage Names and Default Stages
+
+When specifying a Stage within a [Hook](#hook) (like in `preCompare`), the `name` for a Stage is **potentially optional.**
+
+If Stages exists for the `type` you want to use in the hook and you do not specify a `name`...
+
+<details>
+
+<summary>Example</summary>
+
+```json5 title="vlc.json" brackets
+[
+  { 
+    "name": "MyVLC",
+    "data": { /* ... */},
+    // [!code focus:9]
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "rocksky" // [!callout /rocksky/] no `"name"` is specified
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+</details>
+
+Multi-Scrobbler looks for configured Stages in this order:
+
+* The *first* non-default, non-ENV configured Stage IE a [Stage](#stage) you [configured](#configuring-stages) with an explicit `name`
+* An ENV configured stage, like [Rocksky's ENV Configuration](/configuration/transforms/rocksky#env-configuration)
+  * ENV configured stages are always named `MSEnv`
+* The **default**, built-in Stage from Multi-Scrobbler. This is always named `MSDefault`
+
+All of the [Modification Stages](#stage) have an `MSDefault` configured Stage except for Spotify.
+
+#### Overriding Configuration
+
+The default configuration you set for your Stage may be overridden in any usage of the Stage within a Hook.
+
+<details>
+
+<summary>Example</summary>
+
+Your [AIO Config](/configuration?configType=aio#configuration-types):
+
+:::code-tabs
+```json5 label="config" title="config.json" brackets
+{
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
+  "transformers": [
+    {
+      "type": "native",
+      "name": "MyNativeTransformer",
+      "defaults": {
+        // [!ref] default delimiters when this Stage is used in a hook
+        "delimiters": [
+          "•"
+        ],
+        // [!ref] default artistsParseFrom when this Stage is used in a hook
+        "artistsParseFrom": ["artists"]
+      }
+    }
+  ]
+}
+```
+```json5 label="subsonic" title="subsonic.json" brackets
+[
+  { 
+    // [!link /Subsonic/ /configuration/sources/subsonic]
+    // [!link /File Config/ /configuration?configType=file#configuration-types]
+    // ...your Subsonic File Config
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    // [!code focus:11]
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "native",
+            "name": "MyNativeTransformer",
+            // [!code highlight] [!ref] overrides `"artistsParseFrom"` from `"defaults"`
+            "artistsParseFrom": ["artists", "title"]
+          }
+        ]
+      }
+    }
+  }
+]
+```
+:::
+
+</details>
+
+
+### Rules for Play Data {#stage-rules}
+
+Each [Stage](#stage) may specify whether it should apply the resulting transformation to different parts of the Play data by specifying `title`, `artists` and/or `album` in the Stage object.
+
+```json5 brackets
+{
+    "type": "native",
+    // ...
+    "title": false, // [!ref] will not apply any changes to Play title
+    "artists": {
+      // [!link /when/ #conditional-modification]
+      "when": {/* ... */}, // [!ref] will only apply changes to Play artists if `"when"` is satisfied
+    /* ... */
+    },
+    "albumArtists": true, // [!ref] will always apply changes to Play album artists
+    "album": true, // [!ref] will always apply changes to Play album
+    "duration": true, // [!ref] will always apply changes to Play duration (length of track)
+    "meta": true, // [!ref] will always apply changes to Play meta (MBIDs, spotify links, etc...)
+    "art": true // [!ref] will always apply art to Play (if stage provides art)
+}
+```
+
+The actual value of each property may be different for each Stage. Check the docs for the Stage you want to use to see its usage of each.
+
+Generically, though, each property may be some value **or** an object combining a [`when` condition](#conditional-modification) and that value.
+
+**If none of the properties are specified in the stage then it's assumed all transformed data should be used.**
+
+<DetailsAdmo type="info" summary="How meta and art Combine With Other Rules">
+
+IDs (MBIDs, Spotify IDs...) and art belong to a specific part of your Play: the title, the album, or an individual artist. So what `meta` and `art` do depends on whether the Stage is also allowed to change that part.
+
+| Rule for a part (EX `title`) | `meta`  | What happens to that part                                                                                          |
+| ---------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
+| `true`                       | `true`  | Name is replaced and IDs from the Stage are added. IDs the part already has from *other* services/stages are kept. |
+| `true`                       | `false` | Name is replaced and no IDs are added. If the name actually changed, the IDs the part already had are **removed**. |
+| `false`                      | `true`  | Name is not changed. IDs from the Stage are added to the existing part.                                            |
+| `false`                      | `false` | Nothing is changed.                                                                                                |
+
+:::note
+
+The behavior for when `artists`/`albumArtists` is `false`, and `meta` is `true`, is slightly different than the above:
+
+* The Stage needs to work out which ID belongs to which of your existing artists. It matches them by name first.
+* If none of the names match, and the Stage found the same number of artists as your Play has, they are matched by position. IDs that cannot be matched to an artist are not added.
+
+:::
+
+</DetailsAdmo>
+
+:::note
+
+Specifying these Rules is **not** the same as [configuring the Stage](#configuring-stages). Rules only determine if the *result* of the transformation should be used (replace) the existing Play Data.
+
+:::
+
+## Stage Flow Control {#flow-control}
+
+Stages may be optionally configured to **continue** to the next Stage or **stop** (end early) all subsequent Stages, based on the outcome of the currently running Stage.
+
+These three properties can be added to the [Modification Stage](#stage) data, alongside [Rules](#stage-rules):
+
+* `onSuccess` (default `continue`) - If the Stage successfully finishes processing
+* `onFailure` (default `stop`) - If the Stage encounters an error while processing, or otherwise fails to achieve the transformation result
+* `onSkip` (default `continue`) - If the Stage does not process the Play data due to stage-level [`when`](#conditional-modification) or other stage-specific skip conditions
+
+<Aside type="important" title="A Failed or Skipped Stage Never Applies Its Own Changes">
+
+
+`onFailure`/`onSkip` only control whether **later** Stages in the same Hook still run -- they do **not** cause a failed or skipped Stage to partially apply, or fall back to, any changes. A Stage that fails (EX no results found) or is skipped (EX a `when` condition wasn't met, or a stage-specific prerequisite wasn't met) contributes nothing to your Play.
+
+If you want a Stage to only ever apply data from a single, specific match method (EX only from an ID lookup) and do nothing at all otherwise, you don't need any special configuration for this -- it's the default behavior whenever that lookup method doesn't succeed.
+
+By default (`onFailure: "stop"`), a failure also reverts your Play all the way back to how it was **before any Stage in that Hook ran** -- so if you have multiple Stages in one Hook and a later one fails, earlier successful changes from that same Hook are discarded too. Set `failureReturnPartial: true` on the failing Stage to instead keep whatever earlier Stages in the same Hook already successfully applied, and only discard the failed Stage's own (nonexistent) contribution.
+
+
+</Aside>
+
+:::tip
+
+The default behaviors for Flow Control are the same as you would intuitively think Stages should run IE the next Stage you have defined runs if the current Stage does not fail. 
+
+Specifying Flow Control is only necessary if the above assumptions are not true for your scenario.
+
+:::code-tabs
+```json5 title="subsonic.json (Default Flow Control Example)" label="default-example" brackets expandable={5}
+    // ...
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            // [!ref] if this stage is successful, native is run. If this stage fails, native does not run
+            "type": "musicbrainz",
+            "name": "MyMB"
+          },
+          {
+            "type": "native",
+            "name": "MyNative"
+          }
+        ]
+      }
+    }
+```
+```json5 title="subsonic.json (Customized Example)" label="customized-example" brackets expandable={5}
+    // ...
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "musicbrainz",
+            "name": "MyMB",
+            "onSuccess": "stop", // [!code highlight] [!ref] if musicbrainz is successful then do NOT run native
+            "onFailure": "continue" // [!code highlight] [!ref] only run native if musicbrainz fails to find a match
+          },
+          {
+            "type": "native",
+            "name": "MyNative"
+          }
+        ]
+      }
+    }
+```
+:::
+
+### Conditionally Run {#conditional-modification}
+
+[Stages](#stage) within a [Hook](#hook), and [Rules](#stage-rules) within each Stage, support a `when` object for testing **if they should be run.**
+
+The `when` object may have propertes for rule. Each property may be a string or regular expression.  The value of the property is used to match the **pre-transformation** values from Play data.
+
+All parts of an individual `when` clause must test true to "pass" but if **any** `when` clauses pass the Stage/Rule is processed.
+
+If the `when` test does not pass then the Stage is [**skipped (`onSkip`)**](#flow-control).
+
+:::code-tabs{sync="when"}
+```json5 label="Single condition"
+{
+  "when":
+    {
+      "artist": "Elephant Gym", // [!ref] Play must have an artist matching "Elephant Gym" (AND)
+      "album": "Dreams" // [!ref] Play object must have an album  matching "Dreams" (AND)
+    }
+}
+```
+```json5 label="Multiple conditions (OR)"
+{
+  "when": [
+    {
+      "artist": "Elephant Gym", // [!ref] Play must have an artist matching "Elephant Gym" (AND)
+      "album": "Dreams" // [!ref] Play object must have an album  matching "Dreams" (AND)
+    },
+    // [!ref] OR...
+    {
+      "title": "/(Remastered)$/", // [!ref] Play title must match regular expression (AND)
+      "album": "Various Artists" // [!ref] Play album must match "Various Artists" (AND)
+    }
+  ]
+}
+```
+:::
+
+<DetailsAdmo type="tip" summary="Checking for Art">
+
+To test if your Play/scrobble has *no* `art` associated with the data use an empty string for `art`:
+
+```json5
+{
+  "when": [
+    {
+      "art": "", // [!callout /""/] run the stage when play has no artwork (album, track, or artist)
+    },
+  ]
+}
+```
+
+Otherwise, using a string/regex pattern for `art` will test if *any* art url includes that pattern.
+
+EX: only run stage if art does *not* come from deezer, use deezer's cdn in a not regex statement:
+
+```json5
+{
+  "when": [
+    {
+      "art": "/^((?!(dzcdn)).)*$/", // [!callout /^/] run the stage when no art url comes from deezer (using this regex)
+    },
+  ]
+}
+```
+
+</DetailsAdmo>
+
+More succinctly:
+
+* All parts (`artist` `album` `albumArtist` `duration` `meta` `title` `art`) of a `when` are `AND` conditions
+* All part-objects in the `when` array are `OR` conditions
+
+:::code-tabs
+```json5 label="Stage with 'when' condition" expandable={8}
+{
+  "playTransform": {
+    "preCompare": [
+      {
+        "type": "native",
+        // [!ref] Only run `native` if these conditions are true...
+        "when": [
+          {
+            "artist": "/Elephant Gym/" // [!ref] if artist is `Elephant Gym` 
+          }
+        ]
+      }
+    ],
+  }
+}
+```
+```json5 label="Individual Rule with 'when' condition" expandable={8}
+{
+  "playTransform": {
+    "preCompare": {
+      "type": "native", // [!ref] Always run `native` stage since no `when` at this level
+      "artists": 
+        {
+          "when": [  // [!ref] Only apply `artists` if Play artist was *originally* `Elephant Gym`
+            {
+              "artist": "/Elephant Gym/"
+            }
+          ]
+        },
+    }
+  }
+}
+```
+:::
+
+## Logging
+
+MS can log a diff of Stage transformations if/when they occur. In the `playTransform` object of a Source/Client config use `log`:
+
+* `"log": true` => Output original play + final transformed output of last Stage in the array
+  * This can also be enabled by using [`DEBUG_MODE=true`](/configuration/#debug-mode)
+* `"log": "all"` => Output original play + final transformed output of **each** Stage in the array
+
+```json5 {7}
+{
+  "name": "myThing",
+  "data": {/*...*/},
+  "options": {
+    "playTransform": {
+      "preCompare": {/*...*/},
+      "log": true
+    }
+  }
+}
+```
+
+<details>
+
+<summary>Example</summary>
+
+The output shows the diff between the previous stage (or original Play) and the current stage. In docker logs this is highlighted with diff syntax:
+
+```diff
+[2025-12-17 08:53:10.467 -0500] DEBUG  : [App] [Sources] [Lastfm - mylfm] [Play Transform] [preCompare] [VLDJJo] Transform Diff
+- Original
++ musicbrainz-MyMB
+
+  Title        : Demons Theme Part II (original 12" mix)
+  Artists      : LTJ Bukem
+  Album Artists: (None)
+- Album        : Producer 05: Rarities (Original 12" Version)
++ Album        : Producer 05: Rarities (original 12" version)
+  Meta         : 
+  * brainz-album: 36759a8a-d3df-47da-a236-60f84fdc0cab
++ * brainz-artist: 28c1b7b7-355a-48b1-b2c4-75b8eb8080ef
++ * brainz-track: a0d51240-7ef1-4676-882e-be9f354075cb
++ * brainz-releaseGroup: e0cce74f-abcc-343b-9390-1673e4d57ce7
+```
+
+</details>
+
+## Best Practices
+
+### Caching
+
+MS uses [caching](/configuration/#caching) to reduce the number of API calls needed for stages like [Musicbrainz](/configuration/transforms/musicbrainz) and to speed up all transforms by caching steps and results. However, the default caching strategy uses a small cache size and very short [TTLs](https://en.wikipedia.org/wiki/Time_to_live) because it is *in-memory*.
+
+**If you are using any Transform stages you should configure [secondary caching](/configuration#secondary-caching)** to increase the cache size and lifetime of cached items. This will also reduce memory usage in MS.
+
+## Examples
+
+See **Examples** sections in specific Stage docs (also in the sidebar):
+
+* [User Stage](/configuration/transforms/user#examples)
+* [Native Stage](/configuration/transforms/native#examples)
+* [Musicbrainz Stage](/configuration/transforms/musicbrainz#examples)
+
+These examples use all of the features described above. They walk you through the entire process of building configuration to transform your scrobble data, from start to end, in one usecase.
+
+## Walkthrough - Remove Something from Title {#walkthrough-user}
+
+You want to use the [User Stage](/configuration/transforms/user) to remove instances of `(Album Version)` in track titles from Navidrome.
+
+<CodeWalkthrough>
+
+```json title="config.json" step="Decide on Stage"
+{
+  "type": "user" // [!ref] Set the [Stage type](#configuring-stages)
+}
+```
+
+```json title="config.json" step="Decide on Rule"
+{
+  "type": "user",
+  "title": [ // [!ref] Define which [Rule](#stage-rules) this Stage will apply. This equates to the part of the scrobble data you want to modify
+
+  ]
+}
+```
+
+```json title="config.json" step="Define Stage Behavior" brackets
+{
+  "type": "user",
+  "title": [ 
+    { // [!ref] Add the [behavior](/configuration/transforms/user/#search-and-replace-expression) for the chosen Stage to that Rule
+      "search": "(Album Version)",
+      "replace": "" // [!ref] Replacing with an empty string ("") [removes the value](/configuration/transforms/user/#rules) found in `search`
+    }
+  ]
+}
+```
+
+```json title="config.json" step="Decide When Stage should Run" brackets
+{
+  "preCompare": [ // [!ref] Run this behavior [when scrobble data is **first seen**](#lifecycle-hooks)
+    {
+      "type": "user",
+      "title": [ 
+        { 
+          "search": "(Album Version)",
+          "replace": ""
+        }
+      ]
+    }
+  ]
+}
+```
+
+```json title="config.json" step="Add everything to a Source/Client" brackets
+{
+  "sources": [
+    {
+      "type": "subsonic",
+      "id": "myNavidrome",
+      "data": {},
+      // [!code focus:15]
+      "options": {
+        "playTransform": { // [!ref] Defined on the Navidrome source scrobble data comes from
+          "preCompare": [ 
+            {
+              "type": "user",
+              "title": [ 
+                { 
+                  "search": "(Album Version)",
+                  "replace": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
+```
+
+</CodeWalkthrough>
+
+## Walkthrough - Using Musicbrainz on Many Sources/Clients
+
+You want to use the [Musicbrainz Stage](/configuration/transforms/musicbrainz), with specific behavior, to correct/enrich your scrobble data. It should do this for both Navidrome and Jellyfin.
+
+<CodeWalkthrough>
+
+```json title="config.json" step="Decide on Stage"
+{
+  // [!ref] Add to [`transformers` in AIO config](#configuring-stages). This is where Stages with **reusable** configuration are defined
+  "transformers": [
+    {
+      "type": "musicbrainz", // [!ref] Set the [Musicbrainz Stage](#configuring-stages)
+      "name": "myMB" // [!ref] Give it a [unique name](#stage-names-and-default-stages) so we can reference it in Client/Sources later
+    }
+  ]
+}
+```
+
+```json title="config.json" step="Decide on Rules"
+{
+  "transformers": [
+    {
+      "type": "musicbrainz",
+      "name": "myMB"
+      // [!ref] You want **all** [Rules](#stage-rules) from this Stage to apply. All rules default to `true` when not defined, so defining **nothing** here is the same as "apply everything".
+      //"title": true,
+      //"artists": true,
+      //"album": true,
+      //...
+    }
+  ]
+}
+```
+
+```json title="config.json" step="Set Stage Default" brackets
+{
+  "transformers": [
+    {
+      "type": "musicbrainz",
+      "name": "myMB",
+      // [!ref] Unlike [the User Stage Walkthrough](#walkthrough-user) which sets behavior directly in the Rule, we want the behavior we set to apply to *all* Sources/Clients that use it, so we set behavior in [`defaults`](#configuring-stages)
+      "defaults": {}
+    }
+  ]
+}
+```
+
+```json title="config.json" step="Set Stage Default Behavior" brackets
+{
+  "transformers": [
+    {
+      "type": "musicbrainz",
+      "name": "myMB",
+      // [!ref] Add our stage behvior to [`defaults`](#configuring-stages)
+      "defaults": {
+        // [!ref] Prioritize [releases](/configuration/transforms/musicbrainz/#release-attributes) and country for releases
+        "releaseGroupPrimaryTypePriority": ["single", "ep", "album"],
+        "releaseCountryPriority": ["US"],    
+      }
+      // [!ref] Now our stage is ready to be used in Sources/Clients
+    }
+  ]
+}
+```
+
+```json title="config.json" step="Add Stage to Sources/Clients" brackets
+{
+  "transformers": [...],
+  // [!code focus:32]
+  "sources": [
+    {
+      "type": "subsonic",
+      "id": "myNavidrome",
+      "data": {},
+      "options": {
+        "playTransform": { // [!ref] Defined on the Navidrome source scrobble data comes from
+          "preCompare": [ // [!ref] Run this behavior [when scrobble data is **first seen**](#lifecycle-hooks
+            {
+              "type": "musicbrainz",
+              "name": "myMB", // [!ref] Referencing Stage [by name](#stage-names-and-default-stages) means "use the `defaults` in the Stage in `transformers` with this `name`"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "jellyfin",
+      "id": "myJellyfin",
+      "data": {},
+      "options": {
+        "playTransform": { // [!ref] Defined on the jellyfin source scrobble data comes from
+          "preCompare": [ 
+            {
+              "type": "musicbrainz",
+              "name": "myMB",
+            }
+          ]
+        }
+      }
+    },    
+  ],
+  "clients": [...]
+}
+```
+
+</CodeWalkthrough>

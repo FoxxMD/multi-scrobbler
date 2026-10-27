@@ -1,1 +1,1 @@
-See flatpak docs on the [docs website](https://foxxmd.github.io/multi-scrobbler/docs/development/flatpak) or at [`/docsite/docs/development/flatpak.md`](../docsite/docs/development/flatpak.md)
+See flatpak docs on the [docs website](https://foxxmd.github.io/multi-scrobbler/docs/development/flatpak) or at [`/docsite/src/content/docs/development/flatpak.mdx`](../docsite/src/content/docs/development/flatpak.mdx)

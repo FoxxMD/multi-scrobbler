@@ -1,5 +1,4 @@
 import React, {useEffect, useState} from "react"
-import BrowserOnly from "@docusaurus/BrowserOnly"
 
 //import './Explorer.scss';
 import { JsonSchemaViewer } from 'cf-json-schema-viz';
@@ -10,12 +9,13 @@ export interface ExplorerProps {
 }
 
 // based on https://github.com/jy95/docusaurus-json-schema-plugin/blob/main/testsite/src/components/PlaygroundInner.tsx
-export default function Explorer(props: ExplorerProps): JSX.Element {
+export default function Explorer(props: ExplorerProps): React.JSX.Element {
 
     //injectStyles();
 
     return (
         <div>
+<div className="not-content">
             <JsonSchemaViewer
   schema={props.schema}
   renderRootTreeLines={true}
@@ -24,11 +24,12 @@ export default function Explorer(props: ExplorerProps): JSX.Element {
   skipTopLevelDescription={false}
   markup
 />
+            </div>
         </div>
     )
 }
 
-// export default function PlaygroundComponent(): JSX.Element {
+// export default function PlaygroundComponent(): React.JSX.Element {
 //     return (
 //         <BrowserOnly fallback={<div>Loading...</div>}>
 //             {() => {

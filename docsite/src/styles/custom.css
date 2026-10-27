@@ -1,0 +1,78 @@
+/* Colors for our extra aside types (Aside.astro / DetailsAdmo), using the Galaxy theme's aside variables:
+   info = note (blue), important = Galaxy's "premium" purple, warning = caution (amber) */
+.starlight-aside--info {
+	--galaxy-aside-accent: #3b82f6;
+	--galaxy-aside-bg: rgba(59, 130, 246, 0.05);
+}
+.starlight-aside--important {
+	--galaxy-aside-accent: #8b5cf6;
+	--galaxy-aside-bg: rgba(139, 92, 246, 0.05);
+}
+.starlight-aside--warning {
+	--galaxy-aside-accent: #f59e0b;
+	--galaxy-aside-bg: rgba(245, 158, 11, 0.05);
+}
+:root[data-theme='dark'] .starlight-aside--info {
+	--galaxy-aside-bg: rgba(59, 130, 246, 0.08);
+}
+:root[data-theme='dark'] .starlight-aside--important {
+	--galaxy-aside-bg: rgba(139, 92, 246, 0.08);
+}
+:root[data-theme='dark'] .starlight-aside--warning {
+	--galaxy-aside-bg: rgba(245, 158, 11, 0.08);
+}
+
+/* collapsible asides */
+details.details-admo > summary {
+	cursor: pointer;
+	margin-bottom: 0;
+}
+details.details-admo[open] > summary {
+	margin-bottom: 0.5rem;
+}
+details.details-admo--plain {
+	--galaxy-aside-accent: var(--sl-color-gray-3);
+	--galaxy-aside-bg: transparent;
+}
+
+/** https://stackoverflow.com/a/79808430/1469797 */
+img.image-center {
+	display: block;
+	margin-inline: auto;
+}
+
+/* Minimal stand-in for the Infima .button classes used by Button/ButtonGroup */
+.button {
+	cursor: pointer;
+	font: inherit;
+	font-size: var(--sl-text-sm);
+	padding: 0.3rem 0.9rem;
+	border: 1px solid var(--sl-color-accent);
+	background: transparent;
+	color: var(--sl-color-accent-high);
+	border-radius: 0.25rem;
+}
+.button--primary:not(.button--outline) {
+	background: var(--sl-color-accent);
+	color: var(--sl-color-black);
+}
+.button--outline:hover {
+	background: var(--sl-color-accent-low);
+}
+
+/* GenericConfiguration: build-time plain example, hidden while the interactive editor is shown */
+.file-example[data-mode='interactive'] .file-example__plain {
+	display: none;
+}
+
+/* Source/Client config pages: a wider content column so the explorer and example editor fit side by side on large screens */
+:root:has(.schemaWrapper) {
+	--sl-content-width: 58rem;
+}
+
+/* Galaxy sets `.expressive-code code { display: block; width: 100% }` for the code body, which also hits inline
+   `code` in starlight-codeblocks footnotes, callouts and annotations. Keep those inline. */
+.expressive-code code:not(pre > code) {
+	display: inline;
+	width: auto;
+}

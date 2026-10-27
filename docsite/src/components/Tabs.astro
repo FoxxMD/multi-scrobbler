@@ -1,0 +1,15 @@
+---
+// Docusaurus-compatible wrapper: `groupId` becomes Starlight's localStorage-backed `syncKey`.
+// `queryString` and `className` are accepted and ignored.
+import { Tabs } from '@astrojs/starlight/components';
+
+interface Props {
+	groupId?: string;
+	queryString?: boolean | string;
+	className?: string;
+}
+
+const { groupId } = Astro.props;
+---
+
+<Tabs syncKey={groupId}><slot /></Tabs>

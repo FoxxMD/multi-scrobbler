@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react"
-import BrowserOnly from "@docusaurus/BrowserOnly"
-import { useColorMode } from '@docusaurus/theme-common';
+import { useColorMode } from '../theme';
 
 const STRINGIFY_JSON = (json: unknown) => JSON.stringify(json, null, "\t");
 import "../modern-json-react-styles.css";
@@ -11,12 +10,12 @@ import json5 from 'json5';
 
 export interface SchemaEditorProps {
     config: object | string
-    schema?: object
+    schema?: object | undefined
     height?: string
 }
 
 // based on https://github.com/jy95/docusaurus-json-schema-plugin/blob/main/testsite/src/components/PlaygroundInner.tsx
-function SchemaEditorInner(props: SchemaEditorProps): JSX.Element {
+function SchemaEditorInner(props: SchemaEditorProps): React.JSX.Element {
 
     const validator: Validator | undefined = useMemo(() => {
         if(props.schema === undefined) {
@@ -58,6 +57,7 @@ function SchemaEditorInner(props: SchemaEditorProps): JSX.Element {
 
     //const val = typeof props.config === 'object' ? STRINGIFY_JSON(props.config) : props.config;
     return (
+<div className="not-content">
             <ReactJsonEditor
                 validator={validator}
                 theme={colorMode}
@@ -65,15 +65,12 @@ function SchemaEditorInner(props: SchemaEditorProps): JSX.Element {
                 content={initialData}
                 style={{height: 'initial'}}
             />
+            </div>
     )
 }
 
-export default function SchemaEditor(props: SchemaEditorProps): JSX.Element {
+export default function SchemaEditor(props: SchemaEditorProps): React.JSX.Element {
     return (
-        <BrowserOnly fallback={<div>Loading...</div>}>
-            {() => {
-                return <SchemaEditorInner {...props} />
-            }}
-        </BrowserOnly>
+        <SchemaEditorInner {...props} />
     )
 }

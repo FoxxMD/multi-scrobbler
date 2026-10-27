@@ -20,19 +20,6 @@
             ],
         },
         {
-            "name": "Run Canonical Replace",
-            "program": "${workspaceFolder}/docsite/canonical-replace.ts",
-            "runtimeArgs": ["--experimental-strip-types"],
-            "args": [
-                "${workspaceFolder}/docsite/build"
-            ],
-            "request": "launch",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "type": "node"
-        },
-        {
             "name": "dev",
             "type": "node",
             "request": "launch",

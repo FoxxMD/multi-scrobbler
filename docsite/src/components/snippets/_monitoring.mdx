@@ -1,16 +1,16 @@
-import CodeBlock from '@theme/CodeBlock';
+
 
 ### Monitoring Activity
 
 Monitoring activity for a Source/Client can be explicitly toggled on/off from each Source/Client respective details page by choosing <kbd>Ignore</kbd> or <kbd>Monitor</kbd> from the Status dropdown.
 
 <p align="center">
-<img src={require('/img/monitoring_on.png').default} width="50%"/> <img src={require('/img/monitoring_off.jpg').default} width="50%"/>
+<img src={withBase("img/monitoring_on.png")} width="50%"/> <img src={withBase("img/monitoring_off.jpg")} width="50%"/>
 </p>
 
 When a Source/Client is *not* monitored it will *still show activity* (like an active Player) but the resulting Play will marked as **Discarded.**
 
-<img src={require('/img/monitoring_discarded.png').default}/>
+<img src={withBase("img/monitoring_discarded.png")}/>
 
 Discarded Plays are **not** forwarded from Sources -> Clients (Discovered) and for Clients are **not** Scrobbled to downstream scrobble clients.
 

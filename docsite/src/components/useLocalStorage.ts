@@ -4,7 +4,6 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import ExecutionEnvironment from '@docusaurus/ExecutionEnvironment';
 
 const localTypedStorageHook = <T>(key: string, initialValue: T, json: boolean = true): [T, (value: T) => void] => {
 
@@ -44,12 +43,12 @@ const localTypedStorageHook = <T>(key: string, initialValue: T, json: boolean = 
 
 
   const updateValue = useCallback(
-    newValue => {
+    (newValue: T) => {
       setStoredValue(() => {
         if(json) {
            localStorage.setItem(key, JSON.stringify(newValue)) 
         } else {
-            localStorage.setItem(key, newValue)
+            localStorage.setItem(key, String(newValue))
         }
         return newValue
       })
@@ -107,7 +106,7 @@ export const useTypedLocalStorage = <T>(key: string, defaultValue: T, json?: boo
   }
 
   // prevents usage during server static rendering
-  if(!ExecutionEnvironment.canUseDOM) {
+  if(typeof window === 'undefined') {
     return [defaultValue, () => null];
   }
 

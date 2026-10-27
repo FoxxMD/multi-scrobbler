@@ -1,0 +1,31 @@
+---
+title: Koito
+description: Koito (Source)
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 5
+---
+
+
+
+
+import KoitoConfig from '@site/../config/koito.json.example?raw';
+import ENVConfig from "@site/src/content/docs/configuration/sources/_env_configs/_koito.md";
+
+This Source monitors a Koito account's scrobble history and then re-scrobbles discovered tracks to configured [Clients.](/configuration/clients)
+
+:::tip[Other Uses]
+
+To  _scrobble to_ a Koito server, create a [Koito (Client)](/configuration/clients/koito)
+
+:::
+
+See the [Koito (Client)](/configuration/clients/koito) configuration for general setup. The only difference for **Source** configuration:
+
+* [File/AIO config](/configuration?configType=file#configuration-types) must include `"configureAs": "source"`
+
+#### Configuration
+
+<Config config="KoitoSourceConfig" fileContent={KoitoConfig} configureAs ambiguous name="koito">
+<ENVConfig/>
+</Config>
