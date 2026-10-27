@@ -1,6 +1,6 @@
 {
   "extends": "astro/tsconfigs/strict",
-  "include": [".astro/types.d.ts", "**/*"],
+  "include": [".astro/types.d.ts", "**/*", "node_modules/starlight-changelogs/virtual.d.ts"],
   "exclude": ["build", "build-*"],
   "compilerOptions": {
     "jsx": "react-jsx",

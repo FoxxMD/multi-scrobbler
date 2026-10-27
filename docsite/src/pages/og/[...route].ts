@@ -1,11 +1,8 @@
-import { getCollection } from 'astro:content';
 import { OGImageRoute } from 'astro-og-canvas';
-
-const entries = await getCollection('docs');
-const pages = Object.fromEntries(entries.map(({ id, data }) => [id || 'index', data]));
+import { ogImagePages } from '../../ogPages';
 
 export const { getStaticPaths, GET } = await OGImageRoute({
-	pages,
+	pages: ogImagePages,
 	getImageOptions: (_path, page) => ({
 		title: page.title,
 		description: page.description ?? 'Listen everywhere, Scrobble anywhere',
