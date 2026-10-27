@@ -40,7 +40,12 @@ if (process.env.GSITEVERIFICATION?.trim()) {
 if (process.env.RY_ANALYTICS?.trim()) {
   head.push({
     tag: 'script',
-    attrs: { src: process.env.RY_ANALYTICS, defer: true, ...(process.env.RY_ANALYTICS_SITEID ? { 'data-site-id': process.env.RY_ANALYTICS_SITEID } : {}) },
+    attrs: { 
+      src: process.env.RY_ANALYTICS,
+      defer: true,
+      'data-replay-block-selector': '.progress-scroll-container',
+      ...(process.env.RY_ANALYTICS_SITEID ? { 'data-site-id': process.env.RY_ANALYTICS_SITEID } : {})
+    },
   });
 }
 const base = docsBase;
