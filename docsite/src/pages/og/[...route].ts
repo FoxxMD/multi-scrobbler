@@ -8,10 +8,14 @@ export const { getStaticPaths, GET } = await OGImageRoute({
 	pages,
 	getImageOptions: (_path, page) => ({
 		title: page.title,
-		description: page.description ?? 'Scrobble all the things',
-		logo: { path: './src/assets/icon.png', size: [100] },
-		bgGradient: [[24, 24, 27], [17, 94, 89]],
-		border: { color: [37, 194, 160], width: 12, side: 'inline-start' },
+		description: page.description ?? 'Listen everywhere, Scrobble anywhere',
+		// icon + "Multi-Scrobbler" in one image, since the card layout only stacks logo/title/description. Regenerate with:
+		// magick icon.png -resize 120x120 i.png; magick -background none -fill 'rgb(240,240,240)' -font fonts/AdwaitaSans-Regular-Static.ttf -pointsize 112 label:'Multi-Scrobbler' -trim +repage t.png
+		// magick i.png \( -size 28x120 xc:none \) \( t.png -background none -gravity center -extent x120 \) -background none +append +repage -define png:color-type=6 og-logo.png
+		logo: { path: './src/assets/og-logo.png' },
+		// neutral dark fading into a darkened logo red (#c54a38)
+		bgGradient: [[24, 24, 27], [28, 25, 26], [92, 36, 29]],
+		border: { color: [197, 74, 56], width: 12, side: 'inline-start' },
 		padding: 60,
 		font: {
 			title: { size: 64, families: ['Adwaita Sans'], color: [240, 240, 240] },
