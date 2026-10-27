@@ -42,6 +42,19 @@ export const getOpenApiDoc = async () => {
         version: '0.1.0',
         description: description
     });
+    // express-typed-router can't set operationId, so derive it from the summary.
+    // The docs site (starlight-openapi) uses it as the page slug: /api/operations/<operationId>/
+    const operationIds = new Set<string>();
+    for (const [path, pathItem] of Object.entries(spec.paths)) {
+        for (const [method, op] of Object.entries(pathItem as Record<string, { summary: string, operationId?: string }>)) {
+            const id = op.summary.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+            if (operationIds.has(id)) {
+                throw new Error(`Duplicate operationId '${id}' for ${method.toUpperCase()} ${path}. Give this route a unique summary.`);
+            }
+            operationIds.add(id);
+            op.operationId = id;
+        }
+    }
     return spec;
 }
 

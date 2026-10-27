@@ -1,25 +1,14 @@
-// The generated spec has no operationIds, so starlight-openapi would slug the path (`/api/components/{id}` -> `apicomponentsid`).
-// Give every operation the same slug docusaurus-plugin-openapi-docs derived from its summary, and redirect the old URLs.
-// (Long term: emit these operationIds in src/backend/utils/OpenApiUtils.ts instead.)
+// starlight-openapi renders the spec's descriptions itself, so root-relative Markdown links in them miss the base.
+// Write a copy with those links fixed and return every operationId (set in src/backend/utils/OpenApiUtils.ts),
+// which starlight-openapi uses as the page slug (/api/operations/<operationId>/).
 import fs from 'node:fs';
 import { baseHref } from './satteriBaseLinks.mjs';
 
-const kebab = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-
 export function prepareSpec(src, dest, base) {
-	const spec = JSON.parse(fs.readFileSync(src, 'utf8'));
-	const slugs = [];
-	for (const pathItem of Object.values(spec.paths ?? {})) {
-		for (const op of Object.values(pathItem)) {
-			if (typeof op !== 'object' || op === null || !('responses' in op)) continue;
-			op.operationId ??= kebab(op.summary ?? '');
-			slugs.push(op.operationId);
-		}
-	}
+	const json = fs.readFileSync(src, 'utf8');
 	fs.mkdirSync(new URL('.', dest), { recursive: true });
-	// starlight-openapi renders descriptions itself, so root-relative Markdown links miss the base
-	fs.writeFileSync(dest, JSON.stringify(spec).replace(/\]\((\/[^)\s"]*)\)/g, (_, href) => `](${baseHref(href, base)})`));
-	return slugs;
+	fs.writeFileSync(dest, json.replace(/\]\((\/[^)\s"]*)\)/g, (_, href) => `](${baseHref(href, base)})`));
+	return Object.values(JSON.parse(json).paths ?? {}).flatMap((pathItem) => Object.values(pathItem).map((op) => op.operationId));
 }
 
 /** old docusaurus-openapi-docs URL -> starlight-openapi URL */
