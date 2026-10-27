@@ -2,13 +2,14 @@
 // (`autogenerate: { directory: '' }` matches nothing), so expand the root level here:
 // top-level pages become links, top-level directories become groups that autogenerate their contents.
 // Ordering uses `sidebar.order` frontmatter / `_meta.yml` `order`, like Docusaurus' sidebar_position / _category_.json.
+// `extra` items are explicit sidebar entries with an optional `order` that are sorted in alongside them.
 import fs from 'node:fs';
 import path from 'node:path';
 import matter from 'gray-matter';
 import yaml from 'js-yaml';
 
-export function rootSidebar(docsDir) {
-	const items = [];
+export function rootSidebar(docsDir, extra = []) {
+	const items = extra.map(({ order, ...item }) => ({ order: order ?? Number.MAX_VALUE, name: item.label ?? '', item }));
 	for (const entry of fs.readdirSync(docsDir, { withFileTypes: true })) {
 		if (entry.name.startsWith('_')) continue;
 		const full = path.join(docsDir, entry.name);

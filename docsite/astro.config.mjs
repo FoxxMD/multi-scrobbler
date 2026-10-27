@@ -138,9 +138,10 @@ export default defineConfig({
         ]),
       ],
       sidebar: [
-        ...rootSidebar(fileURLToPath(new URL('./src/content/docs', import.meta.url))),
-        { label: 'Config Playground', link: '/playground/' },
-        ...openAPISidebarGroups,
+        ...rootSidebar(fileURLToPath(new URL('./src/content/docs', import.meta.url)), [
+          { label: 'Config Playground', link: '/playground/', order: 5.5 },
+          ...openAPISidebarGroups.map((group) => ({ ...group, order: 7.5 })),
+        ]),
       ],
     }),
     react(),
