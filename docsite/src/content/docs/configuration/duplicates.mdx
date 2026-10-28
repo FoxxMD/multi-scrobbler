@@ -258,15 +258,40 @@ It can then decide, opaquely, to match or modify that scrobble to some more "off
 
 There is nothing in the scrobble history API response from Last.fm that identifies it has done any of this. And [it's not super great at being right about these modifications](https://github.com/FoxxMD/multi-scrobbler/issues/333#issuecomment-3145161339).
 
-What this means for you, the user, is that this is very plausible scenario:
+What this means for you, the user, is that this is a very plausible scenario:
 
-* You scrobble `Artist Foo, Artist Bar - My Cool Track` to Last.fm via Pano Scrobbler (outside of Multi-scrobbler)
-  * Last.fm modifies the data to  `The Artist Foo - My Cool Track ft. Artist Bar (Album Version)` 
-* You _also_ scrobble  `Artist Foo, Artist Bar - My Cool Track` to Multi-scrobbler via Pano LFM endpoint **Source**
-  * MS forwards this to Koito Client as-is
-* Soon after, MS polls your Last.fm **Source** for new scrobbles and finds `The Artist Foo - My Cool Track ft. Artist Bar (Album Version)` 
-  * It queries Koito to see if this was scrobbled
-  * It sees that a scrobble did happen at almost the same time BUT the track titles and artist strings are _just different enough_ that it decides it's not a duplicate
-  * MS forwards the scrobble to Koito and you now have a duplicate
+* You have an [Upstream service scrobbling to multiple services](#upstream-scrobbles-sent-to-multiple-sources)
+  * Pano Scrobbler scrobbles to Last.fm
+    * You **also** have the Last.fm as a [Source](/configuration/sources/lastfm-source)
+  * Pano Scrobbler scrobbles to Multi-Scrobbler via [Listenbrainz Endpoint](/configuration/sources/listenbrainz-endpoint)
+
+<CodeWalkthrough>
+
+```text step="Scrobble by Pano Scrobbler"
+Artist Foo, Artist Bar - My Cool Track # [!ref] Scrobbled by Pano Scrobbler to Last.fm, outside MS [!ref] Scrobbled by Pano Scrobbler to MS via LZ Endpoint. This gets forwarded as-is to Koito
+```
+
+```diff lang="text" step="Last.fm modifies data"
+# [!ref] Last.fm recieves your scrobble 
+- Artist Foo, Artist Bar - My Cool Track
+# [!ref] And then modifies it. This is what you see in your LFM profile.
++ The Artist Foo - My Cool Track ft. Artist Bar (Album Version)
+```
+
+```text step="MS polls Last.fm"
+# [!error /The Artist Foo/] Not similar enough to `Artist Foo, Artist Bar`
+# [!error /My Cool Track ft. Artist Bar (Album Version)/] Not similar enough to `My Cool Track`
+Last.fm: The Artist Foo - My Cool Track ft. Artist Bar (Album Version) # [!ref] MS polls the Last.fm **Source**, finds this "new" scrobble, and checks if Koito already has it
+Koito:   Artist Foo, Artist Bar - My Cool Track # [!ref] Koito has a scrobble at almost the same time, BUT the artists and title are *just different enough* that MS decides it is not a duplicate
+```
+
+```text step="Duplicate!"
+# [!callout /Koito/] From Pano -> LZ Endpoint -> Koito
+Koito:   Artist Foo, Artist Bar - My Cool Track
+# [!callout /Koito/] From Pano -> Last.fm Source -> Koito
+Koito:   The Artist Foo - My Cool Track ft. Artist Bar (Album Version) # [!code warning] Duplicate [!ref] MS forwards the Last.fm scrobble to Koito and you now have a duplicate
+```
+
+</CodeWalkthrough>
 
 This behavior is unique to Last.fm. It's truly the **worst** out of all the scrobbler services in terms of preserving your data as-is, or providing a unqiue identifier for your data.
