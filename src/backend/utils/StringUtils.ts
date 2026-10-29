@@ -166,10 +166,26 @@ export const parseArtistCredits = (str: string, delimiters?: boolean | string[],
                 secondary: primaries.slice(1).concat(withJoiner.secondary ?? [])
             }
         }
+        if (primaries.length === 0) {
+            // primary section was only delimiters so promote first secondary artist
+            const [primary, ...secondary] = withJoiner.secondary ?? [];
+            if (primary === undefined) {
+                return undefined;
+            }
+            return {
+                primary,
+                primaryComposite: primary,
+                secondary
+            }
+        }
         return withJoiner;
     }
     // likely this is a plain string with just delims
     const artists = parseContextAwareStringList(str, delims, {ignoreGlobalAmpersand: ignoreGlobalAmpersand ?? true});
+    if (artists.length === 0) {
+        // string was only delimiters
+        return undefined;
+    }
     if (artists.length > 1) {
         return {
             primary: artists[0],
@@ -209,7 +225,8 @@ export const parseContextAwareStringList = (str: string, delimiters: string[] = 
     } else {
         awareList = list;
     }
-    return awareList.map(x =>rejoinBypassed(x.trim()));
+    // leading/trailing/doubled delimiters (EX ", Wolftyla, Bea Miller") would otherwise produce empty entries
+    return awareList.map(x =>rejoinBypassed(x.trim())).filter(x => x !== '');
 }
 
 const bypassJoinerMap = [
