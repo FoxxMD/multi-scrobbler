@@ -76,3 +76,19 @@ img.image-center {
 	display: inline;
 	width: auto;
 }
+
+/* Galaxy sets `display: block !important` on every `.expressive-code` inside `<Tabs>`, which overrides the `hidden`
+   attribute starlight-codeblocks uses to show one `:::code-tabs` variant at a time. Galaxy's rule is in `@layer galaxy`,
+   and `!important` in an earlier layer (`starlight`) beats it, where an unlayered one would not. */
+@layer starlight {
+	[data-scb-code-tabs] > .expressive-code[hidden] {
+		display: none !important;
+	}
+}
+
+/* The selected code-tabs tab keeps the editor `.title` class, which Galaxy gives `font-size: 91%; font-weight: 600`.
+   Match the other tabs to it. */
+.expressive-code .frame.has-title:not(.is-terminal) .scb-tabs-tab {
+	font-size: 91%;
+	font-weight: 600;
+}
