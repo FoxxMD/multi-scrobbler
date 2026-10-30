@@ -1,11 +1,11 @@
 [
     {
-      "name": "Station 1",
-      "enable": true,
       "id": "myIceStation1",
+      "name": "Station 1",
       "data": {
         "url": "http://myIcecast.com/radio"
-      }
+      },
+      "enable": true
     }
   ]
   

@@ -14,11 +14,9 @@ const envKeyKeys = ['APPLEMUSIC_KEY_ID','APPLEMUSIC_KEY_P8','APPLEMUSIC_TEAM_ID'
 export type AppleMusicKey = z.infer<typeof appleMusicKeySchema>;
 
 export const appleMusicDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
-    ...pollingOptionsSchema.shape,
+    mediaUserToken: z.string(),
     key: appleMusicKeySchema.optional(),
     token: z.string().optional(),
-    mediaUserToken: z.string(),
     /**
      * Origin header to include in every Apple Music API request.
      * Required when using a browser token (not a MusicKit key).
@@ -31,6 +29,8 @@ export const appleMusicDataSchema = z.object({
         description: "Origin header to include in every Apple Music API request.",
         examples: ["https://music.apple.com"]
     }),
+    ...pollingOptionsSchema.shape,
+    ...commonSourceDataSchema.shape,
 });
 
 export type AppleMusicData = z.infer<typeof appleMusicDataSchema>;
@@ -159,8 +159,8 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, AppleMusicSourceC
 };
 
 export const appleMusicSourceAIOConfigSchema = z.object({
-    ...appleMusicSourceConfigSchema.shape,
     type: z.literal('applemusic'),
+    ...appleMusicSourceConfigSchema.shape,
 }).meta({title: 'Apple Music'});
 
 export type AppleMusicSourceAIOConfig = z.infer<typeof appleMusicSourceAIOConfigSchema>;

@@ -2,18 +2,18 @@
     {
     "id": "myRockskyClient",
     "name": "FoxxMD Rocksky Client",
-    "configureAs": "client",
     "data": {
-      "appPassword": "l95n-0ndl-2jj7-b1p4",
-      "handle": "alice.bsky.social"
-    }
+      "handle": "alice.bsky.social",
+      "appPassword": "l95n-0ndl-2jj7-b1p4"
+    },
+    "configureAs": "client"
   },
   {
     "id": "myRockskySource",
     "name": "FoxxMD Rocksky Source",
-    "configureAs": "source",
     "data": {
       "handle": "alice.bsky.social"
-    }
+    },
+    "configureAs": "source"
   }
 ]

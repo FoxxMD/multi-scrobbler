@@ -1,12 +1,12 @@
 [
   {
-    "enable": true,
     "id": "myMPD",
     "name": "Desktop",
     "data": {
       "url": "192.168.0.100:6600",
       "password": "MY_PASSWORD"
     },
+    "enable": true,
     "options": {
       "disableDiscovery": false
     }

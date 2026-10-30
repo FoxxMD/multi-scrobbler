@@ -1,12 +1,10 @@
 [
   {
-    "name": "Foxx Plex",
     "id": "MyPlexApi",
-    "enable": true,
-    "clients": [],
+    "name": "Foxx Plex",
     "data": {
-      "token": "1234",
       "url": "http://192.168.0.120:32400",
+      "token": "1234",
       "usersAllow": ["FoxxMD","SomeOtherUser"],
       "usersBlock": ["AnotherUser"],
       "devicesAllow": ["firefox"],
@@ -14,6 +12,8 @@
       "librariesAllow": ["GoodMusic"],
       "librariesBlock": ["BadMusic"]
     },
+    "enable": true,
+    "clients": [],
     "options": {
       "logPayload": true,
       "logFilterFailure": "debug",

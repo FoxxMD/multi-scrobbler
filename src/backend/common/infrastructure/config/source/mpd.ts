@@ -3,8 +3,6 @@ import {pollingOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
 export const mpdDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
-    ...pollingOptionsSchema.shape,
     /**
      * URL:PORT of the MPD server to connect to
      *
@@ -34,7 +32,8 @@ export const mpdDataSchema = z.object({
     password: z.string().optional().meta({
         description: "Password for the server, if set https://mpd.readthedocs.io/en/stable/user.html#permissions-and-passwords"
     }),
-
+    ...pollingOptionsSchema.shape,
+    ...commonSourceDataSchema.shape,
 });
 
 export type MPDData = z.infer<typeof mpdDataSchema>;
@@ -64,14 +63,14 @@ export type MPDSourceOptions = z.infer<typeof mpdSourceOptionsSchema>;
 export const mpdSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,
     data: mpdDataSchema,
-    options: mpdSourceOptionsSchema,
+    options: mpdSourceOptionsSchema.optional(),
 });
 
 export type MPDSourceConfig = z.infer<typeof mpdSourceConfigSchema>;
 
 export const mpdSourceAIOConfigSchema = z.object({
-    ...mpdSourceConfigSchema.shape,
     type: z.literal('mpd'),
+    ...mpdSourceConfigSchema.shape,
 }).meta({title: 'MPD'});
 
 export type MPDSourceAIOConfig = z.infer<typeof mpdSourceAIOConfigSchema>;

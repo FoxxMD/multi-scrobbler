@@ -53,8 +53,8 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, CoolPlayerSourceC
 
 // finally, the AIO config shape is created with the required `type` constant
 export const coolPlayerSourceAIOConfigSchema = z.object({
-    ...coolPlayerSourceConfigSchema.shape,
     type: z.literal('coolplayer'),
+    ...coolPlayerSourceConfigSchema.shape,
 }).meta({title: 'CoolPlayer'});
 
 export type CoolPlayerSourceAIOConfig = z.infer<typeof coolPlayerSourceAIOConfigSchema>;

@@ -78,7 +78,14 @@ export interface MCPlaybackOverviewRequest extends MCRequestCommon {
 }
 
 export const musikcubeDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
+    /**
+     * Password set in Musikcube https://github.com/clangen/musikcube/wiki/remote-api-documentation
+     *
+     * * musikcube -> settings -> server setup -> password
+     * */
+    password: z.string().meta({
+        description: "Password set in Musikcube https://github.com/clangen/musikcube/wiki/remote-api-documentation"
+    }),
     /**
      * URL of the Musikcube Websocket (Metadata) server to connect to
      *
@@ -103,17 +110,9 @@ export const musikcubeDataSchema = z.object({
         examples: ["ws://localhost:7905"]
     }),
 
-    /**
-     * Password set in Musikcube https://github.com/clangen/musikcube/wiki/remote-api-documentation
-     *
-     * * musikcube -> settings -> server setup -> password
-     * */
-    password: z.string().meta({
-        description: "Password set in Musikcube https://github.com/clangen/musikcube/wiki/remote-api-documentation"
-    }),
 
     device_id: z.string().optional(),
-
+    ...commonSourceDataSchema.shape,
 });
 
 export type MusikcubeData = z.infer<typeof musikcubeDataSchema>;
@@ -142,8 +141,8 @@ export const musikcubeSourceConfigSchema = z.object({
 export type MusikcubeSourceConfig = z.infer<typeof musikcubeSourceConfigSchema>;
 
 export const musikcubeSourceAIOConfigSchema = z.object({
-    ...musikcubeSourceConfigSchema.shape,
     type: z.literal('musikcube'),
+    ...musikcubeSourceConfigSchema.shape,
 }).meta({title: 'Musikcube'});
 
 export type MusikcubeSourceAIOConfig = z.infer<typeof musikcubeSourceAIOConfigSchema>;

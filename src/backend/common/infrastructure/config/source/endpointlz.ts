@@ -3,7 +3,6 @@ import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSch
 import { envMetaNormalize } from "../../../../utils/ZodUtils.ts";
 
 export const listenbrainzEndpointDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
     /**
      * The URL ending that should be used to identify scrobbles for this source
      *
@@ -39,6 +38,7 @@ export const listenbrainzEndpointDataSchema = z.object({
     username: z.string().optional().meta({
         description: "The listenbrainz \"username\" to associate with this Source"
     }),
+    ...commonSourceDataSchema.shape,
 });
 
 export const listenbrainzEndpointOptionsSchema = z.object({
@@ -82,8 +82,8 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, ListenbrainzEndpo
 export type ListenbrainzEndpointSourceConfig = z.infer<typeof listenbrainzEndpointSourceConfigSchema>;
 
 export const listenbrainzEndpointSourceAIOConfigSchema = z.object({
-    ...listenbrainzEndpointSourceConfigSchema.shape,
     type: z.literal('endpointlz'),
+    ...listenbrainzEndpointSourceConfigSchema.shape,
 }).meta({title: 'Endpoint Listenbrainz'});
 
 export type ListenbrainzEndpointSourceAIOConfig = z.infer<typeof listenbrainzEndpointSourceAIOConfigSchema>;

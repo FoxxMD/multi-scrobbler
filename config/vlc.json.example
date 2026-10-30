@@ -1,11 +1,11 @@
 [
   {
-    "enable": true,
     "id": "myVlc",
     "name": "Desktop",
     "data": {
-      "url": "localhost:8080",
-      "password": "changeme"
-    }
+      "password": "changeme",
+      "url": "localhost:8080"
+    },
+    "enable": true
   }
 ]

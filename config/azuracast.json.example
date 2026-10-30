@@ -1,14 +1,13 @@
 [
   {
-    "type": "azuracast",
-    "enable": true,
-    "name": "Cool Station",
     "id": "myAzura",
+    "name": "Cool Station",
     "data": {
       "url": "ws://192.168.0.101",
       "station": "my-station-name",
-      "monitorWhenLive": true,
-      "monitorWhenListeners": 1
-    }
+      "monitorWhenListeners": 1,
+      "monitorWhenLive": true
+    },
+    "enable": true
   }
 ]

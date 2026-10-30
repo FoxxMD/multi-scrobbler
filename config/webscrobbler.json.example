@@ -4,8 +4,8 @@
     "name": "Firefox Laptop",
     "data": {
       "slug": "MyOptionalSlug",
-      "whitelist": [],
-      "blacklist": []
+      "blacklist": [],
+      "whitelist": []
     }
   }
 ]

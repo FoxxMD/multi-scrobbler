@@ -2,9 +2,9 @@ import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
+const {interval, ...restPollingOptions} = pollingOptionsSchema.shape;
+
 export const spotifySourceDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
-    ...pollingOptionsSchema.shape,
     /**
      * spotify client id
      *
@@ -56,6 +56,8 @@ export const spotifySourceDataSchema = z.object({
         default: 10,
         examples: [10]
     }),
+    ...restPollingOptions,
+    ...commonSourceDataSchema.shape,
 });
 
 export const spotifyOptionsSchema = z.object({
@@ -115,8 +117,8 @@ export const spotifySourceConfigSchema = z.object({
 export type SpotifySourceConfig = z.infer<typeof spotifySourceConfigSchema>;
 
 export const spotifySourceAIOConfigSchema = z.object({
-    ...spotifySourceConfigSchema.shape,
     type: z.literal('spotify'),
+    ...spotifySourceConfigSchema.shape,
 }).meta({title: 'Spotify'});
 
 export type SpotifySourceAIOConfig = z.infer<typeof spotifySourceAIOConfigSchema>;

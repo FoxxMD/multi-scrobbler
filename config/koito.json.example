@@ -1,22 +1,22 @@
 [
   {
-    "name": "Koito Client A",
     "id": "myKoitoClient",
-    "configureAs": "client",
+    "name": "Koito Client A",
     "data": {
+      "url": "http://192.168.0.100:4110",
       "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
-      "username": "admin",
-      "url": "http://192.168.0.100:4110" 
-    }
+      "username": "admin"
+    },
+    "configureAs": "client"
   },
   {
-    "name": "Koito Source B",
     "id": "myKoitoSource",
-    "configureAs": "source",
+    "name": "Koito Source B",
     "data": {
+      "url": "http://192.168.0.100:4110",
       "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
-      "username": "admin",
-      "url": "http://192.168.0.100:4110" 
-    }
+      "username": "admin"
+    },
+    "configureAs": "source"
   }
 ]

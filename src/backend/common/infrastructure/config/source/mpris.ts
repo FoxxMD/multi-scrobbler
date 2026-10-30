@@ -31,7 +31,6 @@ export interface PlayerInfo {
 }
 
 export const mprisDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
     /**
      * DO NOT scrobble from any players that START WITH these values, case-insensitive
      *
@@ -53,6 +52,7 @@ export const mprisDataSchema = z.object({
         description: "ONLY scrobble from any players that START WITH values from this list",
         examples: [["spotify", "vlc"]]
     }),
+    ...commonSourceDataSchema.shape,
 });
 
 export type MPRISData = z.infer<typeof mprisDataSchema>;
@@ -81,8 +81,8 @@ export const mprisSourceConfigSchema = z.object({
 export type MPRISSourceConfig = z.infer<typeof mprisSourceConfigSchema>;
 
 export const mprisSourceAIOConfigSchema = z.object({
-    ...mprisSourceConfigSchema.shape,
     type: z.literal('mpris'),
+    ...mprisSourceConfigSchema.shape,
 }).meta({title: 'MPRIS'});
 
 export type MPRISSourceAIOConfig = z.infer<typeof mprisSourceAIOConfigSchema>;

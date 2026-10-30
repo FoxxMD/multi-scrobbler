@@ -4,9 +4,9 @@ import {pollingOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
 export const lastFmSourceDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
-    ...pollingOptionsSchema.shape,
     ...lastfmDataSchema.shape,
+    ...pollingOptionsSchema.shape,
+    ...commonSourceDataSchema.shape,
 });
 
 export type LastFmSourceData = z.infer<typeof lastFmSourceDataSchema>;
@@ -32,8 +32,11 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, LastfmSourceConfi
     })
 };
 
+const {enable, clients, options, ...commonConfigPrimary} = commonSourceConfigSchema.shape;
+
 export const lastfmSourceConfigSchema = z.object({
-    ...commonSourceConfigSchema.shape,
+    ...commonConfigPrimary,
+    data: lastFmSourceDataSchema,
     /**
      * When used in `lastfm.config` this tells multi-scrobbler whether to use this data to configure a source or client.
      *
@@ -45,16 +48,18 @@ export const lastfmSourceConfigSchema = z.object({
         default: "source",
         examples: ["source"]
     }),
-    data: lastFmSourceDataSchema,
+    enable,
+    clients,
+    options,
 });
 
 export type LastfmSourceConfig = z.infer<typeof lastfmSourceConfigSchema>;
 
 export const lastFmSouceAIOConfigSchema = z.object({
+    type: z.literal('lastfm'),
     ...lastfmSourceConfigSchema.shape,
     // can be optional since it always appears in a source array
     configureAs: lastfmSourceConfigSchema.shape.configureAs.optional(),
-    type: z.literal('lastfm'),
 }).meta({title: "Last.fm"});
 
 export type LastFmSouceAIOConfig = z.infer<typeof lastFmSouceAIOConfigSchema>;

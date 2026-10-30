@@ -2,7 +2,6 @@ import * as z from "zod";
 import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
 export const lastFmEndpointDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
     /**
      * The URL ending that should be used to identify scrobbles for this source
      *
@@ -24,6 +23,7 @@ export const lastFmEndpointDataSchema = z.object({
     apiKey: z.string().optional().meta({
         description: 'A fake api key to differentiate LFM Endpoint Sources'
     }),
+    ...commonSourceDataSchema.shape,
 });
 
 export type LastFMEndpointData = z.infer<typeof lastFmEndpointDataSchema>;
@@ -54,8 +54,8 @@ export const lastFmEndpointSourceConfigSchema = z.object({
 export type LastFMEndpointSourceConfig = z.infer<typeof lastFmEndpointSourceConfigSchema>;
 
 export const lastFmEndpointSourceAIOConfigSchema = z.object({
-    ...lastFmEndpointSourceConfigSchema.shape,
     type: z.literal('endpointlfm'),
+    ...lastFmEndpointSourceConfigSchema.shape,
 }).meta({title: 'Endpoint Last.fm'});
 
 export type LastFMEndpointSourceAIOConfig = z.infer<typeof lastFmEndpointSourceAIOConfigSchema>;

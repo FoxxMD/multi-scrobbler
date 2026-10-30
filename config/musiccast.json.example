@@ -1,10 +1,10 @@
 [
   {
-    "name": "Livingroom Reciever",
     "id": "myYamaha",
-    "enable": true,
+    "name": "Livingroom Reciever",
     "data": {
       "url": "192.168.0.101"
-    }
+    },
+    "enable": true
   }
 ]

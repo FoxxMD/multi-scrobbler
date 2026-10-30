@@ -3,8 +3,6 @@ import {pollingOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
 export const mixcloudDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
-    ...pollingOptionsSchema.shape,
     /**
      * Mixcloud username whose listening history should be monitored
      *
@@ -34,6 +32,8 @@ export const mixcloudDataSchema = z.object({
     clientSecret: z.string().optional().meta({
         description: "Client secret of a Mixcloud application, from https://www.mixcloud.com/developers/."
     }),
+    ...pollingOptionsSchema.shape,
+    ...commonSourceDataSchema.shape,
 });
 
 export type MixcloudData = z.infer<typeof mixcloudDataSchema>;
@@ -65,8 +65,8 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, MixcloudSourceCon
 };
 
 export const mixcloudSourceAIOConfigSchema = z.object({
-    ...mixcloudSourceConfigSchema.shape,
     type: z.literal('mixcloud'),
+    ...mixcloudSourceConfigSchema.shape,
 }).meta({title: 'Mixcloud'});
 
 export type MixcloudSourceAIOConfig = z.infer<typeof mixcloudSourceAIOConfigSchema>;

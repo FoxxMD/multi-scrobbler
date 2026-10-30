@@ -5,7 +5,6 @@ import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSch
 import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
 export const tuneshineDataSchema = z.object({
-    ...requestRetryOptionsSchema.shape,
     /**
      * IP or hostname for the Tuneshine device
      *
@@ -15,6 +14,7 @@ export const tuneshineDataSchema = z.object({
         description: "IP or http(s)://hostname for the Tuneshine device",
         examples: ["http://192.168.1.100"]
     }),
+    ...requestRetryOptionsSchema.shape,
 });
 export type TuneshineData = z.infer<typeof tuneshineDataSchema>;
 
@@ -42,8 +42,11 @@ export const tuneshineClientDataSchema = tuneshineDataSchema.extend(commonClient
 
 export type TuneshineClientData = z.infer<typeof tuneshineClientDataSchema>;
 
+const {enable, options, ...commonConfigPrimary} = commonClientConfigSchema.shape;
+
 export const tuneshineClientConfigSchema = z.object({
-    ...commonClientConfigSchema.shape,
+    ...commonConfigPrimary,
+    data: tuneshineClientDataSchema,
     /**
      * Should always be `client` when using Tuneshine as a client
      *
@@ -55,15 +58,15 @@ export const tuneshineClientConfigSchema = z.object({
         default: "client",
         examples: ["client"]
     }),
-    data: tuneshineClientDataSchema,
-    options: tuneshineOptionsSchema.optional()
+    enable,
+    options: tuneshineOptionsSchema.optional(),
 });
 
 export type TuneshineClientConfig = z.infer<typeof tuneshineClientConfigSchema>;
 
 export const tuneshineClientAIOConfigSchema = z.object({
-    ...tuneshineClientConfigSchema.shape,
     type: z.literal('tuneshine'),
+    ...tuneshineClientConfigSchema.shape,
 }).meta({title: "Tuneshine"});
 
 export type TuneshineClientAIOConfig = z.infer<typeof tuneshineClientAIOConfigSchema>;

@@ -4,9 +4,6 @@ import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} 
 import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
 export const jRiverDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
-    ...pollingOptionsSchema.shape,
-    ...requestRetryOptionsSchema.shape,
     /**
      * URL of the JRiver HTTP server to connect to
      *
@@ -47,6 +44,9 @@ export const jRiverDataSchema = z.object({
     password: z.string().optional().meta({
         description: "If you have enabled authentication, the password you set"
     }),
+    ...pollingOptionsSchema.shape,
+    ...requestRetryOptionsSchema.shape,
+    ...commonSourceDataSchema.shape,
 });
 
 export type JRiverData = z.infer<typeof jRiverDataSchema>;
@@ -77,8 +77,8 @@ export const jRiverSourceConfigSchema = z.object({
 export type JRiverSourceConfig = z.infer<typeof jRiverSourceConfigSchema>;
 
 export const jRiverSourceAIOConfigSchema = z.object({
-    ...jRiverSourceConfigSchema.shape,
     type: z.literal('jriver'),
+    ...jRiverSourceConfigSchema.shape,
 }).meta({title: 'JRiver'});
 
 export type JRiverSourceAIOConfig = z.infer<typeof jRiverSourceAIOConfigSchema>;

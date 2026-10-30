@@ -4,8 +4,12 @@ import {pollingOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
 
 export const vlcDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
-    ...pollingOptionsSchema.shape,
+    /**
+     * Password for the server
+     * */
+    password: z.string().meta({
+        description: "Password for the server"
+    }),
     /**
      * URL:PORT of the VLC server to connect to
      *
@@ -20,13 +24,8 @@ export const vlcDataSchema = z.object({
         examples: ["localhost:8080"]
     }),
 
-    /**
-     * Password for the server
-     * */
-    password: z.string().meta({
-        description: "Password for the server"
-    }),
-
+    ...pollingOptionsSchema.shape,
+    ...commonSourceDataSchema.shape,
 });
 
 export type VLCData = z.infer<typeof vlcDataSchema>;
@@ -89,8 +88,8 @@ export const vlcSourceConfigSchema = z.object({
 export type VLCSourceConfig = z.infer<typeof vlcSourceConfigSchema>;
 
 export const vlcSourceAIOConfigSchema = z.object({
-    ...vlcSourceConfigSchema.shape,
     type: z.literal('vlc'),
+    ...vlcSourceConfigSchema.shape,
 }).meta({title: 'VLC'});
 
 export type VLCSourceAIOConfig = z.infer<typeof vlcSourceAIOConfigSchema>;

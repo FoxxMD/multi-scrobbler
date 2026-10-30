@@ -3,8 +3,6 @@ import {requestRetryOptionsSchema} from "../common.ts";
 import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, nowPlayingOptionsSchema, type EnvClientSchema} from "./index.ts";
 
 export const lastfmDataSchema = z.object({
-    ...commonClientDataSchema.shape,
-    ...requestRetryOptionsSchema.shape,
     /**
      * API Key generated from Last.fm/Libre.fm account
      *
@@ -40,6 +38,8 @@ export const lastfmDataSchema = z.object({
         default: "http://localhost:9078/lastfm/callback",
         examples: ["http://localhost:9078/lastfm/callback"]
     }),
+    ...requestRetryOptionsSchema.shape,
+    ...commonClientDataSchema.shape,
 });
 
 export type LastfmData = z.infer<typeof lastfmDataSchema>;
@@ -72,8 +72,11 @@ export const lastfmClientOptionsSchema = z.object({
 
 export type LastfmClientOptions = z.infer<typeof lastfmClientOptionsSchema>;
 
+const {enable, options, ...commonConfigPrimary} = commonClientConfigSchema.shape;
+
 export const lastfmClientConfigSchema = z.object({
-    ...commonClientConfigSchema.shape,
+    ...commonConfigPrimary,
+    data: lastfmDataSchema,
     /**
      * Should always be `client` when using LastFM as a client
      *
@@ -85,15 +88,15 @@ export const lastfmClientConfigSchema = z.object({
         default: "client",
         examples: ["client"]
     }),
-    data: lastfmDataSchema,
+    enable,
     options: lastfmClientOptionsSchema.optional(),
 });
 
 export type LastfmClientConfig = z.infer<typeof lastfmClientConfigSchema>;
 
 export const lastfmClientAIOConfigSchema = z.object({
-    ...lastfmClientConfigSchema.shape,
     type: z.literal('lastfm'),
+    ...lastfmClientConfigSchema.shape,
 }).meta({title: 'Last.fm'});
 
 export type LastfmClientAIOConfig = z.infer<typeof lastfmClientAIOConfigSchema>;

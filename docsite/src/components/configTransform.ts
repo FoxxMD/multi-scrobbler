@@ -5,7 +5,7 @@ export function transformConfig(data: string | object, configureAs: 'client' | '
 	let content: any = typeof data === 'string' ? json5.parse(data) : data;
 	if (configureAs !== undefined && Array.isArray(content)) {
 		const filtered = content.filter((x) => x.configureAs === undefined || x.configureAs === configureAs);
-		content = aio ? { [configureAs === 'client' ? 'clients' : 'sources']: filtered.map((x) => ({ ...x, type: name })) } : filtered;
+		content = aio ? { [configureAs === 'client' ? 'clients' : 'sources']: filtered.map((x) => ({ type: name, ...x  })) } : filtered;
 	}
 	return content;
 }

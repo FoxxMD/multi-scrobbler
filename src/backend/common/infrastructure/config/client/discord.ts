@@ -68,8 +68,11 @@ export const discordClientDataSchema = discordDataSchema.extend(commonClientData
 
 export type DiscordClientData = z.infer<typeof discordClientDataSchema>;
 
+const {enable, options, ...commonConfigPrimary} = commonClientConfigSchema.shape;
+
 export const discordClientConfigSchema = z.object({
-    ...commonClientConfigSchema.shape,
+    ...commonConfigPrimary,
+    data: discordClientDataSchema,
     /**
      * Should always be `client` when using Koito as a client
      *
@@ -81,14 +84,15 @@ export const discordClientConfigSchema = z.object({
         default: "client",
         examples: ["client"]
     }),
-    data: discordClientDataSchema,
+    enable,
+    options,
 });
 
 export type DiscordClientConfig = z.infer<typeof discordClientConfigSchema>;
 
 export const discordClientAIOConfigSchema = z.object({
-    ...discordClientConfigSchema.shape,
     type: z.literal('discord'),
+    ...discordClientConfigSchema.shape,
 }).meta({title: 'Discord'});
 
 export type DiscordClientAIOConfig = z.infer<typeof discordClientAIOConfigSchema>;

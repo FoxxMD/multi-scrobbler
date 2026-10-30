@@ -2,9 +2,9 @@ import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
+const {interval, maxInterval, ...restPollingOptions} = pollingOptionsSchema.shape;
+
 export const subsonicDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
-    ...pollingOptionsSchema.shape,
     /**
      * URL of the subsonic media server to query
      *
@@ -97,7 +97,9 @@ export const subsonicDataSchema = z.object({
      *
      * @default true
      * */
-     detectStaleNowPlayingFromMinutesAgo: z.boolean().optional().meta({description: 'Ignore `getNowPlaying` entries whose `minutesAgo`-derived start time is older than their reported duration.\n\n Only used when server/client does not implement OpenSubsonic Playback Report'})
+     detectStaleNowPlayingFromMinutesAgo: z.boolean().optional().meta({description: 'Ignore `getNowPlaying` entries whose `minutesAgo`-derived start time is older than their reported duration.\n\n Only used when server/client does not implement OpenSubsonic Playback Report'}),
+    ...restPollingOptions,
+    ...commonSourceDataSchema.shape,
 });
 
 export type SubsonicData = z.infer<typeof subsonicDataSchema>;
@@ -128,8 +130,8 @@ export const subSonicSourceConfigSchema = z.object({
 export type SubSonicSourceConfig = z.infer<typeof subSonicSourceConfigSchema>;
 
 export const subsonicSourceAIOConfigSchema = z.object({
-    ...subSonicSourceConfigSchema.shape,
     type: z.literal('subsonic'),
+    ...subSonicSourceConfigSchema.shape,
 }).meta({title: 'Subsonic'});
 
 export type SubsonicSourceAIOConfig = z.infer<typeof subsonicSourceAIOConfigSchema>;

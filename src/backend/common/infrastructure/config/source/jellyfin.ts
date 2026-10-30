@@ -5,7 +5,6 @@ import { envMetaNormalize, transformSplitMaybeString, transformSplitMaybeStringO
 //export const jellyfinMediaTypesSchema = z.enum(['unknown','video','audio','photo','book','musicvideo']);
 //export type JellyfinMediaType = z.infer<typeof jellyfinMediaTypesSchema>;
 export const jellyApiDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
     /**
      * HOST:PORT of the Jellyfin server to connect to
      * */
@@ -120,6 +119,7 @@ export const jellyApiDataSchema = z.object({
     frontendUrlOverride: z.string().optional().meta({
         description: "HOST:PORT of the Jellyfin server that your browser will be able to access from the frontend (and thus load images and links from)"
     }),
+    ...commonSourceDataSchema.shape,
 });
 
 export type JellyApiData = z.infer<typeof jellyApiDataSchema>;
@@ -175,8 +175,8 @@ export const jellyApiSourceConfigSchema = z.object({
 export type JellyApiSourceConfig = z.infer<typeof jellyApiSourceConfigSchema>;
 
 export const jellyApiSourceAIOConfigSchema = z.object({
-    ...jellyApiSourceConfigSchema.shape,
     type: z.literal('jellyfin'),
+    ...jellyApiSourceConfigSchema.shape,
 }).meta({title: 'Jellyfin'});
 
 export type JellyApiSourceAIOConfig = z.infer<typeof jellyApiSourceAIOConfigSchema>;

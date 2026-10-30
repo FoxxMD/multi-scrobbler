@@ -2,8 +2,6 @@
   {
     "id": "myMixcloud",
     "name": "MyMixcloud",
-    "enable": true,
-    "clients": [],
     "data": {
       // Option 1: monitor a user's public listening history (no authentication needed)
       "username": "MyUsername",
@@ -18,6 +16,8 @@
 
       // optional: polling interval in seconds (default 60)
       "interval": 60
-    }
+    },
+    "enable": true,
+    "clients": []
   }
 ]

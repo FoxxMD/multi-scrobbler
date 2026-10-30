@@ -4,15 +4,13 @@ import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSch
 import { envMetaNormalize, httpUrl, transformSplitMaybeString } from "../../../../utils/ZodUtils.ts";
 
 export const plexApiDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
-    ...pollingOptionsSchema.shape,
-    token: z.string().optional(),
     /**
      * http(s)://HOST:PORT of the Plex server to connect to
      * */
     url: httpUrl.meta({
         description: "http(s)://HOST:PORT of the Plex server to connect to"
     }),
+    token: z.string().optional(),
 
     /**
      * Only scrobble for specific users
@@ -54,6 +52,8 @@ export const plexApiDataSchema = z.object({
     librariesBlock: z.union([z.string(), z.array(z.string())]).optional().meta({
         description: "Do not scrobble if library name contains strings from this list"
     }),
+    ...pollingOptionsSchema.shape,
+    ...commonSourceDataSchema.shape,
 });
 
 export type PlexApiData = z.infer<typeof plexApiDataSchema>;
@@ -115,8 +115,8 @@ export const plexApiSourceConfigSchema = z.object({
 export type PlexApiSourceConfig = z.infer<typeof plexApiSourceConfigSchema>;
 
 export const plexApiSourceAIOConfigSchema = z.object({
-    ...plexApiSourceConfigSchema.shape,
     type: z.literal('plex'),
+    ...plexApiSourceConfigSchema.shape,
 }).meta({title: 'Plex'});
 
 export type PlexApiSourceAIOConfig = z.infer<typeof plexApiSourceAIOConfigSchema>;

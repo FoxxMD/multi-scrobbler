@@ -16,15 +16,6 @@ export const commonDataSchema = z.record(z.string(), z.any()); // keyOmit<{ [key
 export type CommonData = z.infer<typeof commonDataSchema>;
 
 export const commonConfigSchema = z.object({
-    /**
-     * Vanity name for this Source/Client
-     *
-     * @examples ["My Cool Component"]
-     * */
-    name: z.string().optional().meta({
-        description: "Vanity name for this Source/Client",
-        examples: ["Foxx's Cool Client"]
-    }),
     /** A UNIQUE identifier for this Source/Client
      *
      * It should be unique for the given Source/Client type. No other Source/Client of the same type should have this ID. This ID will be used to register this Source/Client in the database so that it can be identified even if you change the name of the component.
@@ -34,6 +25,15 @@ export const commonConfigSchema = z.object({
     id: z.string().meta({
         description: "A UNIQUE identifier for this Source/Client",
         examples: ["fooGlobalA"]
+    }),
+    /**
+     * Vanity name for this Source/Client
+     *
+     * @examples ["My Cool Component"]
+     * */
+    name: z.string().optional().meta({
+        description: "Vanity name for this Source/Client",
+        examples: ["Foxx's Cool Client"]
     }),
     data: commonDataSchema.optional(),
     /**

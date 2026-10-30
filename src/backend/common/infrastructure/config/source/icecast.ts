@@ -33,14 +33,14 @@ export const icecastOptionsSchema = z.object({
 export type IcecastOptions = z.infer<typeof icecastOptionsSchema>;
 
 export const icecastDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
-    ...icecastOptionsSchema.shape,
     /**
      * The Icecast stream URL
      * */
     url: httpUrl.meta({
         description: "The Icecast stream URL"
     }),
+    ...icecastOptionsSchema.shape,
+    ...commonSourceDataSchema.shape,
 });
 
 export type IcecastData = z.infer<typeof icecastDataSchema>;
@@ -79,8 +79,8 @@ export const icecastSourceConfigSchema = z.object({
 export type IcecastSourceConfig = z.infer<typeof icecastSourceConfigSchema>;
 
 export const icecastSourceAIOConfigSchema = z.object({
-    ...icecastSourceConfigSchema.shape,
     type: z.literal('icecast'),
+    ...icecastSourceConfigSchema.shape,
 }).meta({title: 'Icecast'});
 
 export type IcecastSourceAIOConfig = z.infer<typeof icecastSourceAIOConfigSchema>;

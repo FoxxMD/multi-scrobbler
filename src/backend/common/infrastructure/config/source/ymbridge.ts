@@ -4,8 +4,6 @@ import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} 
 import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
 export const yandexMusicBridgeDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
-    ...pollingOptionsSchema.shape,
     /** URL of the local Python bridge, for example http://yandex-music-bridge:9980 */
     url: httpUrl.meta({
         description: "URL of the local Python bridge, for example http://yandex-music-bridge:9980"
@@ -14,6 +12,8 @@ export const yandexMusicBridgeDataSchema = z.object({
     apiKey: z.string().optional().meta({
         description: "Optional API key sent as X-API-Key to the bridge"
     }),
+    ...pollingOptionsSchema.shape,
+    ...commonSourceDataSchema.shape,
 });
 
 export type YandexMusicBridgeData = z.infer<typeof yandexMusicBridgeDataSchema>;
@@ -42,8 +42,8 @@ export const yandexMusicBridgeSourceConfigSchema = z.object({
 export type YandexMusicBridgeSourceConfig = z.infer<typeof yandexMusicBridgeSourceConfigSchema>;
 
 export const yandexMusicBridgeSourceAIOConfigSchema = z.object({
-    ...yandexMusicBridgeSourceConfigSchema.shape,
     type: z.literal('ymbridge'),
+    ...yandexMusicBridgeSourceConfigSchema.shape,
 }).meta({title: 'Yandex Music'});
 
 export type YandexMusicBridgeSourceAIOConfig = z.infer<typeof yandexMusicBridgeSourceAIOConfigSchema>;

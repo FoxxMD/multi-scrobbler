@@ -5,8 +5,8 @@ import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} 
 
 export const koitoSourceDataSchema = z.object({
     ...koitoDataSchema.shape,
-    ...commonSourceDataSchema.shape,
     ...pollingOptionsSchema.shape,
+    ...commonSourceDataSchema.shape,
 });
 
 export type KoitoSourceData = z.infer<typeof koitoSourceDataSchema>;
@@ -30,8 +30,11 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, KoitoSourceConfig
     })
 };
 
+const {enable, clients, options, ...commonConfigPrimary} = commonSourceConfigSchema.shape;
+
 export const koitoSourceConfigSchema = z.object({
-    ...commonSourceConfigSchema.shape,
+    ...commonConfigPrimary,
+    data: koitoSourceDataSchema,
     /**
      * When used in `koito.config` this tells multi-scrobbler whether to use this data to configure a source or client.
      *
@@ -43,16 +46,18 @@ export const koitoSourceConfigSchema = z.object({
         default: "source",
         examples: ["source"]
     }),
-    data: koitoSourceDataSchema,
+    enable,
+    clients,
+    options,
 });
 
 export type KoitoSourceConfig = z.infer<typeof koitoSourceConfigSchema>;
 
 export const koitoSourceAIOConfigSchema = z.object({
+    type: z.literal('koito'),
     ...koitoSourceConfigSchema.shape,
     // can be optional since it always appears in a source array
     configureAs: koitoSourceConfigSchema.shape.configureAs.optional(),
-    type: z.literal('koito'),
 }).meta({title: "Koito"});
 
 export type KoitoSourceAIOConfig = z.infer<typeof koitoSourceAIOConfigSchema>;

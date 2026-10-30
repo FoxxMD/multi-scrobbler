@@ -4,8 +4,6 @@ import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} 
 import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
 export const kodiDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
-    ...pollingOptionsSchema.shape,
     /**
      * URL of the Kodi HTTP server to connect to
      *
@@ -43,6 +41,8 @@ export const kodiDataSchema = z.object({
     password: z.string().meta({
         description: "The password set for Remote Control via Web Sever"
     }),
+    ...pollingOptionsSchema.shape,
+    ...commonSourceDataSchema.shape,
 });
 
 export type KodiData = z.infer<typeof kodiDataSchema>;
@@ -73,8 +73,8 @@ export const kodiSourceConfigSchema = z.object({
 export type KodiSourceConfig = z.infer<typeof kodiSourceConfigSchema>;
 
 export const kodiSourceAIOConfigSchema = z.object({
-    ...kodiSourceConfigSchema.shape,
     type: z.literal('kodi'),
+    ...kodiSourceConfigSchema.shape,
 }).meta({title: 'Kodi'});
 
 export type KodiSourceAIOConfig = z.infer<typeof kodiSourceAIOConfigSchema>;

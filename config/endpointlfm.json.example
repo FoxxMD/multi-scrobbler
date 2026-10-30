@@ -1,10 +1,10 @@
 [
   {
-    "name": "LFM For App",
-    "enable": true,
     "id": "myLfmApp",
+    "name": "LFM For App",
     "data": {
       "slug": "mySlug"
-    }
+    },
+    "enable": true
   }
 ]

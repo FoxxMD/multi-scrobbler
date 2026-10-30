@@ -26,7 +26,6 @@ export const tealClientDataSchema = z.object({
     ...tealDataSchema.shape,
     appPassword: atProtoAppDataSchema.shape.appPassword.meta(atProtoAppDataSchema.shape.appPassword.meta() ?? {}),
     ...commonClientDataSchema.shape,
-
 });
 
 export type TealClientData = z.infer<typeof tealClientDataSchema>;
@@ -54,8 +53,11 @@ export const tealClientOptionsSchema = z.object({
 
 export type TealClientOptions = z.infer<typeof tealClientOptionsSchema>;
 
+const {enable, options, ...commonConfigPrimary} = commonClientConfigSchema.shape;
+
 export const tealClientConfigSchema = z.object({
-    ...commonClientConfigSchema.shape,
+    ...commonConfigPrimary,
+    data: tealClientDataSchema,
     /**
      * Should always be `client` when using Tealfm as a client
      *
@@ -67,15 +69,15 @@ export const tealClientConfigSchema = z.object({
         default: "client",
         examples: ["client"]
     }),
-    data: tealClientDataSchema,
+    enable,
     options: tealClientOptionsSchema.optional(),
 });
 
 export type TealClientConfig = z.infer<typeof tealClientConfigSchema>;
 
 export const tealClientAIOConfigSchema = z.object({
-    ...tealClientConfigSchema.shape,
     type: z.literal('tealfm'),
+    ...tealClientConfigSchema.shape,
 }).meta({title: 'teal.fm'});
 
 export type TealClientAIOConfig = z.infer<typeof tealClientAIOConfigSchema>;

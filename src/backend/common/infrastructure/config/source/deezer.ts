@@ -5,8 +5,6 @@ import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSch
 import { envMetaNormalize } from "../../../../utils/ZodUtils.ts";
 
 export const deezerDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
-    ...pollingOptionsSchema.shape,
     /**
      * deezer client id
      *
@@ -38,6 +36,8 @@ export const deezerDataSchema = z.object({
     }),
 
     accessToken: z.string().optional(),
+    ...pollingOptionsSchema.shape,
+    ...commonSourceDataSchema.shape,
 });
 
 export type DeezerData = z.infer<typeof deezerDataSchema>;
@@ -50,15 +50,13 @@ export const deezerSourceConfigSchema = z.object({
 export type DeezerSourceConfig = z.infer<typeof deezerSourceConfigSchema>;
 
 export const deezerSourceAIOConfigSchema = z.object({
-    ...deezerSourceConfigSchema.shape,
     type: z.literal('deezer'),
+    ...deezerSourceConfigSchema.shape,
 });
 
 export type DeezerSourceAIOConfig = z.infer<typeof deezerSourceAIOConfigSchema>;
 
 export const deezerInternalDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
-    ...pollingOptionsSchema.shape,
     /** ARL retrieved from Deezer response header */
     arl: z.string().meta({
         description: "ARL retrieved from Deezer response header"
@@ -76,6 +74,8 @@ export const deezerInternalDataSchema = z.object({
     accountId: z.string().optional().meta({
         description: "The ID (USER_ID) of the linked account to monitor."
     }),
+    ...pollingOptionsSchema.shape,
+    ...commonSourceDataSchema.shape,
 });
 
 export type DeezerInternalData = z.infer<typeof deezerInternalDataSchema>;
@@ -107,8 +107,8 @@ export const deezerInternalSourceConfigSchema = z.object({
 export type DeezerInternalSourceConfig = z.infer<typeof deezerInternalSourceConfigSchema>;
 
 export const deezerInternalAIOConfigSchema = z.object({
-    ...deezerInternalSourceConfigSchema.shape,
     type: z.literal('deezer'),
+    ...deezerInternalSourceConfigSchema.shape,
 }).meta({title: 'Deezer'});
 
 export type DeezerInternalAIOConfig = z.infer<typeof deezerInternalAIOConfigSchema>;

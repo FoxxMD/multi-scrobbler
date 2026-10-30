@@ -50,7 +50,6 @@ export interface ArtistResponse {
 }
 
 export const koitoDataSchema = z.object({
-    ...requestRetryOptionsSchema.shape,
     /**
      * URL for the Koito server
      *
@@ -76,6 +75,7 @@ export const koitoDataSchema = z.object({
     username: z.string().meta({
         description: "Username of the user to scrobble for"
     }),
+    ...requestRetryOptionsSchema.shape,
 }).meta({title: 'KoitoData'});
 
 export type KoitoData = z.infer<typeof koitoDataSchema>;
@@ -122,8 +122,11 @@ export const koitoClientDataSchema = koitoDataSchema.extend(commonClientDataSche
 
 export type KoitoClientData = z.infer<typeof koitoClientDataSchema>;
 
+const {enable, options, ...commonConfigPrimary} = commonClientConfigSchema.shape;
+
 export const koitoClientConfigSchema = z.object({
-    ...commonClientConfigSchema.shape,
+    ...commonConfigPrimary,
+    data: koitoClientDataSchema,
     /**
      * Should always be `client` when using Koito as a client
      *
@@ -135,15 +138,15 @@ export const koitoClientConfigSchema = z.object({
         default: "client",
         examples: ["client"]
     }),
-    data: koitoClientDataSchema,
-    options: koitoOptionsSchema.optional()
+    enable,
+    options: koitoOptionsSchema.optional(),
 });
 
 export type KoitoClientConfig = z.infer<typeof koitoClientConfigSchema>;
 
 export const koitoClientAIOConfigSchema = z.object({
-    ...koitoClientConfigSchema.shape,
     type: z.literal('koito'),
+    ...koitoClientConfigSchema.shape,
 }).meta({title: 'Koito'});
 
 export type KoitoClientAIOConfig = z.infer<typeof koitoClientAIOConfigSchema>;

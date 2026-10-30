@@ -5,7 +5,6 @@ import {commonClientConfigSchema, commonClientDataSchema, type EnvClientSchema} 
 import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
 export const malojaDataSchema = z.object({
-    ...requestRetryOptionsSchema.shape,
     /**
      * URL for maloja server
      *
@@ -24,6 +23,7 @@ export const malojaDataSchema = z.object({
         description: "API Key for Maloja server",
         examples: ["myApiKey"]
     }),
+    ...requestRetryOptionsSchema.shape,
 });
 
 export type MalojaData = z.infer<typeof malojaDataSchema>;
@@ -49,8 +49,11 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, MalojaClientConfi
     })
 };
 
+const {enable, options, ...commonConfigPrimary} = commonClientConfigSchema.shape;
+
 export const malojaClientConfigSchema = z.object({
-    ...commonClientConfigSchema.shape,
+    ...commonConfigPrimary,
+    data: malojaClientDataSchema,
     /**
      * Should always be `client` when using Maloja as a client
      *
@@ -62,14 +65,15 @@ export const malojaClientConfigSchema = z.object({
         default: "client",
         examples: ["client"]
     }),
-    data: malojaClientDataSchema,
+    enable,
+    options,
 });
 
 export type MalojaClientConfig = z.infer<typeof malojaClientConfigSchema>;
 
 export const malojaClientAIOConfigSchema = z.object({
-    ...malojaClientConfigSchema.shape,
     type: z.literal('maloja'),
+    ...malojaClientConfigSchema.shape,
 }).meta({title: 'Maloja'});
 
 export type MalojaClientAIOConfig = z.infer<typeof malojaClientAIOConfigSchema>;

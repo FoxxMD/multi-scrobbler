@@ -1,11 +1,11 @@
 [
   {
-    "name": "Desktop",
     "id": "myMprisUbuntu",
-    "enable": true,
+    "name": "Desktop",
     "data": {
-      "whitelist": ["vlc", "mpd"],
-      "blacklist": ["spotify"]
-    }
+      "blacklist": ["spotify"],
+      "whitelist": ["vlc", "mpd"]
+    },
+    "enable": true
   }
 ]

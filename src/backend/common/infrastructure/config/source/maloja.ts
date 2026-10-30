@@ -5,8 +5,8 @@ import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} 
 
 export const malojaSourceDataSchema = z.object({
     ...malojaDataSchema.shape,
-    ...commonSourceDataSchema.shape,
     ...pollingOptionsSchema.shape,
+    ...commonSourceDataSchema.shape,
 });
 
 export type MalojaSourceData = z.infer<typeof malojaSourceDataSchema>;
@@ -28,8 +28,11 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, MalojaSourceConfi
     })
 };
 
+const {enable, clients, options, ...commonConfigPrimary} = commonSourceConfigSchema.shape;
+
 export const malojaSourceConfigSchema = z.object({
-    ...commonSourceConfigSchema.shape,
+    ...commonConfigPrimary,
+    data: malojaSourceDataSchema,
     /**
      * When used in `maloja.config` this tells multi-scrobbler whether to use this data to configure a source or client.
      *
@@ -41,16 +44,18 @@ export const malojaSourceConfigSchema = z.object({
         default: "source",
         examples: ["source"]
     }),
-    data: malojaSourceDataSchema,
+    enable,
+    clients,
+    options,
 });
 
 export type MalojaSourceConfig = z.infer<typeof malojaSourceConfigSchema>;
 
 export const malojaSourceAIOConfigSchema = z.object({
+    type: z.literal('maloja'),
     ...malojaSourceConfigSchema.shape,
     // can be optional since it always appears in a source array
     configureAs: malojaSourceConfigSchema.shape.configureAs.optional(),
-    type: z.literal('maloja'),
 }).meta({title: 'Maloja'});
 
 export type MalojaSourceAIOConfig = z.infer<typeof malojaSourceAIOConfigSchema>;

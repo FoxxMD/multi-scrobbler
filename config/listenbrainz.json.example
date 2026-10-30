@@ -1,24 +1,24 @@
 [
   {
-    "name": "Foxx LZ Client",
     "id": "brainzClient",
-    "enable": true,
-    "configureAs": "client",
+    "name": "Foxx LZ Client",
     "data": {
       "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
       "username": "FoxxMD",
       "url": "https://api.listenbrainz.org"
-    }
+    },
+    "configureAs": "client",
+    "enable": true
   },
   {
-    "name": "Foxx LZ Source",
     "id": "brainzSource",
-    "enable": true,
-    "configureAs": "source",
+    "name": "Foxx LZ Source",
     "data": {
       "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
       "username": "FoxxMD",
       "url": "https://api.listenbrainz.org"
-    }
+    },
+    "configureAs": "source",
+    "enable": true
   }
 ]

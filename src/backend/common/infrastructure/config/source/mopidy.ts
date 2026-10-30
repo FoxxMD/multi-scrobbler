@@ -3,9 +3,9 @@ import {pollingOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 import { envMetaNormalize, transformSplitMaybeString, wsUrl } from "../../../../utils/ZodUtils.ts";
 
+const {interval, maxInterval, ...restPollingOptions} = pollingOptionsSchema.shape;
+
 export const mopidyDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
-    ...pollingOptionsSchema.shape,
     /**
      * URL of the Mopidy HTTP server to connect to
      *
@@ -90,6 +90,8 @@ export const mopidyDataSchema = z.object({
         default: 30,
         examples: [30]
     }),
+    ...restPollingOptions,
+    ...commonSourceDataSchema.shape,
 });
 
 export type MopidyData = z.infer<typeof mopidyDataSchema>;
@@ -122,8 +124,8 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, MopidySourceConfi
 };
 
 export const mopidySourceAIOConfigSchema = z.object({
-    ...mopidySourceConfigSchema.shape,
     type: z.literal('mopidy'),
+    ...mopidySourceConfigSchema.shape,
 }).meta({title: 'Mopidy'});
 
 export type MopidySourceAIOConfig = z.infer<typeof mopidySourceAIOConfigSchema>;

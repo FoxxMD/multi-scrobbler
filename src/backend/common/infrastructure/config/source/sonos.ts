@@ -4,8 +4,6 @@ import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSch
 import { envMetaNormalize, transformSplitMaybeString } from "../../../../utils/ZodUtils.ts";
 
 export const sonosDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
-    ...pollingOptionsSchema.shape,
     /**
      * IP address of any connected Sonos speaker or device
      *
@@ -41,6 +39,8 @@ export const sonosDataSchema = z.object({
     groupsBlock: z.union([z.string(), z.array(z.string())]).optional().meta({
         description: "Do not scrobble if the name of a group the playing device belongs to contains strings from this list"
     }),
+    ...pollingOptionsSchema.shape,
+    ...commonSourceDataSchema.shape,
 });
 
 export type SonosData = z.infer<typeof sonosDataSchema>;
@@ -84,8 +84,8 @@ export const sonosSourceConfigSchema = z.object({
 export type SonosSourceConfig = z.infer<typeof sonosSourceConfigSchema>;
 
 export const sonosSourceAIOConfigSchema = z.object({
-    ...sonosSourceConfigSchema.shape,
     type: z.literal('sonos'),
+    ...sonosSourceConfigSchema.shape,
 }).meta({title: 'Sonos'});
 
 export type SonosSourceAIOConfig = z.infer<typeof sonosSourceAIOConfigSchema>;

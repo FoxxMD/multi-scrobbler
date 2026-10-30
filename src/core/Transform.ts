@@ -130,11 +130,11 @@ export const whennableSchema = z.object({
 export type Whennable = z.infer<typeof whennableSchema>;
 
 export const conditionalSearchAndReplaceRegExpSchema = z.object({
-    ...whennableSchema.shape,
     /** The plain string or regex pattern to match */
     search: z.string().meta({description: 'The plain string or regex pattern to match'}),
     /** The replacement string. Can be empty string or use js replacement string pattern */
     replace: z.string().meta({description: 'The replacement string. Can be empty string or use js replacement string pattern'}),
+    ...whennableSchema.shape,
     test: z.custom<(obj: SearchAndReplaceRegExp) => boolean>((val) => typeof val === 'function').optional(),
 });
 

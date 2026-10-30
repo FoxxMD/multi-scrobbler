@@ -1,11 +1,11 @@
 [
   {
-    "name": "Family Account",
     "id": "myDeezerId",
-    "enable": true,
-    "clients": [],
+    "name": "Family Account",
     "data": {
       "arl": "UOsRPjT3U5Dhaaup3xQ30DWFoSgqugdSYzL3QE743waaVy2eur2ckyJcZ4RV123Q3PsbKXkLwA6ahc9XmEfev6BtfSP8LujE3JswWRQogZCDUOwVzWO5sAig",
-    }
+    },
+    "enable": true,
+    "clients": []
   }
 ]

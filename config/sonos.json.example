@@ -1,6 +1,5 @@
 [
   {
-    "enable": true,
     "id": "MySonos",
     "name": "Boom 2",
     "data": {
@@ -9,6 +8,7 @@
       "devicesBlock": ["roam"],
       "groupsAllow": ["family"],
       "groupsBlock": ["bedroom"]
-    }
+    },
+    "enable": true
   }
 ]

@@ -1,12 +1,12 @@
 [
   {
-    "name": "My JRiver Server",
     "id": "myRiver",
-    "enable": true,
+    "name": "My JRiver Server",
     "data": {
       "url": "0.0.0.0",
       "username": "auser",
       "password": "apassword"
-    }
+    },
+    "enable": true
   }
 ]

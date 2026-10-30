@@ -7,8 +7,8 @@ export const tealSourceDataSchema = z.object({
     identifier: tealDataSchema.shape.identifier.meta(tealDataSchema.shape.identifier.meta() ?? {}),
     serviceAllow: z.array(z.string()).optional(),
     serviceDeny: z.array(z.string()).optional(),
-    ...commonSourceDataSchema.shape,
     ...pollingOptionsSchema.shape,
+    ...commonSourceDataSchema.shape,
 });
 
 export type TealSourceData = z.infer<typeof tealSourceDataSchema>;
@@ -35,8 +35,11 @@ export const tealSourceOptionsSchema = z.object({
 
 export type TealSourceOptions = z.infer<typeof tealSourceOptionsSchema>;
 
+const {enable, clients, options, ...commonConfigPrimary} = commonSourceConfigSchema.shape;
+
 export const tealSourceConfigSchema = z.object({
-    ...commonSourceConfigSchema.shape,
+    ...commonConfigPrimary,
+    data: tealSourceDataSchema,
     /**
      * Should always be `souce` when using Tealfm as a Source
      *
@@ -48,17 +51,18 @@ export const tealSourceConfigSchema = z.object({
         default: "source",
         examples: ["source"]
     }),
-    data: tealSourceDataSchema,
+    enable,
+    clients,
     options: tealSourceOptionsSchema.optional(),
 });
 
 export type TealSourceConfig = z.infer<typeof tealSourceConfigSchema>;
 
 export const tealSourceAIOConfigSchema = z.object({
+    type: z.literal('tealfm'),
     ...tealSourceConfigSchema.shape,
     // can be optional since it always appears in a source array
     configureAs: tealSourceConfigSchema.shape.configureAs.optional(),
-    type: z.literal('tealfm'),
 }).meta({title: 'teal.fm'});
 
 export type TealSourceAIOConfig = z.infer<typeof tealSourceAIOConfigSchema>;

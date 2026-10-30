@@ -1,12 +1,12 @@
 [
   {
-    "name": "My Kodi Server",
     "id": "myKodi",
-    "enable": true,
+    "name": "My Kodi Server",
     "data": {
       "url": "http://localhost:8080/jsonrpc",
       "username": "myUser",
       "password": "myPassword"
-    }
+    },
+    "enable": true
   }
 ]

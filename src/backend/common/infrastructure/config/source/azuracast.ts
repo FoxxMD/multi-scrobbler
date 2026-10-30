@@ -63,7 +63,6 @@ export type AzuraStationResponse = z.infer<typeof azuraStationResponseSchema>;
 
 
 export const azuracastDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
     /**
      * Base URL of the Azuracast instance
      *
@@ -119,7 +118,8 @@ export const azuracastDataSchema = z.object({
      * */
     apiKey: z.string().optional().meta({
         description: "API Key used to access data about private streams"
-    })
+    }),
+    ...commonSourceDataSchema.shape,
 });
 
 export type AzuracastData = z.infer<typeof azuracastDataSchema>;
@@ -161,8 +161,8 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, AzuracastSourceCo
 };
 
 export const azuracastSourceAIOConfigSchema = z.object({
+    type: z.literal('azuracast'),
     ...azuracastSourceConfigSchema.shape,
-    type: z.literal('azuracast')
 }).meta({title: "Azuracast"});
 
 export type AzuracastSourceAIOConfig = z.infer<typeof azuracastSourceAIOConfigSchema>;

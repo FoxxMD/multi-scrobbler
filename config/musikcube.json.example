@@ -1,12 +1,11 @@
 [
   {
-    "type": "musikcube",
-    "enable": true,
-    "name": "Desktop",
     "id": "myMusikcube",
+    "name": "Desktop",
     "data": {
-      "url": "ws://localhost:7905",
-      "password": "MY_PASSWORD"
-    }
+      "password": "MY_PASSWORD",
+      "url": "ws://localhost:7905"
+    },
+    "enable": true
   }
 ]

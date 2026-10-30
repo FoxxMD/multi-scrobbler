@@ -1,22 +1,22 @@
 [
   {
-    "name": "Maloja Client",
     "id": "myMalojaClient",
-    "enable": true,
-    "configureAs": "client",
+    "name": "Maloja Client",
     "data": {
       "url": "http://localhost:42010",
       "apiKey": "myMalojaKey"
-    }
+    },
+    "configureAs": "client",
+    "enable": true
   },
     {
-    "name": "Maloja Source",
     "id": "myMalojaSource",
-    "enable": true,
-    "configureAs": "source",
+    "name": "Maloja Source",
     "data": {
       "url": "http://localhost:42010",
       "apiKey": "myMalojaKey"
-    }
+    },
+    "configureAs": "source",
+    "enable": true
   }
 ]

@@ -5,18 +5,6 @@ import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSch
 import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
 export const listenBrainzDataSchema = z.object({
-    ...requestRetryOptionsSchema.shape,
-    /**
-     * URL for the ListenBrainz server, if not using the default
-     *
-     * @examples ["https://api.listenbrainz.org/"]
-     * @default "https://api.listenbrainz.org/"
-     * */
-    url: httpUrl.optional().meta({
-        description: "URL for the ListenBrainz server, if not using the default",
-        default: "https://api.listenbrainz.org/",
-        examples: ["https://api.listenbrainz.org/"]
-    }),
     /**
      * User token for the user to scrobble for
      *
@@ -33,6 +21,17 @@ export const listenBrainzDataSchema = z.object({
     username: z.string().meta({
         description: "Username of the user to scrobble for"
     }),
+    /**
+     * URL for the ListenBrainz server, if not using the default
+     *
+     * @examples ["https://api.listenbrainz.org/"]
+     * @default "https://api.listenbrainz.org/"
+     * */
+    url: httpUrl.optional().meta({
+        description: "URL for the ListenBrainz server, if not using the default",
+        default: "https://api.listenbrainz.org/",
+        examples: ["https://api.listenbrainz.org/"]
+    }),
 
     /** A website or email Listenbrainz can contact a user at in case of issues. 
      * 
@@ -41,6 +40,7 @@ export const listenBrainzDataSchema = z.object({
         description: '(If running a forked version of multi-scrobbler) A website or email Listenbrainz can contact you at in case of issues',
         examples: ['contact@mydomain.com']
     }),
+    ...requestRetryOptionsSchema.shape,
 });
 export type ListenBrainzData = z.infer<typeof listenBrainzDataSchema>;
 
@@ -93,8 +93,11 @@ export const listenBrainzClientDataSchema = listenBrainzDataSchema.extend(common
 
 export type ListenBrainzClientData = z.infer<typeof listenBrainzClientDataSchema>;
 
+const {enable, options, ...commonConfigPrimary} = commonClientConfigSchema.shape;
+
 export const listenBrainzClientConfigSchema = z.object({
-    ...commonClientConfigSchema.shape,
+    ...commonConfigPrimary,
+    data: listenBrainzClientDataSchema,
     /**
      * Should always be `client` when using Listenbrainz as a client
      *
@@ -106,15 +109,15 @@ export const listenBrainzClientConfigSchema = z.object({
         default: "client",
         examples: ["client"]
     }),
-    data: listenBrainzClientDataSchema,
-    options: listenbrainzOptionsSchema.optional()
+    enable,
+    options: listenbrainzOptionsSchema.optional(),
 });
 
 export type ListenBrainzClientConfig = z.infer<typeof listenBrainzClientConfigSchema>;
 
 export const listenBrainzClientAIOConfigSchema = z.object({
-    ...listenBrainzClientConfigSchema.shape,
     type: z.literal('listenbrainz'),
+    ...listenBrainzClientConfigSchema.shape,
 }).meta({title: "Listenbrainz"});
 
 export type ListenBrainzClientAIOConfig = z.infer<typeof listenBrainzClientAIOConfigSchema>;

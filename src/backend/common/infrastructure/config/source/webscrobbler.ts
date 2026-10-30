@@ -3,7 +3,6 @@ import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} 
 import { envMetaNormalize, transformSplitMaybeString } from "../../../../utils/ZodUtils.ts";
 
 export const webScrobblerDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
     /**
      * The URL ending that should be used to identify scrobbles for this source
      *
@@ -43,6 +42,7 @@ export const webScrobblerDataSchema = z.object({
         description: "Only allow scrobbling from specific WebScrobbler Connectors",
         examples: ["mixcloud", "soundcloud", "bandcamp"]
     }),
+    ...commonSourceDataSchema.shape,
 });
 
 export type WebScrobblerData = z.infer<typeof webScrobblerDataSchema>;
@@ -71,8 +71,8 @@ export const webScrobblerSourceConfigSchema = z.object({
 export type WebScrobblerSourceConfig = z.infer<typeof webScrobblerSourceConfigSchema>;
 
 export const webScrobblerSourceAIOConfigSchema = z.object({
-    ...webScrobblerSourceConfigSchema.shape,
     type: z.literal('webscrobbler'),
+    ...webScrobblerSourceConfigSchema.shape,
 }).meta({title: 'Webscrobbler'});
 
 export type WebScrobblerSourceAIOConfig = z.infer<typeof webScrobblerSourceAIOConfigSchema>;

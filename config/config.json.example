@@ -20,27 +20,27 @@
   "sources": [
     {
       "type": "spotify",
-      "enable": true,
-      "clients": ["myConfig"],
-      "name": "Cool Spotify Name",
       "id": "mySpotifyId",
+      "name": "Cool Spotify Name",
       "data": {
         "clientId": "a89cba1569901a0671d5a9875fed4be1",
         "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
         "redirectUri": "http://localhost:9078/callback"
-      }
+      },
+      "enable": true,
+      "clients": ["myConfig"]
     }
   ],
   "clients": [
     {
       "type": "maloja",
-      "enable": true,
-      "name": "Foxx Maloja",
       "id": "myMalojaId",
+      "name": "Foxx Maloja",
       "data": {
         "url": "http://localhost:42010",
         "apiKey": "myMalojaKey"
-      }
+      },
+      "enable": true
     }
   ],
   "webhooks": [

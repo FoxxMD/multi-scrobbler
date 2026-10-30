@@ -46,8 +46,6 @@ export const innertubeOptionsSchema = z.object({
 export type InnertubeOptions = z.infer<typeof innertubeOptionsSchema>;
 
 export const ytMusicDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
-    ...pollingOptionsSchema.shape,
     /**
      * The cookie retrieved from the Request Headers of music.youtube.com after logging in.
      *
@@ -94,6 +92,8 @@ export const ytMusicDataSchema = z.object({
     innertubeOptions: innertubeOptionsSchema.optional().meta({
         description: "Additional options for authorization and tailoring YTM client.\n\nYou can pass *any* properties from ytjs.dev `SessionOptions` here, even if they are undocumented."
     }),
+    ...pollingOptionsSchema.shape,
+    ...commonSourceDataSchema.shape,
 });
 
 export type YTMusicData = z.infer<typeof ytMusicDataSchema>;
@@ -147,8 +147,8 @@ export const ytMusicSourceConfigSchema = z.object({
 export type YTMusicSourceConfig = z.infer<typeof ytMusicSourceConfigSchema>;
 
 export const ytMusicSourceAIOConfigSchema = z.object({
-    ...ytMusicSourceConfigSchema.shape,
     type: z.literal('ytmusic'),
+    ...ytMusicSourceConfigSchema.shape,
 }).meta({title: 'Youtube Music'});
 
 export type YTMusicSourceAIOConfig = z.infer<typeof ytMusicSourceAIOConfigSchema>;

@@ -73,7 +73,6 @@ export const playbackToReportedStatus = (pb: PlaybackStatus): ReportedPlayerStat
 }
 
 export const musicCastDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
     /**
      * The host or URL of the YamahaExtendedControl endpoint to use
      *
@@ -86,6 +85,7 @@ export const musicCastDataSchema = z.object({
         description: "The host or URL of the YamahaExtendedControl endpoint to use",
         examples: [["192.168.0.101", "http://192.168.0.101/YamahaExtendedControl"]]
     }),
+    ...commonSourceDataSchema.shape,
 });
 
 export type MusicCastData = z.infer<typeof musicCastDataSchema>;
@@ -112,8 +112,8 @@ export const musicCastSourceConfigSchema = z.object({
 export type MusicCastSourceConfig = z.infer<typeof musicCastSourceConfigSchema>;
 
 export const musicCastSourceAIOConfigSchema = z.object({
-    ...musicCastSourceConfigSchema.shape,
     type: z.literal('musiccast'),
+    ...musicCastSourceConfigSchema.shape,
 }).meta({title: 'Musiccast'});
 
 export type MusicCastSourceAIOConfig = z.infer<typeof musicCastSourceAIOConfigSchema>;

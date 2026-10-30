@@ -1,9 +1,7 @@
 [
   {
-    "name": "Cool JF Server",
-    "enable": true,
     "id": "myJellyfin",
-    "clients": [],
+    "name": "Cool JF Server",
     "data": {
       "url": "http://localhost:8096",
       "user": "FoxxMD",
@@ -20,6 +18,8 @@
       "allowMediaTypes": ["audio"],
       "frontendUrlOverride": "https://myJellyfinExternal.tld"
     },
+    "enable": true,
+    "clients": [],
     "options": {
       "logPayload": true,
       "logFilterFailure": "debug"

@@ -79,8 +79,11 @@ export const rockSkyClientOptionsSchema = z.object({
 
 export type RockSkyClientOptions = z.infer<typeof rockSkyClientOptionsSchema>;
 
+const {enable, options, ...commonConfigPrimary} = commonClientConfigSchema.shape;
+
 export const rockSkyClientConfigSchema = z.object({
-    ...commonClientConfigSchema.shape,
+    ...commonConfigPrimary,
+    data: rockSkyClientDataSchema,
     /**
      * Should always be `client` when using RockSky as a client
      *
@@ -92,15 +95,15 @@ export const rockSkyClientConfigSchema = z.object({
         default: "client",
         examples: ["client"]
     }),
-    data: rockSkyClientDataSchema,
+    enable,
     options: rockSkyClientOptionsSchema.optional(),
 });
 
 export type RockSkyClientConfig = z.infer<typeof rockSkyClientConfigSchema>;
 
 export const rockSkyClientAIOConfigSchema = z.object({
-    ...rockSkyClientConfigSchema.shape,
     type: z.literal('rocksky'),
+    ...rockSkyClientConfigSchema.shape,
 }).meta({title: 'Rocksky'});
 
 export type RockSkyClientAIOConfig = z.infer<typeof rockSkyClientAIOConfigSchema>;

@@ -5,8 +5,8 @@ import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} 
 
 export const listenBrainzSourceDataSchema = z.object({
     ...listenBrainzDataSchema.shape,
-    ...commonSourceDataSchema.shape,
     ...pollingOptionsSchema.shape,
+    ...commonSourceDataSchema.shape,
 });
 
 export type ListenBrainzSourceData = z.infer<typeof listenBrainzSourceDataSchema>;
@@ -32,8 +32,11 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, ListenBrainzSourc
     })
 };
 
+const {enable, clients, options, ...commonConfigPrimary} = commonSourceConfigSchema.shape;
+
 export const listenBrainzSourceConfigSchema = z.object({
-    ...commonSourceConfigSchema.shape,
+    ...commonConfigPrimary,
+    data: listenBrainzSourceDataSchema,
     /**
      * When used in `listenbrainz.config` this tells multi-scrobbler whether to use this data to configure a source or client.
      *
@@ -45,16 +48,18 @@ export const listenBrainzSourceConfigSchema = z.object({
         default: "source",
         examples: ["source"]
     }),
-    data: listenBrainzSourceDataSchema,
+    enable,
+    clients,
+    options,
 });
 
 export type ListenBrainzSourceConfig = z.infer<typeof listenBrainzSourceConfigSchema>;
 
 export const listenBrainzSourceAIOConfigSchema = z.object({
+    type: z.literal('listenbrainz'),
     ...listenBrainzSourceConfigSchema.shape,
     // can be optional since it always appears in a source array
     configureAs: listenBrainzSourceConfigSchema.shape.configureAs.optional(),
-    type: z.literal('listenbrainz'),
 }).meta({title: 'Listenbrainz'});
 
 export type ListenBrainzSourceAIOConfig = z.infer<typeof listenBrainzSourceAIOConfigSchema>;

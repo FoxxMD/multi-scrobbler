@@ -5,8 +5,6 @@ import {lastfmClientOptionsSchema} from "./lastfm.ts";
 import { httpUrl } from "../../../../utils/ZodUtils.ts";
 
 export const librefmDataSchema = z.object({
-    ...commonClientDataSchema.shape,
-    ...requestRetryOptionsSchema.shape,
     /**
      * Optional Secret for Libre.fm account
      *
@@ -59,6 +57,8 @@ export const librefmDataSchema = z.object({
         default: "http://localhost:9078/librefm/callback",
         examples: ["http://localhost:9078/librefm/callback"]
     }),
+    ...requestRetryOptionsSchema.shape,
+    ...commonClientDataSchema.shape,
 });
 
 export type LibrefmData = z.infer<typeof librefmDataSchema>;
@@ -92,8 +92,11 @@ export const librefmClientOptionsSchema = z.object({
 
 export type LibrefmClientOptions = z.infer<typeof librefmClientOptionsSchema>;
 
+const {enable, options, ...commonConfigPrimary} = commonClientConfigSchema.shape;
+
 export const librefmClientConfigSchema = z.object({
-    ...commonClientConfigSchema.shape,
+    ...commonConfigPrimary,
+    data: librefmDataSchema,
     /**
      * Should always be `client` when using Librefm as a client
      *
@@ -105,15 +108,15 @@ export const librefmClientConfigSchema = z.object({
         default: "client",
         examples: ["client"]
     }),
-    data: librefmDataSchema,
+    enable,
     options: librefmClientOptionsSchema.optional(),
 });
 
 export type LibrefmClientConfig = z.infer<typeof librefmClientConfigSchema>;
 
 export const librefmClientAIOConfigSchema = z.object({
-    ...librefmClientConfigSchema.shape,
     type: z.literal('librefm'),
+    ...librefmClientConfigSchema.shape,
 }).meta({title: 'Libre.fm'});
 
 export type LibrefmClientAIOConfig = z.infer<typeof librefmClientAIOConfigSchema>;

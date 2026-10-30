@@ -2,13 +2,13 @@
   {
     "id": "mySubsonic",
     "name": "Airsonic Server",
-    "enable": true,
     "data": {
       "url": "http://localhost:4040/airsonic",
       "user": "yourUser",
       "password": "yourPassword",
       "usersAllow": ["yourUser"],
       "detectStaleNowPlayingFromMinutesAgo": true
-    }
+    },
+    "enable": true
   }
 ]

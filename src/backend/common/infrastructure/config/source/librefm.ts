@@ -4,9 +4,9 @@ import {pollingOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
 
 export const librefmSourceDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
-    ...pollingOptionsSchema.shape,
     ...librefmDataSchema.shape,
+    ...pollingOptionsSchema.shape,
+    ...commonSourceDataSchema.shape,
 });
 
 export type librefmSourceData = z.infer<typeof librefmSourceDataSchema>;
@@ -34,8 +34,11 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, LibrefmSourceConf
     })
 };
 
+const {enable, clients, options, ...commonConfigPrimary} = commonSourceConfigSchema.shape;
+
 export const librefmSourceConfigSchema = z.object({
-    ...commonSourceConfigSchema.shape,
+    ...commonConfigPrimary,
+    data: librefmDataSchema,
     /**
      * When used in `librefm.config` this tells multi-scrobbler whether to use this data to configure a source or client.
      *
@@ -47,16 +50,18 @@ export const librefmSourceConfigSchema = z.object({
         default: "source",
         examples: ["source"]
     }),
-    data: librefmDataSchema,
+    enable,
+    clients,
+    options,
 });
 
 export type LibrefmSourceConfig = z.infer<typeof librefmSourceConfigSchema>;
 
 export const librefmSouceAIOConfigSchema = z.object({
+    type: z.literal('librefm'),
     ...librefmSourceConfigSchema.shape,
     // can be optional since it always appears in a source array
     configureAs: librefmSourceConfigSchema.shape.configureAs.optional(),
-    type: z.literal('librefm'),
 }).meta({title: "Libre.fm"});
 
 export type LibrefmSouceAIOConfig = z.infer<typeof librefmSouceAIOConfigSchema>;

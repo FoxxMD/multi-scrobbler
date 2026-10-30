@@ -26,7 +26,6 @@ export const chromecastDeviceInfoSchema = z.object({
 export type ChromecastDeviceInfo = z.infer<typeof chromecastDeviceInfoSchema>;
 
 export const chromecastDataSchema = z.object({
-    ...commonSourceDataSchema.shape,
     /**
      * DO NOT scrobble from any cast devices that START WITH these values, case-insensitive
      *
@@ -129,6 +128,7 @@ export const chromecastDataSchema = z.object({
     forceMediaRecognitionOn: z.array(z.string()).optional().meta({
         description: "Media provided by any App whose name is listed here will ALWAYS be tracked, regardless of the \"media type\" reported"
     }),
+    ...commonSourceDataSchema.shape,
 });
 
 export type ChromecastData = z.infer<typeof chromecastDataSchema>;
@@ -161,8 +161,8 @@ export const chromecastSourceConfigSchema = z.object({
 export type ChromecastSourceConfig = z.infer<typeof chromecastSourceConfigSchema>;
 
 export const chromecastSourceAIOConfigSchema = z.object({
-    ...chromecastSourceConfigSchema.shape,
     type: z.literal('chromecast'),
+    ...chromecastSourceConfigSchema.shape,
 }).meta({title: 'Chromecast'});
 
 export type ChromecastSourceAIOConfig = z.infer<typeof chromecastSourceAIOConfigSchema>;

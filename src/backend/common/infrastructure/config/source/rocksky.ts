@@ -5,8 +5,8 @@ import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSch
 
 export const rockskySourceDataSchema = z.object({
     handle: rockSkyDataSchema.shape.handle.meta(rockSkyDataSchema.shape.handle.meta() ?? {}),
-    ...commonSourceDataSchema.shape,
     ...pollingOptionsSchema.shape,
+    ...commonSourceDataSchema.shape,
 });
 
 export type RockskySourceData = z.infer<typeof rockskySourceDataSchema>;
@@ -33,8 +33,11 @@ export const rockskySourceOptionsSchema = z.object({
 
 export type RockskySourceOptions = z.infer<typeof rockskySourceOptionsSchema>;
 
+const {enable, clients, options, ...commonConfigPrimary} = commonSourceConfigSchema.shape;
+
 export const rockskySourceConfigSchema = z.object({
-    ...commonSourceConfigSchema.shape,
+    ...commonConfigPrimary,
+    data: rockskySourceDataSchema,
     /**
      * When used in `rocksky.config` this tells multi-scrobbler whether to use this data to configure a source or client.
      *
@@ -46,17 +49,18 @@ export const rockskySourceConfigSchema = z.object({
         default: "source",
         examples: ["source"]
     }),
-    data: rockskySourceDataSchema,
+    enable,
+    clients,
     options: rockskySourceOptionsSchema.optional(),
 });
 
 export type RockskySourceConfig = z.infer<typeof rockskySourceConfigSchema>;
 
 export const rockskySourceAIOConfigSchema = z.object({
+    type: z.literal('rocksky'),
     ...rockskySourceConfigSchema.shape,
     // can be optional since it always appears in a source array
     configureAs: rockskySourceConfigSchema.shape.configureAs.optional(),
-    type: z.literal('rocksky'),
 }).meta({title: 'Rocksky'});
 
 export type RockskySourceAIOConfig = z.infer<typeof rockskySourceAIOConfigSchema>;

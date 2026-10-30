@@ -1,13 +1,13 @@
 [
   {
-    "name": "Mopidy Desktop",
     "id": "MyMopidy",
-    "enable": true,
+    "name": "Mopidy Desktop",
     "data": {
       "url": "localhost",
       "uriBlacklist": [],
       "uriWhitelist": [],
       "albumBlacklist": []
-    }
+    },
+    "enable": true
   }
 ]

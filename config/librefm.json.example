@@ -1,24 +1,24 @@
 [
   {
-    "name": "Foxx Libre Client",
     "id": "myLibreFmClient",
-    "enable": true,
-    "configureAs": "client",
+    "name": "Foxx Libre Client",
     "data": {
       "apiKey": "anything",
       "secret": "anything",
       "redirectUri": "http://localhost:9078/librefm/callback"
-    }
+    },
+    "configureAs": "client",
+    "enable": true
   },
   {
-    "name": "Foxx Libre Source",
     "id": "myLibreFmSource",
-    "enable": true,
-    "configureAs": "source",
+    "name": "Foxx Libre Source",
     "data": {
       "apiKey": "anything",
       "secret": "anything",
       "redirectUri": "http://localhost:9078/librefm/callback"
-    }
+    },
+    "configureAs": "source",
+    "enable": true
   }
 ]
