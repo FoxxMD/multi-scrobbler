@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type PropsWithChildren } from "react";
-import { Alert, Box, Button, Card, Field, Input, Link, Spinner, Stack, Text } from "@chakra-ui/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Alert, Box, Button, Card, Field, Heading, Input, Link, Spinner, Stack, Table, Text } from "@chakra-ui/react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ky from "ky";
 import { Link as RouterLink, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { authClient, errorMessage, useHasAccess, useRefreshAuth, useSetupStatus } from "../../auth/authClient";
@@ -207,6 +207,7 @@ export const AuthMenu = () => {
 
 /** Settings section: change password for a logged in user, or point to setup when the instance is not secured */
 export const AccountSettings = () => {
+    const queryClient = useQueryClient();
     const {data: status} = useSetupStatus();
     const {data: session} = authClient.useSession();
     const [current, setCurrent] = useState('');
@@ -225,6 +226,7 @@ export const AccountSettings = () => {
             setCurrent('');
             setNext('');
             setConfirm('');
+            queryClient.invalidateQueries({queryKey: ['sessions']});
         }
     });
 
@@ -239,6 +241,7 @@ export const AccountSettings = () => {
     }
 
     return (
+        <Stack gap="6" width="full">
         <form onSubmit={(e: FormEvent) => { e.preventDefault(); if (!mismatch) { reset(); mutate(); } }}>
             <Stack gap="4" maxWidth="sm">
                 <Text>Logged in as <strong>{(session.user as {username?: string}).username ?? session.user.name}</strong></Text>
@@ -260,5 +263,85 @@ export const AccountSettings = () => {
                 <Button type="submit" loading={isPending} disabled={mismatch || next === ''} alignSelf="flex-start">Change Password</Button>
             </Stack>
         </form>
+        <SessionList currentSessionId={session.session.id}/>
+        </Stack>
+    );
+}
+
+const formatDate = (d: Date | string) => new Date(d).toLocaleString();
+
+/** Active sessions of the logged in user, with revoke */
+const SessionList = (props: {currentSessionId: string}) => {
+    const queryClient = useQueryClient();
+    const {data: sessions, error, isLoading} = useQuery({
+        queryKey: ['sessions'],
+        queryFn: async () => {
+            const res = await authClient.listSessions();
+            if (res.error !== null) {
+                // better-auth only lists sessions for a recent login (freshAge)
+                throw new Error(res.error.code === 'SESSION_NOT_FRESH'
+                    ? 'For security, viewing sessions requires a recent login. Log out and log in again to manage sessions.'
+                    : res.error.message ?? 'Could not load sessions');
+            }
+            return res.data;
+        },
+        retry: false,
+    });
+
+    const revoke = useMutation({
+        mutationFn: async (token: string | undefined) => {
+            const res = token === undefined ? await authClient.revokeOtherSessions() : await authClient.revokeSession({token});
+            if (res.error !== null) {
+                throw new Error(res.error.message ?? 'Could not log out session');
+            }
+        },
+        onSettled: () => queryClient.invalidateQueries({queryKey: ['sessions']}),
+    });
+
+    return (
+        <Stack gap="3" width="full">
+            <Heading size="md">Sessions</Heading>
+            <Text fontSize="sm">Devices and browsers currently logged in. Logging out a session takes effect immediately.</Text>
+            {isLoading ? <Spinner/> : null}
+            <FormError error={error !== null ? errorMessage(error) : undefined}/>
+            <FormError error={revoke.error !== null ? errorMessage(revoke.error) : undefined}/>
+            {sessions !== undefined ? (
+                <>
+                    <Table.ScrollArea borderWidth="1px" rounded="md">
+                        <Table.Root size="sm">
+                            <Table.Header>
+                                <Table.Row>
+                                    <Table.ColumnHeader>Device</Table.ColumnHeader>
+                                    <Table.ColumnHeader>IP</Table.ColumnHeader>
+                                    <Table.ColumnHeader>Logged in</Table.ColumnHeader>
+                                    <Table.ColumnHeader>Last active</Table.ColumnHeader>
+                                    <Table.ColumnHeader>Expires</Table.ColumnHeader>
+                                    <Table.ColumnHeader/>
+                                </Table.Row>
+                            </Table.Header>
+                            <Table.Body>
+                                {sessions.map((s) => (
+                                    <Table.Row key={s.id}>
+                                        <Table.Cell maxWidth="xs" truncate title={s.userAgent ?? undefined}>{s.userAgent ?? 'Unknown'}</Table.Cell>
+                                        <Table.Cell>{s.ipAddress ?? 'Unknown'}</Table.Cell>
+                                        <Table.Cell>{formatDate(s.createdAt)}</Table.Cell>
+                                        <Table.Cell>{formatDate(s.updatedAt)}</Table.Cell>
+                                        <Table.Cell>{formatDate(s.expiresAt)}</Table.Cell>
+                                        <Table.Cell textAlign="end">
+                                            {s.id === props.currentSessionId
+                                                ? <Text fontSize="sm" color="fg.muted">This session</Text>
+                                                : <Button size="xs" variant="outline" loading={revoke.isPending && revoke.variables === s.token} onClick={() => revoke.mutate(s.token)}>Log out</Button>}
+                                        </Table.Cell>
+                                    </Table.Row>
+                                ))}
+                            </Table.Body>
+                        </Table.Root>
+                    </Table.ScrollArea>
+                    {sessions.length > 1 ? (
+                        <Button size="sm" variant="outline" alignSelf="flex-start" loading={revoke.isPending && revoke.variables === undefined} onClick={() => revoke.mutate(undefined)}>Log out all other sessions</Button>
+                    ) : null}
+                </>
+            ) : null}
+        </Stack>
     );
 }
