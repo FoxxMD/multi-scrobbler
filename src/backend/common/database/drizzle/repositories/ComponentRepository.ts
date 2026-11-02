@@ -5,6 +5,7 @@ import { components } from "../schema/schema.ts";
 import { generateComponentEntity } from "../entityUtils.ts";
 import type {ComponentType} from "../../../../../core/Atomic.ts";
 import { eq, sql } from "drizzle-orm";
+import { getOwnerId } from "../../../auth/owner.ts";
 
 export class DrizzleComponentRepository extends DrizzleBaseRepository<'components'> {
 
@@ -12,8 +13,13 @@ export class DrizzleComponentRepository extends DrizzleBaseRepository<'component
         super(db, 'components', 'Component', opts);
     }
 
-    findOrInsert = async (data: { mode: ComponentType, type: string, uid?: string, name: string }): Promise<ComponentSelect> => {
+    /**
+     * @param data.userId Owner of the component. Defaults to the instance owner (all file-configured components belong to the owner, for now)
+     * */
+    findOrInsert = async (data: { mode: ComponentType, type: string, uid?: string, name: string, userId?: string }): Promise<ComponentSelect> => {
+        const userId = data.userId ?? await getOwnerId(this.db);
         const where: FindWhere<'components'> = {
+            userId,
             mode: data.mode,
             type: data.type,
             uid: data.uid ?? data.name
@@ -32,7 +38,8 @@ export class DrizzleComponentRepository extends DrizzleBaseRepository<'component
             uid: data.uid ?? data.name,
             mode: data.mode,
             type: data.type,
-            name: data.name
+            name: data.name,
+            userId
         })).returning())[0] as ComponentSelect;
         componentNew.migrations = [];
         return componentNew;

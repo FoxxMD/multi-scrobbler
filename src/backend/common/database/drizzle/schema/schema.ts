@@ -181,10 +181,13 @@ export const components = sqliteTable("components", {
   countNonLive: integer().notNull().default(0),
   createdAt: DayjsTimestamp('createdAt').$defaultFn(() => dayjs()),
   lastReadyAt: DayjsTimestamp('lastReadyAt'),
-  lastActiveAt: DayjsTimestamp('lastActiveAt')
+  lastActiveAt: DayjsTimestamp('lastActiveAt'),
+  // owner. Nullable at the SQL level only so the column could be added to existing databases, app always sets it.
+  userId: text().references(() => users.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
 },
 (table) => [
-  uniqueIndex('uid_mode_type_idx').on(table.uid,table.mode,table.type)
+  uniqueIndex('user_uid_mode_type_idx').on(table.userId, table.uid, table.mode, table.type),
+  index('component_user_id_idx').on(table.userId)
 ]);
 
 export const componentMigrations = sqliteTable("component_migrations", {
@@ -212,8 +215,12 @@ export const jobs = sqliteTable("jobs", {
   scrobbled: integer().notNull().default(0),
   createdAt: DayjsTimestamp('createdAt').notNull().$defaultFn(() => dayjs()),
   updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()).$onUpdate(() => dayjs()),
-  completedAt: DayjsTimestamp('completedAt')
-});
+  completedAt: DayjsTimestamp('completedAt'),
+  // owner. Nullable at the SQL level only so the column could be added to existing databases, app always sets it.
+  userId: text().references(() => users.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
+}, (table) => [
+  index('job_user_id_idx').on(table.userId)
+]);
 
 export const playEvents = sqliteTable("play_events", {
   id: integer({ mode: 'number' }).primaryKey(),
@@ -272,6 +279,10 @@ const playRelations = defineRelations({ plays, queueStates, playEvents, playInpu
     playsHistorical: r.many.plays(),
     queueStates: r.many.queueStates(),
     migrations: r.many.componentMigrations(),
+    user: r.one.users({
+      from: r.components.userId,
+      to: r.users.id,
+    }),
   },
   componentMigrations: {
     component: r.one.components({
@@ -280,7 +291,11 @@ const playRelations = defineRelations({ plays, queueStates, playEvents, playInpu
     })
   },
   jobs: {
-    plays: r.many.plays()
+    plays: r.many.plays(),
+    user: r.one.users({
+      from: r.jobs.userId,
+      to: r.users.id,
+    }),
   },
   playEvents: {
     play: r.one.plays({
@@ -297,6 +312,8 @@ const playRelations = defineRelations({ plays, queueStates, playEvents, playInpu
       from: r.users.id,
       to: r.accounts.userId,
     }),
+    components: r.many.components(),
+    jobs: r.many.jobs(),
   },
   sessions: {
     user: r.one.users({

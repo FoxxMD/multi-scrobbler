@@ -119,7 +119,7 @@ export type ComponentCommonApi = {
     deadLetterPlays: number
     deadLetterPlaysTotal: number
     queued: number
-} & Omit<ComponentMinimalSelect, 'type'>
+} & Omit<ComponentMinimalSelect, 'type' | 'userId'>
 
 /** Maps Dayjs (including nullable/optional Dayjs) properties to string, preserving optionality */
 // nullable Dayjs fields are emitted as undefined (key omitted) when missing, so allow undefined as well as null
