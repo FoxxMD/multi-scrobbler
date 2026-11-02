@@ -19,6 +19,7 @@ import { toNodeHandler } from "better-auth/node";
 import { authBasePath, createAuth, type MSAuth } from "../common/auth/auth.ts";
 import { resolveAuthSettings, type AuthSettings } from "../common/auth/authSettings.ts";
 import { getDataDir } from "../common/index.ts";
+import { applyOwnerPasswordEnv } from "../common/auth/ownerPassword.ts";
 import type { DbConcrete } from "../common/database/drizzle/drizzleUtils.ts";
 import type ScrobbleSources from '../sources/ScrobbleSources.ts';
 import type ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
@@ -97,6 +98,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
                 ...(opts.authSettings ?? {})
             };
             const auth = createAuth(db, authSettings, {basePath, logger: authLogger});
+            await applyOwnerPasswordEnv(auth, db, authSettings.secret, authLogger);
             const locals: ServerLocals = {auth, authSettings, db};
             Object.assign(app.locals, locals);
             // must be mounted before the router (and its body parsing) so better-auth gets the raw request

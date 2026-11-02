@@ -1,21 +1,8 @@
 import { expect } from 'chai';
 import request from 'supertest';
 import express from 'express';
-import { loggerTest } from '@foxxmd/logging';
-import ScrobbleSources from '../../sources/ScrobbleSources.ts';
-import ScrobbleClients from '../../scrobblers/ScrobbleClients.ts';
-import { WildcardEmitter } from '../../common/WildcardEmitter.ts';
-import { initServer, type ServerOptions } from '../../server/index.ts';
 import { sameOriginMiddleware } from '../../server/middleware.ts';
-
-const internalConfig = { localUrl: new URL('http://localhost:9078'), configDir: 'fake', logger: loggerTest, version: 'test' };
-
-export const buildAuthApp = async (opts: ServerOptions = {}) => {
-    const sources = new ScrobbleSources(new WildcardEmitter(), internalConfig, loggerTest);
-    const clients = new ScrobbleClients(new WildcardEmitter(), new WildcardEmitter(), internalConfig, loggerTest);
-    const [app] = await initServer({ sources, clients }, { testMode: true, ...opts });
-    return app;
-};
+import { buildAuthApp } from '../utils/authTestUtils.ts';
 
 describe('Same Origin Middleware', function () {
     const app = express();

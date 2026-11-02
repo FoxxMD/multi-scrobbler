@@ -8,9 +8,19 @@ export const DEFAULT_ADMIN_USERNAME = 'admin';
 /** RFC 2606 reserved TLD, better-auth requires an email but MS does not use it */
 export const PLACEHOLDER_EMAIL_DOMAIN = 'multi-scrobbler.invalid';
 
+// same rules as the better-auth username plugin defaults, otherwise the owner could never sign in
+const USERNAME_REGEX = /^[a-z0-9_.]{3,30}$/;
+
 export const getAdminUsername = (): string => {
     const name = process.env.ADMIN_USERNAME?.trim();
-    return name === undefined || name === '' ? DEFAULT_ADMIN_USERNAME : name.toLowerCase();
+    if (name === undefined || name === '') {
+        return DEFAULT_ADMIN_USERNAME;
+    }
+    const normalized = name.toLowerCase();
+    if (!USERNAME_REGEX.test(normalized)) {
+        throw new Error(`ADMIN_USERNAME must be 3-30 characters of letters, numbers, underscores or dots -- given: ${name}`);
+    }
+    return normalized;
 }
 
 export type OwnerUser = typeof users.$inferSelect;
