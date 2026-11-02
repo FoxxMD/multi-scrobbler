@@ -14,7 +14,7 @@ import { getRoot } from "../ioc.ts";
 import { parseBool } from "../utils.ts";
 import { getAddress } from "../utils/NetworkUtils.ts";
 import { setupApi } from "./api.ts";
-import { errorHandlerMiddleware, safeModeMiddleware, sameOriginMiddleware, WebFault } from "./middleware.ts";
+import { clientIpMiddleware, errorHandlerMiddleware, safeModeMiddleware, sameOriginMiddleware, WebFault } from "./middleware.ts";
 import { toNodeHandler } from "better-auth/node";
 import { authBasePath, createAuth, type MSAuth } from "../common/auth/auth.ts";
 import { resolveAuthSettings, type AuthSettings } from "../common/auth/authSettings.ts";
@@ -117,7 +117,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
             Object.assign(app.locals, locals);
             // must be mounted before the router (and its body parsing) so better-auth gets the raw request
             // and so /api/auth/callback/* is not caught by the source auth callback route
-            app.all(`${authBasePath(basePath)}/*splat`, sameOriginMiddleware({trustProxy: authSettings.trustProxy}), toNodeHandler(auth));
+            app.all(`${authBasePath(basePath)}/*splat`, clientIpMiddleware({trustProxy: authSettings.trustProxy}), sameOriginMiddleware({trustProxy: authSettings.trustProxy}), toNodeHandler(auth));
             apiRouter.useMiddleware(requireAuth({auth, settings: authSettings, state: authState, logger: authLogger, basePath}));
             if(authSettings.mode !== 'disabled' && !authState.secured) {
                 authLogger.warn('Dashboard and API are not secured! Set an admin password from the dashboard or with ADMIN_SETUP_PW.');

@@ -213,3 +213,31 @@ export const sameOriginMiddleware = (opts: SameOriginOptions = {}): RequestHandl
     }
     next();
 }
+
+/** Request header MS sets (overwriting anything the client sent) with the client IP, for better-auth's rate limiter */
+export const CLIENT_IP_HEADER = 'x-ms-client-ip';
+
+/**
+ * Resolve the client IP for better-auth (rate limiting, session IP) without trusting client-supplied headers.
+ *
+ * * Without trustProxy: the connection's remote address
+ * * With trustProxy: the right-most X-Forwarded-For entry, which is the one the proxy in front of MS appended
+ *   (entries to its left can be forged by the client). Behind several chained proxies this is the outer proxy's address,
+ *   which over-limits (shared bucket) rather than allowing a bypass.
+ * */
+export const clientIpMiddleware = (opts: SameOriginOptions = {}): RequestHandler => (req, res, next) => {
+    let ip: string | undefined;
+    if (opts.trustProxy) {
+        ip = req.get('x-forwarded-for')?.split(',').map(x => x.trim()).filter(x => x !== '').at(-1);
+    }
+    ip ??= req.socket.remoteAddress;
+    if (ip?.startsWith('::ffff:')) {
+        ip = ip.slice(7);
+    }
+    if (ip === undefined) {
+        delete req.headers[CLIENT_IP_HEADER];
+    } else {
+        req.headers[CLIENT_IP_HEADER] = ip;
+    }
+    next();
+}

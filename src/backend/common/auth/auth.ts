@@ -1,6 +1,7 @@
 import * as path from "node:path";
 import { betterAuth } from "better-auth";
 import { admin, username } from "better-auth/plugins";
+import { CLIENT_IP_HEADER } from "../../server/middleware.ts";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
 import type { Logger } from "@foxxmd/logging";
 import type { DbConcrete } from "../database/drizzle/drizzleUtils.ts";
@@ -66,6 +67,11 @@ export const createAuth = (db: DbConcrete, settings: AuthSettings, opts: CreateA
             useSecureCookies: settings.secureCookies,
             trustedProxyHeaders: settings.trustProxy,
             cookiePrefix: 'ms',
+            ipAddress: {
+                // better-auth reads X-Forwarded-For by default, which any client can forge to dodge the sign-in rate limit.
+                // MS sets this header itself from the connection (or the proxy's X-Forwarded-For entry when TRUST_PROXY), see clientIpMiddleware
+                ipAddressHeaders: [CLIENT_IP_HEADER],
+            },
         },
         logger: {
             log: (level, message, ...args) => {
