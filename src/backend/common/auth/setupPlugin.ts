@@ -22,7 +22,8 @@ export interface SetupStatus {
     setupTokenRequired: boolean
     /** requester has a session for the owner */
     isOwner: boolean
-    username: string
+    /** owner's username. Omitted once secured unless the requester is logged in as the owner, so it isn't handed to anyone guessing passwords */
+    username?: string
 }
 
 const tokenMatches = (expected: string | undefined, given: string | undefined): boolean => {
@@ -53,13 +54,14 @@ export const setupPlugin = (opts: SetupPluginOptions) => {
                 const state = await computeAuthState(db, ctx.context);
                 const session = await getSessionFromCtx(ctx, {disableRefresh: true});
                 const owner = await ctx.context.internalAdapter.findUserById(state.ownerId);
+                const isOwner = session?.user.id === state.ownerId;
                 return ctx.json<SetupStatus>({
                     mode: settings.mode,
                     secured: state.secured,
                     passwordSet: state.ownerHasPassword,
                     setupTokenRequired: settings.setupToken !== undefined,
-                    isOwner: session?.user.id === state.ownerId,
-                    username: (owner as {username?: string} | null)?.username ?? 'admin',
+                    isOwner,
+                    username: state.secured && !isOwner ? undefined : (owner as {username?: string} | null)?.username ?? 'admin',
                 });
             }),
 

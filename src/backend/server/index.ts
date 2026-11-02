@@ -1,6 +1,6 @@
 import express from 'express';
 import { randomBytes } from 'node:crypto';
-import type { Express } from 'express';
+import type { Express, RequestHandler } from 'express';
 import { childLogger, loggerTest, type LogDataPretty, type Logger } from "@foxxmd/logging";
 import bodyParser from 'body-parser';
 import { stripIndents } from "common-tags";
@@ -21,7 +21,7 @@ import { resolveAuthSettings, type AuthSettings } from "../common/auth/authSetti
 import { getDataDir } from "../common/index.ts";
 import { applyOwnerPasswordEnv } from "../common/auth/ownerPassword.ts";
 import { AuthStateStore } from "../common/auth/authState.ts";
-import { requireAuth, SECURITY_PUBLIC, SECURITY_REQUIRED } from "./requireAuth.ts";
+import { optionalAuth, requireAuth, SECURITY_PUBLIC, SECURITY_REQUIRED } from "./requireAuth.ts";
 import type { DbConcrete } from "../common/database/drizzle/drizzleUtils.ts";
 import type ScrobbleSources from '../sources/ScrobbleSources.ts';
 import type ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
@@ -96,6 +96,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
         app.use(securityHeadersMiddleware);
         app.use(basePath, safeModeMiddleware(webFault));
 
+        let optionalAuthMiddleware: RequestHandler | undefined;
         if(!root.get('disableWeb')) {
             const authLogger = childLogger(logger, 'Auth');
             const db = await root.items.db();
@@ -120,6 +121,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
             // and so /api/auth/callback/* is not caught by the source auth callback route
             app.all(`${authBasePath(basePath)}/*splat`, clientIpMiddleware({trustProxy: authSettings.trustProxy}), sameOriginMiddleware({trustProxy: authSettings.trustProxy}), toNodeHandler(auth));
             apiRouter.useMiddleware(requireAuth({auth, settings: authSettings, state: authState, logger: authLogger, basePath}));
+            optionalAuthMiddleware = optionalAuth({auth, settings: authSettings, state: authState, logger: authLogger});
             if(authSettings.mode !== 'disabled' && !authState.secured) {
                 authLogger.warn('Dashboard and API are not secured! Set an admin password from the dashboard or with ADMIN_SETUP_PW.');
                 if(authSettings.setupTokenGenerated) {
@@ -148,7 +150,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
             return [app, router];
         }
 
-        setupApi({app, router: apiRouter, publicRouter, scrobbleSources: sources, scrobbleClients: clients}, {...opts, logger, webFault});
+        setupApi({app, router: apiRouter, publicRouter, optionalAuth: optionalAuthMiddleware, scrobbleSources: sources, scrobbleClients: clients}, {...opts, logger, webFault});
         app.use(errorHandlerMiddleware(logger));
 
         if(opts.testMode === true) {

@@ -3,6 +3,11 @@ import express from 'express';
 import request from 'supertest';
 import { buildAuthApp, secureApp, signIn } from '../utils/authTestUtils.ts';
 import { CLIENT_IP_HEADER, clientIpMiddleware } from '../../server/middleware.ts';
+import type ScrobbleSources from '../../sources/ScrobbleSources.ts';
+
+const unhealthy = async (sources: ScrobbleSources) => {
+    sources.getStatusSummary = async () => [false, ['Source subsonic - mySecretServer is not polling.']];
+};
 
 const ipEcho = (trustProxy: boolean) => {
     const app = express();
@@ -63,6 +68,34 @@ describe('Hardening', function () {
                 .set('Origin', 'http://localhost:9078')
                 .set('Cookie', cookie);
             expect(res.status).eq(404);
+        });
+    });
+
+    describe('Public endpoints reveal less', function () {
+
+        it('health only reports status to anonymous requests on a secured instance', async function () {
+            const app = await buildAuthApp({}, unhealthy);
+            // unsecured instance: details as before
+            expect((await request(app).get('/api/health')).body.messages).eql(['Source subsonic - mySecretServer is not polling.']);
+
+            await secureApp(app);
+            const anon = await request(app).get('/api/health?name=mySecretServer');
+            expect(anon.status).eq(500);
+            expect(anon.body.messages).eql([]);
+
+            const cookie = await signIn(app);
+            const authed = await request(app).get('/api/health').set('Cookie', cookie);
+            expect(authed.status).eq(500);
+            expect(authed.body.messages).eql(['Source subsonic - mySecretServer is not polling.']);
+        });
+
+        it('setup status omits the username once secured, unless logged in', async function () {
+            const app = await buildAuthApp();
+            expect((await request(app).get('/api/auth/setup/status')).body.username).eq('admin');
+            await secureApp(app);
+            expect((await request(app).get('/api/auth/setup/status')).body).not.have.property('username');
+            const cookie = await signIn(app);
+            expect((await request(app).get('/api/auth/setup/status').set('Cookie', cookie)).body.username).eq('admin');
         });
     });
 });

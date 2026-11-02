@@ -80,36 +80,60 @@ const unauthorizedPage = (host: string, basePath: string) => {
 }
 
 /**
- * Require an actor for the request, resolved into req.auth.
- *
- * Self-contained: everything it needs is passed in, so it can be used as router-level middleware
- * (all routes on that router need auth) or per-route (route options `middleware`).
+ * Resolve the actor for a request into req.auth (left undefined if anonymous).
  *
  * Actor resolution chain: disabled -> better-auth session -> unsecured (owner).
  * New auth methods should resolve through better-auth (getSession) or add a step here.
  * */
-export const requireAuth = (opts: RequireAuthOptions): RequestHandler => {
-    const {auth, settings, state, logger, basePath} = opts;
-    const sameOrigin = sameOriginMiddleware({trustProxy: settings.trustProxy});
-
-    return async (req, res, next) => {
+export const resolveAuth = (opts: Pick<RequireAuthOptions, 'auth' | 'settings' | 'state' | 'logger'>) => {
+    const {auth, settings, state, logger} = opts;
+    return async (req: Request): Promise<void> => {
         try {
             if (settings.mode === 'disabled') {
                 req.auth = {userId: state.ownerId, via: 'disabled'};
-            } else {
-                if (hasCredentials(req)) {
-                    const result = await auth.api.getSession({headers: fromNodeHeaders(req.headers)});
-                    if (result !== null) {
-                        req.auth = {userId: result.user.id, via: 'session', user: result.user, session: result.session};
-                    }
+                return;
+            }
+            if (hasCredentials(req)) {
+                const result = await auth.api.getSession({headers: fromNodeHeaders(req.headers)});
+                if (result !== null) {
+                    req.auth = {userId: result.user.id, via: 'session', user: result.user, session: result.session};
+                    return;
                 }
-                if (req.auth === undefined && !state.secured) {
-                    req.auth = {userId: state.ownerId, via: 'unsecured'};
-                }
+            }
+            if (!state.secured) {
+                req.auth = {userId: state.ownerId, via: 'unsecured'};
             }
         } catch (e) {
             logger.warn(new Error('Failed to resolve request session', {cause: e}));
         }
+    }
+}
+
+/**
+ * Resolve the actor (req.auth) but never reject. For public routes that show more to a logged in user.
+ * */
+export const optionalAuth = (opts: Pick<RequireAuthOptions, 'auth' | 'settings' | 'state' | 'logger'>): RequestHandler => {
+    const resolve = resolveAuth(opts);
+    return async (req, res, next) => {
+        await resolve(req);
+        next();
+    }
+}
+
+/**
+ * Require an actor for the request, resolved into req.auth.
+ *
+ * Self-contained: everything it needs is passed in, so it can be used as router-level middleware
+ * (all routes on that router need auth) or per-route (route options `middleware`).
+ * */
+export const requireAuth = (opts: RequireAuthOptions): RequestHandler => {
+    const {settings, basePath} = opts;
+    const sameOrigin = sameOriginMiddleware({trustProxy: settings.trustProxy});
+
+    const resolve = resolveAuth(opts);
+
+    return async (req, res, next) => {
+        await resolve(req);
 
         if (req.auth === undefined) {
             if (req.method === 'GET' && req.accepts(['json', 'html']) === 'html') {

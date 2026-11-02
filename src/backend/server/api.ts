@@ -1,5 +1,5 @@
 import {loggerTest, type LogDataPretty, type Logger, type LogLevel} from "@foxxmd/logging";
-import type {Express, Request, Response} from 'express';
+import type {Express, Request, RequestHandler, Response} from 'express';
 import { createChannel, createSession, type DefaultChannelState } from 'better-sse';
 import bodyParser from "body-parser";
 import { FixedSizeList } from 'fixed-size-list';
@@ -47,6 +47,8 @@ import { nameToCredit } from "../../core/MusicMetadata.ts";
 import { asPlayCheap } from "../../core/PlayMarshalUtils.ts";
 
 const maxBufferSize = 300;
+
+const noopMiddleware: RequestHandler = (req, res, next) => next();
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
 
 const jsonParser = bodyParser.json({ type: ['text/*', 'application/json'] });
@@ -74,6 +76,8 @@ export interface ApiArgs {
     router: ReturnType<typeof createTypedRouter>
     /** routes that never require auth, mounted at the base path */
     publicRouter: ReturnType<typeof createTypedRouter>
+    /** resolves req.auth without rejecting, for public routes that show more to a logged in user */
+    optionalAuth?: RequestHandler
     scrobbleSources: ScrobbleSources
     scrobbleClients: ScrobbleClients
 }
@@ -91,6 +95,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         app,
         router,
         publicRouter,
+        optionalAuth = noopMiddleware,
         scrobbleSources,
         scrobbleClients
     } = args;
@@ -840,22 +845,29 @@ Note: this is only supported by some components.`
     });
 
     publicRouter.get('/health', {hidden: true}, async (req, res) => res.redirect(307, `/api/${req.url.slice(1)}`));
-    publicRouter.get('/api/health', {docs: {operationId: 'get-health'}, querySchema: z.object({
-        type: z.string().optional().meta({description: 'Only report status for components of this type'}),
-        name: z.string().optional().meta({description: 'Only report status for the component with this name'})
-    }), tags: ['App Meta']}, async (req, res) => {
+    publicRouter.get('/api/health', {
+        docs: {operationId: 'get-health'},
+        middleware: [optionalAuth],
+        querySchema: z.object({
+            type: z.string().optional().meta({description: 'Only report status for components of this type. Ignored when not logged in.'}),
+            name: z.string().optional().meta({description: 'Only report status for the component with this name. Ignored when not logged in.'})
+        }),
+        tags: ['App Meta'],
+        description: 'Status code reports overall health (200 OK, 500 a Source/Client has issues, 503 safe mode). Status messages and filtering by type/name are only available when logged in (or the instance is not secured).'
+    }, async (req, res) => {
+        // without auth only the overall status is reported: component names, filtering and error details stay private
+        const detailed = req.auth !== undefined;
         const {
             type,
             name
-        } = req.query;
+        } = detailed ? req.query : {};
 
         const [sourcesReady, sourceMessages] = await scrobbleSources.getStatusSummary(type, name);
         const [clientsReady, clientMessages] = await scrobbleClients.getStatusSummary(type, name);
 
-
-        const messages = sourceMessages.concat(clientMessages);
+        const messages = detailed ? sourceMessages.concat(clientMessages) : [];
         if(webFault?.fault !== undefined) {
-            return res.status(503).json({messages: [`Web server is in safe mode and must be restarted: ${webFault.fault.error.message}`, ...messages]});
+            return res.status(503).json({messages: detailed ? [`Web server is in safe mode and must be restarted: ${webFault.fault.error.message}`, ...messages] : []});
         }
         return res.status((clientsReady && sourcesReady) ? 200 : 500).json({messages});
     });

@@ -10,7 +10,8 @@ export interface SetupStatus {
     passwordSet: boolean
     setupTokenRequired: boolean
     isOwner: boolean
-    username: string
+    /** omitted once secured unless logged in as the owner */
+    username?: string
 }
 
 // the server injects <base href> with the runtime mount path so this resolves correctly at root or under a subpath
