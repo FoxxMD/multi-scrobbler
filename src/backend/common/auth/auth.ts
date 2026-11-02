@@ -6,11 +6,14 @@ import type { Logger } from "@foxxmd/logging";
 import type { DbConcrete } from "../database/drizzle/drizzleUtils.ts";
 import { authSchema } from "../database/drizzle/schema/auth.ts";
 import type { AuthSettings } from "./authSettings.ts";
+import { setupPlugin } from "./setupPlugin.ts";
 
 export interface CreateAuthOptions {
     /** pathname the app is mounted under, '/' at root */
     basePath: string
     logger: Logger
+    /** called after setup endpoints change auth state (first password) */
+    onStateChange?: () => Promise<unknown>
 }
 
 export const authBasePath = (basePath: string) => path.posix.join(basePath, '/api/auth');
@@ -50,6 +53,7 @@ export const createAuth = (db: DbConcrete, settings: AuthSettings, opts: CreateA
                 defaultRole: 'user',
                 adminRoles: ['admin'],
             }),
+            setupPlugin({db, settings, onStateChange: opts.onStateChange ?? (async () => undefined)}),
         ],
         telemetry: {
             enabled: false

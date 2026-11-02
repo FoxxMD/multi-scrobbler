@@ -1,13 +1,19 @@
 import { createHmac } from "node:crypto";
 import type { Logger } from "@foxxmd/logging";
 import type { DbConcrete } from "../database/drizzle/drizzleUtils.ts";
+import type { AuthContext } from "@better-auth/core";
 import type { MSAuth } from "./auth.ts";
 import { ensureOwner, getSetting, setSetting } from "./owner.ts";
 
 export const RESET_FINGERPRINT_KEY = 'adminResetPwFingerprint';
 
-export const userHasPassword = async (auth: MSAuth, userId: string): Promise<boolean> => {
-    const ctx = await auth.$context;
+export type PasswordContext = Pick<AuthContext, 'internalAdapter'> & {password: Pick<AuthContext['password'], 'hash' | 'config'>};
+
+/** Accept either the better-auth instance or an endpoint/plugin context (ctx.context) */
+const toContext = async (auth: MSAuth | PasswordContext): Promise<PasswordContext> => '$context' in auth ? await auth.$context : auth;
+
+export const userHasPassword = async (auth: MSAuth | PasswordContext, userId: string): Promise<boolean> => {
+    const ctx = await toContext(auth);
     return (await ctx.internalAdapter.findCredentialAccount(userId)) !== null;
 }
 
@@ -15,8 +21,8 @@ export const userHasPassword = async (auth: MSAuth, userId: string): Promise<boo
  * Set a user's password without needing a session, creating the credential account if the user does not have one yet
  * (the owner is created passwordless).
  * */
-export const setUserPassword = async (auth: MSAuth, userId: string, password: string, opts: {revokeSessions?: boolean} = {}): Promise<void> => {
-    const ctx = await auth.$context;
+export const setUserPassword = async (auth: MSAuth | PasswordContext, userId: string, password: string, opts: {revokeSessions?: boolean} = {}): Promise<void> => {
+    const ctx = await toContext(auth);
     const {minPasswordLength, maxPasswordLength} = ctx.password.config;
     if (password.length < minPasswordLength) {
         throw new Error(`Password must be at least ${minPasswordLength} characters`);

@@ -46,10 +46,8 @@ export type RoutePolicy = 'public' | 'optionalAuth' | 'user';
  * (Listenbrainz /1/*, Last.fm /2.0/) are public by default.
  * */
 export const PUBLIC_ROUTES: RegExp[] = [
-    // better-auth
+    // better-auth, including instance setup endpoints (they enforce their own rules)
     /^\/api\/auth(\/|$)/,
-    // instance setup (enforces its own rules)
-    /^\/api\/setup(\/|$)/,
     // ingress Sources, they have their own authentication
     /^\/api\/listenbrainz/,
     /^\/api\/lastfm/,

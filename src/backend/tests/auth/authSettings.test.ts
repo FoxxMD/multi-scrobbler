@@ -50,6 +50,18 @@ describe('Auth Settings', function () {
         expect(() => resolveAuthSettings({localUrl: http, hasDefinedBaseUrl: false, env: {AUTH_MODE: 'nope'}})).to.throw(/AUTH_MODE/);
     });
 
+    it('parses AUTH_SETUP_TOKEN', function () {
+        const base = {localUrl: http, hasDefinedBaseUrl: false};
+        expect(resolveAuthSettings({...base, env: {}}).setupToken).is.undefined;
+        expect(resolveAuthSettings({...base, env: {AUTH_SETUP_TOKEN: 'false'}}).setupToken).is.undefined;
+        const generated = resolveAuthSettings({...base, env: {AUTH_SETUP_TOKEN: 'true'}});
+        expect(generated.setupTokenGenerated).is.true;
+        expect(generated.setupToken?.length).gte(10);
+        const literal = resolveAuthSettings({...base, env: {AUTH_SETUP_TOKEN: 'myToken'}});
+        expect(literal.setupTokenGenerated).is.false;
+        expect(literal.setupToken).eq('myToken');
+    });
+
     it('persists a generated secret and prefers env', async function () {
         await withLocalTmpDir(async () => {
             const first = getOrCreateSecret({}, process.cwd());

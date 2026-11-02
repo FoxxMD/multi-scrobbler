@@ -19,6 +19,10 @@ export interface AuthSettings {
     secret: string
     /** Origin used as better-auth baseURL fallback when hosts are restricted */
     fallbackOrigin: string
+    /** If defined, setting the first password without a session requires this token */
+    setupToken?: string
+    /** setup token was generated (should be printed in logs) rather than user-defined */
+    setupTokenGenerated: boolean
 }
 
 export interface ResolveAuthSettingsOptions {
@@ -100,6 +104,18 @@ export const resolveAuthSettings = (opts: ResolveAuthSettingsOptions): AuthSetti
 
     const trustProxy = parseBool(env.TRUST_PROXY, config.trustProxy ?? false);
 
+    let setupToken: string | undefined;
+    let setupTokenGenerated = false;
+    const setupEnv = env.AUTH_SETUP_TOKEN?.trim();
+    if (setupEnv !== undefined && setupEnv !== '' && !['0', 'false', 'no'].includes(setupEnv.toLowerCase())) {
+        if (['1', 'true', 'yes'].includes(setupEnv.toLowerCase())) {
+            setupToken = randomBytes(9).toString('base64url');
+            setupTokenGenerated = true;
+        } else {
+            setupToken = setupEnv;
+        }
+    }
+
     if (hostsOpen && hasDefinedBaseUrl && mode !== 'disabled') {
         logger?.info(`HINT: For better security set ALLOWED_HOSTS=${localUrl.host} (or auth.allowedHosts in config.json) so only requests for your Base URL are accepted`);
     }
@@ -112,5 +128,7 @@ export const resolveAuthSettings = (opts: ResolveAuthSettingsOptions): AuthSetti
         trustProxy,
         secret: getOrCreateSecret(env, dataDir, logger),
         fallbackOrigin: localUrl.origin,
+        setupToken,
+        setupTokenGenerated,
     };
 }

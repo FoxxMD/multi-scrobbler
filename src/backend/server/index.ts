@@ -100,9 +100,10 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
                 }),
                 ...(opts.authSettings ?? {})
             };
-            const auth = createAuth(db, authSettings, {basePath, logger: authLogger});
+            let authState!: AuthStateStore;
+            const auth = createAuth(db, authSettings, {basePath, logger: authLogger, onStateChange: () => authState.refresh()});
             await applyOwnerPasswordEnv(auth, db, authSettings.secret, authLogger);
-            const authState = await new AuthStateStore(auth, db).refresh();
+            authState = await new AuthStateStore(auth, db).refresh();
             const locals: ServerLocals = {auth, authSettings, authState, db};
             Object.assign(app.locals, locals);
             // must be mounted before the router (and its body parsing) so better-auth gets the raw request
@@ -111,6 +112,9 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
             app.use(basePath, authGuardMiddleware({auth, settings: authSettings, state: authState, logger: authLogger}));
             if(authSettings.mode !== 'disabled' && !authState.secured) {
                 authLogger.warn('Dashboard and API are not secured! Set an admin password from the dashboard or with ADMIN_SETUP_PW.');
+                if(authSettings.setupTokenGenerated) {
+                    authLogger.warn(`Setup token (required to secure this instance from the dashboard): ${authSettings.setupToken}`);
+                }
             }
             authLogger.verbose(`Auth mode: ${authSettings.mode} | Allowed Hosts: ${authSettings.allowedHosts.join(', ')} | Secure Cookies: ${authSettings.secureCookies ? 'Yes' : 'No'} | Trust Proxy: ${authSettings.trustProxy ? 'Yes' : 'No'}`);
         }
