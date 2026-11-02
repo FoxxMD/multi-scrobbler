@@ -864,12 +864,6 @@ Note: this is only supported by some components.`
        return res.json({version: root.get('version')});
     });
 
-    router.use('/api/docs', router.docs({
-        title: "Multi-Scrobbler API",
-        version: "0.1.0",
-        description: "Public API docs",
-    }))
-
     router.all('/api/*path', {hidden: true}, async (req, res) => {
         const remote = req.connection.remoteAddress;
         const proxyRemote = req.headers["x-forwarded-for"];
