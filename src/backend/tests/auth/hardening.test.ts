@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import express from 'express';
 import request from 'supertest';
+import { buildAuthApp } from '../utils/authTestUtils.ts';
 import { CLIENT_IP_HEADER, clientIpMiddleware } from '../../server/middleware.ts';
 
 const ipEcho = (trustProxy: boolean) => {
@@ -31,6 +32,23 @@ describe('Hardening', function () {
 
         it('falls back to the connection address with TRUST_PROXY but no proxy header', async function () {
             expect((await request(ipEcho(true)).get('/')).body.ip).eq('127.0.0.1');
+        });
+    });
+
+    describe('Security headers', function () {
+
+        it('are set on api, auth and dashboard responses', async function () {
+            const app = await buildAuthApp();
+            for (const path of ['/api/version', '/api/components', '/api/auth/setup/status', '/components/3']) {
+                const res = await request(app).get(path);
+                expect(res.headers['x-frame-options'], path).eq('DENY');
+                // express's own 404 page (no SPA in test mode) replaces the CSP with an even stricter one
+                if (path.startsWith('/api')) {
+                    expect(res.headers['content-security-policy'], path).eq("frame-ancestors 'none'");
+                }
+                expect(res.headers['x-content-type-options'], path).eq('nosniff');
+                expect(res.headers['referrer-policy'], path).eq('same-origin');
+            }
         });
     });
 });

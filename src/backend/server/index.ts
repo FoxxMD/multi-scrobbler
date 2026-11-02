@@ -14,7 +14,7 @@ import { getRoot } from "../ioc.ts";
 import { parseBool } from "../utils.ts";
 import { getAddress } from "../utils/NetworkUtils.ts";
 import { setupApi } from "./api.ts";
-import { clientIpMiddleware, errorHandlerMiddleware, safeModeMiddleware, sameOriginMiddleware, WebFault } from "./middleware.ts";
+import { clientIpMiddleware, errorHandlerMiddleware, safeModeMiddleware, sameOriginMiddleware, securityHeadersMiddleware, WebFault } from "./middleware.ts";
 import { toNodeHandler } from "better-auth/node";
 import { authBasePath, createAuth, type MSAuth } from "../common/auth/auth.ts";
 import { resolveAuthSettings, type AuthSettings } from "../common/auth/authSettings.ts";
@@ -93,6 +93,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
 
         // mount API routes under the same prefix the frontend's relative
         // `api/...` fetches resolve against
+        app.use(securityHeadersMiddleware);
         app.use(basePath, safeModeMiddleware(webFault));
 
         if(!root.get('disableWeb')) {

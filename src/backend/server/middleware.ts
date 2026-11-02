@@ -241,3 +241,18 @@ export const clientIpMiddleware = (opts: SameOriginOptions = {}): RequestHandler
     }
     next();
 }
+
+/**
+ * Baseline security headers for every response
+ *
+ * * no framing (clickjacking of a logged in dashboard)
+ * * no MIME sniffing
+ * * no Referer to other origins (third-party auth callback URLs carry codes in their query string)
+ * */
+export const securityHeadersMiddleware: RequestHandler = (req, res, next) => {
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'same-origin');
+    next();
+}
