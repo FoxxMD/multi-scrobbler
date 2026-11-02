@@ -168,3 +168,48 @@ export const errorHandlerMiddleware = (logger: Logger): ErrorRequestHandler => (
     }
     res.status(500).json({error: 'An unexpected error occurred while handling this request'});
 }
+
+const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
+
+export interface SameOriginOptions {
+    /** use X-Forwarded-Host as the request host */
+    trustProxy?: boolean
+}
+
+/**
+ * CSRF protection for cookie-authenticated, state-changing requests: a browser request must come from the same origin as the host it is sent to.
+ *
+ * better-auth has its own origin check but it is disabled when allowedHosts is open ('*') because every origin is then trusted.
+ * This also protects MS's own API routes, which better-auth knows nothing about.
+ *
+ * Requests without Origin/Referer (scripts, curl, external services) are allowed since they do not carry a browser's ambient cookies.
+ * */
+export const sameOriginMiddleware = (opts: SameOriginOptions = {}): RequestHandler => (req, res, next) => {
+    if (SAFE_METHODS.includes(req.method)) {
+        next();
+        return;
+    }
+    const fetchSite = req.get('sec-fetch-site');
+    if (fetchSite !== undefined && fetchSite !== 'same-origin' && fetchSite !== 'none') {
+        res.status(403).json({error: 'Cross-site request blocked', code: 'cross_site'});
+        return;
+    }
+    const source = req.get('origin') ?? req.get('referer');
+    if (source === undefined) {
+        next();
+        return;
+    }
+    const forwarded = opts.trustProxy ? req.get('x-forwarded-host')?.split(',')[0]?.trim() : undefined;
+    const host = forwarded !== undefined && forwarded !== '' ? forwarded : req.get('host');
+    let sourceHost: string | undefined;
+    try {
+        sourceHost = new URL(source).host;
+    } catch {
+        sourceHost = undefined;
+    }
+    if (sourceHost === undefined || host === undefined || sourceHost.toLowerCase() !== host.toLowerCase()) {
+        res.status(403).json({error: 'Request origin does not match host', code: 'origin_mismatch'});
+        return;
+    }
+    next();
+}

@@ -14,7 +14,12 @@ import { getRoot } from "../ioc.ts";
 import { parseBool } from "../utils.ts";
 import { getAddress } from "../utils/NetworkUtils.ts";
 import { setupApi } from "./api.ts";
-import { errorHandlerMiddleware, safeModeMiddleware, WebFault } from "./middleware.ts";
+import { errorHandlerMiddleware, safeModeMiddleware, sameOriginMiddleware, WebFault } from "./middleware.ts";
+import { toNodeHandler } from "better-auth/node";
+import { authBasePath, createAuth, type MSAuth } from "../common/auth/auth.ts";
+import { resolveAuthSettings, type AuthSettings } from "../common/auth/authSettings.ts";
+import { getDataDir } from "../common/index.ts";
+import type { DbConcrete } from "../common/database/drizzle/drizzleUtils.ts";
 import type ScrobbleSources from '../sources/ScrobbleSources.ts';
 import type ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
 import { qsOptions } from '../../core/Atomic.ts';
@@ -31,6 +36,14 @@ export interface ServerOptions {
     initialOutput?: LogDataPretty[]
     testMode?: boolean
     webFault?: WebFault
+    /** override resolved auth settings (tests) */
+    authSettings?: Partial<AuthSettings>
+}
+
+export interface ServerLocals {
+    auth: MSAuth
+    authSettings: AuthSettings
+    db: DbConcrete
 }
 
 export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Promise<[Express, ReturnType<typeof createTypedRouter>, Server?]> => {
@@ -68,6 +81,30 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
         // mount API routes under the same prefix the frontend's relative
         // `api/...` fetches resolve against
         app.use(basePath, safeModeMiddleware(webFault));
+
+        if(!root.get('disableWeb')) {
+            const authLogger = childLogger(logger, 'Auth');
+            const db = await root.items.db();
+            const authSettings: AuthSettings = {
+                ...resolveAuthSettings({
+                    config: root.get('authConfig'),
+                    localUrl: local,
+                    hasDefinedBaseUrl: localDefined,
+                    // tests use an ephemeral secret
+                    dataDir: opts.testMode === true ? undefined : getDataDir(),
+                    logger: authLogger
+                }),
+                ...(opts.authSettings ?? {})
+            };
+            const auth = createAuth(db, authSettings, {basePath, logger: authLogger});
+            const locals: ServerLocals = {auth, authSettings, db};
+            Object.assign(app.locals, locals);
+            // must be mounted before the router (and its body parsing) so better-auth gets the raw request
+            // and so /api/auth/callback/* is not caught by the source auth callback route
+            app.all(`${authBasePath(basePath)}/*splat`, sameOriginMiddleware({trustProxy: authSettings.trustProxy}), toNodeHandler(auth));
+            authLogger.verbose(`Auth mode: ${authSettings.mode} | Allowed Hosts: ${authSettings.allowedHosts.join(', ')} | Secure Cookies: ${authSettings.secureCookies ? 'Yes' : 'No'} | Trust Proxy: ${authSettings.trustProxy ? 'Yes' : 'No'}`);
+        }
+
         app.use(basePath, router.getRouter());
         app.use(bodyParser.json());
         app.use(

@@ -8,6 +8,9 @@ import { writeFileSync } from "node:fs";
 import { resolve } from "path";
 import { projectRootDir } from "../common/infrastructure/Atomic.ts";
 import { stripIndents } from "common-tags";
+import { getRoot } from "../ioc.ts";
+import { getMigratedDb } from "../common/database/appMigrator.ts";
+import { MEMORY_DB_NAME } from "../common/database/Database.ts";
 
 const description = stripIndents`
 The Multi-Scrobbler server API is documented in **OpenAPI format** and includes
@@ -32,6 +35,8 @@ The endpoints documented here, other than those in Ingress categories, are **sub
 `
 
 export const getOpenApiDoc = async () => {
+    // server setup (auth) needs a database, an in-memory one is enough to build the spec
+    getRoot({logger: loggerTest, db: async () => (await getMigratedDb(MEMORY_DB_NAME))[0]});
     const internalConfig = { localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test' };
     const clients = new ScrobbleClients(new WildcardEmitter(), new WildcardEmitter(), internalConfig, loggerTest);
     const sources = new ScrobbleSources(new WildcardEmitter(), internalConfig, loggerTest);

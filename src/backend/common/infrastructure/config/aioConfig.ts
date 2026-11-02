@@ -43,6 +43,31 @@ export const metadaConfigSchema = z.object({
 });
 export type MetadataConfig = z.infer<typeof metadaConfigSchema>;
 
+export const authModeSchema = z.enum(['disabled', 'optional']);
+
+export const authConfigSchema = z.object({
+    mode: authModeSchema.optional().meta({
+        description: "How authentication is enforced. 'optional': auth is dormant until an admin password is set. 'disabled': no authentication (use when MS is behind your own auth proxy). Can also be set with ENV AUTH_MODE",
+        default: 'optional',
+        examples: ['optional']
+    }),
+    allowedHosts: z.array(z.string()).optional().meta({
+        description: "Hosts (with optional port, wildcards allowed) the dashboard is accessed from. Restricting this enables additional origin checks. Can also be set with ENV ALLOWED_HOSTS (comma-separated)",
+        default: ['*'],
+        examples: [['ms.myDomain.tld', '192.168.0.101:9078']]
+    }),
+    secureCookies: z.boolean().optional().meta({
+        description: "Set the Secure attribute on auth cookies. Only enable if the dashboard is accessed over https. Defaults to true if baseUrl is https. Can also be set with ENV SECURE_COOKIES",
+    }),
+    trustProxy: z.boolean().optional().meta({
+        description: "Trust X-Forwarded-Host/Proto headers from a reverse proxy. Can also be set with ENV TRUST_PROXY",
+        default: false
+    }),
+});
+
+export type AuthConfig = z.infer<typeof authConfigSchema>;
+export type AuthMode = z.infer<typeof authModeSchema>;
+
 export const aioConfigSchema = z.object({
     sourceDefaults: sourceDefaultsSchema.optional(),
     clientDefaults: clientDefaultsSchema.optional(),
@@ -120,6 +145,8 @@ export const aioConfigSchema = z.object({
     database: z.object({
         retention: retentionConfigDurationValueSchema.optional(),
     }).optional(),
+
+    auth: authConfigSchema.optional().meta({description: 'Configuration for dashboard/API authentication'}),
 });
 
 export type AIOConfig = z.infer<typeof aioConfigSchema>;
