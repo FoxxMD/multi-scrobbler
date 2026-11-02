@@ -15,6 +15,7 @@ import { MSComponentListFetchable } from './components/msComponent/MSComponentLi
 import { Provider } from './components/Provider';
 import { SettingsContainer } from './components/settings/settings';
 import { Toaster } from './components/Toaster';
+import { AuthGate, LoginForm, SetPasswordForm } from './components/auth/Auth';
 
 function NoMatch() {
     const location = useLocation();
@@ -61,7 +62,7 @@ const Layout = () => {
     </Box>
     <Container display="flex">
         <Box hideBelow="md" display="flex" flexDir="column" pr="2" gap="6" flexShrink="1"></Box>
-        <Outlet/>
+        <AuthGate><Outlet/></AuthGate>
     </Container>
     </>);
 }
@@ -78,6 +79,14 @@ const routesNested: RouteObject[] = [
         {
             path: "components/:componentId",
             element: <Container boxSize="full" p="0" maxWidth="8xl"><MSErrorBoundary><ComponentDetailedRoutable/></MSErrorBoundary></Container>
+        },
+        {
+            path: "login",
+            element: <LoginForm/>
+        },
+        {
+            path: "setup",
+            element: <SetPasswordForm/>
         },
         {
             path: "settings",

@@ -13,6 +13,7 @@ import { ExternaLinksMenu } from "./ExternaLinksMenu";
 import { FloatingLogs } from "./LogsNext";
 import { ToggleTip } from "./ToggleTip";
 import { ColorModeButton } from './Color-Mode';
+import { AuthMenu } from './auth/Auth';
 
 export const AppTitle = (props: { fetchable?: boolean } = {}) => {
     const {
@@ -125,6 +126,7 @@ export const AppHeader = (props: PropsWithChildren<{ fetchable?: boolean }>) => 
         <Flex justify="space-between">
             <AppTitle fetchable={props.fetchable} />
             <Flex justify="flex-start" gap="1.5" alignItems="flex-end">
+                {props.fetchable ? <AuthMenu/> : null}
                 <SSEStatus live={props.fetchable}/>
                 <FloatingLogs streamable={props.fetchable}/>
                 <ColorModeButton/>
