@@ -1,8 +1,15 @@
 import { expect } from 'chai';
 import express from 'express';
 import request from 'supertest';
+import type { Logger } from '@foxxmd/logging';
+import { toNodeHandler } from 'better-auth/node';
 import { buildAuthApp, secureApp, signIn } from '../utils/authTestUtils.ts';
 import { CLIENT_IP_HEADER, clientIpMiddleware } from '../../server/middleware.ts';
+import { transientDb } from '../utils/TransientTestUtils.ts';
+import { createAuth } from '../../common/auth/auth.ts';
+import { resolveAuthSettings } from '../../common/auth/authSettings.ts';
+import { ensureOwner } from '../../common/auth/owner.ts';
+import { setUserPassword } from '../../common/auth/ownerPassword.ts';
 import type ScrobbleSources from '../../sources/ScrobbleSources.ts';
 
 /** run with env vars set, restoring them afterwards */
@@ -85,6 +92,33 @@ describe('Hardening', function () {
                 .set('Origin', 'http://localhost:9078')
                 .set('Cookie', cookie);
             expect(res.status).eq(404);
+        });
+    });
+
+    describe('Login audit log', function () {
+
+        it('logs failed and successful logins with the client IP', async function () {
+            const logs: [string, string][] = [];
+            const capture = (level: string) => (msg: string) => { logs.push([level, msg]); };
+            const logger = {info: capture('info'), warn: capture('warn'), error: capture('error'), debug: capture('debug'), verbose: capture('verbose')} as unknown as Logger;
+
+            const db = await transientDb();
+            const settings = resolveAuthSettings({localUrl: new URL('http://localhost:9078'), hasDefinedBaseUrl: false, env: {}});
+            const auth = createAuth(db, settings, {basePath: '/', logger});
+            const owner = await ensureOwner(db);
+            await setUserPassword(auth, owner.id, 'ownerPassword');
+            const app = express();
+            app.all('/api/auth/*splat', clientIpMiddleware(), toNodeHandler(auth));
+
+            await request(app).post('/api/auth/sign-in/username').set('X-Forwarded-For', '6.6.6.6').send({username: 'admin\nLogin succeeded for user "admin" from 1.1.1.1', password: 'wrong'});
+            await request(app).post('/api/auth/sign-in/username').send({username: 'admin', password: 'ownerPassword'});
+
+            const failed = logs.find(([, m]) => m.startsWith('Login failed'));
+            expect(failed?.[0]).eq('warn');
+            // client IP from the connection, not the forged header, and the username can't inject a second log line
+            expect(failed?.[1]).match(/^Login failed for user "admin\\nLogin succeeded.*" from 127\.0\.0\.1: /);
+            expect(failed?.[1]).not.include('\n');
+            expect(logs).to.deep.include(['info', 'Login succeeded for user "admin" from 127.0.0.1']);
         });
     });
 

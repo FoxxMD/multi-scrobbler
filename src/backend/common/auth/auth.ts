@@ -1,6 +1,7 @@
 import * as path from "node:path";
 import { betterAuth } from "better-auth";
 import { username } from "better-auth/plugins";
+import { createAuthMiddleware, isAPIError } from "better-auth/api";
 import { CLIENT_IP_HEADER } from "../../server/middleware.ts";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
 import type { Logger } from "@foxxmd/logging";
@@ -25,6 +26,36 @@ export const authBasePath = (basePath: string) => path.posix.join(basePath, '/ap
  * Extending auth (OIDC, API keys, bearer, JWT...) should happen by adding better-auth plugins here.
  * Anything that resolves through auth.api.getSession is picked up by the route guard automatically.
  * */
+/** keep user-supplied values on one line so they can't forge log entries */
+const logSafe = (val: unknown) => JSON.stringify(typeof val === 'string' ? val : String(val ?? ''));
+
+/**
+ * Log logins, failed logins and first password setup with the client IP, in a stable format fail2ban/CrowdSec can match on:
+ *
+ * * `Login failed for user "<username>" from <ip>: <reason>`
+ * * `Login succeeded for user "<username>" from <ip>`
+ * * `Admin password setup failed from <ip>: <reason>` (wrong setup token...)
+ * * `Admin password set from the dashboard by <ip>`
+ * */
+export const loginAuditHook = (logger: Logger) => createAuthMiddleware(async (ctx) => {
+    const ip = ctx.headers?.get(CLIENT_IP_HEADER) ?? 'unknown';
+    const failed = isAPIError(ctx.context.returned);
+    if (ctx.path.startsWith('/sign-in/')) {
+        const user = logSafe((ctx.body as {username?: string, email?: string} | undefined)?.username ?? (ctx.body as {email?: string} | undefined)?.email);
+        if (failed) {
+            logger.warn(`Login failed for user ${user} from ${ip}: ${(ctx.context.returned as Error).message}`);
+        } else {
+            logger.info(`Login succeeded for user ${user} from ${ip}`);
+        }
+    } else if (ctx.path === '/setup/password') {
+        if (failed) {
+            logger.warn(`Admin password setup failed from ${ip}: ${(ctx.context.returned as Error).message}`);
+        } else {
+            logger.info(`Admin password set from the dashboard by ${ip}`);
+        }
+    }
+});
+
 export const createAuth = (db: DbConcrete, settings: AuthSettings, opts: CreateAuthOptions) => {
     const { logger } = opts;
     return betterAuth({
@@ -58,6 +89,9 @@ export const createAuth = (db: DbConcrete, settings: AuthSettings, opts: CreateA
             // users.role and the ban/impersonation columns are kept so adding it back needs no migration
             setupPlugin({db, settings, onStateChange: opts.onStateChange ?? (async () => undefined)}),
         ],
+        hooks: {
+            after: loginAuditHook(logger),
+        },
         telemetry: {
             enabled: false
         },
