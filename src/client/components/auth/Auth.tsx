@@ -1,9 +1,9 @@
 import { useState, type FormEvent, type PropsWithChildren } from "react";
 import { Alert, Box, Button, Card, Field, Input, Link, Spinner, Stack, Text } from "@chakra-ui/react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import ky from "ky";
 import { Link as RouterLink, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { authClient, errorMessage, useRefreshAuth, useSetupStatus } from "../../auth/authClient";
+import { authClient, errorMessage, useHasAccess, useRefreshAuth, useSetupStatus } from "../../auth/authClient";
 
 const AuthCard = (props: PropsWithChildren<{title: string, description?: string}>) => (
     <Box display="flex" justifyContent="center" width="full" py="8">
@@ -36,6 +36,8 @@ export const LoginForm = () => {
     const {data: status} = useSetupStatus();
     const refresh = useRefreshAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+    const {hasSession} = useHasAccess();
     const [username, setUsername] = useState<string | undefined>(undefined);
     const [password, setPassword] = useState('');
 
@@ -48,12 +50,17 @@ export const LoginForm = () => {
         },
         onSuccess: async () => {
             await refresh();
-            navigate('/');
+            if (location.pathname === '/login') {
+                navigate('/');
+            }
         }
     });
 
     if (status !== undefined && !status.secured) {
         return <Navigate to="/setup"/>;
+    }
+    if (hasSession && location.pathname === '/login') {
+        return <Navigate to="/"/>;
     }
 
     return (
@@ -103,7 +110,7 @@ export const SetPasswordForm = () => {
     return (
         <AuthCard
             title="Secure this instance"
-            description={'Set a password for the admin account. Afterwards, changing anything from the dashboard or API requires logging in. Scrobbling, ingress Sources (Listenbrainz/Last.fm endpoints, Webscrobbler) and health checks are not affected.'}>
+            description={'Set a password for the admin account. Afterwards, using the dashboard or API requires logging in. Scrobbling, ingress Sources (Listenbrainz/Last.fm endpoints, Webscrobbler) and health checks are not affected.'}>
             <form onSubmit={(e: FormEvent) => { e.preventDefault(); if (!mismatch) { mutate(); } }}>
                 <Stack gap="4">
                     <Field.Root>
@@ -136,7 +143,7 @@ export const NotSecuredBanner = () => (
         <Alert.Content>
             <Alert.Title>This instance is not secured</Alert.Title>
             <Alert.Description>
-                Anyone who can reach this dashboard can change things. <Link asChild variant="underline"><RouterLink to="/setup">Set an admin password</RouterLink></Link> or use ADMIN_SETUP_PW.
+                Anyone who can reach this dashboard can view and change everything. <Link asChild variant="underline"><RouterLink to="/setup">Set an admin password</RouterLink></Link> or use ADMIN_SETUP_PW.
             </Alert.Description>
         </Alert.Content>
     </Alert.Root>
@@ -146,21 +153,26 @@ export const NotSecuredBanner = () => (
  * Decides what the dashboard shows based on auth state:
  *
  * * not secured -> normal dashboard with a warning banner
- * * otherwise the normal dashboard. Read-only views are public for now, logging in is needed to change things.
+ * * secured without a session -> login form (in place, so the current route is kept after logging in)
+ * * otherwise the normal dashboard
  * */
 export const AuthGate = (props: PropsWithChildren) => {
-    const {data: status, isLoading} = useSetupStatus();
+    const {data: status} = useSetupStatus();
+    const {ready, hasSession} = useHasAccess();
     const location = useLocation();
 
-    if (isLoading) {
+    if (!ready) {
         return <Box width="full" display="flex" justifyContent="center" py="8"><Spinner/></Box>;
     }
     // if status cannot be fetched let the dashboard render, its own requests will surface any errors
     if (status === undefined || status.mode === 'disabled') {
         return <>{props.children}</>;
     }
-    if (!status.secured && location.pathname !== '/setup') {
-        return <Box width="full"><NotSecuredBanner/>{props.children}</Box>;
+    if (!status.secured) {
+        return location.pathname === '/setup' ? <>{props.children}</> : <Box width="full"><NotSecuredBanner/>{props.children}</Box>;
+    }
+    if (!hasSession && location.pathname !== '/login') {
+        return <LoginForm/>;
     }
     return <>{props.children}</>;
 }
@@ -171,6 +183,7 @@ export const AuthMenu = () => {
     const {data: session} = authClient.useSession();
     const refresh = useRefreshAuth();
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
 
     if (status === undefined || status.mode === 'disabled' || !status.secured) {
         return null;
@@ -183,6 +196,8 @@ export const AuthMenu = () => {
             <Text hideBelow="md" fontSize="sm">{(session.user as {username?: string}).username ?? session.user.name}</Text>
             <Button size="xs" variant="ghost" onClick={async () => {
                 await authClient.signOut();
+                // dashboard data must not be shown (from cache) after logging out
+                queryClient.removeQueries({predicate: (q) => q.queryKey[0] !== 'auth'});
                 await refresh();
                 navigate('/');
             }}>Log out</Button>

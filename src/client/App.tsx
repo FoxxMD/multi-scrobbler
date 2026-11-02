@@ -16,6 +16,8 @@ import { Provider } from './components/Provider';
 import { SettingsContainer } from './components/settings/settings';
 import { Toaster } from './components/Toaster';
 import { AuthGate, LoginForm, SetPasswordForm } from './components/auth/Auth';
+import { useHasAccess } from './auth/authClient';
+import type { PropsWithChildren } from 'react';
 
 function NoMatch() {
     const location = useLocation();
@@ -119,14 +121,20 @@ export const sseProviderOptions = {
     coordination: {enabled: true}
 }
 
+/** live events stream is gated like the rest of the API, only connect once the user has access */
+const AuthAwareSSEProvider = (props: PropsWithChildren) => {
+    const {ready, hasAccess} = useHasAccess();
+    return <SSEProvider<MsSseEvent> options={{...sseProviderOptions, enabled: ready && hasAccess}}>{props.children}</SSEProvider>;
+}
+
 function App() {
   return (
       <Provider>
             <Toaster/>
         {/* <Box px="4" py="2" pb="4"><AppHeader fetchable/></Box> */}
-            <SSEProvider<MsSseEvent> options={sseProviderOptions}>
+            <AuthAwareSSEProvider>
             <RouterProvider router={router}/>
-            </SSEProvider>
+            </AuthAwareSSEProvider>
       </Provider>
   );
 }

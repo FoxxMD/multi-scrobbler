@@ -56,3 +56,19 @@ export const errorMessage = (e: unknown): string => {
     }
     return String(e);
 }
+
+/**
+ * Whether the current user can use the dashboard API (everything other than ingress/auth/health is gated once secured).
+ *
+ * `ready` is false until both setup status and session are known, so callers can avoid a flash of the login screen.
+ * If setup status cannot be fetched access is assumed so the dashboard's own requests surface the error.
+ * */
+export const useHasAccess = (): {ready: boolean, hasAccess: boolean, hasSession: boolean} => {
+    const {data: status, isLoading} = useSetupStatus();
+    const {data: session, isPending} = authClient.useSession();
+    const hasSession = session !== null && session !== undefined;
+    const open = status === undefined || status.mode === 'disabled' || !status.secured;
+    // session only matters when the instance is secured
+    const ready = !isLoading && (open || !isPending);
+    return {ready, hasAccess: open || hasSession, hasSession};
+}

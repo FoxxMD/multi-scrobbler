@@ -33,11 +33,10 @@ declare global {
 }
 
 /**
- * * public -- never requires auth (ingress, third-party auth callbacks, health/metrics, auth endpoints)
- * * optionalAuth -- read-only, public for now. Actor is still resolved so handlers can trim responses for anonymous callers in the future
+ * * public -- never requires auth (ingress, third-party auth callbacks, health/version/metrics, auth endpoints)
  * * user -- requires an actor once the instance is secured
  * */
-export type RoutePolicy = 'public' | 'optionalAuth' | 'user';
+export type RoutePolicy = 'public' | 'user';
 
 /**
  * Paths (relative to the base path) that are always public.
@@ -60,17 +59,7 @@ export const PUBLIC_ROUTES: RegExp[] = [
     /^\/api\/metrics$/,
 ];
 
-const READ_METHODS = ['GET', 'HEAD', 'OPTIONS'];
-
-export const getRoutePolicy = (path: string, method: string): RoutePolicy => {
-    if (!path.startsWith('/api/') || PUBLIC_ROUTES.some(x => x.test(path))) {
-        return 'public';
-    }
-    if (READ_METHODS.includes(method.toUpperCase())) {
-        return 'optionalAuth';
-    }
-    return 'user';
-}
+export const getRoutePolicy = (path: string): RoutePolicy => !path.startsWith('/api/') || PUBLIC_ROUTES.some(x => x.test(path)) ? 'public' : 'user';
 
 const hasCredentials = (req: Request) => req.headers.cookie !== undefined || req.headers.authorization !== undefined;
 
@@ -92,7 +81,7 @@ export const authGuardMiddleware = (opts: AuthGuardOptions): RequestHandler => {
     const sameOrigin = sameOriginMiddleware({trustProxy: settings.trustProxy});
 
     return async (req, res, next) => {
-        const policy = getRoutePolicy(req.path, req.method);
+        const policy = getRoutePolicy(req.path);
         if (policy === 'public') {
             next();
             return;
@@ -116,13 +105,13 @@ export const authGuardMiddleware = (opts: AuthGuardOptions): RequestHandler => {
             logger.warn(new Error('Failed to resolve request session', {cause: e}));
         }
 
-        if (policy === 'user' && req.auth === undefined) {
+        if (req.auth === undefined) {
             res.status(401).json({error: 'Authentication required', code: 'auth_required'});
             return;
         }
 
-        if (policy === 'user' && req.auth?.via === 'session') {
-            // ambient cookie auth needs CSRF protection
+        if (req.auth.via === 'session') {
+            // ambient cookie auth needs CSRF protection (safe methods are passed through)
             sameOrigin(req, res, next);
             return;
         }

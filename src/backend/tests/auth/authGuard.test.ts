@@ -16,28 +16,30 @@ const MUTATE = '/api/components/999/plays/queue';
 describe('Route Policy', function () {
 
     it('classifies routes', function () {
-        expect(getRoutePolicy('/', 'GET')).eq('public');
-        expect(getRoutePolicy('/components/3', 'GET')).eq('public');
-        expect(getRoutePolicy('/1/submit-listens', 'POST')).eq('public');
-        expect(getRoutePolicy('/2.0/', 'POST')).eq('public');
-        expect(getRoutePolicy('/api/listenbrainz/mySlug', 'POST')).eq('public');
-        expect(getRoutePolicy('/api/lastfm', 'POST')).eq('public');
-        expect(getRoutePolicy('/api/webscrobbler', 'POST')).eq('public');
-        expect(getRoutePolicy('/api/spotify/callback', 'GET')).eq('public');
-        expect(getRoutePolicy('/api/deezer/callback', 'GET')).eq('public');
-        expect(getRoutePolicy('/api/health', 'GET')).eq('public');
-        expect(getRoutePolicy('/api/metrics', 'GET')).eq('public');
-        expect(getRoutePolicy('/api/version', 'GET')).eq('public');
-        expect(getRoutePolicy('/api/auth/sign-in/username', 'POST')).eq('public');
+        expect(getRoutePolicy('/')).eq('public');
+        expect(getRoutePolicy('/components/3')).eq('public');
+        expect(getRoutePolicy('/1/submit-listens')).eq('public');
+        expect(getRoutePolicy('/2.0/')).eq('public');
+        expect(getRoutePolicy('/api/listenbrainz/mySlug')).eq('public');
+        expect(getRoutePolicy('/api/lastfm')).eq('public');
+        expect(getRoutePolicy('/api/webscrobbler')).eq('public');
+        expect(getRoutePolicy('/api/spotify/callback')).eq('public');
+        expect(getRoutePolicy('/api/deezer/callback')).eq('public');
+        expect(getRoutePolicy('/api/health')).eq('public');
+        expect(getRoutePolicy('/api/metrics')).eq('public');
+        expect(getRoutePolicy('/api/version')).eq('public');
+        expect(getRoutePolicy('/api/auth/sign-in/username')).eq('public');
 
-        expect(getRoutePolicy('/api/components', 'GET')).eq('optionalAuth');
-        expect(getRoutePolicy('/api/events', 'GET')).eq('optionalAuth');
+        expect(getRoutePolicy('/api/components')).eq('user');
+        expect(getRoutePolicy('/api/events')).eq('user');
+        expect(getRoutePolicy('/api/logs')).eq('user');
+        expect(getRoutePolicy('/api/docs')).eq('user');
 
-        expect(getRoutePolicy('/api/components/1/state', 'POST')).eq('user');
-        expect(getRoutePolicy('/api/logs', 'PUT')).eq('user');
-        expect(getRoutePolicy('/api/cache/metadata', 'DELETE')).eq('user');
+        expect(getRoutePolicy('/api/components/1/state')).eq('user');
+        expect(getRoutePolicy('/api/logs')).eq('user');
+        expect(getRoutePolicy('/api/cache/metadata')).eq('user');
         // not fooled by a public prefix lookalike
-        expect(getRoutePolicy('/api/healthcheck', 'POST')).eq('user');
+        expect(getRoutePolicy('/api/healthcheck')).eq('user');
     });
 });
 
@@ -66,9 +68,21 @@ describe('Auth Guard', function () {
         expect((await request(app).post(MUTATE).set('Cookie', cookie).send({})).status).not.eq(401);
     });
 
-    it('secured instance keeps read-only routes public for now', async function () {
+    it('secured instance requires a session for reads', async function () {
         const app = await buildAuthApp();
         await secureApp(app);
+        const res = await request(app).get('/api/components');
+        expect(res.status).eq(401);
+        expect(res.body.code).eq('auth_required');
+        // SSE stream is rejected before it opens
+        expect((await request(app).get('/api/events')).status).eq(401);
+
+        const cookie = await signIn(app);
+        expect((await request(app).get('/api/components').set('Cookie', cookie)).status).eq(200);
+    });
+
+    it('unsecured instance keeps reads open', async function () {
+        const app = await buildAuthApp();
         expect((await request(app).get('/api/components')).status).eq(200);
     });
 
@@ -122,8 +136,6 @@ describe('Auth Guard', function () {
 
     it('every documented route matches its expected policy on a secured instance', async function () {
         this.timeout(10000);
-        // long-lived streams (SSE) never complete a response, their policy is covered by Route Policy tests
-        const streaming = ['/api/events'];
         const [app, router] = await buildAuthAppRouter();
         await secureApp(app);
         const spec = await generateOpenApiSpec(router, {title: 'test', version: '0'});
@@ -134,10 +146,7 @@ describe('Auth Guard', function () {
             }
             const path = rawPath.replace(/\{[^}]+\}/g, '1');
             for (const method of Object.keys(item as object)) {
-                if (method === 'get' && streaming.includes(path)) {
-                    continue;
-                }
-                const policy = getRoutePolicy(path, method);
+                const policy = getRoutePolicy(path);
                 // regex routes (source auth callbacks) are not real paths in the spec, covered by Route Policy tests
                 if (!path.startsWith("/")) {
                     continue;
