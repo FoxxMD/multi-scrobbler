@@ -1,0 +1,89 @@
+import { sql } from "drizzle-orm";
+import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
+
+/*
+ * Tables used by better-auth (https://better-auth.com)
+ *
+ * Shape follows `npx auth generate` output for the core schema + username and admin plugins
+ * (better-auth 1.7.x) but with column names left to drizzle's default (property name) to match the rest of the MS schema.
+ *
+ * better-auth reads/writes these through the drizzle adapter by *property name* so column names are free to differ.
+ * If plugins are added/removed regenerate the schema and diff against this file.
+ * */
+
+const nowMs = sql`(cast(unixepoch('subsecond') * 1000 as integer))`;
+
+export const users = sqliteTable("users", {
+    id: text().primaryKey(),
+    name: text().notNull(),
+    email: text().notNull().unique(),
+    emailVerified: integer({ mode: 'boolean' }).default(false).notNull(),
+    image: text(),
+    createdAt: integer({ mode: 'timestamp_ms' }).default(nowMs).notNull(),
+    updatedAt: integer({ mode: 'timestamp_ms' }).default(nowMs).$onUpdate(() => new Date()).notNull(),
+    // username plugin
+    username: text().unique(),
+    displayUsername: text(),
+    // admin plugin
+    role: text(),
+    banned: integer({ mode: 'boolean' }).default(false),
+    banReason: text(),
+    banExpires: integer({ mode: 'timestamp_ms' }),
+});
+
+export const sessions = sqliteTable("sessions", {
+    id: text().primaryKey(),
+    expiresAt: integer({ mode: 'timestamp_ms' }).notNull(),
+    token: text().notNull().unique(),
+    createdAt: integer({ mode: 'timestamp_ms' }).default(nowMs).notNull(),
+    updatedAt: integer({ mode: 'timestamp_ms' }).$onUpdate(() => new Date()).notNull(),
+    ipAddress: text(),
+    userAgent: text(),
+    userId: text().notNull().references(() => users.id, { onDelete: 'cascade' }),
+    // admin plugin
+    impersonatedBy: text(),
+}, (table) => [
+    index("sessions_userId_idx").on(table.userId),
+]);
+
+export const accounts = sqliteTable("accounts", {
+    id: text().primaryKey(),
+    accountId: text().notNull(),
+    providerId: text().notNull(),
+    userId: text().notNull().references(() => users.id, { onDelete: 'cascade' }),
+    accessToken: text(),
+    refreshToken: text(),
+    idToken: text(),
+    accessTokenExpiresAt: integer({ mode: 'timestamp_ms' }),
+    refreshTokenExpiresAt: integer({ mode: 'timestamp_ms' }),
+    scope: text(),
+    password: text(),
+    createdAt: integer({ mode: 'timestamp_ms' }).default(nowMs).notNull(),
+    updatedAt: integer({ mode: 'timestamp_ms' }).$onUpdate(() => new Date()).notNull(),
+}, (table) => [
+    index("accounts_userId_idx").on(table.userId),
+]);
+
+export const verifications = sqliteTable("verifications", {
+    id: text().primaryKey(),
+    identifier: text().notNull(),
+    value: text().notNull(),
+    expiresAt: integer({ mode: 'timestamp_ms' }).notNull(),
+    createdAt: integer({ mode: 'timestamp_ms' }).default(nowMs).notNull(),
+    updatedAt: integer({ mode: 'timestamp_ms' }).default(nowMs).$onUpdate(() => new Date()).notNull(),
+}, (table) => [
+    index("verifications_identifier_idx").on(table.identifier),
+]);
+
+/**
+ * Small key/value store for app-level state that must survive restarts
+ * (applied password-reset fingerprint, etc.)
+ * */
+export const appSettings = sqliteTable("app_settings", {
+    key: text().primaryKey(),
+    value: text({ mode: 'json' }),
+    updatedAt: integer({ mode: 'timestamp_ms' }).default(nowMs).$onUpdate(() => new Date()).notNull(),
+});
+
+/** Tables better-auth needs passed to its drizzle adapter, keyed by plural model name */
+export const authSchema = { users, sessions, accounts, verifications };

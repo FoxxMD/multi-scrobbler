@@ -7,6 +7,8 @@ import type {ExternalMetadataTerm, PlayTransformPartsConfig, SearchAndReplaceTer
 import type {JobRangeCount, JobRangeTime} from "../../../infrastructure/Job.ts";
 import { serializeError, deserializeError } from "serialize-error";
 import { generatePlayUid } from "../../../../../core/StringUtils.ts";
+import { users, sessions, accounts, verifications, appSettings } from "./auth.ts";
+
 
 const DayjsTimestamp = customType<
   {
@@ -224,7 +226,7 @@ export const playEvents = sqliteTable("play_events", {
   index('play_event_id_idx').on(table.playId)
 ]);
 
-const playRelations = defineRelations({ plays, queueStates, playEvents, playInputs, components, jobs, componentMigrations,playsHistorical }, (r) => ({
+const playRelations = defineRelations({ plays, queueStates, playEvents, playInputs, components, jobs, componentMigrations, playsHistorical, users, sessions, accounts, verifications, appSettings }, (r) => ({
   plays: {
     queueStates: r.many.queueStates(),
     input: r.one.playInputs({
@@ -286,6 +288,28 @@ const playRelations = defineRelations({ plays, queueStates, playEvents, playInpu
       to: r.plays.id
     }),
   },
+  users: {
+    sessions: r.many.sessions({
+      from: r.users.id,
+      to: r.sessions.userId,
+    }),
+    accounts: r.many.accounts({
+      from: r.users.id,
+      to: r.accounts.userId,
+    }),
+  },
+  sessions: {
+    user: r.one.users({
+      from: r.sessions.userId,
+      to: r.users.id,
+    })
+  },
+  accounts: {
+    user: r.one.users({
+      from: r.accounts.userId,
+      to: r.users.id,
+    })
+  },
 }));
 
 export const relations = playRelations;
@@ -315,4 +339,5 @@ export const schema = {playInputs, plays, playEvents, components, componentMigra
 
 export type TSchema = typeof relations;
 export type Schema = typeof schema;
-export type TableName = keyof TSchema;
+/** App (non-auth) tables managed through MS repositories */
+export type TableName = Exclude<keyof TSchema, 'users' | 'sessions' | 'accounts' | 'verifications' | 'appSettings'>;
