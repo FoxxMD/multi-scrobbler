@@ -39,6 +39,7 @@ export const setupWebscrobblerRoutes = (app: Express, router: ReturnType<typeof 
 
     router.post('/api/webscrobbler{*splat}',
         {
+            docs: {operationId: 'accepts-a-webscrobbler-native-scrobble'},
             middleware: [rawIngress,cors(corsOpts) as TypedMiddleware,webScrobblerJsonParser,nonEmptyBody(logger, 'WebScrobbler Extension')],
             bodySchema: webScrobblePayloadSchema,
             tags: ['WebScrobbler Ingress'],

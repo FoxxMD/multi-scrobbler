@@ -21,13 +21,13 @@ import { resolveAuthSettings, type AuthSettings } from "../common/auth/authSetti
 import { getDataDir } from "../common/index.ts";
 import { applyOwnerPasswordEnv } from "../common/auth/ownerPassword.ts";
 import { AuthStateStore } from "../common/auth/authState.ts";
-import { authGuardMiddleware } from "./authGuard.ts";
+import { requireAuth, SECURITY_PUBLIC, SECURITY_REQUIRED } from "./requireAuth.ts";
 import type { DbConcrete } from "../common/database/drizzle/drizzleUtils.ts";
 import type ScrobbleSources from '../sources/ScrobbleSources.ts';
 import type ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
 import { qsOptions } from '../../core/Atomic.ts';
 import { projectRootDir } from "../common/infrastructure/Atomic.ts";
-import { createTypedRouter } from "@minisylar/express-typed-router";
+import { createTypedRouter, type ValidationFailureHook } from "@minisylar/express-typed-router";
 
 export interface ServerArgs {
     sources: ScrobbleSources
@@ -68,10 +68,19 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
     const webFault = opts.webFault ?? new WebFault(logger);
 
 
-    const router = createTypedRouter().onValidationFailure((info) => {
+    const onValidationFailure: ValidationFailureHook = (info) => {
         const {req, ...rest} = info;
         logger.warn(rest, 'Request failed validation');
-    });
+    };
+    // Routes that never require auth: ingress Sources (own auth), health/version/metrics.
+    // Mounted first so they are matched before anything that requires auth.
+    const publicRouter = createTypedRouter().onValidationFailure(onValidationFailure).security(SECURITY_PUBLIC);
+    // Everything else under /api. Requires auth via router-level middleware (added below once auth is set up)
+    // so any new route is protected by default. Mounted at /api so that middleware never runs for the dashboard/static assets.
+    const apiRouter = createTypedRouter().onValidationFailure(onValidationFailure).security(SECURITY_REQUIRED);
+    const router = createTypedRouter().onValidationFailure(onValidationFailure);
+    router.use(publicRouter);
+    router.use('/api', apiRouter);
 
     try {
         const root = getRoot();
@@ -109,7 +118,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
             // must be mounted before the router (and its body parsing) so better-auth gets the raw request
             // and so /api/auth/callback/* is not caught by the source auth callback route
             app.all(`${authBasePath(basePath)}/*splat`, sameOriginMiddleware({trustProxy: authSettings.trustProxy}), toNodeHandler(auth));
-            app.use(basePath, authGuardMiddleware({auth, settings: authSettings, state: authState, logger: authLogger}));
+            apiRouter.useMiddleware(requireAuth({auth, settings: authSettings, state: authState, logger: authLogger, basePath}));
             if(authSettings.mode !== 'disabled' && !authState.secured) {
                 authLogger.warn('Dashboard and API are not secured! Set an admin password from the dashboard or with ADMIN_SETUP_PW.');
                 if(authSettings.setupTokenGenerated) {
@@ -129,7 +138,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
 
         //app.use(express.static(buildDir));
 
-        router.use(session({secret: 'keyboard cat', resave: false, saveUninitialized: false}));
+        apiRouter.use(session({secret: 'keyboard cat', resave: false, saveUninitialized: false}));
         app.use(session({secret: 'keyboard cat', resave: false, saveUninitialized: false}));
         app.use(passport.initialize());
         app.use(passport.session());
@@ -140,7 +149,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
             return [app, router];
         }
 
-        setupApi({app, router, scrobbleSources: sources, scrobbleClients: clients}, {...opts, logger, webFault});
+        setupApi({app, router: apiRouter, publicRouter, scrobbleSources: sources, scrobbleClients: clients}, {...opts, logger, webFault});
         app.use(errorHandlerMiddleware(logger));
 
         if(opts.testMode === true) {

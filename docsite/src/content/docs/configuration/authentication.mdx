@@ -1,0 +1,144 @@
+---
+title: Authentication
+description: Securing the dashboard and API with an admin account
+sidebar:
+  order: 6
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 4
+---
+
+Multi-scrobbler has built-in authentication for the dashboard and most API endpoints.
+
+## What Is Protected?
+
+**Once your instance is [secured](#securing-your-instance)** the dashboard and all API endpoints, except those listed below, require authenticated access.
+
+### Open Endpoints
+
+These endpoints are always unsecure or use their own authentication via config.
+
+<DetailsAdmo type="info" summary="Sources With Ingress Endpoints">
+
+Sources that use [**Ingress**](/configuration/sources/#by-communication-method) endpoints for capturing listening activity are always unauthenticated or use their own auth/token via config.
+
+
+[**Listenbrainz Endpoint** Source](/configuration/sources/listenbrainz-endpoint)
+
+* `/1/*` - standard route
+* `/api/listenbrainz*` - custom Listenbrainz Endpoint with slug
+
+[**Last.fm Endpoint** Source](/configuration/sources/lastfm-endpoint)
+
+* `/2.0/` - standard route
+* `/api/lastfm*` - custom Last.fm Endpoint with slug
+
+[**Webscrobbler** Source](/configuration/sources/webscrobbler)
+
+* `/api/webscrobbler*` - standard/custom route
+
+</DetailsAdmo>
+
+<DetailsAdmo type="info" summary="Multi-Scrobbler Basic Info and Metrics">
+
+These routes provide either basic health/info which are safe to expose, or are metrics for prometheus which generally are not protected for consumption.
+
+* `/api/health`
+* `/api/version`
+* `/api/metrics`
+
+TODO: Prometheus metrics and this endpoint can be turned off with `PROMETHEUS=false`
+
+</DetailsAdmo>
+
+## Securing Your Instance
+
+On first startup Multi-scrobbler creates a single **admin** account automatically (username `admin`). It has no password until you set one. Until then, every request is treated as the admin and the dashboard/API are accessible to anyone.
+
+<Aside type="tip">
+
+While a password is **not** set the dashboard will show a warning banner prompting you to set one.
+
+</Aside>
+
+Set the admin password in either of these ways:
+
+* **Dashboard:** click **Set an admin password** in the warning banner (or open `/setup`). You are logged in once it is set.
+* **ENV:** set `ADMIN_SETUP_PW` before starting multi-scrobbler. It is only used while the admin has no password, and is ignored afterwards. Leaving it set is harmless.
+  * You can also use the ENV `ADMIN_USERNAME` to set the initial admin username non-interactively.
+
+<Aside type="important">
+
+**With default settings, until a password is set _anyone_ who can reach the dashboard can set it.** If your instance may be reachable by others, use `ADMIN_SETUP_PW`, a [claim token](#claim-token), or [claim mode](#modes).
+
+</Aside>
+
+### Changing or Resetting the Password
+
+Change the password from **Settings -> Account** while logged in. All other sessions are logged out.
+
+If you have forgotten it, set `ADMIN_RESET_PW` and restart. The password is reset, and all admin sessions are logged out. The same value is only applied once, so the reset does not happen again on every restart, but **remove `ADMIN_RESET_PW` after you have logged in.**
+
+### Sessions
+
+A login lasts **7 days** since the dashboard was last used. Each visit extends it, so you stay logged in as long as you use the dashboard at least once in that period.
+
+Change the lifetime with `AUTH_SESSION_EXPIRES` (or `auth.sessionExpires`), using the same duration formats as [retention](/configuration#retention): a number of seconds (`86400`), a duration string (`12 hours`, `30 days`), or an ISO 8601 duration (`P30D`). The minimum is 60 seconds.
+
+## Auth Modes
+
+Set the mode with `AUTH_MODE` (or `auth.mode` in [`config.json`](/configuration/?configType=aio#configuration-types)).
+
+| Mode                 | Behavior                                                                                                                                                             |
+| :------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `optional` (default) | Authentication is dormant until an admin password is set, from the dashboard or `ADMIN_SETUP_PW`.                                                                    |
+| `disabled`           | No authentication. Use this if multi-scrobbler is already behind your own [authenticating reverse proxy](/configuration/security#reverse-proxy-with-authentication). |
+
+### Setup Token
+
+Set `AUTH_SETUP_TOKEN` to require a token when setting the first password from the dashboard.
+
+* `AUTH_SETUP_TOKEN=true` generates a random token on each startup and prints it in the logs.
+* Any other value is used as the token.
+
+## Hosts, Cookies and Reverse Proxies
+
+By default multi-scrobbler accepts requests for **any** host (IP, hostname, etc.), so no configuration is needed. Logins are protected against cross-site requests regardless.
+
+* **`ALLOWED_HOSTS`** (or `auth.allowedHosts`): comma-separated hosts (with port, wildcards allowed, like `ms.mydomain.tld,192.168.0.101:9078`) the dashboard is accessed from. Restricting this adds another layer of origin checks. If you set [`BASE_URL`](/configuration#base-url) multi-scrobbler logs a hint with the host to use.
+* **`SECURE_COOKIES`** (or `auth.secureCookies`): marks the login cookie as https-only. It defaults to `true` only when `BASE_URL` is `https://...`. If you access the dashboard over **plain http**, this must be `false` or logging in will silently fail.
+* **`TRUST_PROXY`** (or `auth.trustProxy`): trust `X-Forwarded-Host`/`X-Forwarded-Proto` from your reverse proxy. Only needed if your proxy does not pass the original `Host` header.
+
+## Configuration
+
+<Tabs groupId="configType">
+<TabItem value="env" label="ENV">
+| Environmental Variable | Default                       | Description                                                                                                 |
+| :--------------------- | :---------------------------- | :---------------------------------------------------------------------------------------------------------- |
+| `AUTH_MODE`            | `optional`                    | `optional`, `claim` or `disabled`. See [Modes](#modes)                                                      |
+| `ADMIN_USERNAME`       | `admin`                       | Username of the admin account. 3-30 letters, numbers, underscores or dots                                   |
+| `ADMIN_SETUP_PW`       |                               | Initial admin password. Only used if the admin has no password                                              |
+| `ADMIN_RESET_PW`       |                               | Reset the admin password and log out all sessions. Remove after use                                         |
+| `AUTH_SETUP_TOKEN`     |                               | `true` to generate a token (printed in logs), or the token itself                                           |
+| `ALLOWED_HOSTS`        | `*`                           | Comma-separated hosts the dashboard is accessed from                                                        |
+| `SECURE_COOKIES`       | `true` if `BASE_URL` is https | Only set https-only cookies                                                                                 |
+| `TRUST_PROXY`          | `false`                       | Trust `X-Forwarded-*` headers                                                                               |
+| `AUTH_SESSION_EXPIRES` | `7 days`                      | How long a login lasts since the dashboard was last used. See [Sessions](#sessions)                         |
+| `BETTER_AUTH_SECRET`   | generated                     | Secret used to sign sessions. If not set, one is generated and saved as `auth.secret` in the data directory |
+</TabItem>
+<TabItem value="aio" label="AIO">
+```json title="config.json"
+{
+  "auth": {
+    "mode": "optional",
+    "allowedHosts": ["ms.mydomain.tld"],
+    "secureCookies": true,
+    "trustProxy": false,
+    "sessionExpires": "30 days"
+  }
+}
+```
+
+ENV variables take precedence over `config.json`. Passwords can only be set with ENV or the dashboard.
+</TabItem>
+</Tabs>

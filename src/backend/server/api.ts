@@ -71,7 +71,10 @@ const getLogs = (minLevel: number, limit: number = maxBufferSize, sort: 'asc' | 
 
 export interface ApiArgs {
     app: Express
+    /** routes that require auth, mounted at /api (route paths are relative to /api) */
     router: ReturnType<typeof createTypedRouter>
+    /** routes that never require auth, mounted at the base path */
+    publicRouter: ReturnType<typeof createTypedRouter>
     scrobbleSources: ScrobbleSources
     scrobbleClients: ScrobbleClients
 }
@@ -88,6 +91,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     const {
         app,
         router,
+        publicRouter,
         scrobbleSources,
         scrobbleClients
     } = args;
@@ -167,12 +171,13 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         next();
     }
 
-    router.get('/api/logs', {middleware: [setLogWebSettings], tags: ['Events'], summary: 'Get Logs'}, async (req, res) => {
+    router.get('/logs', {docs: {operationId: 'get-logs'}, middleware: [setLogWebSettings], tags: ['Events'], summary: 'Get Logs'}, async (req, res) => {
         const slicedLog = getLogs(logger.levels.values[logConfig.level], logConfig.limit + 1, logConfig.sort === 'ascending' ? 'asc' : 'desc');
         return res.json({data: slicedLog, settings: logConfig});
     });
 
-    router.put('/api/logs', {
+    router.put('/logs', {
+        docs: {operationId: 'update-log-settings'},
         middleware: [jsonParser],
         bodySchema: z.object({
             level: logLevelStandaloneSchema.optional(),
@@ -191,14 +196,14 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.json({data: slicedLog, settings: logConfig});
     });
 
-    router.get('/api/events', {querySchema: z.object({
+    router.get('/events', {docs: {operationId: 'sse-events'}, querySchema: z.object({
         tab: z.string().optional().meta({description: 'Client-generated connection id. Required to opt in to log events via PUT /api/events/:tab/logs'})
     }), middleware: [setLogWebSettings], tags: ['Events'], summary: 'SSE Events'}, async (req, res) => {
         const session = await createSession(req, res, {state: {tab: req.query.tab, logs: false}});
         eventsChannel.register(session);
     });
 
-    router.put('/api/events/:tab/logs', {
+    router.put('/events/:tab/logs', {
         middleware: [jsonParser],
         hidden: true,
         bodySchema: z.object({
@@ -220,12 +225,12 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     });
 
     setupDeezerRoutes(app, logger, scrobbleSources);
-    setupWebscrobblerRoutes(app, router, logger, scrobbleSources);
-    setupLZEndpointRoutes(app, router, logger, scrobbleSources, scrobbleClients);
-    setupLastfmEndpointRoutes(app, router, logger, scrobbleSources);
+    setupWebscrobblerRoutes(app, publicRouter, logger, scrobbleSources);
+    setupLZEndpointRoutes(app, publicRouter, logger, scrobbleSources, scrobbleClients);
+    setupLastfmEndpointRoutes(app, publicRouter, logger, scrobbleSources);
     setupAuthRoutes(app, router, logger, scrobbleSources, scrobbleClients);
 
-    router.get('/api/components', {tags: ['Source/Client'], summary: 'Get All Sources/Clients'}, async (req, res, next) => {
+    router.get('/components', {docs: {operationId: 'get-all-sources-clients'}, tags: ['Source/Client'], summary: 'Get All Sources/Clients'}, async (req, res, next) => {
 
         const sourceData = scrobbleSources.sources.filter(x => x.databaseOK).map((x) => {
             const {
@@ -285,7 +290,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.json([...sourceData, ...clientData]);
     });
 
-    router.get('/api/components/:id/players', {middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Source/Client Players'}, async (req, res, next) => {
+    router.get('/components/:id/players', {docs: {operationId: 'get-source-client-players'}, middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Source/Client Players'}, async (req, res, next) => {
         if(req.component instanceof MemorySource) {
             return res.json(req.component.playersToObject());
         } else if(req.component instanceof AbstractScrobbleClient && req.component.nowPlayingEnabled) {
@@ -294,7 +299,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.json({});
     });
 
-    router.get('/api/components/:id/players/:platformId', {middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Specific Source/Client Player'}, async (req, res, next) => {
+    router.get('/components/:id/players/:platformId', {docs: {operationId: 'get-specific-source-client-player'}, middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Specific Source/Client Player'}, async (req, res, next) => {
         const {
             params: {
                 platformId
@@ -317,15 +322,16 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.status(400).json({error: `Component does not support players`});
     });
 
-    router.get('/api/components/:id', {middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Source/Client'}, async (req, res) => {
+    router.get('/components/:id', {docs: {operationId: 'get-source-client'}, middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Source/Client'}, async (req, res) => {
         const {
             component,
         } = req;
         return res.json(component.getApiData());
     });
     
-    router.post('/api/components/:id/state',
+    router.post('/components/:id/state',
    {
+    docs: {operationId: 'update-source-client-state'},
     middleware: [componentAwareMiddle, jsonParser],
     bodySchema: componentStateBodySchema,
     tags: ['Source/Client'],
@@ -375,7 +381,8 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.sendStatus(200);
     });
 
-    router.post('/api/components/:id/auth', {
+    router.post('/components/:id/auth', {
+        docs: {operationId: 'test-source-client-authentication'},
         middleware: [componentAwareMiddle],
         tags: ['Source/Client'],
         summary: 'Test Source/Client Authentication'
@@ -403,7 +410,8 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         }
     });
 
-    router.get('/api/components/:id/art', {
+    router.get('/components/:id/art', {
+        docs: {operationId: 'get-external-art'},
         middleware: [componentAwareMiddle],
         querySchema: z.looseObject({}),
         tags: ['Source/Client'],
@@ -437,7 +445,8 @@ Note: this is only supported by some components.`
         return res.status(501).json({error: {message: `Component ${component.componentId} does not support art retrieval`}});
     });
 
-    router.get('/api/components/:id/plays', {
+    router.get('/components/:id/plays', {
+        docs: {operationId: 'get-paginated-plays'},
         middleware: [componentAwareMiddle],
         tags: ['Plays'],
         summary: 'Get Paginated Plays'
@@ -457,7 +466,8 @@ Note: this is only supported by some components.`
         return res.json(playRes);
     });
 
-    router.get('/api/components/:id/plays/:uid', {
+    router.get('/components/:id/plays/:uid', {
+        docs: {operationId: 'get-play'},
         middleware: [componentAwareMiddle],
         tags: ['Plays'],
         summary: 'Get Play'
@@ -475,7 +485,8 @@ Note: this is only supported by some components.`
         return res.json(asSerializablePlaySelect(playRes));
     });
 
-    router.delete('/api/components/:id/plays/:uid', {
+    router.delete('/components/:id/plays/:uid', {
+        docs: {operationId: 'delete-play'},
         middleware: [componentAwareMiddle],
         querySchema: z.object({children: z.stringbool().optional()}),
         tags: ['Plays'],
@@ -501,7 +512,8 @@ Note: this is only supported by some components.`
         return res.sendStatus(200);
     });
 
-    router.put('/api/components/:id/plays/:uid/play', {
+    router.put('/components/:id/plays/:uid/play', {
+        docs: {operationId: 'update-play'},
         middleware: [componentAwareMiddle,jsonParser],
         tags: ['Plays'],
         summary: 'Update Play',
@@ -521,7 +533,8 @@ Note: this is only supported by some components.`
         return res.json(asSerializablePlaySelect(playRes));
     });
 
-    router.post('/api/components/:id/plays/queue', {
+    router.post('/components/:id/plays/queue', {
+        docs: {operationId: 'requeue-bulk-plays'},
         middleware: [componentAwareMiddle,jsonParser],
         bodySchema: z.object({
             context: queueContextSchema.optional(),
@@ -552,7 +565,8 @@ Note: this is only supported by some components.`
         }
     });
 
-    router.post('/api/components/:id/plays/:uid/queue', {
+    router.post('/components/:id/plays/:uid/queue', {
+        docs: {operationId: 'requeue-a-play'},
         middleware: [componentAwareMiddle,jsonParser],
         bodySchema: queueContextSchema.optional(),
         tags: ['Plays'],
@@ -575,7 +589,8 @@ Note: this is only supported by some components.`
         return res.sendStatus(200);
     });
 
-    router.delete('/api/components/:id/plays/:uid/queue', {
+    router.delete('/components/:id/plays/:uid/queue', {
+        docs: {operationId: 'dequeue-a-play'},
         middleware: [componentAwareMiddle],
         tags: ['Plays'],
         summary: 'Dequeue a Play'
@@ -596,7 +611,8 @@ Note: this is only supported by some components.`
         return res.sendStatus(200);
     });
 
-    router.post('/api/components/:id/plays/:uid/state', {
+    router.post('/components/:id/plays/:uid/state', {
+        docs: {operationId: 'mark-play-as-done'},
         middleware: [componentAwareMiddle, jsonParser],
         bodySchema: playStateBodySchema,
         tags: ['Plays'],
@@ -628,7 +644,8 @@ Note: this is only supported by some components.`
         return res.sendStatus(200);
     });
 
-    router.delete('/api/cache/:cacheType', {
+    router.delete('/cache/:cacheType', {
+        docs: {operationId: 'delete-cache-by-type'},
         tags: ['Cache'],
         summary: 'Delete Cache By Type'
     }, async (req, res) => {
@@ -648,7 +665,8 @@ Note: this is only supported by some components.`
         return res.sendStatus(204);
     });
 
-    router.post('/api/components/:id/plays/historical', {
+    router.post('/components/:id/plays/historical', {
+        docs: {operationId: 'hydrate-historical-plays'},
         middleware: [componentAwareMiddle,jsonParser],
         tags: ['Plays'],
         summary: 'Hydrate Historical Plays',
@@ -711,7 +729,8 @@ Note: this is only supported by some components.`
         return res.end();
     }
 
-    router.get('/api/metadata/search/tracks', {
+    router.get('/metadata/search/tracks', {
+        docs: {operationId: 'get-track-metadata-from-providers'},
         tags: ['Metadata'],
         summary: 'Get Track Metadata from Providers',
         querySchema: trackSearchSimpleRequestQuerySchema,
@@ -735,7 +754,8 @@ Note: this is only supported by some components.`
             album: nameToCredit(album)
         });
     });
-    router.post('/api/metadata/search/tracks', {
+    router.post('/metadata/search/tracks', {
+        docs: {operationId: 'get-track-metadata-from-providers-advanced'},
         tags: ['Metadata'],
         middleware: [jsonParser],
         summary: 'Get Track Metadata from Providers (Advanced)',
@@ -748,7 +768,8 @@ Note: this is only supported by some components.`
         return sendSearchResults(req, res, 'Track', body);
     });
 
-    router.get('/api/metadata/search/albums', {
+    router.get('/metadata/search/albums', {
+        docs: {operationId: 'get-album-metadata-from-providers'},
         tags: ['Metadata'],
         summary: 'Get Album Metadata from Providers',
         querySchema: albumSearchSimpleRequestQuerySchema,
@@ -770,7 +791,8 @@ Note: this is only supported by some components.`
             album: nameToCredit(album)
         });
     });
-    router.post('/api/metadata/search/albums', {
+    router.post('/metadata/search/albums', {
+        docs: {operationId: 'get-album-metadata-from-providers-advanced'},
         tags: ['Metadata'],
         middleware: [jsonParser],
         summary: 'Get Album Metadata from Providers (Advanced)',
@@ -783,7 +805,8 @@ Note: this is only supported by some components.`
         return sendSearchResults(req, res, 'Album', body);
     });
 
-    router.get('/api/metadata/search/artists', {
+    router.get('/metadata/search/artists', {
+        docs: {operationId: 'get-artist-metadata-from-providers'},
         tags: ['Metadata'],
         summary: 'Get Artist Metadata from Providers',
         querySchema: artistSearchSimpleRequestQuerySchema,
@@ -804,7 +827,8 @@ Note: this is only supported by some components.`
             artists: [nameToCredit(artist)],
         });
     });
-    router.post('/api/metadata/search/artists', {
+    router.post('/metadata/search/artists', {
+        docs: {operationId: 'get-artist-metadata-from-providers-advanced'},
         tags: ['Metadata'],
         middleware: [jsonParser],
         summary: 'Get Artist Metadata from Providers (Advanced)',
@@ -817,8 +841,8 @@ Note: this is only supported by some components.`
         return sendSearchResults(req, res, 'Artist', body);
     });
 
-    router.get('/health', {hidden: true}, async (req, res) => res.redirect(307, `/api/${req.url.slice(1)}`));
-    router.get('/api/health', {querySchema: z.object({
+    publicRouter.get('/health', {hidden: true}, async (req, res) => res.redirect(307, `/api/${req.url.slice(1)}`));
+    publicRouter.get('/api/health', {docs: {operationId: 'get-health'}, querySchema: z.object({
         type: z.string().optional().meta({description: 'Only report status for components of this type'}),
         name: z.string().optional().meta({description: 'Only report status for the component with this name'})
     }), tags: ['App Meta']}, async (req, res) => {
@@ -845,7 +869,7 @@ Note: this is only supported by some components.`
         }
     }
 
-    router.get('/api/metrics', {tags: ['App Meta']}, async (req, res) => {
+    publicRouter.get('/api/metrics', {docs: {operationId: 'get-metrics'}, tags: ['App Meta']}, async (req, res) => {
 
         if(!hasMetricRepositories()) {
             const db = await getRoot().items.db();
@@ -860,11 +884,12 @@ Note: this is only supported by some components.`
 
     });
 
-    router.get('/api/version', {tags: ['App Meta']}, async (req, res) => {
+    publicRouter.get('/api/version', {docs: {operationId: 'get-version'}, tags: ['App Meta']}, async (req, res) => {
        return res.json({version: root.get('version')});
     });
 
-    router.all('/api/*path', {hidden: true}, async (req, res) => {
+    // unknown /api routes (after auth, so it does not reveal which routes exist)
+    router.all('/*path', {hidden: true}, async (req, res) => {
         const remote = req.connection.remoteAddress;
         const proxyRemote = req.headers["x-forwarded-for"];
         const ua = req.headers["user-agent"];

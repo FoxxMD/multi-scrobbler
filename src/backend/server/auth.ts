@@ -18,7 +18,7 @@ import * as z from 'zod';
 export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTypedRouter>, logger: Logger, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
     const componentAwareMiddle = makeComponentMiddle(scrobbleSources, scrobbleClients);
 
-    router.get('/api/components/:id/auth', {middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Source/Client Auth URL'}, async (req, res, next) => {
+    router.get('/components/:id/auth', {docs: {operationId: 'get-source-client-auth-url'}, middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Source/Client Auth URL'}, async (req, res, next) => {
         switch(req.component.type) {
             case 'lastfm':
             case 'librefm':
@@ -52,7 +52,9 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
         return res.sendStatus(404);
     });
 
+    // third-party auth callbacks are browser redirects (the flow is started from the dashboard), so the user's session is present
     router.get(/.*callback$/, {
+        docs: {operationId: 'get-resource'},
         querySchema: z.looseObject({}).optional(),
         paramsSchema: z.looseObject({}).optional(),
     }, async (req, res) => {

@@ -35,6 +35,16 @@ Additionally, exposing MS without security can potentially leak **personally ide
 
 ## Securing Multi-Scrobbler
 
+### Built-in Authentication
+
+Set an admin password to require logging in to use the dashboard or API. Ingress Sources and scrobbling are not affected. See [Authentication](/configuration/authentication).
+
+Ingress, health, version and metrics endpoints are still reachable without logging in, and multi-scrobbler is not hardened for direct exposure, so **built-in authentication does not replace the network-level options below** if your instance is reachable from the public internet.
+
+If you already protect MS with an [authenticating reverse proxy](#reverse-proxy-with-authentication) you can set `AUTH_MODE=disabled` to skip the built-in login.
+
+### Network-Level Options
+
 If you absolutely need to host Multi-Scrobbler on a machine that is also accessible from the public internet then use one of the mitigating solutions below to harden your instance.
 
 ### Without Ingress
