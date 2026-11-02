@@ -42,6 +42,10 @@ export const createAuth = (db: DbConcrete, settings: AuthSettings, opts: CreateA
             schema: authSchema,
             usePlural: true,
         }),
+        session: {
+            expiresIn: settings.sessionExpiresIn,
+            updateAge: settings.sessionUpdateAge,
+        },
         emailAndPassword: {
             enabled: true,
             // users are only created by MS (owner bootstrap) or, in the future, by an admin

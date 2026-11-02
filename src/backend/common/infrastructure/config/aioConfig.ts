@@ -3,7 +3,7 @@ import {commonClientOptionsSchema} from "./client/index.ts";
 import {requestRetryOptionsSchema} from "./common.ts";
 import {webhookConfigSchema} from "./health/webhooks.ts";
 import {commonSourceOptionsSchema, fileLogOptionsSchema, logLevelSchema, sourceRetryOptionsSchema} from "./source/index.ts";
-import {cacheConfigUserSchema} from "../Atomic.ts";
+import {cacheConfigUserSchema, durationValueSchema} from "../Atomic.ts";
 import {retentionConfigDurationValueSchema} from "./database.ts";
 import { metadataPreferredProviderSchema } from "../../../../core/Transform.ts";
 
@@ -62,6 +62,11 @@ export const authConfigSchema = z.object({
     trustProxy: z.boolean().optional().meta({
         description: "Trust X-Forwarded-Host/Proto headers from a reverse proxy. Can also be set with ENV TRUST_PROXY",
         default: false
+    }),
+    sessionExpires: durationValueSchema.optional().meta({
+        description: "How long a login lasts without using the dashboard. Each use extends it. Number of seconds, a duration string like '7 days', or ISO 8601 duration. Can also be set with ENV AUTH_SESSION_EXPIRES",
+        default: '7 days',
+        examples: ['7 days', '12 hours', 86400]
     }),
 });
 

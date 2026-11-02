@@ -86,4 +86,18 @@ describe('Owner Password ENV', function () {
         const session = await request(app).get('/api/auth/get-session').set('Cookie', cookie);
         expect(session.body.user.username).eq('admin');
     });
+
+    it('session and cookie use the configured lifetime', async function () {
+        const app = await buildAuthApp({authSettings: {sessionExpiresIn: 3600, sessionUpdateAge: 720}});
+        const {auth, db, authSettings} = app.locals as ServerLocals;
+        await applyOwnerPasswordEnv(auth, db, authSettings.secret, loggerTest, {ADMIN_SETUP_PW: 'firstPassword'});
+
+        const res = await request(app).post('/api/auth/sign-in/username').send({username: 'admin', password: 'firstPassword'});
+        const sessionCookie = (res.headers['set-cookie'] as unknown as string[]).find(x => x.startsWith('ms.session_token='))!;
+        expect(sessionCookie).to.match(/Max-Age=3600/i);
+
+        const session = await request(app).get('/api/auth/get-session').set('Cookie', sessionCookie);
+        const expiresInSec = (new Date(session.body.session.expiresAt).getTime() - Date.now()) / 1000;
+        expect(expiresInSec).to.be.within(3500, 3601);
+    });
 });

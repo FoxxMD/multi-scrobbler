@@ -62,6 +62,34 @@ describe('Auth Settings', function () {
         expect(literal.setupToken).eq('myToken');
     });
 
+    it('parses session expiration like retention durations', function () {
+        const base = {localUrl: http, hasDefinedBaseUrl: false};
+        const def = resolveAuthSettings({...base, env: {}});
+        expect(def.sessionExpiresIn).eq(60 * 60 * 24 * 7);
+        // unchanged from better-auth default
+        expect(def.sessionUpdateAge).eq(60 * 60 * 24);
+
+        expect(resolveAuthSettings({...base, env: {AUTH_SESSION_EXPIRES: '30 days'}}).sessionExpiresIn).eq(60 * 60 * 24 * 30);
+        expect(resolveAuthSettings({...base, env: {AUTH_SESSION_EXPIRES: '3600'}}).sessionExpiresIn).eq(3600);
+        expect(resolveAuthSettings({...base, env: {AUTH_SESSION_EXPIRES: 'PT2H'}}).sessionExpiresIn).eq(7200);
+        expect(resolveAuthSettings({...base, config: {sessionExpires: '2 days'}, env: {}}).sessionExpiresIn).eq(60 * 60 * 48);
+        expect(resolveAuthSettings({...base, config: {sessionExpires: 600}, env: {}}).sessionExpiresIn).eq(600);
+        // env wins
+        expect(resolveAuthSettings({...base, config: {sessionExpires: '2 days'}, env: {AUTH_SESSION_EXPIRES: '1 hour'}}).sessionExpiresIn).eq(3600);
+    });
+
+    it('short session lifetimes still slide', function () {
+        const s = resolveAuthSettings({localUrl: http, hasDefinedBaseUrl: false, env: {AUTH_SESSION_EXPIRES: '1 hour'}});
+        expect(s.sessionUpdateAge).lt(s.sessionExpiresIn);
+        expect(s.sessionUpdateAge).eq(720);
+    });
+
+    it('rejects invalid or too short session expiration', function () {
+        const base = {localUrl: http, hasDefinedBaseUrl: false};
+        expect(() => resolveAuthSettings({...base, env: {AUTH_SESSION_EXPIRES: 'forever'}})).to.throw(/AUTH_SESSION_EXPIRES/);
+        expect(() => resolveAuthSettings({...base, env: {AUTH_SESSION_EXPIRES: '10 seconds'}})).to.throw(/at least 60 seconds/);
+    });
+
     it('persists a generated secret and prefers env', async function () {
         await withLocalTmpDir(async () => {
             const first = getOrCreateSecret({}, process.cwd());

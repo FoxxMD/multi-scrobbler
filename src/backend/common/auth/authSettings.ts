@@ -5,8 +5,12 @@ import type { Logger } from "@foxxmd/logging";
 import { authModeSchema, type AuthConfig, type AuthMode } from "../infrastructure/config/aioConfig.ts";
 import { parseBool, parseBoolStrict } from "../../utils.ts";
 import { fileExists } from "../../utils/FSUtils.ts";
+import { parseDurationFromDurationValue } from "../../utils/TimeUtils.ts";
 
 export const OPEN_HOSTS = ['*'];
+/** better-auth default */
+export const DEFAULT_SESSION_EXPIRES = 60 * 60 * 24 * 7;
+const DEFAULT_SESSION_UPDATE_AGE = 60 * 60 * 24;
 export const SECRET_FILE_NAME = 'auth.secret';
 
 export interface AuthSettings {
@@ -23,6 +27,10 @@ export interface AuthSettings {
     setupToken?: string
     /** setup token was generated (should be printed in logs) rather than user-defined */
     setupTokenGenerated: boolean
+    /** seconds a session lasts since it was last refreshed */
+    sessionExpiresIn: number
+    /** seconds after which using a session extends its expiration */
+    sessionUpdateAge: number
 }
 
 export interface ResolveAuthSettingsOptions {
@@ -116,6 +124,21 @@ export const resolveAuthSettings = (opts: ResolveAuthSettingsOptions): AuthSetti
         }
     }
 
+    let sessionExpiresIn = DEFAULT_SESSION_EXPIRES;
+    const sessionExpiresVal = (env.AUTH_SESSION_EXPIRES !== undefined && env.AUTH_SESSION_EXPIRES.trim() !== '') ? env.AUTH_SESSION_EXPIRES.trim() : config.sessionExpires;
+    if (sessionExpiresVal !== undefined) {
+        try {
+            sessionExpiresIn = Math.floor(parseDurationFromDurationValue(sessionExpiresVal).asSeconds());
+        } catch (e) {
+            throw new Error(`Session expiration (AUTH_SESSION_EXPIRES or auth.sessionExpires) must be a number of seconds, a duration like '7 days', or an ISO 8601 duration -- given: ${sessionExpiresVal}`, {cause: e});
+        }
+        if (sessionExpiresIn < 60) {
+            throw new Error(`Session expiration (AUTH_SESSION_EXPIRES or auth.sessionExpires) must be at least 60 seconds -- given: ${sessionExpiresVal}`);
+        }
+    }
+    // keep better-auth's 1 day refresh for normal lifetimes but make sure short lifetimes still slide
+    const sessionUpdateAge = Math.min(DEFAULT_SESSION_UPDATE_AGE, Math.floor(sessionExpiresIn * 0.2));
+
     if (hostsOpen && hasDefinedBaseUrl && mode !== 'disabled') {
         logger?.info(`HINT: For better security set ALLOWED_HOSTS=${localUrl.host} (or auth.allowedHosts in config.json) so only requests for your Base URL are accepted`);
     }
@@ -130,5 +153,7 @@ export const resolveAuthSettings = (opts: ResolveAuthSettingsOptions): AuthSetti
         fallbackOrigin: localUrl.origin,
         setupToken,
         setupTokenGenerated,
+        sessionExpiresIn,
+        sessionUpdateAge,
     };
 }

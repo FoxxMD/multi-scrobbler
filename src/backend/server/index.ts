@@ -116,7 +116,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
                     authLogger.warn(`Setup token (required to secure this instance from the dashboard): ${authSettings.setupToken}`);
                 }
             }
-            authLogger.verbose(`Auth mode: ${authSettings.mode} | Allowed Hosts: ${authSettings.allowedHosts.join(', ')} | Secure Cookies: ${authSettings.secureCookies ? 'Yes' : 'No'} | Trust Proxy: ${authSettings.trustProxy ? 'Yes' : 'No'}`);
+            authLogger.verbose(`Auth mode: ${authSettings.mode} | Allowed Hosts: ${authSettings.allowedHosts.join(', ')} | Secure Cookies: ${authSettings.secureCookies ? 'Yes' : 'No'} | Trust Proxy: ${authSettings.trustProxy ? 'Yes' : 'No'} | Session Expires: ${authSettings.sessionExpiresIn}s`);
         }
 
         app.use(basePath, router.getRouter());
