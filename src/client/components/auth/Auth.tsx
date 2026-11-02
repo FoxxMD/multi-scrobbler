@@ -189,3 +189,61 @@ export const AuthMenu = () => {
         </Stack>
     );
 }
+
+/** Settings section: change password for a logged in user, or point to setup when the instance is not secured */
+export const AccountSettings = () => {
+    const {data: status} = useSetupStatus();
+    const {data: session} = authClient.useSession();
+    const [current, setCurrent] = useState('');
+    const [next, setNext] = useState('');
+    const [confirm, setConfirm] = useState('');
+    const mismatch = confirm !== '' && next !== confirm;
+
+    const {mutate, isPending, error, isSuccess, reset} = useMutation({
+        mutationFn: async () => {
+            const res = await authClient.changePassword({currentPassword: current, newPassword: next, revokeOtherSessions: true});
+            if (res.error !== null) {
+                throw new Error(res.error.message ?? 'Could not change password');
+            }
+        },
+        onSuccess: () => {
+            setCurrent('');
+            setNext('');
+            setConfirm('');
+        }
+    });
+
+    if (status === undefined || status.mode === 'disabled') {
+        return <Text>Authentication is disabled (AUTH_MODE=disabled).</Text>;
+    }
+    if (!status.secured) {
+        return <Text>This instance is not secured. <Link asChild variant="underline"><RouterLink to="/setup">Set an admin password</RouterLink></Link></Text>;
+    }
+    if (session === null || session === undefined) {
+        return <Text><Link asChild variant="underline"><RouterLink to="/login">Log in</RouterLink></Link> to manage your account.</Text>;
+    }
+
+    return (
+        <form onSubmit={(e: FormEvent) => { e.preventDefault(); if (!mismatch) { reset(); mutate(); } }}>
+            <Stack gap="4" maxWidth="sm">
+                <Text>Logged in as <strong>{(session.user as {username?: string}).username ?? session.user.name}</strong></Text>
+                <Field.Root required>
+                    <Field.Label>Current Password</Field.Label>
+                    <Input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password"/>
+                </Field.Root>
+                <Field.Root required>
+                    <Field.Label>New Password</Field.Label>
+                    <Input type="password" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password"/>
+                </Field.Root>
+                <Field.Root required invalid={mismatch}>
+                    <Field.Label>Confirm New Password</Field.Label>
+                    <Input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password"/>
+                    <Field.ErrorText>Passwords do not match</Field.ErrorText>
+                </Field.Root>
+                <FormError error={error !== null ? errorMessage(error) : undefined}/>
+                {isSuccess ? <Alert.Root status="success"><Alert.Indicator/><Alert.Title>Password changed. Other sessions were logged out.</Alert.Title></Alert.Root> : null}
+                <Button type="submit" loading={isPending} disabled={mismatch || next === ''} alignSelf="flex-start">Change Password</Button>
+            </Stack>
+        </form>
+    );
+}

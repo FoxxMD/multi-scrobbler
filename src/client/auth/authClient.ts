@@ -56,5 +56,3 @@ export const errorMessage = (e: unknown): string => {
     }
     return String(e);
 }
-
-export const isAuthRequiredError = (e: unknown): boolean => e instanceof HTTPError && e.response.status === 401;

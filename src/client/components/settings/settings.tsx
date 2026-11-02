@@ -15,6 +15,7 @@ import { useMutation } from "@tanstack/react-query";
 import ky from "ky";
 import type { CacheClearType } from "../../../core/Api";
 import { EphemeralElement } from "../Badges";
+import { AccountSettings } from "../auth/Auth";
 
 const DarkIcon = makeChakraIcon(LuMoon);
 const LightIcon = makeChakraIcon(LuSun);
@@ -43,6 +44,8 @@ export const SettingsContainer = () => {
 
     return (
         <VStack alignItems="flex-start">
+            <Heading my="3">Account</Heading>
+            <AccountSettings/>
             <Heading my="3">Appearance</Heading>
             <VStack>
                 <SegmentGroup.Root size="md" value={theme === 'system' ? 'system' : resolvedTheme} onValueChange={(val) => val.value !== null && setThemeCB(val.value)}>
