@@ -1,4 +1,3 @@
-import { timingSafeEqual } from "node:crypto";
 import * as z from "zod";
 import type { BetterAuthPlugin } from "better-auth";
 import { APIError, createAuthEndpoint, getSessionFromCtx } from "better-auth/api";
@@ -7,6 +6,7 @@ import type { DbConcrete } from "../database/drizzle/drizzleUtils.ts";
 import type { AuthSettings } from "./authSettings.ts";
 import { computeAuthState } from "./authState.ts";
 import { setUserPassword } from "./ownerPassword.ts";
+import { secretMatches } from "../../server/middleware.ts";
 
 export interface SetupPluginOptions {
     db: DbConcrete
@@ -26,17 +26,7 @@ export interface SetupStatus {
     username?: string
 }
 
-const tokenMatches = (expected: string | undefined, given: string | undefined): boolean => {
-    if (expected === undefined) {
-        return true;
-    }
-    if (given === undefined) {
-        return false;
-    }
-    const a = Buffer.from(expected);
-    const b = Buffer.from(given);
-    return a.length === b.length && timingSafeEqual(a, b);
-}
+const tokenMatches = (expected: string | undefined, given: string | undefined): boolean => expected === undefined || secretMatches(expected, given);
 
 /**
  * Instance setup endpoints, as a better-auth plugin so they can create sessions and set signed session cookies.

@@ -5,6 +5,23 @@ import { buildAuthApp, secureApp, signIn } from '../utils/authTestUtils.ts';
 import { CLIENT_IP_HEADER, clientIpMiddleware } from '../../server/middleware.ts';
 import type ScrobbleSources from '../../sources/ScrobbleSources.ts';
 
+/** run with env vars set, restoring them afterwards */
+const withEnv = async <T>(env: Record<string, string>, fn: () => Promise<T>): Promise<T> => {
+    const prev = Object.fromEntries(Object.keys(env).map(k => [k, process.env[k]]));
+    Object.assign(process.env, env);
+    try {
+        return await fn();
+    } finally {
+        for (const [k, v] of Object.entries(prev)) {
+            if (v === undefined) {
+                delete process.env[k];
+            } else {
+                process.env[k] = v;
+            }
+        }
+    }
+};
+
 const unhealthy = async (sources: ScrobbleSources) => {
     sources.getStatusSummary = async () => [false, ['Source subsonic - mySecretServer is not polling.']];
 };
@@ -96,6 +113,24 @@ describe('Hardening', function () {
             expect((await request(app).get('/api/auth/setup/status')).body).not.have.property('username');
             const cookie = await signIn(app);
             expect((await request(app).get('/api/auth/setup/status').set('Cookie', cookie)).body.username).eq('admin');
+        });
+
+        it('metrics require the bearer token when METRICS_TOKEN is set', async function () {
+            const app = await withEnv({METRICS_TOKEN: 'promSecret'}, () => buildAuthApp());
+            const none = await request(app).get('/api/metrics');
+            expect(none.status).eq(401);
+            expect(none.headers['www-authenticate']).eq('Bearer');
+            expect((await request(app).get('/api/metrics').set('Authorization', 'Bearer wrong')).status).eq(401);
+            expect((await request(app).get('/api/metrics').set('Authorization', 'Bearer promSecret')).status).eq(200);
+        });
+
+        it('metrics are public without METRICS_TOKEN and gone with PROMETHEUS=false', async function () {
+            expect((await request(await buildAuthApp()).get('/api/metrics')).status).eq(200);
+            const disabled = await withEnv({PROMETHEUS: 'false'}, () => buildAuthApp());
+            // falls through to the auth-required api router, so: not found when unsecured, login required when secured
+            expect((await request(disabled).get('/api/metrics')).status).eq(404);
+            await secureApp(disabled);
+            expect((await request(disabled).get('/api/metrics')).status).eq(401);
         });
     });
 });

@@ -24,7 +24,8 @@ import MemorySource from "../sources/MemorySource.ts";
 import { setupAuthRoutes } from "./auth.ts";
 import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes.ts";
 import {setupLastfmEndpointRoutes} from "./endpointLastfmRoutes.ts";
-import { makeComponentMiddle, type WebFault } from "./middleware.ts";
+import { bearerTokenMiddleware, makeComponentMiddle, type WebFault } from "./middleware.ts";
+import { parseBool } from "../utils.ts";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.ts";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
@@ -879,7 +880,15 @@ Note: this is only supported by some components.`
         }
     }
 
-    publicRouter.get('/api/metrics', {docs: {operationId: 'get-metrics'}, tags: ['App Meta']}, async (req, res) => {
+    // PROMETHEUS=false only removes the endpoint, metrics are still collected in-process
+    const prometheusEnabled = parseBool(process.env.PROMETHEUS, true);
+    const metricsToken = process.env.METRICS_TOKEN?.trim() || undefined;
+    if(prometheusEnabled) publicRouter.get('/api/metrics', {
+        docs: {operationId: 'get-metrics'},
+        middleware: [metricsToken !== undefined ? bearerTokenMiddleware(metricsToken) : noopMiddleware],
+        tags: ['App Meta'],
+        description: 'Prometheus metrics. Requires `Authorization: Bearer <token>` when METRICS_TOKEN is set. The endpoint is removed with PROMETHEUS=false.'
+    }, async (req, res) => {
 
         if(!hasMetricRepositories()) {
             const db = await getRoot().items.db();

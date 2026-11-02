@@ -5,6 +5,7 @@ import type {Request, Response, NextFunction, ErrorRequestHandler, RequestHandle
 import type AbstractSource from "../sources/AbstractSource.ts";
 import type AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";
 import type { TypedMiddleware } from "@minisylar/express-typed-router";
+import { timingSafeEqual } from "node:crypto";
 
 export const nonEmptyBody = (logger: Logger, origin: string = 'Origin'): TypedMiddleware => async (req, res, next) => {
     const bodyEmpty = req.body === undefined || req.body === null || (typeof req.body === 'object' && Object.keys(req.body).length === 0);
@@ -254,5 +255,26 @@ export const securityHeadersMiddleware: RequestHandler = (req, res, next) => {
     res.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'same-origin');
+    next();
+}
+
+/** Timing-safe string comparison */
+export const secretMatches = (expected: string, given: string | undefined): boolean => {
+    if (given === undefined) {
+        return false;
+    }
+    const a = Buffer.from(expected);
+    const b = Buffer.from(given);
+    return a.length === b.length && timingSafeEqual(a, b);
+}
+
+/** Require `Authorization: Bearer <token>` (e.g. for Prometheus scraping with a static token) */
+export const bearerTokenMiddleware = (token: string): RequestHandler => (req, res, next) => {
+    const [scheme, given] = (req.get('authorization') ?? '').split(' ');
+    if (scheme?.toLowerCase() !== 'bearer' || !secretMatches(token, given)) {
+        res.setHeader('WWW-Authenticate', 'Bearer');
+        res.status(401).json({error: 'Bearer token required', code: 'auth_required'});
+        return;
+    }
     next();
 }
