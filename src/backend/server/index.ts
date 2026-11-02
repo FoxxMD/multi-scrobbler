@@ -1,4 +1,5 @@
 import express from 'express';
+import { randomBytes } from 'node:crypto';
 import type { Express } from 'express';
 import { childLogger, loggerTest, type LogDataPretty, type Logger } from "@foxxmd/logging";
 import bodyParser from 'body-parser';
@@ -6,7 +7,6 @@ import { stripIndents } from "common-tags";
 import session from 'express-session';
 import type { Server } from "node:http";
 import type { PassThrough } from "node:stream";
-import passport from 'passport';
 import path from "path";
 import qs from 'qs';
 import ViteExpress from "vite-express";
@@ -139,10 +139,8 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
 
         //app.use(express.static(buildDir));
 
-        apiRouter.use(session({secret: 'keyboard cat', resave: false, saveUninitialized: false}));
-        app.use(session({secret: 'keyboard cat', resave: false, saveUninitialized: false}));
-        app.use(passport.initialize());
-        app.use(passport.session());
+        // only holds dashboard log view preferences, in memory, so a per-process random secret is enough
+        apiRouter.use(session({secret: randomBytes(32).toString('hex'), resave: false, saveUninitialized: false}));
 
         if(root.get('disableWeb')) {
             logger.warn('API and Dashboard have been DISABLED. Note that any ingress sources (Webscrobbler, Listenbrainz/Lastfm Endpoint Sources, etc...) will be unusable');

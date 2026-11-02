@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import express from 'express';
 import request from 'supertest';
-import { buildAuthApp } from '../utils/authTestUtils.ts';
+import { buildAuthApp, secureApp, signIn } from '../utils/authTestUtils.ts';
 import { CLIENT_IP_HEADER, clientIpMiddleware } from '../../server/middleware.ts';
 
 const ipEcho = (trustProxy: boolean) => {
@@ -49,6 +49,20 @@ describe('Hardening', function () {
                 expect(res.headers['x-content-type-options'], path).eq('nosniff');
                 expect(res.headers['referrer-policy'], path).eq('same-origin');
             }
+        });
+    });
+
+    describe('Unused better-auth endpoints', function () {
+
+        it('admin plugin endpoints do not exist', async function () {
+            const app = await buildAuthApp();
+            await secureApp(app);
+            const cookie = await signIn(app);
+            const res = await request(app).get('/api/auth/admin/list-users')
+                .set('Host', 'localhost:9078')
+                .set('Origin', 'http://localhost:9078')
+                .set('Cookie', cookie);
+            expect(res.status).eq(404);
         });
     });
 });

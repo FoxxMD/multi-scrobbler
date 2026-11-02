@@ -2,14 +2,11 @@ import { nameToCredit } from "../../core/MusicMetadata.ts";
 import { namesToCredits } from "../../core/MusicMetadata.ts";
 import dayjs from "dayjs";
 import type EventEmitter from "events";
-import passport from "passport";
-import { Strategy as DeezerStrategy } from 'passport-deezer';
 import request from 'superagent';
 import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type PlayObjectMinimal} from "../../core/Atomic.ts";
 import { DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
 import type {DeezerSourceConfig} from "../common/infrastructure/config/source/deezer.ts";
 import { parseRetryAfterSecsFromObj, sleep, sortByOldestPlayDate, } from "../utils.ts";
-import { writeFile } from '../utils/FSUtils.ts';
 import { readJson } from '../utils/DataUtils.ts';
 import { joinedUrl } from "../utils/NetworkUtils.ts";
 import AbstractSource, { type RecentlyPlayedOptions } from "./AbstractSource.ts";
@@ -110,14 +107,9 @@ export default class DeezerSource extends AbstractSource {
             throw new Error('Current deezer credentials file exists but could not be parsed', {cause: e});
         }
         if (this.config.data.accessToken === undefined) {
-            if (this.config.data.clientId === undefined) {
-                throw new Error('clientId must be defined when accessToken is not present');
-            } else if (this.config.data.clientSecret === undefined) {
-                throw new Error('clientSecret must be defined when accessToken is not present');
-            }
+            // the OAuth login flow (passport-deezer) was removed, it had not been reachable from the dashboard for some time
+            throw new Error('No Deezer access token found in config or credentials file. Authenticating this deprecated Source is no longer supported, use the Deezer (Internal) Source instead.');
         }
-        this.logger.info(`Redirect URL that will be used on auth callback: '${this.redirectUri}'`);
-        passport.use(`deezer-${this.name}`, this.generatePassportStrategy());
         return true;
     }
 
@@ -207,48 +199,6 @@ export default class DeezerSource extends AbstractSource {
             const responseMeta = ssResp ?? text;
             this.logger.error({status, response: responseMeta}, msg);
             throw e;
-        }
-    }
-
-    generatePassportStrategy = () => new DeezerStrategy({
-            clientID: this.config.data.clientId,
-            clientSecret: this.config.data.clientSecret,
-            callbackURL: this.redirectUri,
-            scope: ['listening_history','offline_access'],
-        }, (accessToken: any, refreshToken: any, profile: any, done: any) => {
-                // return done(null, {
-                //     accessToken,
-                //     refreshToken,
-                //     ...profile,
-                // });
-            this.handleAuthCodeCallback({
-                accessToken,
-                refreshToken,
-                ...profile,
-            }).then((r) => {
-                if(r === true) {
-                    return done(null, {});
-                }
-                return done(r);
-            });
-        })
-
-    handleAuthCodeCallback = async (res: any) => {
-        const {error, accessToken, id, displayName} = res;
-        if (error === undefined) {
-            await writeFile(this.workingCredsPath, JSON.stringify({
-                accessToken,
-                id,
-                displayName,
-            }));
-            this.config.data.accessToken = accessToken;
-            this.logger.info('Got token Deezer SDK callback!');
-            return true;
-        } else {
-            this.logger.warn('Callback contained an error! User may have denied access?')
-            this.errors.push(error);
-            this.logger.error(error);
-            return error;
         }
     }
 

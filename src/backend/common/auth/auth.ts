@@ -1,6 +1,6 @@
 import * as path from "node:path";
 import { betterAuth } from "better-auth";
-import { admin, username } from "better-auth/plugins";
+import { username } from "better-auth/plugins";
 import { CLIENT_IP_HEADER } from "../../server/middleware.ts";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
 import type { Logger } from "@foxxmd/logging";
@@ -54,10 +54,8 @@ export const createAuth = (db: DbConcrete, settings: AuthSettings, opts: CreateA
         },
         plugins: [
             username(),
-            admin({
-                defaultRole: 'user',
-                adminRoles: ['admin'],
-            }),
+            // ponytail: admin plugin (roles, user management endpoints) left out until there is more than one user.
+            // users.role and the ban/impersonation columns are kept so adding it back needs no migration
             setupPlugin({db, settings, onStateChange: opts.onStateChange ?? (async () => undefined)}),
         ],
         telemetry: {

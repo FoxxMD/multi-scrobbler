@@ -22,7 +22,6 @@ import { getRoot } from "../ioc.ts";
 import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";;
 import MemorySource from "../sources/MemorySource.ts";
 import { setupAuthRoutes } from "./auth.ts";
-import { setupDeezerRoutes } from "./deezerRoutes.ts";
 import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes.ts";
 import {setupLastfmEndpointRoutes} from "./endpointLastfmRoutes.ts";
 import { makeComponentMiddle, type WebFault } from "./middleware.ts";
@@ -224,7 +223,6 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.sendStatus(200);
     });
 
-    setupDeezerRoutes(app, logger, scrobbleSources);
     setupWebscrobblerRoutes(app, publicRouter, logger, scrobbleSources);
     setupLZEndpointRoutes(app, publicRouter, logger, scrobbleSources, scrobbleClients);
     setupLastfmEndpointRoutes(app, publicRouter, logger, scrobbleSources);
