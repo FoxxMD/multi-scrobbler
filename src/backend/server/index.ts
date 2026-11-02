@@ -20,6 +20,8 @@ import { authBasePath, createAuth, type MSAuth } from "../common/auth/auth.ts";
 import { resolveAuthSettings, type AuthSettings } from "../common/auth/authSettings.ts";
 import { getDataDir } from "../common/index.ts";
 import { applyOwnerPasswordEnv } from "../common/auth/ownerPassword.ts";
+import { AuthStateStore } from "../common/auth/authState.ts";
+import { authGuardMiddleware } from "./authGuard.ts";
 import type { DbConcrete } from "../common/database/drizzle/drizzleUtils.ts";
 import type ScrobbleSources from '../sources/ScrobbleSources.ts';
 import type ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
@@ -44,6 +46,7 @@ export interface ServerOptions {
 export interface ServerLocals {
     auth: MSAuth
     authSettings: AuthSettings
+    authState: AuthStateStore
     db: DbConcrete
 }
 
@@ -99,11 +102,16 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
             };
             const auth = createAuth(db, authSettings, {basePath, logger: authLogger});
             await applyOwnerPasswordEnv(auth, db, authSettings.secret, authLogger);
-            const locals: ServerLocals = {auth, authSettings, db};
+            const authState = await new AuthStateStore(auth, db).refresh();
+            const locals: ServerLocals = {auth, authSettings, authState, db};
             Object.assign(app.locals, locals);
             // must be mounted before the router (and its body parsing) so better-auth gets the raw request
             // and so /api/auth/callback/* is not caught by the source auth callback route
             app.all(`${authBasePath(basePath)}/*splat`, sameOriginMiddleware({trustProxy: authSettings.trustProxy}), toNodeHandler(auth));
+            app.use(basePath, authGuardMiddleware({auth, settings: authSettings, state: authState, logger: authLogger}));
+            if(authSettings.mode !== 'disabled' && !authState.secured) {
+                authLogger.warn('Dashboard and API are not secured! Set an admin password from the dashboard or with ADMIN_SETUP_PW.');
+            }
             authLogger.verbose(`Auth mode: ${authSettings.mode} | Allowed Hosts: ${authSettings.allowedHosts.join(', ')} | Secure Cookies: ${authSettings.secureCookies ? 'Yes' : 'No'} | Trust Proxy: ${authSettings.trustProxy ? 'Yes' : 'No'}`);
         }
 
