@@ -1,14 +1,19 @@
 ---
-title: Authentication
+title: Built-In Authentication
 description: Securing the dashboard and API with an admin account
 sidebar:
-  order: 6
+  order: 2
 tableOfContents:
   minHeadingLevel: 2
   maxHeadingLevel: 4
 ---
 
+import {LocalStorageText} from '@site/src/components/Storage/Text';
+
 Multi-scrobbler has built-in authentication for the dashboard and most API endpoints.
+
+This [Authentication Mode](/security/overview#securing-multi-scrobbler) is the **default** when no config is present. It can be explicitly set through the ENV `AUTH_MODE=optional` or AIO `auth.mode: 'optional'` [`config.json`](/configuration/?configType=aio#configuration-types).
+
 
 ## What Is Protected?
 
@@ -54,17 +59,18 @@ Prometheus metrics (`/api/metrics`) require authentication once the instance is 
 
 On first startup Multi-scrobbler creates a single **admin** account automatically (username `admin`). It has no password until you set one. Until then, every request is treated as the admin and the dashboard/API are accessible to anyone.
 
-<Aside type="tip">
+**Set the admin password in either of these ways:**
 
-While a password is **not** set the dashboard will show a warning banner prompting you to set one.
+<Tabs groupId="adminPassword">
+<TabItem value="dashboard" label="Dashboard">
+Visit the dashboard at <LocalStorageText client:load initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/> and click **Set an admin password** in the displayed warning banner (or open `/setup`). You are logged in once it is set.
+</TabItem>
+<TabItem value="env" label="ENV">
+Set `ADMIN_SETUP_PW` before starting multi-scrobbler. It is only used while the admin has no password, and is ignored afterwards. Leaving it set is harmless.
 
-</Aside>
-
-Set the admin password in either of these ways:
-
-* **Dashboard:** click **Set an admin password** in the warning banner (or open `/setup`). You are logged in once it is set.
-* **ENV:** set `ADMIN_SETUP_PW` before starting multi-scrobbler. It is only used while the admin has no password, and is ignored afterwards. Leaving it set is harmless.
-  * You can also use the ENV `ADMIN_USERNAME` to set the initial admin username non-interactively.
+TIP:  You can also use the ENV `ADMIN_USERNAME` to set the initial admin username non-interactively.
+</TabItem>
+</Tabs>
 
 <Aside type="important">
 
@@ -74,28 +80,37 @@ Set the admin password in either of these ways:
 
 ### Unsecured Instance Protections
 
-While no password is set (and `AUTH_MODE` is not `disabled`), multi-scrobbler protects itself in a few ways without getting in your way on a private network:
+Depending on how it is accessed, **while MS is insecure** (no password is set and `AUTH_MODE` is not `disabled`) it protects itself in a few ways: 
 
-* **Setup token:** a random [setup token](#setup-token) is generated on every startup and printed in the console output (`docker logs multi-scrobbler`) and log file. It is **not** shown in the dashboard's logs. It is required to set the password from the dashboard when:
+<Tabs groupId="insecureProtection">
+<TabItem value="token" label="Setup Token">
+A random [setup token](#setup-token) is generated on every startup and printed in the console/docker logs and log file. It is **not** shown in the dashboard's logs. It is required to set the password from the dashboard when:
   * you appear to be connecting from the **internet** (a public IP address), or
-  * you are using the dashboard through a **domain it does not recognize** (see below).
-* **Read-only through unrecognized domains:** a malicious website you visit can point its own domain at your multi-scrobbler instance ([DNS rebinding](https://en.wikipedia.org/wiki/DNS_rebinding)) and use it from your browser. To prevent that site from changing anything, the dashboard and API are **read-only** when used through a domain multi-scrobbler does not recognize. Recognized are:
+  * you are using the dashboard through a **domain it does not recognize**
+</TabItem>
+<TabItem value="unrecognized-domain" label="Unrecognized Domains">
+While MS is insecure, a malicious website you visit can point its own domain at your multi-scrobbler instance ([DNS rebinding](https://en.wikipedia.org/wiki/DNS_rebinding)) and use it from your browser.
+
+To prevent that site from changing anything, the dashboard and API are **read-only**, and setup requires a Token, when used through a domain multi-scrobbler does not recognize. Recognized are:
   * IP addresses and `localhost`
   * single-word hostnames like `nas` or `docker-host`
   * names ending in `.local`, `.lan`, `.home.arpa`, `.internal`, `.localhost` or `.ts.net`
   * the [`BASE_URL`](/configuration#base-url) host and anything in [`ALLOWED_HOSTS`](#hosts-cookies-and-reverse-proxies)
-* **Warnings:** the dashboard banner warns when you appear to be connecting from the internet, and multi-scrobbler logs a warning (at most hourly) when it is used from a public IP.
-* **Cross-site requests are blocked:** other websites cannot make changes through your browser.
+</TabItem>
+<TabItem value="warnings" label="Warnings">
+A banner on the Dashboard warns when you appear to be connecting from the internet.
 
-Detecting a public IP is only a best guess. It can be wrong (for example on a LAN using IPv6, or behind some proxies), so it never blocks you, it only asks for the setup token.
+Additionally, multi-scrobbler logs a warning (at most hourly) when it is used from a public IP.
+</TabItem>
+</Tabs>
 
 <Aside type="caution">
 
-Read-only access still lets a malicious website _read_ your multi-scrobbler data through DNS rebinding. Set a password, or set `ALLOWED_HOSTS` to the hosts you use, to prevent it.
+Read-only access still lets a malicious website _read_ your multi-scrobbler data through DNS rebinding. Set a password to prevent it.
 
 </Aside>
 
-How to secure your instance in common setups:
+<DetailsAdmo type="tip" summary="Common Deployment Setups and How To Secure Them">
 
 | Setup | Setup token needed? | Unsecured dashboard | How to secure |
 | :--- | :--- | :--- | :--- |
@@ -108,6 +123,8 @@ How to secure your instance in common setups:
 | Port forwarded to the internet | Yes | Full access by IP, read-only by a dynamic DNS name | Enter the token from the console output on `/setup` |
 | Authenticating reverse proxy (Authelia, Authentik...) | - | - | Use `AUTH_MODE=disabled` |
 | Any | - | - | Set `ADMIN_SETUP_PW` and restart |
+
+</DetailsAdmo>
 
 ### Changing or Resetting the Password
 
@@ -150,18 +167,9 @@ scrape_configs:
 
 Requests with an invalid key are logged as `Invalid API key from <ip>`.
 
-## Auth Modes
-
-Set the mode with `AUTH_MODE` (or `auth.mode` in [`config.json`](/configuration/?configType=aio#configuration-types)).
-
-| Mode                 | Behavior                                                                                                                                                             |
-| :------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `optional` (default) | Authentication is dormant until an admin password is set, from the dashboard or `ADMIN_SETUP_PW`.                                                                    |
-| `disabled`           | No authentication and none of the [unsecured instance protections](#unsecured-instance-protections). **Only** use this if multi-scrobbler is already behind your own [authenticating reverse proxy](/configuration/security#reverse-proxy-with-authentication). |
-
 ### Setup Token
 
-A setup token is generated on every startup while the instance is not secured, and printed in the console output and log file (never in the dashboard's logs). It is only required in [some situations](#unsecured-instance-protections).
+A setup token is generated on every startup while the instance is not secured, and printed in the console/docker output and log file. It is only required in [some situations](#unsecured-instance-protections).
 
 Set `AUTH_SETUP_TOKEN` to **always** require it when setting the first password from the dashboard:
 
@@ -170,12 +178,21 @@ Set `AUTH_SETUP_TOKEN` to **always** require it when setting the first password 
 
 ## Hosts, Cookies and Reverse Proxies
 
-By default multi-scrobbler accepts requests for **any** host (IP, hostname, etc.), so no configuration is needed. Logins are protected against cross-site requests regardless.
+By default multi-scrobbler accepts requests for **any** host (IP, hostname, etc.), so no configuration is needed. Logins are protected against cross-site requests regardless. These settings can additionally be configured to expand or restrict what types of requests MS trusts:
 
-* **`ALLOWED_HOSTS`** (or `auth.allowedHosts`): comma-separated hosts (with port, wildcards allowed, like `ms.mydomain.tld,192.168.0.101:9078`) the dashboard is accessed from. Restricting this adds another layer of origin checks. If you set [`BASE_URL`](/configuration#base-url) multi-scrobbler logs a hint with the host to use.
-* **`SECURE_COOKIES`** (or `auth.secureCookies`): marks the login cookie as https-only. It defaults to `true` only when `BASE_URL` is `https://...`. If you access the dashboard over **plain http**, this must be `false` or logging in will silently fail.
-* **`TRUST_PROXY`** (or `auth.trustProxy`): trust `X-Forwarded-Host`/`X-Forwarded-Proto`/`X-Forwarded-For` from your reverse proxy. Only needed if your proxy does not pass the original `Host` header.
-  * **Only set this if multi-scrobbler can _only_ be reached through your proxy.** Otherwise clients can fake their IP address, which lets them get around the login rate limit and put fake IPs in the logs (tricking tools like fail2ban into banning the wrong address).
+<Tabs groupId="betterAuthSettings">
+<TabItem value="allowedHosts" label="Allowed Hosts">
+**`ALLOWED_HOSTS`** (or `auth.allowedHosts`): comma-separated hosts (with port, wildcards allowed, like `ms.mydomain.tld,192.168.0.101:9078`) the dashboard is accessed from. Restricting this adds another layer of origin checks. If you set [`BASE_URL`](/configuration#base-url) multi-scrobbler logs a hint with the host to use.
+</TabItem>
+<TabItem value="secureCookies" label="Secure Cookies">
+**`SECURE_COOKIES`** (or `auth.secureCookies`): marks the login cookie as https-only. It defaults to `true` only when `BASE_URL` is `https://...`. If you access the dashboard over **plain http**, this must be `false` or logging in will silently fail.
+</TabItem>
+<TabItem value="trustProxy" label="Trusted Proxies">
+**`TRUST_PROXY`** (or `auth.trustProxy`): trust `X-Forwarded-Host`/`X-Forwarded-Proto`/`X-Forwarded-For` from your reverse proxy. Used for correct client IP detection and rate limiting.
+
+**Only set this if multi-scrobbler can _only_ be reached through your proxy.** Otherwise clients can fake their IP address, which lets them get around the login rate limit and put fake IPs in the logs.
+</TabItem>
+</Tabs>
 
 ## Configuration
 
@@ -183,7 +200,7 @@ By default multi-scrobbler accepts requests for **any** host (IP, hostname, etc.
 <TabItem value="env" label="ENV">
 | Environmental Variable | Default                       | Description                                                                                                 |
 | :--------------------- | :---------------------------- | :---------------------------------------------------------------------------------------------------------- |
-| `AUTH_MODE`            | `optional`                    | `optional`, `claim` or `disabled`. See [Modes](#modes)                                                      |
+| `AUTH_MODE`            | `optional`                    | `optional`, or `disabled`. See [Securing Multi-Scrobbler](/security/overview#securing-multi-scrobbler)       |
 | `ADMIN_USERNAME`       | `admin`                       | Username of the admin account. 3-30 letters, numbers, underscores or dots                                   |
 | `ADMIN_SETUP_PW`       |                               | Initial admin password. Only used if the admin has no password                                              |
 | `ADMIN_RESET_PW`       |                               | Reset the admin password and log out all sessions. Remove after use                                         |
