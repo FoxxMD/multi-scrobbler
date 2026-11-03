@@ -41,13 +41,12 @@ Sources that use [**Ingress**](/configuration/sources/#by-communication-method) 
 
 <DetailsAdmo type="info" summary="Multi-Scrobbler Basic Info and Metrics">
 
-These routes provide either basic health/info which are safe to expose, or are metrics for prometheus which generally are not protected for consumption.
+These routes provide basic health/info which is safe to expose.
 
-* `/api/health`
+* `/api/health` (only the status code unless authenticated)
 * `/api/version`
-* `/api/metrics`
 
-TODO: Prometheus metrics and this endpoint can be turned off with `PROMETHEUS=false`
+Prometheus metrics (`/api/metrics`) require authentication once the instance is secured. Scrape them with a **Read** [API key](#api-keys). Set `PROMETHEUS=false` to remove the endpoint entirely.
 
 </DetailsAdmo>
 
@@ -84,6 +83,35 @@ If you have forgotten it, set `ADMIN_RESET_PW` and restart. The password is rese
 A login lasts **7 days** since the dashboard was last used. Each visit extends it, so you stay logged in as long as you use the dashboard at least once in that period.
 
 Change the lifetime with `AUTH_SESSION_EXPIRES` (or `auth.sessionExpires`), using the same duration formats as [retention](/configuration#retention): a number of seconds (`86400`), a duration string (`12 hours`, `30 days`), or an ISO 8601 duration (`P30D`). The minimum is 60 seconds.
+
+### API Keys
+
+API keys let scripts, Prometheus and other tools use the API without logging in. Create and delete them from **Settings -> Account** while logged in. The key is only shown once, when it is created.
+
+Each key has a scope:
+
+* **Read** can only make `GET` requests, including metrics.
+* **Write** can use every endpoint, including those that change data.
+
+Send the key in the `Authorization` header:
+
+```shell
+curl -H "Authorization: Bearer ms_..." http://localhost:9078/api/components
+```
+
+Scraping metrics with Prometheus:
+
+```yaml title="prometheus.yml"
+scrape_configs:
+  - job_name: multi-scrobbler
+    metrics_path: /api/metrics
+    authorization:
+      credentials: ms_...
+    static_configs:
+      - targets: ['localhost:9078']
+```
+
+Requests with an invalid key are logged as `Invalid API key from <ip>`.
 
 ## Auth Modes
 
