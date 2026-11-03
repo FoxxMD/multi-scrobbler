@@ -97,6 +97,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
         app.use(basePath, safeModeMiddleware(webFault));
 
         let optionalAuthMiddleware: RequestHandler | undefined;
+        const hiddenFromWeb: string[] = [];
         if(!root.get('disableWeb')) {
             const authLogger = childLogger(logger, 'Auth');
             const db = await root.items.db();
@@ -123,6 +124,9 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
             app.use(clientIpMiddleware({trustProxy: authSettings.trustProxy}));
             app.all(`${authBasePath(basePath)}/*splat`, sameOriginMiddleware({trustProxy: authSettings.trustProxy}), toNodeHandler(auth));
             apiRouter.useMiddleware(requireAuth({auth, settings: authSettings, state: authState, logger: authLogger, basePath}));
+            if(authSettings.setupToken !== undefined) {
+                hiddenFromWeb.push(authSettings.setupToken);
+            }
             optionalAuthMiddleware = optionalAuth({auth, settings: authSettings, state: authState, logger: authLogger});
             if(authSettings.mode !== 'disabled' && !authState.secured) {
                 authLogger.warn('Dashboard and API are not secured! Set an admin password from the dashboard or with ADMIN_SETUP_PW.');
@@ -152,7 +156,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
             return [app, router];
         }
 
-        setupApi({app, router: apiRouter, publicRouter, optionalAuth: optionalAuthMiddleware, scrobbleSources: sources, scrobbleClients: clients}, {...opts, logger, webFault});
+        setupApi({app, router: apiRouter, publicRouter, optionalAuth: optionalAuthMiddleware, hiddenFromWeb, scrobbleSources: sources, scrobbleClients: clients}, {...opts, logger, webFault});
         app.use(errorHandlerMiddleware(logger));
 
         if(opts.testMode === true) {

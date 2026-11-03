@@ -11,6 +11,8 @@ import { resolveAuthSettings } from '../../common/auth/authSettings.ts';
 import { ensureOwner } from '../../common/auth/owner.ts';
 import { setUserPassword } from '../../common/auth/ownerPassword.ts';
 import type ScrobbleSources from '../../sources/ScrobbleSources.ts';
+import { PassThrough } from 'node:stream';
+import { HIDDEN_FROM_WEB, hideSecrets } from '../../server/api.ts';
 
 /** run with env vars set, restoring them afterwards */
 const withEnv = async <T>(env: Record<string, string>, fn: () => Promise<T>): Promise<T> => {
@@ -164,6 +166,33 @@ describe('Hardening', function () {
             expect((await request(disabled).get('/api/metrics')).status).eq(404);
             await secureApp(disabled);
             expect((await request(disabled).get('/api/metrics')).status).eq(401);
+        });
+    });
+
+    describe('Setup token in dashboard logs', function () {
+
+        const TOKEN = 'superSecretSetupToken123';
+
+        it('is hidden from the log lines sent to the browser', async function () {
+            const stream = new PassThrough({objectMode: true});
+            const app = await buildAuthApp({appLoggerStream: stream, authSettings: {setupToken: TOKEN, setupTokenGenerated: true}});
+            stream.write({level: 40, time: Date.now(), msg: `Setup token: ${TOKEN}`, line: `WARN : [Auth] Setup token: ${TOKEN}`});
+            stream.write({level: 40, time: Date.now(), msg: 'Admin password setup failed from 1.2.3.4: wrong token', line: 'WARN : [Auth] Admin password setup failed from 1.2.3.4: wrong token'});
+            await new Promise(resolve => setImmediate(resolve));
+
+            // test logger is silent, show everything
+            const res = await request(app).put('/api/logs').send({level: 'debug'});
+            const body = JSON.stringify(res.body);
+            expect(body).not.include(TOKEN);
+            expect(body).include(HIDDEN_FROM_WEB);
+            // audit lines stay visible
+            expect(body).include('Admin password setup failed from 1.2.3.4');
+        });
+
+        it('leaves lines without secrets untouched', function () {
+            const log = {level: 30, time: 1, msg: 'hello', line: 'hello'} as any;
+            expect(hideSecrets(log, [TOKEN])).eq(log);
+            expect(hideSecrets(log, [])).eq(log);
         });
     });
 });

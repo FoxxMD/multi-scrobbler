@@ -54,6 +54,23 @@ const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
 
 const jsonParser = bodyParser.json({ type: ['text/*', 'application/json'] });
 
+export const HIDDEN_FROM_WEB = '[setup token hidden: see the server console/log file]';
+
+/**
+ * Remove secrets (setup token) from a log line before it reaches the dashboard (/logs and SSE).
+ * The console and log files keep the full line.
+ * */
+export const hideSecrets = (log: LogDataPretty, secrets: string[]): LogDataPretty => {
+    if (secrets.length === 0) {
+        return log;
+    }
+    const str = JSON.stringify(log);
+    if (!secrets.some(x => str.includes(x))) {
+        return log;
+    }
+    return JSON.parse(secrets.reduce((acc, x) => acc.replaceAll(JSON.stringify(x).slice(1, -1), HIDDEN_FROM_WEB), str));
+}
+
 const createAddToLogBuffer = (levelMap:  {[p: number]: string}) => (log: LogDataPretty) => {
     output[log.level].add({...log, levelLabel: levelMap[log.level]});
 }
@@ -79,6 +96,8 @@ export interface ApiArgs {
     publicRouter: ReturnType<typeof createTypedRouter>
     /** resolves req.auth without rejecting, for public routes that show more to a logged in user */
     optionalAuth?: RequestHandler
+    /** values that must never be sent to the browser in logs (setup token) */
+    hiddenFromWeb?: string[]
     scrobbleSources: ScrobbleSources
     scrobbleClients: ScrobbleClients
 }
@@ -97,6 +116,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         router,
         publicRouter,
         optionalAuth = noopMiddleware,
+        hiddenFromWeb = [],
         scrobbleSources,
         scrobbleClients
     } = args;
@@ -114,7 +134,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
 
     const addToLogBuffer = createAddToLogBuffer(logger.levels.labels);
     for(const log of initialLogOutput) {
-        addToLogBuffer(log);
+        addToLogBuffer(hideSecrets(log, hiddenFromWeb));
     }
     const root = getRoot();
 
@@ -145,8 +165,9 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     // only warn on the first failure until forwarding succeeds again
     // otherwise the warning is itself a log line that fails to forward, logging another warning, forever
     let logForwardFailing = false;
-    appLoggerStream.on('data', (log: LogDataPretty) => {
+    appLoggerStream.on('data', (rawLog: LogDataPretty) => {
         try {
+            const log = hideSecrets(rawLog, hiddenFromWeb);
             addToLogBuffer(log);
             if(log.level >= logger.levels.values[logConfig.level]) {
                 eventsChannel.broadcast({message: log.line, level: log.level, levelLabel: logger.levels.labels[log.level]} satisfies LogEvent, 'log', {filter: (s) => s.state.logs});
