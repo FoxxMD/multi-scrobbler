@@ -78,7 +78,6 @@ describe('Require Auth', function () {
 
         expect((await request(app).get('/api/health')).status).not.eq(401);
         expect((await request(app).get('/api/version')).status).eq(200);
-        expect((await request(app).get('/api/metrics')).status).eq(200);
         expect((await request(app).get('/1/validate-token')).status).eq(200);
         expect((await request(app).post('/api/webscrobbler').send({})).status).not.eq(401);
         expect((await request(app).post('/api/lastfm').send({})).status).not.eq(401);
@@ -158,7 +157,6 @@ describe('Require Auth', function () {
             'POST /2.0/',
             'POST /api/webscrobbler',
             'GET /api/health',
-            'GET /api/metrics',
             'GET /api/version',
         ];
         const [app, router] = await buildAuthAppRouter();

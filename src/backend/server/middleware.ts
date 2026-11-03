@@ -267,14 +267,3 @@ export const secretMatches = (expected: string, given: string | undefined): bool
     const b = Buffer.from(given);
     return a.length === b.length && timingSafeEqual(a, b);
 }
-
-/** Require `Authorization: Bearer <token>` (e.g. for Prometheus scraping with a static token) */
-export const bearerTokenMiddleware = (token: string): RequestHandler => (req, res, next) => {
-    const [scheme, given] = (req.get('authorization') ?? '').split(' ');
-    if (scheme?.toLowerCase() !== 'bearer' || !secretMatches(token, given)) {
-        res.setHeader('WWW-Authenticate', 'Bearer');
-        res.status(401).json({error: 'Bearer token required', code: 'auth_required'});
-        return;
-    }
-    next();
-}

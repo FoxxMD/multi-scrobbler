@@ -3,7 +3,7 @@ import express from 'express';
 import request from 'supertest';
 import type { Logger } from '@foxxmd/logging';
 import { toNodeHandler } from 'better-auth/node';
-import { buildAuthApp, secureApp, signIn } from '../utils/authTestUtils.ts';
+import { buildAuthApp, createApiKey, secureApp, signIn } from '../utils/authTestUtils.ts';
 import { CLIENT_IP_HEADER, clientIpMiddleware } from '../../server/middleware.ts';
 import { transientDb } from '../utils/TransientTestUtils.ts';
 import { createAuth } from '../../common/auth/auth.ts';
@@ -149,17 +149,16 @@ describe('Hardening', function () {
             expect((await request(app).get('/api/auth/setup/status').set('Cookie', cookie)).body.username).eq('admin');
         });
 
-        it('metrics require the bearer token when METRICS_TOKEN is set', async function () {
-            const app = await withEnv({METRICS_TOKEN: 'promSecret'}, () => buildAuthApp());
-            const none = await request(app).get('/api/metrics');
-            expect(none.status).eq(401);
-            expect(none.headers['www-authenticate']).eq('Bearer');
-            expect((await request(app).get('/api/metrics').set('Authorization', 'Bearer wrong')).status).eq(401);
-            expect((await request(app).get('/api/metrics').set('Authorization', 'Bearer promSecret')).status).eq(200);
+        it('metrics require auth once secured', async function () {
+            const app = await buildAuthApp();
+            expect((await request(app).get('/api/metrics')).status).eq(200);
+            await secureApp(app);
+            expect((await request(app).get('/api/metrics')).status).eq(401);
+            const key = await createApiKey(app, await signIn(app), 'read');
+            expect((await request(app).get('/api/metrics').set('Authorization', `Bearer ${key}`)).status).eq(200);
         });
 
-        it('metrics are public without METRICS_TOKEN and gone with PROMETHEUS=false', async function () {
-            expect((await request(await buildAuthApp()).get('/api/metrics')).status).eq(200);
+        it('metrics are gone with PROMETHEUS=false', async function () {
             const disabled = await withEnv({PROMETHEUS: 'false'}, () => buildAuthApp());
             // falls through to the auth-required api router, so: not found when unsecured, login required when secured
             expect((await request(disabled).get('/api/metrics')).status).eq(404);
