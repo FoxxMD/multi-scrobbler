@@ -5,13 +5,14 @@ import type { MSAuth } from "../common/auth/auth.ts";
 import type { AuthSettings } from "../common/auth/authSettings.ts";
 import type { AuthStateStore } from "../common/auth/authState.ts";
 import type { SecurityRequirement, SecurityScheme } from "@minisylar/express-typed-router";
-import { CLIENT_IP_HEADER, CLIENT_PUBLIC_HEADER, sameOriginMiddleware } from "./middleware.ts";
+import { CLIENT_IP_HEADER, CLIENT_PUBLIC_HEADER, isRecognizedHost, requestHost, sameOriginMiddleware } from "./middleware.ts";
 
 /**
  * How a request was authenticated
  *
  * * session  -- better-auth session (cookie, or any future better-auth plugin that resolves a session)
  * * apiKey -- API key (`Authorization: Bearer ms_...`), limited by its scope
+ * * unsecured -- (see below) read-only when the request uses a host that could be DNS rebinding
  * * unsecured -- instance has not been secured yet so every request acts as the owner, same as before auth existed
  * * disabled -- AUTH_MODE=disabled, every request acts as the owner
  * */
@@ -39,7 +40,7 @@ export const apiKeyScope = (metadata: unknown): ApiKeyScope => (metadata as {sco
 export interface RequestAuth {
     userId: string
     via: AuthVia
-    /** only set for API keys */
+    /** only set for API keys, and unsecured access through an unrecognized host */
     scope?: ApiKeyScope
     user?: Awaited<ReturnType<MSAuth['api']['getSession']>> extends infer S ? S extends {user: infer U} ? U : never : never
     session?: Awaited<ReturnType<MSAuth['api']['getSession']>> extends infer S ? S extends {session: infer U} ? U : never : never
@@ -144,7 +145,10 @@ export const resolveAuth = (opts: Pick<RequireAuthOptions, 'auth' | 'settings' |
                 }
             }
             if (!state.secured) {
-                req.auth = {userId: state.ownerId, via: 'unsecured'};
+                // a malicious website can point its own domain at this instance (DNS rebinding) and act as the owner from a LAN user's browser.
+                // Only hosts that can't be rebound get full access, others are read-only until the instance is secured
+                const recognized = isRecognizedHost(requestHost((x) => req.get(x), settings.trustProxy), settings);
+                req.auth = {userId: state.ownerId, via: 'unsecured', ...(recognized ? {} : {scope: 'read'})};
                 if (req.headers[CLIENT_PUBLIC_HEADER] === '1' && Date.now() - lastPublicWarn > PUBLIC_WARN_INTERVAL) {
                     lastPublicWarn = Date.now();
                     const forwarded = req.get('x-forwarded-for')?.split(',').at(-1)?.trim();
@@ -194,6 +198,13 @@ export const requireAuth = (opts: RequireAuthOptions): RequestHandler => {
         }
 
         if (req.auth.scope === 'read' && !SAFE_METHODS.includes(req.method)) {
+            if (req.auth.via === 'unsecured') {
+                res.status(403).json({
+                    error: `This instance is not secured and is being used through a host it does not recognize (${requestHost((x) => req.get(x), settings.trustProxy) ?? 'unknown'}), so it is read-only. Set an admin password, or add the host to ALLOWED_HOSTS or BASE_URL.`,
+                    code: 'unsecured_read_only'
+                });
+                return;
+            }
             res.status(403).json({error: 'API key is read-only', code: 'insufficient_scope'});
             return;
         }

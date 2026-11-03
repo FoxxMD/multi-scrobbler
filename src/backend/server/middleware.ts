@@ -7,6 +7,7 @@ import type AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts
 import type { TypedMiddleware } from "@minisylar/express-typed-router";
 import { timingSafeEqual } from "node:crypto";
 import { BlockList, isIP, isIPv4 } from "node:net";
+import type { AuthSettings } from "../common/auth/authSettings.ts";
 
 export const nonEmptyBody = (logger: Logger, origin: string = 'Origin'): TypedMiddleware => async (req, res, next) => {
     const bodyEmpty = req.body === undefined || req.body === null || (typeof req.body === 'object' && Object.keys(req.body).length === 0);
@@ -245,6 +246,47 @@ export const isPrivateAddress = (address: string): boolean => {
     const ip = stripMapped(address.trim());
     const family = isIP(ip);
     return family !== 0 && privateNetworks.check(ip, family === 4 ? 'ipv4' : 'ipv6');
+}
+
+/** Host the client used: X-Forwarded-Host (with trustProxy) or Host */
+export const requestHost = (getHeader: (name: string) => string | null | undefined, trustProxy: boolean): string | undefined => {
+    const forwarded = trustProxy ? getHeader('x-forwarded-host')?.split(',')[0]?.trim() : undefined;
+    return (forwarded !== undefined && forwarded !== '' ? forwarded : getHeader('host')?.trim()) || undefined;
+}
+
+/** name endings public DNS can't serve, so a malicious website can't use them for DNS rebinding */
+const LOCAL_SUFFIXES = ['.local', '.lan', '.home.arpa', '.internal', '.localhost', '.ts.net'];
+
+const hostPatternMatches = (pattern: string, host: string) =>
+    new RegExp(`^${pattern.toLowerCase().replace(/[.+?^${}()|[\]\\]/g, '\\$&').replaceAll('*', '.*')}$`).test(host);
+
+/**
+ * Whether a Host can't be a DNS rebinding attack: a malicious website pointing its own domain at this instance.
+ *
+ * Allowed: IP addresses, localhost, single-label names (nas), names ending in a local-only suffix (.local, .lan, .home.arpa, .internal, .ts.net),
+ * the BASE_URL host and ALLOWED_HOSTS entries (when not open).
+ * */
+export const isRecognizedHost = (host: string | undefined, settings: Pick<AuthSettings, 'allowedHosts' | 'hostsOpen' | 'fallbackOrigin'>): boolean => {
+    if (host === undefined) {
+        return false;
+    }
+    const withPort = host.toLowerCase();
+    // [::1]:9078 -> ::1, 192.168.0.1:9078 -> 192.168.0.1, nas:9078 -> nas
+    const hostname = (withPort.startsWith('[') ? withPort.slice(1, withPort.indexOf(']')) : withPort.replace(/:\d+$/, '')).replace(/\.$/, '');
+    if (hostname === '') {
+        return false;
+    }
+    if (isIP(hostname) !== 0 || hostname === 'localhost' || !hostname.includes('.') || LOCAL_SUFFIXES.some(x => hostname.endsWith(x))) {
+        return true;
+    }
+    try {
+        if (new URL(settings.fallbackOrigin).hostname.toLowerCase() === hostname) {
+            return true;
+        }
+    } catch {
+        // not a valid origin, ignore
+    }
+    return !settings.hostsOpen && settings.allowedHosts.some(x => hostPatternMatches(x, withPort) || hostPatternMatches(x, hostname));
 }
 
 /**

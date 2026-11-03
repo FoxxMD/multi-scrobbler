@@ -6,12 +6,12 @@ import type { DbConcrete } from "../database/drizzle/drizzleUtils.ts";
 import type { AuthSettings } from "./authSettings.ts";
 import { computeAuthState } from "./authState.ts";
 import { setUserPassword } from "./ownerPassword.ts";
-import { CLIENT_IP_HEADER, CLIENT_PUBLIC_HEADER, secretMatches } from "../../server/middleware.ts";
+import { CLIENT_PUBLIC_HEADER, isRecognizedHost, requestHost, secretMatches } from "../../server/middleware.ts";
 import type { Logger } from "@foxxmd/logging";
 
 export interface SetupPluginOptions {
     db: DbConcrete
-    settings: Pick<AuthSettings, 'mode' | 'setupToken' | 'setupTokenAlways'>
+    settings: Pick<AuthSettings, 'mode' | 'setupToken' | 'setupTokenAlways' | 'trustProxy' | 'allowedHosts' | 'hostsOpen' | 'fallbackOrigin'>
     logger: Logger
     /** called after anything that changes auth state (password set) */
     onStateChange: () => Promise<unknown>
@@ -27,21 +27,28 @@ export interface SetupStatus {
      *
      * * configured -- AUTH_SETUP_TOKEN is set
      * * public_ip -- the request looks like it comes from the internet
+     * * host -- the request uses a host that could be DNS rebinding (unrecognized domain)
      * */
     setupTokenReason?: SetupTokenReason
     /** the request looks like it comes from the internet (only a signal, may be wrong) */
     publicClient: boolean
+    /** host the request used */
+    host?: string
+    /** host can't be DNS rebinding. While unsecured, the API is read-only through other hosts */
+    hostRecognized: boolean
     /** requester has a session for the owner */
     isOwner: boolean
     /** owner's username. Omitted once secured unless the requester is logged in as the owner, so it isn't handed to anyone guessing passwords */
     username?: string
 }
 
-export type SetupTokenReason = 'configured' | 'public_ip';
+export type SetupTokenReason = 'configured' | 'public_ip' | 'host';
 
 type Headers = {get: (name: string) => string | null} | undefined;
 
 const isPublic = (headers: Headers) => headers?.get(CLIENT_PUBLIC_HEADER) === '1';
+
+const hostOf = (settings: SetupPluginOptions['settings'], headers: Headers) => requestHost((x) => headers?.get(x), settings.trustProxy);
 
 const tokenReason = (settings: SetupPluginOptions['settings'], headers: Headers): SetupTokenReason | undefined => {
     if (settings.setupTokenAlways) {
@@ -49,6 +56,9 @@ const tokenReason = (settings: SetupPluginOptions['settings'], headers: Headers)
     }
     if (isPublic(headers)) {
         return 'public_ip';
+    }
+    if (!isRecognizedHost(hostOf(settings, headers), settings)) {
+        return 'host';
     }
     return undefined;
 }
@@ -81,6 +91,8 @@ export const setupPlugin = (opts: SetupPluginOptions) => {
                     setupTokenRequired: tokenReason(settings, ctx.headers) !== undefined,
                     setupTokenReason: tokenReason(settings, ctx.headers),
                     publicClient: isPublic(ctx.headers),
+                    host: hostOf(settings, ctx.headers),
+                    hostRecognized: isRecognizedHost(hostOf(settings, ctx.headers), settings),
                     isOwner,
                     username: state.secured && !isOwner ? undefined : (owner as {username?: string} | null)?.username ?? 'admin',
                 });

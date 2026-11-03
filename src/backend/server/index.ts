@@ -129,7 +129,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
             if(authSettings.mode !== 'disabled' && !authState.secured) {
                 authLogger.warn('Dashboard and API are not secured! Set an admin password from the dashboard or with ADMIN_SETUP_PW.');
                 if(authSettings.setupTokenGenerated) {
-                    authLogger.warn(`Setup token (required to secure this instance from the dashboard${authSettings.setupTokenAlways ? '' : ' when connecting from what looks like the internet'}): ${authSettings.setupToken}`);
+                    authLogger.warn(`Setup token (required to secure this instance from the dashboard${authSettings.setupTokenAlways ? '' : ' when connecting from what looks like the internet, or through a domain it does not recognize'}): ${authSettings.setupToken}`);
                 }
             }
             authLogger.verbose(`Auth mode: ${authSettings.mode} | Allowed Hosts: ${authSettings.allowedHosts.join(', ')} | Secure Cookies: ${authSettings.secureCookies ? 'Yes' : 'No'} | Trust Proxy: ${authSettings.trustProxy ? 'Yes' : 'No'} | Session Expires: ${authSettings.sessionExpiresIn}s`);

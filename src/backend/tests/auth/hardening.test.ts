@@ -4,7 +4,7 @@ import request from 'supertest';
 import type { Logger } from '@foxxmd/logging';
 import { toNodeHandler } from 'better-auth/node';
 import { buildAuthApp, createApiKey, secureApp, signIn } from '../utils/authTestUtils.ts';
-import { CLIENT_IP_HEADER, clientIpMiddleware, isPrivateAddress, isPublicClient } from '../../server/middleware.ts';
+import { CLIENT_IP_HEADER, clientIpMiddleware, isPrivateAddress, isPublicClient, isRecognizedHost } from '../../server/middleware.ts';
 import { transientDb } from '../utils/TransientTestUtils.ts';
 import { createAuth } from '../../common/auth/auth.ts';
 import { resolveAuthSettings } from '../../common/auth/authSettings.ts';
@@ -246,6 +246,67 @@ describe('Hardening', function () {
             await request(probe).get('/').set('X-Forwarded-For', '8.8.8.8');
             expect(logs).length(1);
             expect(logs[0]).match(/^Unsecured instance was used from 127\.0\.0\.1 \(forwarded for 8\.8\.8\.8\), which looks like a public IP/);
+        });
+    });
+
+    describe('DNS rebinding (unrecognized hosts while unsecured)', function () {
+
+        const MUTATE = '/api/components/999/plays/queue';
+        const open = {allowedHosts: ['*'], hostsOpen: true, fallbackOrigin: 'http://localhost:9078'};
+
+        it('recognizes hosts that cannot be rebound', function () {
+            for (const host of ['192.168.0.101:9078', '127.0.0.1', '[::1]:9078', '[fd00::5]', 'localhost:9078', 'nas', 'nas:9078', 'NAS.', 'mycoolsite.local', 'ms.lan:80', 'ms.home.arpa', 'ms.internal', 'box.tail1234.ts.net', 'app.localhost']) {
+                expect(isRecognizedHost(host, open), host).is.true;
+            }
+            for (const host of ['ms.mydomain.com', 'evil.example.com:9078', 'mycoolsite.dev', 'local.evil.com', undefined, '', ':9078']) {
+                expect(isRecognizedHost(host, open), String(host)).is.false;
+            }
+        });
+
+        it('recognizes the BASE_URL host and ALLOWED_HOSTS', function () {
+            expect(isRecognizedHost('ms.mydomain.com', {...open, fallbackOrigin: 'https://ms.mydomain.com'})).is.true;
+            expect(isRecognizedHost('ms.mydomain.com:443', {...open, fallbackOrigin: 'https://ms.mydomain.com'})).is.true;
+            const restricted = {...open, hostsOpen: false, allowedHosts: ['*.mydomain.com', 'other.example.com:9078']};
+            expect(isRecognizedHost('ms.mydomain.com', restricted)).is.true;
+            expect(isRecognizedHost('other.example.com:9078', restricted)).is.true;
+            expect(isRecognizedHost('other.example.com:1234', restricted)).is.false;
+            expect(isRecognizedHost('evil.com', restricted)).is.false;
+            expect(isRecognizedHost('mydomain.com.evil.com', restricted)).is.false;
+        });
+
+        it('makes an unsecured instance read-only through unrecognized hosts', async function () {
+            const app = await buildAuthApp();
+            expect((await request(app).get('/api/components').set('Host', 'ms.mydomain.com')).status).eq(200);
+            const res = await request(app).post(MUTATE).set('Host', 'ms.mydomain.com').send({});
+            expect(res.status).eq(403);
+            expect(res.body.code).eq('unsecured_read_only');
+            expect(res.body.error).include('ms.mydomain.com');
+            // recognized host is unaffected
+            expect((await request(app).post(MUTATE).set('Host', '192.168.0.101:9078').send({})).status).not.oneOf([401, 403]);
+        });
+
+        it('uses X-Forwarded-Host with TRUST_PROXY', async function () {
+            const app = await buildAuthApp({authSettings: {trustProxy: true}});
+            expect((await request(app).post(MUTATE).set('Host', 'upstream:9078').set('X-Forwarded-Host', 'ms.mydomain.com').send({})).status).eq(403);
+            expect((await request(app).post(MUTATE).set('Host', 'ms.mydomain.com').set('X-Forwarded-Host', 'ms.lan').send({})).status).not.oneOf([401, 403]);
+        });
+
+        it('requires the setup token through unrecognized hosts', async function () {
+            const app = await buildAuthApp({authSettings: {setupToken: 'sekret'}});
+            const status = (await request(app).get('/api/auth/setup/status').set('Host', 'ms.mydomain.com')).body;
+            expect(status).include({setupTokenRequired: true, setupTokenReason: 'host', hostRecognized: false, host: 'ms.mydomain.com'});
+            expect((await request(app).post('/api/auth/setup/password').set('Host', 'ms.mydomain.com').send({password: 'ownerPassword'})).status).eq(403);
+            expect((await request(app).post('/api/auth/setup/password').set('Host', 'ms.mydomain.com').send({password: 'ownerPassword', token: 'sekret'})).status).eq(200);
+        });
+
+        it('does not apply to secured or disabled instances', async function () {
+            const secured = await buildAuthApp();
+            await secureApp(secured);
+            const cookie = await signIn(secured);
+            expect((await request(secured).post(MUTATE).set('Host', 'ms.mydomain.com').set('Cookie', cookie).send({})).status).not.oneOf([401, 403]);
+
+            const disabled = await buildAuthApp({authSettings: {mode: 'disabled'}});
+            expect((await request(disabled).post(MUTATE).set('Host', 'ms.mydomain.com').send({})).status).not.oneOf([401, 403]);
         });
     });
 });
