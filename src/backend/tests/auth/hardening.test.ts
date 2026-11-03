@@ -4,7 +4,7 @@ import request from 'supertest';
 import type { Logger } from '@foxxmd/logging';
 import { toNodeHandler } from 'better-auth/node';
 import { buildAuthApp, createApiKey, secureApp, signIn } from '../utils/authTestUtils.ts';
-import { CLIENT_IP_HEADER, clientIpMiddleware } from '../../server/middleware.ts';
+import { CLIENT_IP_HEADER, clientIpMiddleware, isPrivateAddress, isPublicClient } from '../../server/middleware.ts';
 import { transientDb } from '../utils/TransientTestUtils.ts';
 import { createAuth } from '../../common/auth/auth.ts';
 import { resolveAuthSettings } from '../../common/auth/authSettings.ts';
@@ -12,6 +12,8 @@ import { ensureOwner } from '../../common/auth/owner.ts';
 import { setUserPassword } from '../../common/auth/ownerPassword.ts';
 import type ScrobbleSources from '../../sources/ScrobbleSources.ts';
 import { PassThrough } from 'node:stream';
+import type { ServerLocals } from '../../server/index.ts';
+import { optionalAuth } from '../../server/requireAuth.ts';
 import { HIDDEN_FROM_WEB, hideSecrets } from '../../server/api.ts';
 
 /** run with env vars set, restoring them afterwards */
@@ -193,6 +195,57 @@ describe('Hardening', function () {
             const log = {level: 30, time: 1, msg: 'hello', line: 'hello'} as any;
             expect(hideSecrets(log, [TOKEN])).eq(log);
             expect(hideSecrets(log, [])).eq(log);
+        });
+    });
+
+    describe('Public client detection', function () {
+
+        const req = (socket: string | undefined, forwarded?: string) => ({
+            socket: {remoteAddress: socket},
+            get: (name: string) => name.toLowerCase() === 'x-forwarded-for' ? forwarded : undefined,
+        }) as any;
+
+        it('knows private addresses', function () {
+            for (const ip of ['127.0.0.1', '10.1.2.3', '172.16.0.1', '172.31.255.255', '192.168.0.101', '100.64.0.1', '100.127.255.255', '169.254.1.1', '::1', 'fd12:3456::1', 'fe80::1', '::ffff:192.168.0.5', '::FFFF:10.0.0.1']) {
+                expect(isPrivateAddress(ip), ip).is.true;
+            }
+            for (const ip of ['8.8.8.8', '172.32.0.1', '100.128.0.1', '203.0.113.7', '2001:4860::8888', '::ffff:8.8.8.8', 'not-an-ip', '']) {
+                expect(isPrivateAddress(ip), ip).is.false;
+            }
+        });
+
+        it('detects public clients without TRUST_PROXY', function () {
+            expect(isPublicClient(req('192.168.0.5'))).is.false;
+            expect(isPublicClient(req('8.8.8.8'))).is.true;
+            // public connection can't hide behind a forged header
+            expect(isPublicClient(req('8.8.8.8', '192.168.0.5'))).is.true;
+            // reverse proxy on the LAN, right-most entry is what the proxy appended
+            expect(isPublicClient(req('172.17.0.1', '192.168.0.5, 8.8.8.8'))).is.true;
+            expect(isPublicClient(req('172.17.0.1', '8.8.8.8, 192.168.0.5'))).is.false;
+            expect(isPublicClient(req(undefined))).is.false;
+        });
+
+        it('uses the forwarded address with TRUST_PROXY', function () {
+            expect(isPublicClient(req('172.17.0.1', '8.8.8.8'), {trustProxy: true})).is.true;
+            expect(isPublicClient(req('172.17.0.1', '192.168.0.5'), {trustProxy: true})).is.false;
+            expect(isPublicClient(req('172.17.0.1'), {trustProxy: true})).is.false;
+        });
+
+        it('warns at most hourly when an unsecured instance is used from a public IP', async function () {
+            const app = await buildAuthApp();
+            const {auth, authSettings, authState} = app.locals as ServerLocals;
+            const logs: string[] = [];
+            const logger = {warn: (m: string) => logs.push(m), info: () => undefined, debug: () => undefined, verbose: () => undefined, error: () => undefined} as unknown as Logger;
+            const probe = express();
+            probe.use(clientIpMiddleware(), optionalAuth({auth, settings: authSettings, state: authState, logger}));
+            probe.get('/', (req, res) => res.json({}));
+
+            await request(probe).get('/');
+            expect(logs).length(0);
+            await request(probe).get('/').set('X-Forwarded-For', '8.8.8.8');
+            await request(probe).get('/').set('X-Forwarded-For', '8.8.8.8');
+            expect(logs).length(1);
+            expect(logs[0]).match(/^Unsecured instance was used from 127\.0\.0\.1 \(forwarded for 8\.8\.8\.8\), which looks like a public IP/);
         });
     });
 });

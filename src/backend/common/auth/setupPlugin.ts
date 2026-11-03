@@ -6,11 +6,13 @@ import type { DbConcrete } from "../database/drizzle/drizzleUtils.ts";
 import type { AuthSettings } from "./authSettings.ts";
 import { computeAuthState } from "./authState.ts";
 import { setUserPassword } from "./ownerPassword.ts";
-import { secretMatches } from "../../server/middleware.ts";
+import { CLIENT_IP_HEADER, CLIENT_PUBLIC_HEADER, secretMatches } from "../../server/middleware.ts";
+import type { Logger } from "@foxxmd/logging";
 
 export interface SetupPluginOptions {
     db: DbConcrete
-    settings: Pick<AuthSettings, 'mode' | 'setupToken'>
+    settings: Pick<AuthSettings, 'mode' | 'setupToken' | 'setupTokenAlways'>
+    logger: Logger
     /** called after anything that changes auth state (password set) */
     onStateChange: () => Promise<unknown>
 }
@@ -20,13 +22,39 @@ export interface SetupStatus {
     secured: boolean
     passwordSet: boolean
     setupTokenRequired: boolean
+    /**
+     * Why the setup token is required for this request
+     *
+     * * configured -- AUTH_SETUP_TOKEN is set
+     * * public_ip -- the request looks like it comes from the internet
+     * */
+    setupTokenReason?: SetupTokenReason
+    /** the request looks like it comes from the internet (only a signal, may be wrong) */
+    publicClient: boolean
     /** requester has a session for the owner */
     isOwner: boolean
     /** owner's username. Omitted once secured unless the requester is logged in as the owner, so it isn't handed to anyone guessing passwords */
     username?: string
 }
 
-const tokenMatches = (expected: string | undefined, given: string | undefined): boolean => expected === undefined || secretMatches(expected, given);
+export type SetupTokenReason = 'configured' | 'public_ip';
+
+type Headers = {get: (name: string) => string | null} | undefined;
+
+const isPublic = (headers: Headers) => headers?.get(CLIENT_PUBLIC_HEADER) === '1';
+
+const tokenReason = (settings: SetupPluginOptions['settings'], headers: Headers): SetupTokenReason | undefined => {
+    if (settings.setupTokenAlways) {
+        return 'configured';
+    }
+    if (isPublic(headers)) {
+        return 'public_ip';
+    }
+    return undefined;
+}
+
+/** print the token again when someone is stuck without it, but not on every request of someone hammering the endpoint */
+const TOKEN_REPRINT_INTERVAL = 5 * 60 * 1000;
 
 /**
  * Instance setup endpoints, as a better-auth plugin so they can create sessions and set signed session cookies.
@@ -35,7 +63,8 @@ const tokenMatches = (expected: string | undefined, given: string | undefined): 
  * * POST /setup/password -- set the owner's *first* password. Afterwards use better-auth's change-password.
  * */
 export const setupPlugin = (opts: SetupPluginOptions) => {
-    const {db, settings, onStateChange} = opts;
+    const {db, settings, onStateChange, logger} = opts;
+    let lastReprint = 0;
 
     return {
         id: 'ms-setup',
@@ -49,7 +78,9 @@ export const setupPlugin = (opts: SetupPluginOptions) => {
                     mode: settings.mode,
                     secured: state.secured,
                     passwordSet: state.ownerHasPassword,
-                    setupTokenRequired: settings.setupToken !== undefined,
+                    setupTokenRequired: tokenReason(settings, ctx.headers) !== undefined,
+                    setupTokenReason: tokenReason(settings, ctx.headers),
+                    publicClient: isPublic(ctx.headers),
                     isOwner,
                     username: state.secured && !isOwner ? undefined : (owner as {username?: string} | null)?.username ?? 'admin',
                 });
@@ -65,8 +96,13 @@ export const setupPlugin = (opts: SetupPluginOptions) => {
                 }
                 const session = await getSessionFromCtx(ctx, {disableRefresh: true});
                 const isOwner = session?.user.id === state.ownerId;
-                if (!isOwner && !tokenMatches(settings.setupToken, ctx.body.token)) {
-                    throw new APIError('FORBIDDEN', {message: 'Setup token is missing or incorrect. Find it in the multi-scrobbler logs.', code: 'INVALID_SETUP_TOKEN'});
+                const reason = tokenReason(settings, ctx.headers);
+                if (!isOwner && reason !== undefined && !secretMatches(settings.setupToken, ctx.body.token)) {
+                    if (Date.now() - lastReprint > TOKEN_REPRINT_INTERVAL) {
+                        lastReprint = Date.now();
+                        logger.warn(`Setup token (required to secure this instance from the dashboard): ${settings.setupToken}`);
+                    }
+                    throw new APIError('FORBIDDEN', {message: 'Setup token is missing or incorrect. Find it in the multi-scrobbler console output (docker logs) or log file.', code: 'INVALID_SETUP_TOKEN'});
                 }
                 try {
                     await setUserPassword(ctx.context, state.ownerId, ctx.body.password);

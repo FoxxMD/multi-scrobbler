@@ -43,11 +43,28 @@ describe('Instance Setup', function () {
         });
 
         it('requires the setup token when configured', async function () {
-            const app = await buildAuthApp({authSettings: {setupToken: 'sekret'}});
-            expect((await request(app).get('/api/auth/setup/status')).body.setupTokenRequired).is.true;
+            const app = await buildAuthApp({authSettings: {setupToken: 'sekret', setupTokenAlways: true}});
+            expect((await request(app).get('/api/auth/setup/status')).body).include({setupTokenRequired: true, setupTokenReason: 'configured'});
             expect((await request(app).post('/api/auth/setup/password').send({password: 'ownerPassword'})).status).eq(403);
             expect((await request(app).post('/api/auth/setup/password').send({password: 'ownerPassword', token: 'wrong!'})).status).eq(403);
             expect((await request(app).post('/api/auth/setup/password').send({password: 'ownerPassword', token: 'sekret'})).status).eq(200);
+        });
+
+        it('requires the setup token for clients that look public', async function () {
+            const app = await buildAuthApp({authSettings: {setupToken: 'sekret'}});
+            // private connection (supertest is local) without a proxy header: no token
+            expect((await request(app).get('/api/auth/setup/status')).body).include({setupTokenRequired: false, publicClient: false});
+
+            // a reverse proxy on the LAN forwarding a public client
+            const PUBLIC = '203.0.113.7';
+            const status = (await request(app).get('/api/auth/setup/status').set('X-Forwarded-For', PUBLIC)).body;
+            expect(status).include({setupTokenRequired: true, setupTokenReason: 'public_ip', publicClient: true});
+            const noToken = await request(app).post('/api/auth/setup/password').set('X-Forwarded-For', PUBLIC).send({password: 'ownerPassword'});
+            expect(noToken.status).eq(403);
+            expect(noToken.body.code).eq('INVALID_SETUP_TOKEN');
+            // client-supplied value of the signal header is ignored
+            expect((await request(app).post('/api/auth/setup/password').set('X-Forwarded-For', PUBLIC).set('x-ms-client-public', '0').send({password: 'ownerPassword'})).status).eq(403);
+            expect((await request(app).post('/api/auth/setup/password').set('X-Forwarded-For', PUBLIC).send({password: 'ownerPassword', token: 'sekret'})).status).eq(200);
         });
 
         it('setup endpoints are protected from cross-site requests', async function () {

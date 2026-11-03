@@ -5,7 +5,7 @@ import type { MSAuth } from "../common/auth/auth.ts";
 import type { AuthSettings } from "../common/auth/authSettings.ts";
 import type { AuthStateStore } from "../common/auth/authState.ts";
 import type { SecurityRequirement, SecurityScheme } from "@minisylar/express-typed-router";
-import { CLIENT_IP_HEADER, sameOriginMiddleware } from "./middleware.ts";
+import { CLIENT_IP_HEADER, CLIENT_PUBLIC_HEADER, sameOriginMiddleware } from "./middleware.ts";
 
 /**
  * How a request was authenticated
@@ -117,8 +117,11 @@ const unauthorizedPage = (host: string, basePath: string) => {
  * An invalid API key is logged as `Invalid API key from <ip>` (for fail2ban/CrowdSec) and the request stays anonymous.
  * New auth methods should resolve through better-auth (getSession) or add a step here.
  * */
+const PUBLIC_WARN_INTERVAL = 60 * 60 * 1000;
+
 export const resolveAuth = (opts: Pick<RequireAuthOptions, 'auth' | 'settings' | 'state' | 'logger'>) => {
     const {auth, settings, state, logger} = opts;
+    let lastPublicWarn = 0;
     return async (req: Request): Promise<void> => {
         try {
             if (settings.mode === 'disabled') {
@@ -142,6 +145,12 @@ export const resolveAuth = (opts: Pick<RequireAuthOptions, 'auth' | 'settings' |
             }
             if (!state.secured) {
                 req.auth = {userId: state.ownerId, via: 'unsecured'};
+                if (req.headers[CLIENT_PUBLIC_HEADER] === '1' && Date.now() - lastPublicWarn > PUBLIC_WARN_INTERVAL) {
+                    lastPublicWarn = Date.now();
+                    const forwarded = req.get('x-forwarded-for')?.split(',').at(-1)?.trim();
+                    const from = `${req.headers[CLIENT_IP_HEADER] ?? 'unknown'}${forwarded ? ` (forwarded for ${forwarded})` : ''}`;
+                    logger.warn(`Unsecured instance was used from ${from}, which looks like a public IP. This instance may be reachable from the internet and anyone who can reach it can use it. Set an admin password to secure it.`);
+                }
             }
         } catch (e) {
             logger.warn(new Error('Failed to resolve request session', {cause: e}));

@@ -6,6 +6,7 @@ import type AbstractSource from "../sources/AbstractSource.ts";
 import type AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";
 import type { TypedMiddleware } from "@minisylar/express-typed-router";
 import { timingSafeEqual } from "node:crypto";
+import { BlockList, isIP, isIPv4 } from "node:net";
 
 export const nonEmptyBody = (logger: Logger, origin: string = 'Origin'): TypedMiddleware => async (req, res, next) => {
     const bodyEmpty = req.body === undefined || req.body === null || (typeof req.body === 'object' && Object.keys(req.body).length === 0);
@@ -223,6 +224,51 @@ export const sameOriginMiddleware = (opts: SameOriginOptions = {}): RequestHandl
 
 /** Request header MS sets (overwriting anything the client sent) with the client IP, for better-auth's rate limiter */
 export const CLIENT_IP_HEADER = 'x-ms-client-ip';
+/** Request header MS sets (overwriting anything the client sent): '1' if the client looks like it is on the public internet, else '0' */
+export const CLIENT_PUBLIC_HEADER = 'x-ms-client-public';
+
+const privateNetworks = new BlockList();
+for (const [net, prefix] of [['127.0.0.0', 8], ['10.0.0.0', 8], ['172.16.0.0', 12], ['192.168.0.0', 16], ['100.64.0.0', 10], ['169.254.0.0', 16]] as const) {
+    privateNetworks.addSubnet(net, prefix, 'ipv4');
+}
+for (const [net, prefix] of [['::1', 128], ['fc00::', 7], ['fe80::', 10]] as const) {
+    privateNetworks.addSubnet(net, prefix, 'ipv6');
+}
+
+const stripMapped = (ip: string) => ip.toLowerCase().startsWith('::ffff:') && isIPv4(ip.slice(7)) ? ip.slice(7) : ip;
+
+/**
+ * Loopback, private (RFC1918, IPv6 unique local), CGNAT (Tailscale) or link-local address.
+ * Anything that isn't a valid IP is not private.
+ * */
+export const isPrivateAddress = (address: string): boolean => {
+    const ip = stripMapped(address.trim());
+    const family = isIP(ip);
+    return family !== 0 && privateNetworks.check(ip, family === 4 ? 'ipv4' : 'ipv6');
+}
+
+/**
+ * Best guess at whether the client is on the public internet. Only a signal: it is used for warnings and to require the setup token, never to deny access.
+ *
+ * * trustProxy: the right-most X-Forwarded-For entry (or the connection) decides
+ * * otherwise, a public connection address is public (a direct client can't fake it).
+ *   A private connection address with X-Forwarded-For is probably a reverse proxy, so its right-most entry (appended by that proxy) decides.
+ * */
+export const isPublicClient = (req: Request, opts: SameOriginOptions = {}): boolean => {
+    const forwarded = req.get('x-forwarded-for')?.split(',').map(x => x.trim()).filter(x => x !== '').at(-1);
+    const socket = req.socket.remoteAddress;
+    if (opts.trustProxy) {
+        const ip = forwarded ?? socket;
+        return ip !== undefined && !isPrivateAddress(ip);
+    }
+    if (socket === undefined) {
+        return false;
+    }
+    if (!isPrivateAddress(socket)) {
+        return true;
+    }
+    return forwarded !== undefined && !isPrivateAddress(forwarded);
+}
 
 /**
  * Resolve the client IP for better-auth (rate limiting, session IP) without trusting client-supplied headers.
@@ -246,6 +292,7 @@ export const clientIpMiddleware = (opts: SameOriginOptions = {}): RequestHandler
     } else {
         req.headers[CLIENT_IP_HEADER] = ip;
     }
+    req.headers[CLIENT_PUBLIC_HEADER] = isPublicClient(req, opts) ? '1' : '0';
     next();
 }
 

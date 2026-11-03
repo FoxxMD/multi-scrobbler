@@ -23,10 +23,15 @@ export interface AuthSettings {
     secret: string
     /** Origin used as better-auth baseURL fallback when hosts are restricted */
     fallbackOrigin: string
-    /** If defined, setting the first password without a session requires this token */
-    setupToken?: string
+    /**
+     * Token for setting the first password without a session. Always exists: generated at startup unless AUTH_SETUP_TOKEN gives a value.
+     * Required when setupTokenAlways, or for requests that look risky (public client IP...)
+     * */
+    setupToken: string
     /** setup token was generated (should be printed in logs) rather than user-defined */
     setupTokenGenerated: boolean
+    /** AUTH_SETUP_TOKEN is set: the token is required for every setup request */
+    setupTokenAlways: boolean
     /** seconds a session lasts since it was last refreshed */
     sessionExpiresIn: number
     /** seconds after which using a session extends its expiration */
@@ -112,15 +117,15 @@ export const resolveAuthSettings = (opts: ResolveAuthSettingsOptions): AuthSetti
 
     const trustProxy = parseBool(env.TRUST_PROXY, config.trustProxy ?? false);
 
-    let setupToken: string | undefined;
-    let setupTokenGenerated = false;
+    let setupToken = randomBytes(9).toString('base64url');
+    let setupTokenGenerated = true;
+    let setupTokenAlways = false;
     const setupEnv = env.AUTH_SETUP_TOKEN?.trim();
     if (setupEnv !== undefined && setupEnv !== '' && !['0', 'false', 'no'].includes(setupEnv.toLowerCase())) {
-        if (['1', 'true', 'yes'].includes(setupEnv.toLowerCase())) {
-            setupToken = randomBytes(9).toString('base64url');
-            setupTokenGenerated = true;
-        } else {
+        setupTokenAlways = true;
+        if (!['1', 'true', 'yes'].includes(setupEnv.toLowerCase())) {
             setupToken = setupEnv;
+            setupTokenGenerated = false;
         }
     }
 
@@ -153,6 +158,7 @@ export const resolveAuthSettings = (opts: ResolveAuthSettingsOptions): AuthSetti
         fallbackOrigin: localUrl.origin,
         setupToken,
         setupTokenGenerated,
+        setupTokenAlways,
         sessionExpiresIn,
         sessionUpdateAge,
     };

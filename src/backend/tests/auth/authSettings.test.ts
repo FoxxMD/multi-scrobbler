@@ -52,13 +52,20 @@ describe('Auth Settings', function () {
 
     it('parses AUTH_SETUP_TOKEN', function () {
         const base = {localUrl: http, hasDefinedBaseUrl: false};
-        expect(resolveAuthSettings({...base, env: {}}).setupToken).is.undefined;
-        expect(resolveAuthSettings({...base, env: {AUTH_SETUP_TOKEN: 'false'}}).setupToken).is.undefined;
+        // always generated, only required for risky requests
+        for (const env of [{}, {AUTH_SETUP_TOKEN: 'false'}]) {
+            const s = resolveAuthSettings({...base, env});
+            expect(s.setupToken.length).gte(10);
+            expect(s.setupTokenGenerated).is.true;
+            expect(s.setupTokenAlways).is.false;
+        }
         const generated = resolveAuthSettings({...base, env: {AUTH_SETUP_TOKEN: 'true'}});
         expect(generated.setupTokenGenerated).is.true;
-        expect(generated.setupToken?.length).gte(10);
+        expect(generated.setupTokenAlways).is.true;
+        expect(generated.setupToken.length).gte(10);
         const literal = resolveAuthSettings({...base, env: {AUTH_SETUP_TOKEN: 'myToken'}});
         expect(literal.setupTokenGenerated).is.false;
+        expect(literal.setupTokenAlways).is.true;
         expect(literal.setupToken).eq('myToken');
     });
 

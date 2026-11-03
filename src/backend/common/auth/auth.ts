@@ -88,7 +88,7 @@ export const createAuth = (db: DbConcrete, settings: AuthSettings, opts: CreateA
             username(),
             // ponytail: admin plugin (roles, user management endpoints) left out until there is more than one user.
             // users.role and the ban/impersonation columns are kept so adding it back needs no migration
-            setupPlugin({db, settings, onStateChange: opts.onStateChange ?? (async () => undefined)}),
+            setupPlugin({db, settings, logger, onStateChange: opts.onStateChange ?? (async () => undefined)}),
             apiKey({
                 defaultPrefix: 'ms_',
                 requireName: true,
