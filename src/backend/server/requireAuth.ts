@@ -5,20 +5,42 @@ import type { MSAuth } from "../common/auth/auth.ts";
 import type { AuthSettings } from "../common/auth/authSettings.ts";
 import type { AuthStateStore } from "../common/auth/authState.ts";
 import type { SecurityRequirement, SecurityScheme } from "@minisylar/express-typed-router";
-import { sameOriginMiddleware } from "./middleware.ts";
+import { CLIENT_IP_HEADER, sameOriginMiddleware } from "./middleware.ts";
 
 /**
  * How a request was authenticated
  *
- * * session  -- better-auth session (cookie, or any future better-auth plugin that resolves a session: bearer, api key sessions...)
+ * * session  -- better-auth session (cookie, or any future better-auth plugin that resolves a session)
+ * * apiKey -- API key (`Authorization: Bearer ms_...`), limited by its scope
  * * unsecured -- instance has not been secured yet so every request acts as the owner, same as before auth existed
  * * disabled -- AUTH_MODE=disabled, every request acts as the owner
  * */
-export type AuthVia = 'session' | 'unsecured' | 'disabled';
+export type AuthVia = 'session' | 'apiKey' | 'unsecured' | 'disabled';
+
+/**
+ * What an API key may do
+ *
+ * * read -- safe methods only (GET, HEAD, OPTIONS)
+ * * write -- everything
+ * */
+export type ApiKeyScope = 'read' | 'write';
+
+const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
+
+/**
+ * Scope is stored in the key's metadata, set when the key is created from the dashboard.
+ * Anything other than 'write' is read so a malformed key can never do more than read.
+ *
+ * ponytail: metadata is client-settable but only by the owner's session, who can create write keys anyway.
+ * Move to the plugin's server-only `permissions` (custom create endpoint) once there are multiple users or finer scopes.
+ * */
+export const apiKeyScope = (metadata: unknown): ApiKeyScope => (metadata as {scope?: unknown} | null)?.scope === 'write' ? 'write' : 'read';
 
 export interface RequestAuth {
     userId: string
     via: AuthVia
+    /** only set for API keys */
+    scope?: ApiKeyScope
     user?: Awaited<ReturnType<MSAuth['api']['getSession']>> extends infer S ? S extends {user: infer U} ? U : never : never
     session?: Awaited<ReturnType<MSAuth['api']['getSession']>> extends infer S ? S extends {session: infer U} ? U : never : never
 }
@@ -41,14 +63,22 @@ export const SECURITY_SCHEMES: Record<string, SecurityScheme> = {
         name: 'ms.session_token',
         description: 'Session cookie set by logging in to the dashboard. Only required once the instance is secured (an admin password is set).',
     },
+    apiKey: {
+        type: 'http',
+        scheme: 'bearer',
+        description: 'API key created in the dashboard under Settings -> Account. Read keys can only use GET requests, Write keys can use everything. Only required once the instance is secured (an admin password is set).',
+    },
 };
 
 /** docs security for routes that require auth */
-export const SECURITY_REQUIRED: SecurityRequirement[] = [{session: []}];
+export const SECURITY_REQUIRED: SecurityRequirement[] = [{session: []}, {apiKey: []}];
 /** docs security for public routes */
 export const SECURITY_PUBLIC: SecurityRequirement[] = [];
 
-const hasCredentials = (req: Request) => req.headers.cookie !== undefined || req.headers.authorization !== undefined;
+const bearerToken = (req: Request): string | undefined => {
+    const [scheme, token] = (req.headers.authorization ?? '').split(' ');
+    return scheme?.toLowerCase() === 'bearer' && token ? token : undefined;
+}
 
 export interface RequireAuthOptions {
     auth: MSAuth
@@ -82,7 +112,9 @@ const unauthorizedPage = (host: string, basePath: string) => {
 /**
  * Resolve the actor for a request into req.auth (left undefined if anonymous).
  *
- * Actor resolution chain: disabled -> better-auth session -> unsecured (owner).
+ * Actor resolution chain: disabled -> API key (bearer) -> better-auth session (cookie) -> unsecured (owner).
+ *
+ * An invalid API key is logged as `Invalid API key from <ip>` (for fail2ban/CrowdSec) and the request stays anonymous.
  * New auth methods should resolve through better-auth (getSession) or add a step here.
  * */
 export const resolveAuth = (opts: Pick<RequireAuthOptions, 'auth' | 'settings' | 'state' | 'logger'>) => {
@@ -93,7 +125,15 @@ export const resolveAuth = (opts: Pick<RequireAuthOptions, 'auth' | 'settings' |
                 req.auth = {userId: state.ownerId, via: 'disabled'};
                 return;
             }
-            if (hasCredentials(req)) {
+            const key = bearerToken(req);
+            if (key !== undefined) {
+                const result = await auth.api.verifyApiKey({body: {key}, headers: fromNodeHeaders(req.headers)});
+                if (result.valid && result.key !== null) {
+                    req.auth = {userId: result.key.referenceId, via: 'apiKey', scope: apiKeyScope(result.key.metadata)};
+                    return;
+                }
+                logger.warn(`Invalid API key from ${req.headers[CLIENT_IP_HEADER] ?? req.socket.remoteAddress ?? 'unknown'}: ${result.error?.code ?? 'unknown'}`);
+            } else if (req.headers.cookie !== undefined) {
                 const result = await auth.api.getSession({headers: fromNodeHeaders(req.headers)});
                 if (result !== null) {
                     req.auth = {userId: result.user.id, via: 'session', user: result.user, session: result.session};
@@ -141,6 +181,11 @@ export const requireAuth = (opts: RequireAuthOptions): RequestHandler => {
                 return;
             }
             res.status(401).json({error: 'Authentication required', code: 'auth_required'});
+            return;
+        }
+
+        if (req.auth.scope === 'read' && !SAFE_METHODS.includes(req.method)) {
+            res.status(403).json({error: 'API key is read-only', code: 'insufficient_scope'});
             return;
         }
 

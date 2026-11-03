@@ -119,7 +119,9 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
             Object.assign(app.locals, locals);
             // must be mounted before the router (and its body parsing) so better-auth gets the raw request
             // and so /api/auth/callback/* is not caught by the source auth callback route
-            app.all(`${authBasePath(basePath)}/*splat`, clientIpMiddleware({trustProxy: authSettings.trustProxy}), sameOriginMiddleware({trustProxy: authSettings.trustProxy}), toNodeHandler(auth));
+            // client IP for better-auth's rate limiter and the login/API key audit logs
+            app.use(clientIpMiddleware({trustProxy: authSettings.trustProxy}));
+            app.all(`${authBasePath(basePath)}/*splat`, sameOriginMiddleware({trustProxy: authSettings.trustProxy}), toNodeHandler(auth));
             apiRouter.useMiddleware(requireAuth({auth, settings: authSettings, state: authState, logger: authLogger, basePath}));
             optionalAuthMiddleware = optionalAuth({auth, settings: authSettings, state: authState, logger: authLogger});
             if(authSettings.mode !== 'disabled' && !authState.secured) {

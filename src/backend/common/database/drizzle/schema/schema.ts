@@ -7,7 +7,7 @@ import type {ExternalMetadataTerm, PlayTransformPartsConfig, SearchAndReplaceTer
 import type {JobRangeCount, JobRangeTime} from "../../../infrastructure/Job.ts";
 import { serializeError, deserializeError } from "serialize-error";
 import { generatePlayUid } from "../../../../../core/StringUtils.ts";
-import { users, sessions, accounts, verifications, appSettings } from "./auth.ts";
+import { users, sessions, accounts, verifications, appSettings, apikeys } from "./auth.ts";
 
 
 const DayjsTimestamp = customType<
@@ -233,7 +233,7 @@ export const playEvents = sqliteTable("play_events", {
   index('play_event_id_idx').on(table.playId)
 ]);
 
-const playRelations = defineRelations({ plays, queueStates, playEvents, playInputs, components, jobs, componentMigrations, playsHistorical, users, sessions, accounts, verifications, appSettings }, (r) => ({
+const playRelations = defineRelations({ plays, queueStates, playEvents, playInputs, components, jobs, componentMigrations, playsHistorical, users, sessions, accounts, verifications, appSettings, apikeys }, (r) => ({
   plays: {
     queueStates: r.many.queueStates(),
     input: r.one.playInputs({
@@ -314,6 +314,10 @@ const playRelations = defineRelations({ plays, queueStates, playEvents, playInpu
     }),
     components: r.many.components(),
     jobs: r.many.jobs(),
+    apikeys: r.many.apikeys({
+      from: r.users.id,
+      to: r.apikeys.referenceId,
+    }),
   },
   sessions: {
     user: r.one.users({
@@ -324,6 +328,12 @@ const playRelations = defineRelations({ plays, queueStates, playEvents, playInpu
   accounts: {
     user: r.one.users({
       from: r.accounts.userId,
+      to: r.users.id,
+    })
+  },
+  apikeys: {
+    user: r.one.users({
+      from: r.apikeys.referenceId,
       to: r.users.id,
     })
   },
@@ -357,4 +367,4 @@ export const schema = {playInputs, plays, playEvents, components, componentMigra
 export type TSchema = typeof relations;
 export type Schema = typeof schema;
 /** App (non-auth) tables managed through MS repositories */
-export type TableName = Exclude<keyof TSchema, 'users' | 'sessions' | 'accounts' | 'verifications' | 'appSettings'>;
+export type TableName = Exclude<keyof TSchema, 'users' | 'sessions' | 'accounts' | 'verifications' | 'appSettings' | 'apikeys'>;

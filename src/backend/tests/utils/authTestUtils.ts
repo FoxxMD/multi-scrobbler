@@ -40,3 +40,16 @@ export const signIn = async (app: Express, password = 'ownerPassword') => {
     }
     return res.headers['set-cookie'] as unknown as string[];
 }
+
+/** Create an API key for the signed in owner and return the full key */
+export const createApiKey = async (app: Express, cookie: string[], scope: unknown = 'read', name = 'test') => {
+    const res = await request(app).post('/api/auth/api-key/create')
+        .set('Host', 'localhost:9078')
+        .set('Origin', 'http://localhost:9078')
+        .set('Cookie', cookie)
+        .send({name, metadata: {scope}});
+    if (res.status !== 200) {
+        throw new Error(`Create API key failed with ${res.status}: ${JSON.stringify(res.body)}`);
+    }
+    return res.body.key as string;
+}

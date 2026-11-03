@@ -3,7 +3,7 @@ import request from 'supertest';
 import pEvent from 'p-event';
 import { generateOpenApiSpec } from '@minisylar/express-typed-router';
 import { buildAuthApp, buildAuthAppRouter, secureApp, signIn } from '../utils/authTestUtils.ts';
-import { SECURITY_SCHEMES } from '../../server/requireAuth.ts';
+import { SECURITY_REQUIRED, SECURITY_SCHEMES } from '../../server/requireAuth.ts';
 import type { ListenbrainzEndpointSourceConfig } from '../../common/infrastructure/config/source/endpointlz.ts';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { playToSubmitPayload } from '../../common/vendor/listenbrainz/lzUtils.ts';
@@ -173,6 +173,8 @@ describe('Require Auth', function () {
                 const isPublic = op.security!.length === 0;
                 if (isPublic) {
                     documentedPublic.push(name);
+                } else {
+                    expect(op.security, `${name} should accept a session or API key`).eql(SECURITY_REQUIRED);
                 }
                 // regex routes (source auth callbacks) and splat routes are not real paths in the spec
                 if (!rawPath.startsWith('/') || rawPath.includes('*') || rawPath.includes('.{')) {

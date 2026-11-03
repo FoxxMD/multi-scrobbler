@@ -1,6 +1,7 @@
 import * as path from "node:path";
 import { betterAuth } from "better-auth";
 import { username } from "better-auth/plugins";
+import { apiKey } from "@better-auth/api-key";
 import { createAuthMiddleware, isAPIError } from "better-auth/api";
 import { CLIENT_IP_HEADER } from "../../server/middleware.ts";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
@@ -88,6 +89,14 @@ export const createAuth = (db: DbConcrete, settings: AuthSettings, opts: CreateA
             // ponytail: admin plugin (roles, user management endpoints) left out until there is more than one user.
             // users.role and the ban/impersonation columns are kept so adding it back needs no migration
             setupPlugin({db, settings, onStateChange: opts.onStateChange ?? (async () => undefined)}),
+            apiKey({
+                defaultPrefix: 'ms_',
+                requireName: true,
+                // holds the key scope, see apiKeyScope in requireAuth.ts
+                enableMetadata: true,
+                // the per-key default is 10 requests/day, which would break any scraper or script
+                rateLimit: {enabled: false},
+            }),
         ],
         hooks: {
             after: loginAuditHook(logger),

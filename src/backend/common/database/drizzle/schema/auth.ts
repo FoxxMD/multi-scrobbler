@@ -4,7 +4,7 @@ import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
 /*
  * Tables used by better-auth (https://better-auth.com)
  *
- * Shape follows `npx auth generate` output for the core schema + username and admin plugins
+ * Shape follows `npx auth generate` output for the core schema + username, admin and api-key plugins
  * (better-auth 1.7.x) but with column names left to drizzle's default (property name) to match the rest of the MS schema.
  *
  * better-auth reads/writes these through the drizzle adapter by *property name* so column names are free to differ.
@@ -75,6 +75,37 @@ export const verifications = sqliteTable("verifications", {
     index("verifications_identifier_idx").on(table.identifier),
 ]);
 
+// api-key plugin (@better-auth/api-key)
+export const apikeys = sqliteTable("apikeys", {
+    id: text().primaryKey(),
+    configId: text().default('default').notNull(),
+    name: text(),
+    start: text(),
+    // owning user. The plugin also allows organizations here, MS only uses users
+    referenceId: text().notNull().references(() => users.id, { onDelete: 'cascade' }),
+    prefix: text(),
+    key: text().notNull(),
+    refillInterval: integer(),
+    refillAmount: integer(),
+    lastRefillAt: integer({ mode: 'timestamp_ms' }),
+    enabled: integer({ mode: 'boolean' }).default(true),
+    rateLimitEnabled: integer({ mode: 'boolean' }).default(true),
+    rateLimitTimeWindow: integer(),
+    rateLimitMax: integer(),
+    requestCount: integer().default(0),
+    remaining: integer(),
+    lastRequest: integer({ mode: 'timestamp_ms' }),
+    expiresAt: integer({ mode: 'timestamp_ms' }),
+    createdAt: integer({ mode: 'timestamp_ms' }).default(nowMs).notNull(),
+    updatedAt: integer({ mode: 'timestamp_ms' }).default(nowMs).$onUpdate(() => new Date()).notNull(),
+    permissions: text(),
+    metadata: text(),
+}, (table) => [
+    index("apikeys_configId_idx").on(table.configId),
+    index("apikeys_referenceId_idx").on(table.referenceId),
+    index("apikeys_key_idx").on(table.key),
+]);
+
 /**
  * Small key/value store for app-level state that must survive restarts
  * (applied password-reset fingerprint, etc.)
@@ -86,4 +117,4 @@ export const appSettings = sqliteTable("app_settings", {
 });
 
 /** Tables better-auth needs passed to its drizzle adapter, keyed by plural model name */
-export const authSchema = { users, sessions, accounts, verifications };
+export const authSchema = { users, sessions, accounts, verifications, apikeys };
