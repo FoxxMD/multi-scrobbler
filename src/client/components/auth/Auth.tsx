@@ -297,7 +297,9 @@ export const AccountSettings = () => {
                 </Field.Root>
                 <FormError error={error !== null ? errorMessage(error) : undefined}/>
                 {isSuccess ? <Alert.Root status="success"><Alert.Indicator/><Alert.Title>Password changed. Other sessions were logged out.</Alert.Title></Alert.Root> : null}
+                <Box display="flex" justifyContent="right" width="full">
                 <Button type="submit" loading={isPending} disabled={mismatch || next === ''} alignSelf="flex-start">Change Password</Button>
+                </Box>
             </Stack>
         </form>
         <SessionList currentSessionId={session.session.id}/>
@@ -374,10 +376,12 @@ const SessionList = (props: {currentSessionId: string}) => {
                                 ))}
                             </Table.Body>
                         </Table.Root>
-                    </Table.ScrollArea>
+                        </Table.ScrollArea>
+                    <Box display="flex" justifyContent="right" width="full">
                     {sessions.length > 1 ? (
                         <Button size="sm" variant="outline" alignSelf="flex-start" loading={revoke.isPending && revoke.variables === undefined} onClick={() => revoke.mutate(undefined)}>Log out all other sessions</Button>
                     ) : null}
+                    </Box>
                 </>
             ) : null}
         </Stack>
@@ -435,7 +439,7 @@ const ApiKeyList = () => {
     return (
         <Stack gap="3" width="full">
             <Heading size="md">API Keys</Heading>
-            <Text fontSize="sm">For scripts and Prometheus. Send as <Code>Authorization: Bearer &lt;key&gt;</Code>. <strong>Read</strong> keys can only make GET requests (includes metrics), <strong>Write</strong> keys can do everything.</Text>
+            <Text fontSize="sm">Send as <Code>Authorization: Bearer &lt;key&gt;</Code>. <strong>Read</strong> keys can only make GET requests, <strong>Write</strong> keys can do everything.</Text>
             {isLoading ? <Spinner/> : null}
             <FormError error={error !== null ? errorMessage(error) : undefined}/>
             <FormError error={remove.error !== null ? errorMessage(remove.error) : undefined}/>
