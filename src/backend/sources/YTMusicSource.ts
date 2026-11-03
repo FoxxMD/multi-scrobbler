@@ -249,7 +249,7 @@ export default class YTMusicSource extends AbstractSource {
 
         const scopeOpts = getGoogleOauthOpts();
         this.logger.debug(`Using scopes:\n${(scopeOpts.scope as string[]).join('\n')}`)
-        const authorizationUrl = this.oauthClient.generateAuthUrl(getGoogleOauthOpts());
+        const authorizationUrl = this.oauthClient.generateAuthUrl({...getGoogleOauthOpts(), state: this.oauthState});
         this.verificationUrl = authorizationUrl;
     }
 

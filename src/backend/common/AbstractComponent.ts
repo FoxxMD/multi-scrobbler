@@ -1,4 +1,5 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
+import { randomBytes } from "node:crypto";
 import {
     cacheFunctions,
 } from "@foxxmd/regex-buddy-core";
@@ -85,6 +86,17 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     protected componentType!: ComponentType;
     type!: ClientType | SourceType;
     name!: string;
+
+    /**
+     * Secret sent through third-party auth flows (OAuth `state`, or in the callback URL) and checked when the callback returns.
+     * Ties a callback to an auth flow started from this instance, so a link carrying someone else's authorization code
+     * can't connect this component to their account. Rotated after each successful authorization.
+     * */
+    oauthState: string = randomBytes(16).toString('base64url');
+
+    rotateOAuthState() {
+        this.oauthState = randomBytes(16).toString('base64url');
+    }
 
     lastActiveAt?: Dayjs;
     lastReadyAt?: Dayjs;

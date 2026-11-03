@@ -45,7 +45,6 @@ import { AuthError, SimpleError } from "../common/errors/MSErrors.ts";
 import { AsyncTask, SimpleIntervalJob } from "toad-scheduler";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
-const state = 'random';
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -347,7 +346,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
         }
     }
 
-    createAuthUrl = () => this.spotifyApi.createAuthorizeURL(scopes, this.getSafeExternalName())
+    createAuthUrl = () => this.spotifyApi.createAuthorizeURL(scopes, this.oauthState)
 
     handleAuthCodeCallback = async ({
         error,

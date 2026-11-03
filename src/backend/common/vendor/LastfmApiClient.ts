@@ -15,7 +15,6 @@ import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjec
 import type {LastfmData} from "../infrastructure/config/client/lastfm.ts";
 import AbstractApiClient from "./AbstractApiClient.ts";
 import { parseArtistCredits } from "../../utils/StringUtils.ts";
-import { normalizeStr } from "../../../core/StringUtils.ts";
 import { LastFMUser, LastFMAuth, LastFMTrack, type LastFMUserGetRecentTracksResponse, type LastFMBooleanNumber, type LastFMUpdateNowPlayingResponse, type LastFMUserGetInfoResponse, type LastFMUserGetRecentTracksParams, LastFMResponseError } from 'lastfm-ts-api';
 import clone from 'clone';
 import type { IncomingMessage } from "http";
@@ -116,7 +115,8 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             this.reqQueue = new RateLimiterQueue(new RateLimiterMemory({points: config.rateLimit.points, duration: config.rateLimit.duration}), {maxQueueSize: 20});
         }
 
-        this.redirectUri = `${redirectUri ?? joinedUrl(localUrl, `${cbPrefix}/callback`).href}?state=${normalizeStr(this.name, {keepSingleWhitespace: false})}`;
+        // the auth url adds `state` (the component's oauthState) to this
+        this.redirectUri = redirectUri ?? joinedUrl(localUrl, `${cbPrefix}/callback`).href;
 
         this.logger.info(`Using ${this.url.normal} for API calls`);
         this.logger.info(`Redirect Uri: ${this.redirectUri}`);
@@ -207,21 +207,24 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
         }
     }
 
-    getAuthUrl = () => {
+    /** @param state the component's oauthState, returned in the callback as `state` */
+    getAuthUrl = (state: string) => {
 
+        const cb = new URL(this.redirectUri);
+        cb.searchParams.set('state', state);
         const isLastFm = this.url.url.host === LASTFM_HOST;
         let authUrl: string;
         if(isLastFm) {
             this.logger.debug('Detected last.fm host');
-            authUrl = `http://www.last.fm/api/auth/?api_key=${this.config.apiKey}&cb=${encodeURIComponent(this.redirectUri)}`;
+            authUrl = `http://www.last.fm/api/auth/?api_key=${this.config.apiKey}&cb=${encodeURIComponent(cb.toString())}`;
         } else {
             this.logger.debug('Detected non-last.fm host (probably libre.fm)');
             const aUrl = new URL(this.url.url.toString());
-            aUrl.search = `?api_key=${this.config.apiKey}&cb=${encodeURIComponent(this.redirectUri)}`;
+            aUrl.search = `?api_key=${this.config.apiKey}&cb=${encodeURIComponent(cb.toString())}`;
             aUrl.pathname = '/api/auth';
             authUrl = aUrl.toString();
         }
-        const redactedUrl = authUrl.replace(this.config.apiKey, redactString(this.config.apiKey, 6));
+        const redactedUrl = authUrl.replace(this.config.apiKey, redactString(this.config.apiKey, 6)).replace(encodeURIComponent(state), redactString(state, 4));
         this.logger.debug(`Generated auth url: ${redactedUrl}`);
         return authUrl;
     }

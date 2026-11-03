@@ -10,7 +10,8 @@ import type YTMusicSource from "../sources/YTMusicSource.ts";
 import type LibrefmScrobbler from "../scrobblers/LibrefmScrobbler.ts";
 import type LibrefmSource from "../sources/LibrefmSource.ts";
 import AbstractSource from "../sources/AbstractSource.ts";
-import { makeComponentMiddle } from './middleware.ts';
+import { CLIENT_IP_HEADER, makeComponentMiddle, secretMatches } from './middleware.ts';
+import type AbstractComponent from '../common/AbstractComponent.ts';
 import { findAuthIssue, SimpleError } from '../common/errors/MSErrors.ts';
 import type { createTypedRouter } from '@minisylar/express-typed-router';
 import * as z from 'zod';
@@ -22,7 +23,7 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
         switch(req.component.type) {
             case 'lastfm':
             case 'librefm':
-                res.status(200).send((req.component as LastfmScrobbler | LastfmSource | LibrefmScrobbler | LibrefmSource ).api.getAuthUrl());
+                res.status(200).send((req.component as LastfmScrobbler | LastfmSource | LibrefmScrobbler | LibrefmSource ).api.getAuthUrl(req.component.oauthState));
                 break;
             case 'spotify': {
                 const source = req.component as SpotifySource;
@@ -61,10 +62,18 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
         const {
             query: {
                 state,
-                name
             } = {}
         } = req;
         const entityTypeHint = req.url.includes('lastfm') ? 'lastfm' : 'librefm';
+
+        // the callback must carry the state of an auth flow started from this instance (see AbstractComponent.oauthState),
+        // otherwise a link with someone else's authorization code could connect a component to *their* account
+        const findByState = <T extends AbstractComponent>(candidates: AbstractComponent[]): T | undefined =>
+            typeof state === 'string' ? candidates.find(x => secretMatches(x.oauthState, state)) as T | undefined : undefined;
+        const rejectState = (provider: string) => {
+            logger.warn(`Rejected ${provider} auth callback from ${req.headers[CLIENT_IP_HEADER] ?? 'unknown'}: it does not match an authentication started from this instance`);
+            res.status(400).type('text').send('This authorization link is invalid, expired or was already used. Start authentication again from the multi-scrobbler dashboard.');
+        }
 
         if (req.url.includes('lastfm') || req.url.includes('librefm')) {
             const {
@@ -72,23 +81,14 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
                     token
                 } = {}
             } = req;
-            let entity: LastfmScrobbler | LastfmSource | LibrefmScrobbler | LibrefmSource | undefined;
-            if(req.url.includes('lastfm')) {
-                entity = scrobbleClients.getByNameAndType(state as string, 'lastfm', true) as (LastfmScrobbler | LastfmSource | undefined);
-            } else {
-                entity = scrobbleClients.getByNameAndType(state as string, 'librefm', true) as (LibrefmScrobbler | LibrefmSource | undefined);
-            }
-
+            const entity = findByState<LastfmScrobbler | LastfmSource | LibrefmScrobbler | LibrefmSource>([...scrobbleClients.getByType(entityTypeHint), ...scrobbleSources.getByType(entityTypeHint)]);
             if(entity === undefined) {
-                entity = scrobbleSources.getByName(state, true) as LastfmSource | LibrefmSource;
+                rejectState(entityTypeHint);
+                return;
             }
             try {
-                if(entity === undefined) {
-                    const error = new Error(`No source/client with type '${entityTypeHint}' and name ${state} was found`);
-                    logger.error(error);
-                    throw error;
-                }
                 await entity.api.authenticate(token);
+                entity.rotateOAuthState();
                 entity.clearErrors({predicate: x => findAuthIssue(x) !== undefined});
                 if(entity instanceof AbstractSource) {
                     entity.poll().catch((e) => logger.error(e));
@@ -110,15 +110,15 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
             res.redirect('/');
             return;
         } else if(req.url.includes('ytmusic')) {
-            const entity: YTMusicSource | undefined = scrobbleSources.getByName(name) as (YTMusicSource | undefined);
+            const entity = findByState<YTMusicSource>(scrobbleSources.getByType('ytmusic'));
             if(entity === undefined) {
-                logger.error(`No YTMUsic source with name ${name} was found`);
-                res.status(404).send(`No YTMusic source with name ${name} was found`);
+                rejectState('YTMusic');
                 return;
             }
             const result = await entity.handleAuthCodeCallback(req.query as Record<string, any>);
             let responseContent = 'OK';
             if(result === true) {
+                entity.rotateOAuthState();
                 entity.authFailure = false;
                 entity.poll().catch((e) => logger.error(e));
             } else {
@@ -128,17 +128,16 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
             return;
         } else if(req.url.includes('mixcloud')) {
             logger.info({label: 'Mixcloud'}, 'Received auth code callback from Mixcloud');
-            // the redirect uri carries the source's own name (like ytmusic) so match on it as-is
-            const source = scrobbleSources.getByNameAndType(name as string, 'mixcloud') as MixcloudSource | undefined;
+            const source = findByState<MixcloudSource>(scrobbleSources.getByType('mixcloud'));
             if(source === undefined) {
-                const e = new Error(`No Mixcloud source with name ${name} was found`);
-                logger.error(e);
-                res.status(404).send(e.message);
+                rejectState('Mixcloud');
                 return;
             }
             try {
                 const tokenResult = await source.handleAuthCodeCallback(req.query);
                 if (tokenResult === true) {
+                    // after the token exchange, which needs the redirect uri (with the current state) used to authorize
+                    source.rotateOAuthState();
                     source.clearErrors({predicate: x => findAuthIssue(x) !== undefined});
                     source.poll().catch((e) => logger.error(e));
                 } else {
@@ -159,14 +158,18 @@ export const setupAuthRoutes = (app: Express, router: ReturnType<typeof createTy
             res.redirect('/');
             return;
         } else {
-            // TODO right now all sources requiring source interaction are covered by logic branches (deezer above and spotify here)
+            // TODO right now all sources requiring source interaction are covered by logic branches (spotify here)
             // but eventually should update all source callbacks to url specific URLS to avoid ambiguity...
-            // wish we could use state param to identify name/source but not all auth strategies and auth provides may provide access to that
             logger.info({label: 'Spotify'}, 'Received auth code callback from Spotify');
-            const source = scrobbleSources.getByNameAndType(state as string, 'spotify', true) as SpotifySource;
+            const source = findByState<SpotifySource>(scrobbleSources.getByType('spotify'));
+            if(source === undefined) {
+                rejectState('Spotify');
+                return;
+            }
             try {
                 const tokenResult = await source.handleAuthCodeCallback(req.query);
                 if (tokenResult === true) {
+                    source.rotateOAuthState();
                     source.clearErrors({predicate: x => findAuthIssue(x) !== undefined});
                     source.poll().catch((e) => logger.error(e));
                 } else {
