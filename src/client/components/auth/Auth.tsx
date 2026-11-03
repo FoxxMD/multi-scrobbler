@@ -1,5 +1,6 @@
 import { useState, type FormEvent, type PropsWithChildren } from "react";
-import { Alert, Box, Button, Card, Field, Heading, Input, Link, Spinner, Stack, Table, Text } from "@chakra-ui/react";
+import { Alert, Badge, Box, Button, Card, Code, Field, Heading, HStack, Input, Link, NativeSelect, Spinner, Stack, Table, Text } from "@chakra-ui/react";
+import { ChakraClip } from "../ChakraClipboard";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ky from "ky";
 import { Link as RouterLink, Navigate, useLocation, useNavigate } from "react-router-dom";
@@ -264,6 +265,7 @@ export const AccountSettings = () => {
             </Stack>
         </form>
         <SessionList currentSessionId={session.session.id}/>
+        <ApiKeyList/>
         </Stack>
     );
 }
@@ -342,6 +344,126 @@ const SessionList = (props: {currentSessionId: string}) => {
                     ) : null}
                 </>
             ) : null}
+        </Stack>
+    );
+}
+
+type ApiKeyScope = 'read' | 'write';
+/** same fail-closed rule as the server (apiKeyScope in src/backend/server/requireAuth.ts) */
+const keyScope = (metadata: unknown): ApiKeyScope => (metadata as {scope?: unknown} | null)?.scope === 'write' ? 'write' : 'read';
+
+/** API keys of the logged in user, with create and delete */
+const ApiKeyList = () => {
+    const queryClient = useQueryClient();
+    const [name, setName] = useState('');
+    const [scope, setScope] = useState<ApiKeyScope>('read');
+    const [created, setCreated] = useState<string | undefined>();
+
+    const {data: keys, error, isLoading} = useQuery({
+        queryKey: ['apiKeys'],
+        queryFn: async () => {
+            const res = await authClient.apiKey.list();
+            if (res.error !== null) {
+                throw new Error(res.error.message ?? 'Could not load API keys');
+            }
+            return res.data.apiKeys;
+        },
+        retry: false,
+    });
+
+    const create = useMutation({
+        mutationFn: async () => {
+            const res = await authClient.apiKey.create({name, metadata: {scope}});
+            if (res.error !== null) {
+                throw new Error(res.error.message ?? 'Could not create API key');
+            }
+            return res.data.key;
+        },
+        onSuccess: (key) => {
+            setCreated(key);
+            setName('');
+        },
+        onSettled: () => queryClient.invalidateQueries({queryKey: ['apiKeys']}),
+    });
+
+    const remove = useMutation({
+        mutationFn: async (keyId: string) => {
+            const res = await authClient.apiKey.delete({keyId});
+            if (res.error !== null) {
+                throw new Error(res.error.message ?? 'Could not delete API key');
+            }
+        },
+        onSettled: () => queryClient.invalidateQueries({queryKey: ['apiKeys']}),
+    });
+
+    return (
+        <Stack gap="3" width="full">
+            <Heading size="md">API Keys</Heading>
+            <Text fontSize="sm">For scripts and Prometheus. Send as <Code>Authorization: Bearer &lt;key&gt;</Code>. <strong>Read</strong> keys can only make GET requests (includes metrics), <strong>Write</strong> keys can do everything.</Text>
+            {isLoading ? <Spinner/> : null}
+            <FormError error={error !== null ? errorMessage(error) : undefined}/>
+            <FormError error={remove.error !== null ? errorMessage(remove.error) : undefined}/>
+            {keys !== undefined && keys.length > 0 ? (
+                <Table.ScrollArea borderWidth="1px" rounded="md">
+                    <Table.Root size="sm">
+                        <Table.Header>
+                            <Table.Row>
+                                <Table.ColumnHeader>Name</Table.ColumnHeader>
+                                <Table.ColumnHeader>Key</Table.ColumnHeader>
+                                <Table.ColumnHeader>Scope</Table.ColumnHeader>
+                                <Table.ColumnHeader>Created</Table.ColumnHeader>
+                                <Table.ColumnHeader>Last used</Table.ColumnHeader>
+                                <Table.ColumnHeader/>
+                            </Table.Row>
+                        </Table.Header>
+                        <Table.Body>
+                            {keys.map((k) => (
+                                <Table.Row key={k.id}>
+                                    <Table.Cell>{k.name}</Table.Cell>
+                                    <Table.Cell><Code>{k.start ?? ''}…</Code></Table.Cell>
+                                    <Table.Cell>{keyScope(k.metadata) === 'write' ? <Badge colorPalette="orange">Write</Badge> : <Badge>Read</Badge>}</Table.Cell>
+                                    <Table.Cell>{formatDate(k.createdAt)}</Table.Cell>
+                                    <Table.Cell>{k.lastRequest ? formatDate(k.lastRequest) : 'Never'}</Table.Cell>
+                                    <Table.Cell textAlign="end">
+                                        <Button size="xs" variant="outline" colorPalette="red" loading={remove.isPending && remove.variables === k.id} onClick={() => remove.mutate(k.id)}>Delete</Button>
+                                    </Table.Cell>
+                                </Table.Row>
+                            ))}
+                        </Table.Body>
+                    </Table.Root>
+                </Table.ScrollArea>
+            ) : null}
+            {created !== undefined ? (
+                <Alert.Root status="success">
+                    <Alert.Indicator/>
+                    <Alert.Content>
+                        <Alert.Title>API key created. Copy it now, it will not be shown again.</Alert.Title>
+                        <Alert.Description>
+                            <HStack><Code wordBreak="break-all">{created}</Code><ChakraClip value={created}/></HStack>
+                        </Alert.Description>
+                    </Alert.Content>
+                </Alert.Root>
+            ) : null}
+            <form onSubmit={(e: FormEvent) => { e.preventDefault(); setCreated(undefined); create.mutate(); }}>
+                <HStack gap="3" alignItems="flex-end" flexWrap="wrap">
+                    <Field.Root required maxWidth="xs">
+                        <Field.Label>Name</Field.Label>
+                        <Input value={name} maxLength={32} onChange={(e) => setName(e.target.value)} placeholder="prometheus"/>
+                    </Field.Root>
+                    <Field.Root maxWidth="40">
+                        <Field.Label>Scope</Field.Label>
+                        <NativeSelect.Root>
+                            <NativeSelect.Field value={scope} onChange={(e) => setScope(e.target.value as ApiKeyScope)}>
+                                <option value="read">Read</option>
+                                <option value="write">Write</option>
+                            </NativeSelect.Field>
+                            <NativeSelect.Indicator/>
+                        </NativeSelect.Root>
+                    </Field.Root>
+                    <Button type="submit" loading={create.isPending} disabled={name.trim() === ''}>Create API Key</Button>
+                </HStack>
+            </form>
+            <FormError error={create.error !== null ? errorMessage(create.error) : undefined}/>
         </Stack>
     );
 }

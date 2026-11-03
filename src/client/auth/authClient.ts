@@ -1,5 +1,6 @@
 import { createAuthClient } from "better-auth/react";
 import { usernameClient } from "better-auth/client/plugins";
+import { apiKeyClient } from "@better-auth/api-key/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import ky, { HTTPError } from "ky";
 
@@ -19,7 +20,7 @@ const authBaseUrl = () => new URL('api/auth', document.baseURI).toString();
 
 export const authClient = createAuthClient({
     baseURL: authBaseUrl(),
-    plugins: [usernameClient()],
+    plugins: [usernameClient(), apiKeyClient()],
 });
 
 export const setupStatusKey = ['auth', 'setupStatus'];
