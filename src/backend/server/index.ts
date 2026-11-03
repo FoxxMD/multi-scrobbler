@@ -154,7 +154,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
             return [app, router];
         }
 
-        setupApi({app, router: apiRouter, publicRouter, optionalAuth: optionalAuthMiddleware, hiddenFromWeb, scrobbleSources: sources, scrobbleClients: clients}, {...opts, logger, webFault});
+        setupApi({app, router: apiRouter, publicRouter, optionalAuth: optionalAuthMiddleware, hiddenFromWeb, scrobbleSources: sources, scrobbleClients: clients}, {...opts, initialLogOutput: opts.initialOutput, logger, webFault});
         app.use(errorHandlerMiddleware(logger));
 
         if(opts.testMode === true) {

@@ -191,6 +191,19 @@ describe('Hardening', function () {
             expect(body).include('Admin password setup failed from 1.2.3.4');
         });
 
+        it('shows log lines from before the server started, without the token', async function () {
+            const app = await buildAuthApp({
+                authSettings: {setupToken: TOKEN, setupTokenGenerated: true},
+                initialOutput: [
+                    {level: 40, time: Date.now(), msg: 'Started before the server', line: 'WARN : Started before the server'},
+                    {level: 40, time: Date.now(), msg: `Setup token: ${TOKEN}`, line: `WARN : Setup token: ${TOKEN}`},
+                ] as any,
+            });
+            const body = JSON.stringify((await request(app).put('/api/logs').send({level: 'debug'})).body);
+            expect(body).include('Started before the server');
+            expect(body).not.include(TOKEN);
+        });
+
         it('leaves lines without secrets untouched', function () {
             const log = {level: 30, time: 1, msg: 'hello', line: 'hello'} as any;
             expect(hideSecrets(log, [TOKEN])).eq(log);
