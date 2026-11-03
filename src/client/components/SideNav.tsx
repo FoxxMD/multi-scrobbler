@@ -9,12 +9,14 @@ import {
 } from "@chakra-ui/react"
 import { Link as RouterLink } from "react-router";
 import { ExternalLinkIconRaw } from "./icons/ChakraIcons"
+import { useHasAccess } from "../auth/authClient";
 
-interface SideNavItem {
+interface SideNavItemProp {
   title: string
   url: LinkProps["href"] | undefined
   external?: boolean
   status?: string
+  authed?: boolean
 }
 
 interface SideNavProps {
@@ -22,7 +24,7 @@ interface SideNavProps {
   title: string
   id: string
   status?: string
-  items: Array<SideNavItem>
+  items: Array<SideNavItemProp>
 }
 
 
@@ -49,6 +51,7 @@ const SideNavItem = (props: StackProps) => {
 
 export const SideNav = (props: SideNavProps) => {
   const { title, items, currentUrl, status } = props
+  const {hasAccess} = useHasAccess();
   return (
     <Stack gap="2">
       {title && (
@@ -58,7 +61,16 @@ export const SideNav = (props: SideNavProps) => {
         </HStack>
       )}
       <Stack gap="1px">
-        {items.map((item, index) => (
+        {items.map((item, index) => {
+          if(item.authed !== undefined) {
+            if(item.authed && !hasAccess) {
+              return undefined;
+            }
+            if(!item.authed && hasAccess) {
+              return undefined;
+            }
+          }
+          return (
           <SideNavItem key={index} asChild>
             {item.external ? (
               <Link
@@ -81,7 +93,7 @@ export const SideNav = (props: SideNavProps) => {
               </RouterLink>
             )}
           </SideNavItem>
-        ))}
+        )}).filter(x => x !== undefined)}
       </Stack>
     </Stack>
   )
@@ -140,12 +152,29 @@ export const NAV_LINKS: SideNavProps[] = [
             {
                 title: 'Dashboard',
                 url: '/'
-            },
-            {
-                title: 'Settings',
-                url: '/settings'
             }
         ]
+    },
+    {
+      title: 'Account',
+      id: 'account',
+      items: [
+        {
+          title: 'Settings',
+          url: '/settings',
+          authed: true
+        },
+        {
+          title: 'Log Out',
+          url: '/logout',
+          authed: true
+        },
+        {
+          title: 'Log In',
+          url: '/login',
+          authed: false
+        }
+      ]
     },
     EXTERNAL_LINKS
 ];

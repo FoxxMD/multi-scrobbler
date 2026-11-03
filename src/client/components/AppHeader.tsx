@@ -9,11 +9,9 @@ import { TerminalIcon } from "./icons/ChakraIcons";
 import { useSSEContext, useSSEStatus } from "@flamefrontend/sse-runtime-react";
 import type {ErrorLike} from "../../core/Atomic";
 import { ErrorAlert } from "./ErrorAlert";
-import { ExternaLinksMenu } from "./ExternaLinksMenu";
 import { FloatingLogs } from "./LogsNext";
 import { ToggleTip } from "./ToggleTip";
 import { ColorModeButton } from './Color-Mode';
-import { AuthMenu } from './auth/Auth';
 import { useHasAccess } from '../auth/authClient';
 
 export const AppTitle = (props: { fetchable?: boolean } = {}) => {
@@ -139,7 +137,6 @@ export const AppHeader = (props: PropsWithChildren<{ fetchable?: boolean }>) => 
         <Flex justify="space-between">
             <AppTitle fetchable={props.fetchable} />
             <Flex justify="flex-start" gap="1.5" alignItems="flex-end">
-                {props.fetchable ? <AuthMenu/> : null}
                 {props.fetchable ? <LiveHeaderItems/> : <>
                     <SSEStatus/>
                     <FloatingLogs/>

@@ -1,10 +1,12 @@
-import React, { useState, type FormEvent, type PropsWithChildren } from "react";
+import React, { useEffect, useRef, useState, type ComponentProps, type FormEvent, type PropsWithChildren } from "react";
 import { Alert, Badge, Box, Button, Card, Code, Field, Heading, HStack, Input, Link, NativeSelect, Spinner, Stack, Table, Text, Span } from "@chakra-ui/react";
 import { ChakraClip } from "../ChakraClipboard";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ky from "ky";
 import { Link as RouterLink, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { authClient, errorMessage, useHasAccess, useRefreshAuth, useSetupStatus, type SetupStatus } from "../../auth/authClient";
+import { LoginButton, LogoutButton } from "../icons/ChakraIcons";
+import { Tooltip } from "../ChakraTooltip";
 
 const AuthCard = (props: PropsWithChildren<{title: string, description?: string | React.JSX.Element}>) => (
     <Box display="flex" justifyContent="center" width="full" py="8">
@@ -208,37 +210,66 @@ export const AuthGate = (props: PropsWithChildren) => {
     if (!status.secured) {
         return location.pathname === '/setup' ? <>{props.children}</> : <Box width="full"><NotSecuredBanner status={status}/>{props.children}</Box>;
     }
-    if (!hasSession && location.pathname !== '/login') {
+    // /logout always renders so it can finish logging out (and is never replaced by the login form)
+    if (!hasSession && location.pathname !== '/login' && location.pathname !== '/logout') {
         return <LoginForm/>;
     }
     return <>{props.children}</>;
 }
 
-/** Header element: current user and log out, or a log in link */
-export const AuthMenu = () => {
+export const AuthName = (props: ComponentProps<typeof Span> = {}) => {
     const {data: status} = useSetupStatus();
     const {data: session} = authClient.useSession();
+
+    if (session === null || status === undefined || status.mode === 'disabled' || !status.secured) {
+        return null;
+    }
+    return (
+        <Span {...props}>{(session.user as {username?: string}).username ?? session.user.name}</Span>
+    );
+}
+
+/** Log out, clear cached dashboard data and go to the dashboard root */
+const useLogout = () => {
     const refresh = useRefreshAuth();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    return async () => {
+        await authClient.signOut();
+        // dashboard data must not be shown (from cache) after logging out
+        queryClient.removeQueries({predicate: (q) => q.queryKey[0] !== 'auth'});
+        await refresh();
+        navigate('/');
+    }
+}
+
+/** /logout route: logs out on mount */
+export const LogOut = () => {
+    const logout = useLogout();
+    // StrictMode mounts twice in dev, only log out once
+    const started = useRef(false);
+    useEffect(() => {
+        if (!started.current) {
+            started.current = true;
+            logout();
+        }
+    }, []);
+    return <Box width="full" display="flex" justifyContent="center" py="8"><Spinner/></Box>;
+}
+
+export const AuthActionButton = () => {
+    const {data: status} = useSetupStatus();
+    const {data: session} = authClient.useSession();
+    const logout = useLogout();
 
     if (status === undefined || status.mode === 'disabled' || !status.secured) {
         return null;
     }
     if (session === null || session === undefined) {
-        return <Button asChild size="xs" variant="outline"><RouterLink to="/login">Log in</RouterLink></Button>;
+        return <Tooltip content="Log In"><RouterLink to="/login"><LoginButton variant="ghost"/></RouterLink></Tooltip>;
     }
     return (
-        <Stack direction="row" alignItems="center" gap="2">
-            <Text hideBelow="md" fontSize="sm">{(session.user as {username?: string}).username ?? session.user.name}</Text>
-            <Button size="xs" variant="ghost" onClick={async () => {
-                await authClient.signOut();
-                // dashboard data must not be shown (from cache) after logging out
-                queryClient.removeQueries({predicate: (q) => q.queryKey[0] !== 'auth'});
-                await refresh();
-                navigate('/');
-            }}>Log out</Button>
-        </Stack>
+        <Tooltip content="Log Out"><LogoutButton variant="ghost" onClick={logout}/></Tooltip>
     );
 }
 

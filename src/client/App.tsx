@@ -15,7 +15,7 @@ import { MSComponentListFetchable } from './components/msComponent/MSComponentLi
 import { Provider } from './components/Provider';
 import { SettingsContainer } from './components/settings/settings';
 import { Toaster } from './components/Toaster';
-import { AuthGate, LoginForm, SetPasswordForm } from './components/auth/Auth';
+import { AuthGate, LoginForm, LogOut, SetPasswordForm } from './components/auth/Auth';
 import { useHasAccess } from './auth/authClient';
 import type { PropsWithChildren } from 'react';
 
@@ -85,6 +85,10 @@ const routesNested: RouteObject[] = [
         {
             path: "login",
             element: <LoginForm/>
+        },
+        {
+            path: "logout",
+            element: <LogOut/>
         },
         {
             path: "setup",
