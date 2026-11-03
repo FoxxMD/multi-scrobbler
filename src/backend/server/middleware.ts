@@ -191,7 +191,13 @@ export const sameOriginMiddleware = (opts: SameOriginOptions = {}): RequestHandl
         return;
     }
     const fetchSite = req.get('sec-fetch-site');
-    if (fetchSite !== undefined && fetchSite !== 'same-origin' && fetchSite !== 'none') {
+    if (fetchSite === 'same-origin') {
+        // set by the browser and cannot be changed by page scripts. Trusting it means a proxy that rewrites Host
+        // (nginx's default) does not break the dashboard. Origin/Host comparison below is the fallback for older browsers
+        next();
+        return;
+    }
+    if (fetchSite !== undefined && fetchSite !== 'none') {
         res.status(403).json({error: 'Cross-site request blocked', code: 'cross_site'});
         return;
     }

@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import request from 'supertest';
 import pEvent from 'p-event';
 import { generateOpenApiSpec } from '@minisylar/express-typed-router';
-import { buildAuthApp, buildAuthAppRouter, secureApp, signIn } from '../utils/authTestUtils.ts';
+import { buildAuthApp, buildAuthAppRouter, createApiKey, secureApp, signIn } from '../utils/authTestUtils.ts';
 import { SECURITY_REQUIRED, SECURITY_SCHEMES } from '../../server/requireAuth.ts';
 import type { ListenbrainzEndpointSourceConfig } from '../../common/infrastructure/config/source/endpointlz.ts';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
@@ -62,6 +62,29 @@ describe('Require Auth', function () {
         const cookie = await signIn(app);
         const res = await request(app).post(MUTATE).set('Cookie', cookie).set('Origin', 'http://evil.example.com').send({});
         expect(res.status).eq(403);
+    });
+
+    it('cross-site mutations are blocked on unsecured and disabled instances', async function () {
+        // a malicious page in a LAN user's browser sending a plain cross-site POST (text/plain, no preflight)
+        for (const app of [await buildAuthApp(), await buildAuthApp({authSettings: {mode: 'disabled'}})]) {
+            const crossSite = await request(app).post(MUTATE).set('Origin', 'http://evil.example.com').set('Content-Type', 'text/plain').send('{}');
+            expect(crossSite.status).eq(403);
+            expect((await request(app).post(MUTATE).set('Sec-Fetch-Site', 'cross-site').send({})).status).eq(403);
+            // same-origin (dashboard) and scripts without an Origin keep working
+            expect((await request(app).post(MUTATE).set('Host', 'localhost:9078').set('Origin', 'http://localhost:9078').send({})).status).not.oneOf([401, 403]);
+            expect((await request(app).post(MUTATE).send({})).status).not.oneOf([401, 403]);
+            // a proxy that rewrites Host (nginx default) does not break the dashboard in modern browsers
+            expect((await request(app).post(MUTATE).set('Host', 'upstream:9078').set('Origin', 'https://ms.example.com').set('Sec-Fetch-Site', 'same-origin').send({})).status).not.oneOf([401, 403]);
+            // reads are not affected
+            expect((await request(app).get('/api/components').set('Origin', 'http://evil.example.com')).status).eq(200);
+        }
+    });
+
+    it('API keys are not subject to the same-origin check', async function () {
+        const app = await buildAuthApp();
+        await secureApp(app);
+        const key = await createApiKey(app, await signIn(app), 'write');
+        expect((await request(app).post(MUTATE).set('Authorization', `Bearer ${key}`).set('Origin', 'http://evil.example.com').send({})).status).not.oneOf([401, 403]);
     });
 
     it('invalid session cookie is anonymous', async function () {

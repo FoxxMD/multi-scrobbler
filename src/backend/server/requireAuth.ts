@@ -189,11 +189,13 @@ export const requireAuth = (opts: RequireAuthOptions): RequestHandler => {
             return;
         }
 
-        if (req.auth.via === 'session') {
-            // ambient cookie auth needs CSRF protection (safe methods are passed through)
-            sameOrigin(req, res, next);
+        if (req.auth.via === 'apiKey') {
+            // a key is sent explicitly by the caller, a browser never attaches it on its own
+            next();
             return;
         }
-        next();
+        // session cookies, and unsecured/disabled instances (where being able to reach the instance *is* the credential),
+        // are ambient: a malicious page in the user's browser could use them. Reject cross-site requests (safe methods are passed through)
+        sameOrigin(req, res, next);
     }
 }
