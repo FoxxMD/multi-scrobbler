@@ -34,6 +34,8 @@ const queryClient = new QueryClient({
       const code = (error.data as {code?: string} | undefined)?.code;
       if (error.response.status === 401 && code === 'auth_required') {
         toaster.create({type: 'error', title: 'Log in required', description: 'Log in to make changes on this instance.'});
+      } else if (error.response.status === 403 && code === 'unsecured_read_only') {
+        toaster.create({type: 'error', title: 'Read-only', description: (error.data as {error?: string}).error});
       }
     }
   })

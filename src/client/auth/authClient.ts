@@ -10,6 +10,14 @@ export interface SetupStatus {
     secured: boolean
     passwordSet: boolean
     setupTokenRequired: boolean
+    /** why the token is required: AUTH_SETUP_TOKEN is set, the client looks public, or the host is not recognized */
+    setupTokenReason?: 'configured' | 'public_ip' | 'host'
+    /** the request looks like it comes from the internet (only a signal, may be wrong) */
+    publicClient: boolean
+    /** host the dashboard is being used through */
+    host?: string
+    /** while unsecured, the API is read-only through unrecognized hosts */
+    hostRecognized: boolean
     isOwner: boolean
     /** omitted once secured unless logged in as the owner */
     username?: string

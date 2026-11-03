@@ -4,7 +4,7 @@ import { ChakraClip } from "../ChakraClipboard";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ky from "ky";
 import { Link as RouterLink, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { authClient, errorMessage, useHasAccess, useRefreshAuth, useSetupStatus } from "../../auth/authClient";
+import { authClient, errorMessage, useHasAccess, useRefreshAuth, useSetupStatus, type SetupStatus } from "../../auth/authClient";
 
 const AuthCard = (props: PropsWithChildren<{title: string, description?: string}>) => (
     <Box display="flex" justifyContent="center" width="full" py="8">
@@ -29,7 +29,7 @@ const SetupTokenField = (props: {value: string, onChange: (val: string) => void}
     <Field.Root required>
         <Field.Label>Setup Token</Field.Label>
         <Input value={props.value} onChange={(e) => props.onChange(e.target.value)} autoComplete="off"/>
-        <Field.HelperText>Printed in the multi-scrobbler logs on startup.</Field.HelperText>
+        <Field.HelperText>Printed on startup in the multi-scrobbler console output (<Code>docker logs multi-scrobbler</Code>) or log file. It is hidden from the dashboard logs.</Field.HelperText>
     </Field.Root>
 );
 
@@ -84,6 +84,28 @@ export const LoginForm = () => {
     );
 }
 
+/** Explains why the setup token is needed, and the other ways to secure the instance */
+const SetupTokenReason = (props: {status: SetupStatus}) => {
+    const {setupTokenReason: reason, host} = props.status;
+    if (reason !== 'public_ip' && reason !== 'host') {
+        return null;
+    }
+    return (
+        <Alert.Root status="info">
+            <Alert.Indicator/>
+            <Alert.Content>
+                <Alert.Title>Setup token required</Alert.Title>
+                <Alert.Description>
+                    {reason === 'public_ip'
+                        ? 'You appear to be connecting from the internet (this may be wrong). To make sure only someone with access to the server can secure this instance, enter the setup token.'
+                        : <>You are using this instance through <strong>{host}</strong>, which it does not recognize. Enter the setup token, open this page using the server's IP address, or add the host to ALLOWED_HOSTS or BASE_URL.</>}
+                    {' '}You can also set the password with the ADMIN_SETUP_PW environmental variable.
+                </Alert.Description>
+            </Alert.Content>
+        </Alert.Root>
+    );
+}
+
 /** Set the owner's first password (the "secure this instance" page) */
 export const SetPasswordForm = () => {
     const {data: status} = useSetupStatus();
@@ -129,6 +151,7 @@ export const SetPasswordForm = () => {
                         <Input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password"/>
                         <Field.ErrorText>Passwords do not match</Field.ErrorText>
                     </Field.Root>
+                    {needsToken && status !== undefined ? <SetupTokenReason status={status}/> : null}
                     {needsToken ? <SetupTokenField value={token} onChange={setToken}/> : null}
                     <FormError error={error !== null ? errorMessage(error) : undefined}/>
                     <Button type="submit" loading={isPending} disabled={mismatch || password === ''}>Set Password</Button>
@@ -138,17 +161,24 @@ export const SetPasswordForm = () => {
     );
 }
 
-export const NotSecuredBanner = () => (
-    <Alert.Root status="warning" mb="4">
-        <Alert.Indicator/>
-        <Alert.Content>
-            <Alert.Title>This instance is not secured</Alert.Title>
-            <Alert.Description>
-                Anyone who can reach this dashboard can view and change everything. <Link asChild variant="underline"><RouterLink to="/setup">Set an admin password</RouterLink></Link> or use ADMIN_SETUP_PW.
-            </Alert.Description>
-        </Alert.Content>
-    </Alert.Root>
-);
+export const NotSecuredBanner = (props: {status: SetupStatus}) => {
+    const {publicClient, hostRecognized, host} = props.status;
+    return (
+        <Alert.Root status={publicClient ? 'error' : 'warning'} mb="4">
+            <Alert.Indicator/>
+            <Alert.Content>
+                <Alert.Title>{publicClient ? 'This instance may be reachable from the internet and is not secured' : 'This instance is not secured'}</Alert.Title>
+                <Alert.Description>
+                    {publicClient
+                        ? 'You appear to be connecting from the internet (this may be wrong). Anyone who can reach this instance can use it.'
+                        : 'Anyone who can reach this dashboard can view and change everything.'}
+                    {' '}<Link asChild variant="underline"><RouterLink to="/setup">Set an admin password</RouterLink></Link> or use ADMIN_SETUP_PW.
+                    {hostRecognized ? null : <> Because you are using it through <strong>{host}</strong>, which it does not recognize, it is <strong>read-only</strong> until it is secured or the host is added to ALLOWED_HOSTS or BASE_URL.</>}
+                </Alert.Description>
+            </Alert.Content>
+        </Alert.Root>
+    );
+}
 
 /**
  * Decides what the dashboard shows based on auth state:
@@ -170,7 +200,7 @@ export const AuthGate = (props: PropsWithChildren) => {
         return <>{props.children}</>;
     }
     if (!status.secured) {
-        return location.pathname === '/setup' ? <>{props.children}</> : <Box width="full"><NotSecuredBanner/>{props.children}</Box>;
+        return location.pathname === '/setup' ? <>{props.children}</> : <Box width="full"><NotSecuredBanner status={status}/>{props.children}</Box>;
     }
     if (!hasSession && location.pathname !== '/login') {
         return <LoginForm/>;
