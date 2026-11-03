@@ -88,7 +88,7 @@
     "avahi-browse": "^1.1.4",
     "better-auth": "^1.7.15",
     "better-sse": "^0.16.1",
-    "body-parser": "^2.2.2",
+    "body-parser": "^2.4.0",
     "cacheable": "^2.5.0",
     "castv2": "^0.1.10",
     "clone": "^2.1.2",
@@ -152,7 +152,7 @@
     "tough-cookie": "^5.1.2",
     "typeson": "^9.0.4",
     "typeson-registry": "^11.1.1",
-    "undici": "7.24.6",
+    "undici": "7.30.1",
     "vite-express": "^0.22.1",
     "vlc-client": "^1.1.1",
     "xml2js": "0.6.2",
@@ -255,7 +255,7 @@
     "vite-plugin-svgr": "^5.2.0",
     "with-local-tmp-dir": "^7.0.1",
     "zocker": "^3.0.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "browserslist": {
     "production": [
