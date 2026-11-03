@@ -24,7 +24,7 @@ const timelineSlotRecipe = defineSlotRecipe({
     }
 });
 
-const queryClient = new QueryClient({
+export const queryClient = new QueryClient({
   // surface auth failures from any dashboard action in one place
   mutationCache: new MutationCache({
     onError: (error) => {

@@ -1,12 +1,12 @@
-import { useState, type FormEvent, type PropsWithChildren } from "react";
-import { Alert, Badge, Box, Button, Card, Code, Field, Heading, HStack, Input, Link, NativeSelect, Spinner, Stack, Table, Text } from "@chakra-ui/react";
+import React, { useState, type FormEvent, type PropsWithChildren } from "react";
+import { Alert, Badge, Box, Button, Card, Code, Field, Heading, HStack, Input, Link, NativeSelect, Spinner, Stack, Table, Text, Span } from "@chakra-ui/react";
 import { ChakraClip } from "../ChakraClipboard";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ky from "ky";
 import { Link as RouterLink, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { authClient, errorMessage, useHasAccess, useRefreshAuth, useSetupStatus, type SetupStatus } from "../../auth/authClient";
 
-const AuthCard = (props: PropsWithChildren<{title: string, description?: string}>) => (
+const AuthCard = (props: PropsWithChildren<{title: string, description?: string | React.JSX.Element}>) => (
     <Box display="flex" justifyContent="center" width="full" py="8">
         <Card.Root width="full" maxWidth="md">
             <Card.Header>
@@ -29,7 +29,7 @@ const SetupTokenField = (props: {value: string, onChange: (val: string) => void}
     <Field.Root required>
         <Field.Label>Setup Token</Field.Label>
         <Input value={props.value} onChange={(e) => props.onChange(e.target.value)} autoComplete="off"/>
-        <Field.HelperText>Printed on startup in the multi-scrobbler console output (<Code>docker logs multi-scrobbler</Code>) or log file. It is hidden from the dashboard logs.</Field.HelperText>
+        <Field.HelperText>Printed on startup in the multi-scrobbler console output, docker logs, or log file. It is hidden from the dashboard logs.</Field.HelperText>
     </Field.Root>
 );
 
@@ -77,7 +77,9 @@ export const LoginForm = () => {
                         <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" autoFocus/>
                     </Field.Root>
                     <FormError error={error !== null ? errorMessage(error) : undefined}/>
+                    <Box display="flex" justifyContent="right" width="full">
                     <Button type="submit" loading={isPending}>Log in</Button>
+                    </Box>
                 </Stack>
             </form>
         </AuthCard>
@@ -96,10 +98,12 @@ const SetupTokenReason = (props: {status: SetupStatus}) => {
             <Alert.Content>
                 <Alert.Title>Setup token required</Alert.Title>
                 <Alert.Description>
+                    <Stack>
                     {reason === 'public_ip'
-                        ? 'You appear to be connecting from the internet (this may be wrong). To make sure only someone with access to the server can secure this instance, enter the setup token.'
-                        : <>You are using this instance through <strong>{host}</strong>, which it does not recognize. Enter the setup token, open this page using the server's IP address, or add the host to ALLOWED_HOSTS or BASE_URL.</>}
-                    {' '}You can also set the password with the ADMIN_SETUP_PW environmental variable.
+                        ? <Text>You appear to be connecting from the internet. To make sure only someone with access to the server can secure this instance, enter the setup token.</Text>
+                        : <><Text>You are using this instance through <strong>{host}</strong>, which is not a recognized host, so a setup token is required.</Text><Text>To avoid setup token: open this page using the server's IP address, or add the host to <Code>ALLOWED_HOSTS</Code> or <Code>BASE_URL</Code>.</Text></>}
+                    <Text>You can also skip this step by using the <Code>ADMIN_SETUP_PW</Code> environmental variable.</Text>
+                    </Stack>
                 </Alert.Description>
             </Alert.Content>
         </Alert.Root>
@@ -133,13 +137,13 @@ export const SetPasswordForm = () => {
     return (
         <AuthCard
             title="Secure this instance"
-            description={'Set a password for the admin account. Afterwards, using the dashboard or API requires logging in. Scrobbling, ingress Sources (Listenbrainz/Last.fm endpoints, Webscrobbler) and health checks are not affected.'}>
+            description={<Stack><Text>Set a password for the admin account.</Text><Text>Afterwards, using the dashboard or API requires logging in.</Text></Stack>}>
             <form onSubmit={(e: FormEvent) => { e.preventDefault(); if (!mismatch) { mutate(); } }}>
                 <Stack gap="4">
                     <Field.Root>
                         <Field.Label>Username</Field.Label>
                         <Input value={status?.username ?? 'admin'} readOnly autoComplete="username"/>
-                        <Field.HelperText>Change with the ADMIN_USERNAME environmental variable.</Field.HelperText>
+                        <Field.HelperText>Change with the <Code>ADMIN_USERNAME</Code> environmental variable.</Field.HelperText>
                     </Field.Root>
                     <Field.Root required>
                         <Field.Label>Password</Field.Label>
@@ -164,16 +168,18 @@ export const SetPasswordForm = () => {
 export const NotSecuredBanner = (props: {status: SetupStatus}) => {
     const {publicClient, hostRecognized, host} = props.status;
     return (
-        <Alert.Root status={publicClient ? 'error' : 'warning'} mb="4">
+        <Alert.Root status='warning' mb="4">
             <Alert.Indicator/>
             <Alert.Content>
-                <Alert.Title>{publicClient ? 'This instance may be reachable from the internet and is not secured' : 'This instance is not secured'}</Alert.Title>
+                <Alert.Title>{publicClient ? 'This instance may be reachable from the internet and is not secured!' : 'This instance is not secured!'}</Alert.Title>
                 <Alert.Description>
+                    <Stack>
                     {publicClient
-                        ? 'You appear to be connecting from the internet (this may be wrong). Anyone who can reach this instance can use it.'
+                        ? 'You appear to be connecting from the internet. Anyone who can reach this instance can use it.'
                         : 'Anyone who can reach this dashboard can view and change everything.'}
-                    {' '}<Link asChild variant="underline"><RouterLink to="/setup">Set an admin password</RouterLink></Link> or use ADMIN_SETUP_PW.
-                    {hostRecognized ? null : <> Because you are using it through <strong>{host}</strong>, which it does not recognize, it is <strong>read-only</strong> until it is secured or the host is added to ALLOWED_HOSTS or BASE_URL.</>}
+                    <Span><Link asChild variant="underline"><RouterLink to="/setup">Set an admin password</RouterLink></Link> or use ENV<Code>ADMIN_SETUP_PW</Code></Span>
+                    <Span>{hostRecognized ? null : <> Because you are using it through <strong>{host}</strong>, which it does not recognize, it is <strong>read-only</strong> until it is secured or the host is added to <Code>ALLOWED_HOSTS</Code> or <Code>BASE_URL</Code>.</>}</Span>
+                </Stack>
                 </Alert.Description>
             </Alert.Content>
         </Alert.Root>

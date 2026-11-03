@@ -9,7 +9,14 @@ import { initialize, mswLoader, getWorker } from 'msw-storybook-addon';
 try {
   getWorker();
 } catch (_) {
-  initialize();
+  // only warn about unmocked API calls, not vite serving source/assets
+  initialize({
+    onUnhandledRequest(req, print) {
+      if (new URL(req.url).pathname.startsWith('/api/')) {
+        print.warning();
+      }
+    }
+  });
 }
 
 export default definePreview({
