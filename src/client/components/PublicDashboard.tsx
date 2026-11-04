@@ -4,6 +4,7 @@ import type { ClientType, SourceType } from "../../core/Atomic";
 import { type CountUpStat, CountUpValueText } from "./CountUpStat";
 import { capitalize, capitalizeWords } from "../../core/StringUtils";
 import { getMusicServiceIcon } from "./icons/ChakraIcons";
+import { AvatarStack, type AvatarStackItem } from "./AvatarStack";
 
 export interface ComponentStat {
     count: number,
@@ -20,7 +21,7 @@ export interface PublicDashboardData {
 
 export const PublicDashboard = (props: PublicDashboardData) => {
     return (
-        <Stack>
+        <Stack gap="10">
             <CountStats {...props} />
             <ComponentStats {...props} />
         </Stack>
@@ -46,7 +47,7 @@ export const CountStats = (props: Pick<PublicDashboardData, 'scrobbles' | 'plays
         <Stat.Root key={i} size="lg" flex="none">
             <Stat.Label textStyle="3xl">{x.label}</Stat.Label>
             <CountUpValueText textStyle="6xl" {...x} />
-            {x.helpText !== undefined && <Stat.HelpText textStyle="2xl">{x.helpText}</Stat.HelpText>}
+            {x.helpText !== undefined && <Stat.HelpText textStyle="lg">{x.helpText}</Stat.HelpText>}
         </Stat.Root>
     ))}</Wrap>
 }
@@ -57,26 +58,29 @@ export const ComponentStats = (props: Pick<PublicDashboardData, 'sources' | 'cli
         if (key !== 'sources' && key !== 'clients') {
             continue;
         }
+        let avatarItems: AvatarStackItem[] = [];
+        if(val.types !== undefined) {
+            avatarItems = val.types.map((x) => {
+                        const Icon = getMusicServiceIcon(x);
+                        if (Icon !== undefined) {
+                            return {
+                                name: capitalizeWords(x),
+                                icon: Icon
+                            }
+                        }
+                        return {
+                           name: capitalizeWords(x)
+                        }
+                    })
+        }
         componentStats.push(<HStack key={key}>
             <Stat.Root>
                 <Stat.Label textStyle="3xl">{capitalize(key)}</Stat.Label>
+                <HStack>
                 <CountUpValueText delay={componentStats.length * 300} textStyle="6xl" value={val.count} />
+                {avatarItems.length > 0 ? <AvatarStack spread="0.5" items={avatarItems}/> : undefined}
+                </HStack>
             </Stat.Root>
-            {/* <CountUpStat textStyle="4xl" value={val.count} label={capitalize(key)} delay={componentStats.length * 300} /> */}
-            {val.types !== undefined ? (<Wrap>
-
-                {val.types.map((x) => {
-                    let iconElement: React.JSX.Element | undefined = undefined;
-                    const Icon = getMusicServiceIcon(x);
-                    if (Icon !== undefined) {
-                        iconElement = <Tag.StartElement><Icon /></Tag.StartElement>
-                    }
-                    return (<Tag.Root size="lg" key={x}>
-                        {iconElement}
-                        <Tag.Label>{capitalizeWords(x)}</Tag.Label>
-                    </Tag.Root>)
-                })}
-            </Wrap>) : undefined}
         </HStack>);
     }
     if (componentStats.length === 0) {

@@ -27,7 +27,8 @@ export default defineConfig(({ mode }) => {
                 babel({
                 presets: [reactCompilerPreset()]
     }),
-            svgr(),
+            // icon: sets width/height="1em" on ?react svg components (like react-icons) so they have a size outside Chakra components that size child svgs
+            svgr({ svgrOptions: { icon: true } }),
             // only for `npm run frontend:analyze`, writes module reports next to the throwaway build output
             ...(mode === 'analyze' ? [
                 visualizer({ filename: 'node_modules/.cache/frontend-analyze/treemap.html', template: 'treemap', open: true }),
