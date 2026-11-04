@@ -45,10 +45,10 @@ Exposing an insecure MS instance can potentially leak **personally identifiable 
 
 There are two primary ways to secure your instance, set through the ENV `AUTH_MODE` or AIO `auth.mode` [`config.json`](/configuration/?configType=aio#configuration-types).
 
-| Mode                 | Behavior                                                                                                       |
-| :------------------- | :------------------------------------------------------------------------------------------------------------- |
-| `optional` (default) | **Built-In Authentication** is dormant until an admin password is set, from the dashboard or `ADMIN_SETUP_PW`. |
-| `disabled`           | No authentication (Bring Your Own Auth)                                                                        |
+| Mode                 | Behavior                                                                                                                                   |
+| :------------------- | :----------------------------------------------------------------------------------------------------------------------------------------- |
+| `optional` (default) | [**Built-In Authentication**](#built-in-authentication) is dormant until an admin password is set, from the dashboard or `ADMIN_SETUP_PW`. |
+| `disabled`           | No authentication ([**Bring Your Own Auth**](#byoa)). Use when behind an authenticated reverse proxy or authelia/keycloak/tinyauth/etc...  |
 
 ### Built-in Authentication
 
@@ -66,13 +66,21 @@ In some configurations an automatically generated setup token is required to set
 
 Read more about how this works in the [**Built-in Authentication**](/security/authentication) docs.
 
-### Bring Your Own Auth (BYOA) {#bring-your-own-auth}
+### Bring Your Own Auth (BYOA) {#byoa}
 
 With BYOA mode (`AUTH_MODE=disabled`) Multi-Scrobbler functions closely to the way it did before authentication was introduced. In other words, access to the dashboard and all API endpoints is always open. There is no Account, password, API Keys, etc... to manage or configure.
 
 <Aside type="important">
 
-In this mode **you are expected to provide some form of security in front of MS.** Failing to do so can lead to scenarios outlined in [Why Secure It?](#why-secure-it)
+In this mode **you are expected to provide some form of security in front of MS.**
+
+Failing to do so can lead to scenarios outlined in [Why Secure It?](#why-secure-it)
+
+</Aside>
+
+<Aside type="tip">
+
+Use this if you already have an authenticated reverse proxy with something like **Authelia/Authentik/Keycloak/Tinyauth** etc...
 
 </Aside>
 
