@@ -89,6 +89,54 @@ export const formatNumber = (val: number | string, options?: numberFormatOptions
     return `${prefixStr}${localeString}${suffix}`;
 };
 
+export interface AbbreviatedOpts {
+    /** minimum number of digits in the number required before abbreviation is used */
+    minDigits?: number
+    /** maximum number of decimal places in the returned, abbreviated float. Default 1 (EX 12345 => 12.3K) */
+    maxDecimals?: number
+}
+
+export interface AbbreviatedNumberData {
+    num: number
+    /** Undefined if input num was not abbreviated. Otherwise:
+     * * K = thousand
+     * * M = million
+     * * B = billion
+     * * T = trillion
+     * * eN = above trillion, exponent
+     */
+    abbreviation?: string
+}
+
+export const convertNumToAbbreviated = (num: number, opts: AbbreviatedOpts = {}): AbbreviatedNumberData => {
+    const {
+        minDigits = 5,
+        maxDecimals = 1
+    } = opts;
+
+    const abs = Math.abs(num);
+    if (!Number.isFinite(num) || abs < 1000) {
+        return { num };
+    }
+    // number of digits in the integer part
+    const digits = Math.floor(Math.log10(abs)) + 1;
+    if (digits < minDigits) {
+        return { num };
+    }
+
+    // group of thousands: 1 = K, 2 = M, ...
+    let group = Math.floor((digits - 1) / 3);
+    let scaled = Number((num / 10 ** (group * 3)).toFixed(maxDecimals));
+    // rounding can carry into the next group, EX 999,960 => 1000.0K => 1M
+    if (Math.abs(scaled) >= 1000) {
+        group++;
+        scaled = Number((num / 10 ** (group * 3)).toFixed(maxDecimals));
+    }
+
+    const abbreviation = ['K', 'M', 'B', 'T'][group - 1] ?? `e${group * 3}`;
+    return { num: scaled, abbreviation };
+}
+
 export const generateArray = <T = any>(size: number, gen: (index: number) => T): T[] => {
     return Array.from(Array(size), (v,k) => gen(k));
 }

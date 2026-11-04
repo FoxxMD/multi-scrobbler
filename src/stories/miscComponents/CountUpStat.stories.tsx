@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Box, Button, Container, HStack, Stat, Text, VStack } from '@chakra-ui/react';
 
 import { CountUpStat, CountUpValueText } from "../../client/components/CountUpStat.js";
+import { NumberValueText } from "../../client/components/AbbreviatedNumber.js";
 import { Provider } from "../../client/components/Provider.js";
 
 const meta = preview.type<{ args: React.ComponentProps<typeof CountUpStat> }>().meta({
@@ -104,6 +105,30 @@ export const ChangingValue = meta.story({
                     <Button size="sm" onClick={() => setValue(v => v + Math.ceil(Math.random() * 500))}>Increase</Button>
                     <Button size="sm" onClick={() => setValue(v => Math.max(0, v - Math.ceil(Math.random() * 500)))}>Decrease</Button>
                     <Button size="sm" onClick={() => setValue(Math.round(Math.random() * 100000))}>Random</Button>
+                </HStack>
+            </VStack>
+        );
+    }
+});
+
+export const Abbreviated = meta.story({
+    render: function Render(args) {
+        const [value, setValue] = useState(987654);
+        return (
+            <VStack align="start" gap={4}>
+                <HStack gap={8} align="start">
+                    <CountUpStat label="Plays (CountUpStat)" size="lg" value={value} duration={args.duration} reduceMotion={args.reduceMotion}
+                                 abbreviate={{ minDigits: 6, maxDecimals: 2 }} helpText={value.toLocaleString()} />
+                    <Stat.Root size="lg">
+                        <Stat.Label>Plays (plain Stat)</Stat.Label>
+                        <NumberValueText value={value} abbreviate={{ minDigits: 6, maxDecimals: 2 }} />
+                        <Stat.HelpText>{value.toLocaleString()}</Stat.HelpText>
+                    </Stat.Root>
+                </HStack>
+                <HStack>
+                    <Button size="sm" onClick={() => setValue(v => v + 50000)}>+50K</Button>
+                    <Button size="sm" onClick={() => setValue(v => v * 10)}>x10</Button>
+                    <Button size="sm" onClick={() => setValue(1234)}>1,234 (not abbreviated)</Button>
                 </HStack>
             </VStack>
         );

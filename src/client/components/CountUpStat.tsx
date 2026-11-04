@@ -1,19 +1,18 @@
-import { type ComponentProps, type ReactNode, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
+import { type ComponentProps, type ReactNode, useEffect, useEffectEvent, useRef, useState } from "react";
 import { Stat, VisuallyHidden } from "@chakra-ui/react";
+import { type NumberFormatOpts, useNumberFormatter } from "./AbbreviatedNumber.js";
 
-export interface CountUpOptions {
+export interface CountUpOptions extends NumberFormatOpts {
     /** Target number to count up to */
     value: number
     /** Animation length in ms (ease-out). Default 1400 */
     duration?: number
     /** ms to wait after scrolling into view before counting starts. Default 0 */
     delay?: number
-    /** Fixed number of decimal places. Default 0 */
-    decimals?: number
-    /** Locale used by Intl.NumberFormat for separators. Default browser locale */
-    locale?: Intl.LocalesArgument
     prefix?: ReactNode
     suffix?: ReactNode
+    /** Custom number formatting, used for every animation frame. Overrides `decimals`, `locale` and `abbreviate` */
+    formatter?: (num: number) => ReactNode
     /** Force reduced motion (no animation, renders final value like a plain Stat.ValueText) */
     reduceMotion?: boolean
 }
@@ -32,10 +31,12 @@ export const CountUpValueText = (props: CountUpOptions & Omit<ComponentProps<typ
         value,
         duration = 1400,
         delay = 0,
-        decimals = 0,
+        decimals,
         locale,
+        abbreviate,
         prefix,
         suffix,
+        formatter,
         reduceMotion = false,
         ...rest
     } = props;
@@ -51,10 +52,9 @@ export const CountUpValueText = (props: CountUpOptions & Omit<ComponentProps<typ
     const started = useRef(false);
     const frame = useRef<number>(undefined);
 
-    const format = useMemo(() => new Intl.NumberFormat(locale, {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals
-    }).format, [locale, decimals]);
+    // abbreviation is applied on every animation frame so the count rolls over units (999K => 1M) naturally
+    const defaultFormat = useNumberFormatter({ decimals, locale, abbreviate });
+    const format = formatter ?? defaultFormat;
 
     // animate from the currently displayed number to `to`, cancelling any animation in progress
     const animateTo = useEffectEvent((to: number) => {
@@ -129,7 +129,7 @@ export const CountUpStat = (props: CountUpOptions & {
     helpText?: ReactNode
 } & Omit<ComponentProps<typeof Stat.Root>, 'prefix'>) => {
     const {
-        value, duration, delay, decimals, locale, prefix, suffix, reduceMotion,
+        value, duration, delay, decimals, locale, abbreviate, prefix, suffix, reduceMotion,
         label,
         helpText,
         ...rest
@@ -137,8 +137,9 @@ export const CountUpStat = (props: CountUpOptions & {
     return (
         <Stat.Root {...rest}>
             <Stat.Label>{label}</Stat.Label>
-            <CountUpValueText {...{ value, duration, delay, decimals, locale, prefix, suffix, reduceMotion }} />
+            <CountUpValueText {...{ value, duration, delay, decimals, locale, abbreviate, prefix, suffix, reduceMotion }} />
             {helpText !== undefined && <Stat.HelpText>{helpText}</Stat.HelpText>}
         </Stat.Root>
     );
 }
+
