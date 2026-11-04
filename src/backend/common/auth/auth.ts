@@ -57,6 +57,55 @@ export const loginAuditHook = (logger: Logger) => createAuthMiddleware(async (ct
     }
 });
 
+/*
+ * NOTES FOR FUTURE AUTH FEATURES (researched against better-auth 1.7.15)
+ *
+ * None of these need schema changes to existing tables. Everything below is either already in the schema
+ * or a brand new table (plain CREATE TABLE migration). Changing columns on users/accounts makes drizzle-kit
+ * generate a table rebuild whose DROP TABLE cascade-deletes everything referencing users, so avoid that.
+ *
+ * == Generic OAuth 2.0 / OIDC (genericOAuth from better-auth/plugins) ==
+ * https://better-auth.com/docs/plugins/generic-oauth
+ * - No schema. Providers are config-only, logins are rows in `accounts` (providerId + accountId = provider's `sub`).
+ *   OAuth state/PKCE is stored in `verifications` (default storeStateStrategy: "database").
+ * - User matching (better-auth/dist/oauth2/link-account.mjs): first by providerId+accountId, then fallback
+ *   findUserByEmail(email.toLowerCase()). The email fallback only links implicitly if the provider says the email is
+ *   verified or the provider is in account.accountLinking.trustedProviders. See also disableImplicitLinking,
+ *   disableImplicitSignUp, overrideUserInfo, updateUserInfoOnLink.
+ * - There is NO matching by username and genericOAuth never reads `preferred_username`. Populating users.username from
+ *   preferred_username, or matching an existing user by username (authelia/authentik style), needs custom code
+ *   (getUserInfo / mapProfileToUser / a hook). OAuth-created users bypass the username plugin's validation and
+ *   normalization, so apply the same rules as USERNAME_REGEX in owner.ts (IdP usernames can contain '-' or '@').
+ * - users.email is NOT NULL UNIQUE, so a provider that returns no email must get a placeholder from code.
+ *   Use placeholderEmail(user id) from owner.ts, never a username-based one (usernames can change and collide).
+ * - Users without a real email have placeholderEmail(id) with emailVerified: false. Detect them by
+ *   email.endsWith('@' + PLACEHOLDER_EMAIL_DOMAIN), no flag column needed. Swapping in a real email is a row update.
+ * - Implicit linking (first IdP login -> existing user by email) also requires the LOCAL user's emailVerified
+ *   (account.accountLinking.requireLocalEmailVerified, default true). MS sends no email, so users cannot verify one. Ways to link:
+ *   1. Explicit linking (simplest, no email needed): logged in user clicks "link <provider>" in Account settings -> authClient.linkSocial.
+ *      Placeholders can stay forever.
+ *   2. Implicit by email: user needs a real email AND either an admin sets it + marks it verified, or
+ *      requireLocalEmailVerified: false with the (self-hosted) IdP in trustedProviders, so the IdP's email claim is trusted.
+ *      To let users enter their own email use user.changeEmail {enabled: true, updateEmailWithoutVerification: true},
+ *      which only applies while the user is unverified (why placeholders must stay emailVerified: false).
+ *   3. By username: custom code, see above. Email is irrelevant.
+ * - Decide on account.encryptOAuthTokens BEFORE releasing OAuth. Enabling it later leaves already stored tokens in plaintext.
+ *   It derives from the auth secret, which lives in its own file, so encrypted tokens stay valid across db copies only with that file.
+ * - Optional: unique index on accounts(providerId, accountId). better-auth looks accounts up by that pair but does not
+ *   enforce uniqueness. Additive (CREATE UNIQUE INDEX), can be added any time.
+ *
+ * == SSO (@better-auth/sso), only if providers should be registered at runtime from the dashboard ==
+ * https://better-auth.com/docs/plugins/sso
+ * - Adds a new `ssoProvider` table (additive). OIDC claim mapping (oidcConfig.mapping) has email/emailVerified/name/image/extraFields,
+ *   no username mapping, same custom-code caveat as above.
+ *
+ * == Passkeys (@better-auth/passkey) ==
+ * https://better-auth.com/docs/plugins/passkey
+ * - Adds a new `passkey` table (additive): name, publicKey, userId -> users (cascade), credentialID, counter, deviceType,
+ *   backedUp, transports, createdAt, aaguid. Regenerate with `npx auth generate` and diff, the docs page omits the fields.
+ * - WebAuthn needs a secure context and a domain rpID. Bare IPs (192.168.x.x:9078) cannot be an rpID, so passkeys only
+ *   work through a domain over https or localhost. Set rpID/origin explicitly since baseURL.allowedHosts can be a wildcard.
+ * */
 export const createAuth = (db: DbConcrete, settings: AuthSettings, opts: CreateAuthOptions) => {
     const { logger } = opts;
     return betterAuth({

@@ -4,7 +4,7 @@ import { loggerTest } from '@foxxmd/logging';
 import { transientDb } from '../utils/TransientTestUtils.ts';
 import { fixtureCreateComponent } from '../utils/databaseFixtures.ts';
 import { components } from '../../common/database/drizzle/schema/schema.ts';
-import { ensureOwner, getAdminUsername, PLACEHOLDER_EMAIL_DOMAIN } from '../../common/auth/owner.ts';
+import { ensureOwner, getAdminUsername, placeholderEmail } from '../../common/auth/owner.ts';
 import { up as ownerMigration } from '../../common/database/appMigrations/007_componentOwner.ts';
 import { DrizzleComponentRepository } from '../../common/database/drizzle/repositories/ComponentRepository.ts';
 import { createAuth } from '../../common/auth/auth.ts';
@@ -21,7 +21,8 @@ describe('Auth Owner', function () {
         const owner = await ensureOwner(db);
         expect(owner.username).eq('admin');
         expect(owner.role).eq('admin');
-        expect(owner.email).eq(`admin@${PLACEHOLDER_EMAIL_DOMAIN}`);
+        expect(owner.email).eq(placeholderEmail(owner.id));
+        expect(owner.email).not.include('admin');
 
         const again = await ensureOwner(db);
         expect(again.id).eq(owner.id);

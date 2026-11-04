@@ -8,6 +8,14 @@ export const DEFAULT_ADMIN_USERNAME = 'admin';
 /** RFC 2606 reserved TLD, better-auth requires an email but MS does not use it */
 export const PLACEHOLDER_EMAIL_DOMAIN = 'multi-scrobbler.invalid';
 
+/**
+ * Placeholder email for users without a real one.
+ *
+ * Built from the user id, not the username: the username can change, so a username-based email could collide with
+ * a later user who takes the old username (users.email is unique). Ids are 32+ chars, longer than any username (max 30).
+ * */
+export const placeholderEmail = (userId: string) => `${userId}@${PLACEHOLDER_EMAIL_DOMAIN}`;
+
 // same rules as the better-auth username plugin defaults, otherwise the owner could never sign in
 const USERNAME_REGEX = /^[a-z0-9_.]{3,30}$/;
 
@@ -60,13 +68,15 @@ export const ensureOwner = async (db: DbConcrete): Promise<OwnerUser> => {
     // re-use a user with the admin username if one somehow exists without the setting (restored partial db, etc...)
     let owner = await db.query.users.findFirst({where: {username}});
     if (owner === undefined) {
+        const id = randomUUID();
         owner = (await db.insert(users).values({
-            id: randomUUID(),
+            id,
             name: username,
             username,
             displayUsername: username,
-            email: `${username}@${PLACEHOLDER_EMAIL_DOMAIN}`,
-            emailVerified: true,
+            email: placeholderEmail(id),
+            // placeholder emails are never verified, see placeholderEmail
+            emailVerified: false,
             role: 'admin',
         }).returning())[0];
     }
