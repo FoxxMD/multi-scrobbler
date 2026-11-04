@@ -45,10 +45,10 @@ Exposing an insecure MS instance can potentially leak **personally identifiable 
 
 There are two primary ways to secure your instance, set through the ENV `AUTH_MODE` or AIO `auth.mode` [`config.json`](/configuration/?configType=aio#configuration-types).
 
-| Mode       | Behavior                                                                                                                                   |
-| :--------- | :----------------------------------------------------------------------------------------------------------------------------------------- |
-| `default`  | [**Built-In Authentication**](#built-in-authentication) is dormant until an admin password is set, from the dashboard or `ADMIN_SETUP_PW`. |
-| `disabled` | No authentication ([**Bring Your Own Auth**](#byoa)). Use when behind an authenticated reverse proxy or authelia/keycloak/tinyauth/etc...  |
+| Mode       | Behavior                                                                                                                                       |
+| :--------- | :--------------------------------------------------------------------------------------------------------------------------------------------- |
+| `default`  | [**Built-In Authentication**](#built-in-authentication) is dormant until an admin password is set, from the dashboard or ENV `ADMIN_SETUP_PW`. |
+| `disabled` | No authentication ([**Bring Your Own Auth**](#byoa)). Use when behind an authenticated reverse proxy or authelia/keycloak/tinyauth/etc...      |
 
 ### Built-in Authentication
 
