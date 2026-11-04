@@ -45,14 +45,14 @@ Exposing an insecure MS instance can potentially leak **personally identifiable 
 
 There are two primary ways to secure your instance, set through the ENV `AUTH_MODE` or AIO `auth.mode` [`config.json`](/configuration/?configType=aio#configuration-types).
 
-| Mode                 | Behavior                                                                                                                                   |
-| :------------------- | :----------------------------------------------------------------------------------------------------------------------------------------- |
-| `optional` (default) | [**Built-In Authentication**](#built-in-authentication) is dormant until an admin password is set, from the dashboard or `ADMIN_SETUP_PW`. |
-| `disabled`           | No authentication ([**Bring Your Own Auth**](#byoa)). Use when behind an authenticated reverse proxy or authelia/keycloak/tinyauth/etc...  |
+| Mode       | Behavior                                                                                                                                   |
+| :--------- | :----------------------------------------------------------------------------------------------------------------------------------------- |
+| `default`  | [**Built-In Authentication**](#built-in-authentication) is dormant until an admin password is set, from the dashboard or `ADMIN_SETUP_PW`. |
+| `disabled` | No authentication ([**Bring Your Own Auth**](#byoa)). Use when behind an authenticated reverse proxy or authelia/keycloak/tinyauth/etc...  |
 
 ### Built-in Authentication
 
-[**Built-in Authentication**](/security/authentication) (`AUTH_MODE=optional`) uses hardened [Better-Auth](https://better-auth.com/) to lock down all the API endpoints for Multi-Scrobbler. All authentication and account management is done through MS settings/configuration that lives in your database, config, or ENVs.
+[**Built-in Authentication**](/security/authentication) (`AUTH_MODE=default`) uses hardened [Better-Auth](https://better-auth.com/) to lock down all the API endpoints for Multi-Scrobbler. All authentication and account management is done through MS settings/configuration that lives in your database, config, or ENVs.
 
 <Aside type="tip">
 

@@ -7,7 +7,7 @@ import { Provider, queryClient } from "../../client/components/Provider.js";
 import { authClient, type SetupStatus } from "../../client/auth/authClient.js";
 
 export const setupStatus = (overrides: Partial<SetupStatus> = {}): SetupStatus => ({
-    mode: 'optional',
+    mode: 'default',
     secured: false,
     passwordSet: false,
     setupTokenRequired: false,

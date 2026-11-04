@@ -6,7 +6,7 @@ import ky, { HTTPError } from "ky";
 
 /** Shape of GET api/auth/setup/status (src/backend/common/auth/setupPlugin.ts) */
 export interface SetupStatus {
-    mode: 'disabled' | 'optional'
+    mode: 'disabled' | 'default'
     secured: boolean
     passwordSet: boolean
     setupTokenRequired: boolean

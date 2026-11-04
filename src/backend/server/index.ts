@@ -112,10 +112,9 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
                 }),
                 ...(opts.authSettings ?? {})
             };
-            let authState!: AuthStateStore;
             const auth = createAuth(db, authSettings, {basePath, logger: authLogger, onStateChange: () => authState.refresh()});
             await applyOwnerPasswordEnv(auth, db, authSettings.secret, authLogger);
-            authState = await new AuthStateStore(auth, db).refresh();
+            const authState: AuthStateStore = await new AuthStateStore(auth, db).refresh();
             const locals: ServerLocals = {auth, authSettings, authState, db};
             Object.assign(app.locals, locals);
             // must be mounted before the router (and its body parsing) so better-auth gets the raw request

@@ -9,13 +9,13 @@ const cookieFrom = (res: request.Response) => res.headers['set-cookie'] as unkno
 
 describe('Instance Setup', function () {
 
-    describe('optional mode (default)', function () {
+    describe('default mode (default)', function () {
 
         it('reports unsecured status', async function () {
             const app = await buildAuthApp();
             const res = await request(app).get('/api/auth/setup/status');
             expect(res.status).eq(200);
-            expect(res.body).to.include({mode: 'optional', secured: false, passwordSet: false, setupTokenRequired: false, isOwner: false, username: 'admin'});
+            expect(res.body).to.include({mode: 'default', secured: false, passwordSet: false, setupTokenRequired: false, isOwner: false, username: 'admin'});
         });
 
         it('anyone can set the first password, gets logged in, and the instance becomes secured', async function () {

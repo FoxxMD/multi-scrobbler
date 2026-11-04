@@ -7,9 +7,9 @@ const https = new URL('https://ms.example.com');
 
 describe('Auth Settings', function () {
 
-    it('defaults to optional mode, open hosts, insecure cookies', function () {
+    it('defaults to default mode, open hosts, insecure cookies', function () {
         const s = resolveAuthSettings({localUrl: http, hasDefinedBaseUrl: false, env: {}});
-        expect(s.mode).eq('optional');
+        expect(s.mode).eq('default');
         expect(s.allowedHosts).eql(['*']);
         expect(s.hostsOpen).is.true;
         expect(s.secureCookies).is.false;
@@ -27,9 +27,9 @@ describe('Auth Settings', function () {
             localUrl: https,
             hasDefinedBaseUrl: true,
             config: {mode: 'disabled', allowedHosts: ['a.com'], secureCookies: false, trustProxy: false},
-            env: {AUTH_MODE: 'optional', ALLOWED_HOSTS: 'b.com, c.com:9078', SECURE_COOKIES: 'true', TRUST_PROXY: 'true'}
+            env: {AUTH_MODE: 'default', ALLOWED_HOSTS: 'b.com, c.com:9078', SECURE_COOKIES: 'true', TRUST_PROXY: 'true'}
         });
-        expect(s.mode).eq('optional');
+        expect(s.mode).eq('default');
         expect(s.allowedHosts).eql(['b.com', 'c.com:9078']);
         expect(s.hostsOpen).is.false;
         expect(s.secureCookies).is.true;

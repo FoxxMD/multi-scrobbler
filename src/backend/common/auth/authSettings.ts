@@ -87,7 +87,7 @@ export const resolveAuthSettings = (opts: ResolveAuthSettingsOptions): AuthSetti
         env = process.env,
     } = opts;
 
-    let mode: AuthMode = config.mode ?? 'optional';
+    let mode: AuthMode = config.mode ?? 'default';
     if (env.AUTH_MODE !== undefined && env.AUTH_MODE.trim() !== '') {
         const parsed = authModeSchema.safeParse(env.AUTH_MODE.trim().toLowerCase());
         if (!parsed.success) {

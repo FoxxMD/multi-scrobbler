@@ -12,7 +12,7 @@ import {LocalStorageText} from '@site/src/components/Storage/Text';
 
 Multi-scrobbler has built-in authentication for the dashboard and most API endpoints.
 
-This [Authentication Mode](/security/overview#securing-multi-scrobbler) is the **default** when no config is present. It can be explicitly set through the ENV `AUTH_MODE=optional` or AIO `auth.mode: 'optional'` [`config.json`](/configuration/?configType=aio#configuration-types).
+This [Authentication Mode](/security/overview#securing-multi-scrobbler) is the **default** when no config is present. It can be explicitly set through the ENV `AUTH_MODE=default` or AIO `auth.mode: 'default'` [`config.json`](/configuration/?configType=aio#configuration-types).
 
 
 ## What Is Protected?
@@ -200,7 +200,7 @@ By default multi-scrobbler accepts requests for **any** host (IP, hostname, etc.
 <TabItem value="env" label="ENV">
 | Environmental Variable | Default                       | Description                                                                                                 |
 | :--------------------- | :---------------------------- | :---------------------------------------------------------------------------------------------------------- |
-| `AUTH_MODE`            | `optional`                    | `optional`, or `disabled`. See [Securing Multi-Scrobbler](/security/overview#securing-multi-scrobbler)       |
+| `AUTH_MODE`            | `default`                    | `default`, or `disabled`. See [Securing Multi-Scrobbler](/security/overview#securing-multi-scrobbler)       |
 | `ADMIN_USERNAME`       | `admin`                       | Username of the admin account. 3-30 letters, numbers, underscores or dots                                   |
 | `ADMIN_SETUP_PW`       |                               | Initial admin password. Only used if the admin has no password                                              |
 | `ADMIN_RESET_PW`       |                               | Reset the admin password and log out all sessions. Remove after use                                         |
@@ -215,7 +215,7 @@ By default multi-scrobbler accepts requests for **any** host (IP, hostname, etc.
 ```json title="config.json"
 {
   "auth": {
-    "mode": "optional",
+    "mode": "default",
     "allowedHosts": ["ms.mydomain.tld"],
     "secureCookies": true,
     "trustProxy": false,

@@ -43,11 +43,11 @@ export const metadaConfigSchema = z.object({
 });
 export type MetadataConfig = z.infer<typeof metadaConfigSchema>;
 
-export const authModeSchema = z.enum(['disabled', 'optional']);
+export const authModeSchema = z.enum(['disabled', 'default']);
 
 export const authConfigSchema = z.object({
     mode: authModeSchema.optional().meta({
-        description: "How authentication is enforced. 'optional': auth is dormant until an admin password is set. 'disabled': no authentication (use when MS is behind your own auth proxy). Can also be set with ENV AUTH_MODE",
+        description: "How authentication is enforced. 'default': auth is dormant until an admin password is set. 'disabled': no authentication (use when MS is behind your own auth proxy). Can also be set with ENV AUTH_MODE",
         default: 'optional',
         examples: ['optional']
     }),
