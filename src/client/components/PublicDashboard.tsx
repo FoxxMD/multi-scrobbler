@@ -1,5 +1,5 @@
 import React, { type ComponentProps } from "react"
-import { Stack, Wrap, HStack, Stat, Tag } from '@chakra-ui/react';
+import { Stack, Wrap, HStack, Stat, Highlight, Flex, Text, LinkBox, LinkOverlay } from '@chakra-ui/react';
 import type { ClientType, SourceType } from "../../core/Atomic";
 import { type CountUpStat, CountUpValueText } from "./CountUpStat";
 import { capitalize, capitalizeWords } from "../../core/StringUtils";
@@ -19,14 +19,30 @@ export interface PublicDashboardData {
     clients?: ComponentStat
 }
 
+// eslint-disable-next-line arrow-body-style
 export const PublicDashboard = (props: PublicDashboardData) => {
     return (
         <Stack gap="10">
             <CountStats {...props} />
             <ComponentStats {...props} />
+            <CallToAction />
         </Stack>
     )
 }
+
+const CallToAction = () => (
+    <Flex justify="space-evenly">
+        <LinkBox>
+            <LinkOverlay href="https://docs.multi-scrobbler.app" target="_blank">
+                <Text textStyle="xl" letterSpacing="tight">
+                    <Highlight query={['anywhere', 'everywhere']} styles={{ color: "#e1553d" }}>
+                        Listen everywhere, Scrobble anywhere
+                    </Highlight>
+                </Text>
+            </LinkOverlay>
+        </LinkBox>
+    </Flex>
+);
 
 export const CountStats = (props: Pick<PublicDashboardData, 'scrobbles' | 'plays' | 'listened'>) => {
     const statProps: ComponentProps<typeof CountUpStat>[] = [];
@@ -59,26 +75,26 @@ export const ComponentStats = (props: Pick<PublicDashboardData, 'sources' | 'cli
             continue;
         }
         let avatarItems: AvatarStackItem[] = [];
-        if(val.types !== undefined) {
+        if (val.types !== undefined) {
             avatarItems = val.types.map((x) => {
-                        const Icon = getMusicServiceIcon(x);
-                        if (Icon !== undefined) {
-                            return {
-                                name: capitalizeWords(x),
-                                icon: Icon
-                            }
-                        }
-                        return {
-                           name: capitalizeWords(x)
-                        }
-                    })
+                const Icon = getMusicServiceIcon(x);
+                if (Icon !== undefined) {
+                    return {
+                        name: capitalizeWords(x),
+                        icon: Icon
+                    }
+                }
+                return {
+                    name: capitalizeWords(x)
+                }
+            })
         }
         componentStats.push(<HStack key={key}>
             <Stat.Root>
                 <Stat.Label textStyle="3xl">{capitalize(key)}</Stat.Label>
                 <HStack>
-                <CountUpValueText delay={componentStats.length * 300} textStyle="6xl" value={val.count} />
-                {avatarItems.length > 0 ? <AvatarStack spread="0.5" items={avatarItems}/> : undefined}
+                    <CountUpValueText delay={componentStats.length * 300} textStyle="6xl" value={val.count} />
+                    {avatarItems.length > 0 ? <AvatarStack spread="0.5" items={avatarItems} /> : undefined}
                 </HStack>
             </Stat.Root>
         </HStack>);
