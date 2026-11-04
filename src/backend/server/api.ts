@@ -46,6 +46,8 @@ import type { PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
 import { stripIndents } from "common-tags";
 import { nameToCredit } from "../../core/MusicMetadata.ts";
 import { asPlayCheap } from "../../core/PlayMarshalUtils.ts";
+import { deleteUserSetting, getUserSetting, getUserSettings, isUserSettingKey, setUserSetting, type UserSettingKey } from "../common/auth/userSettings.ts";
+import type { ServerLocals } from "./index.ts";
 
 const maxBufferSize = 300;
 
@@ -248,6 +250,93 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
             s.state.logs = req.body.enabled;
         }
         return res.sendStatus(200);
+    });
+
+    /**
+     * Resolve which user's setting is accessed and reject the request if not allowed. `me` means the requester.
+     * Users may only access their own settings (ponytail: admin access to other users comes with an admin plugin)
+     * */
+    const userSettingTarget = (requester: string, res: Response, params: {userId: string, key?: string}): string | undefined => {
+        const userId = params.userId === 'me' ? requester : params.userId;
+        if (userId !== requester) {
+            res.status(403).json({error: 'Cannot access settings of another user'});
+            return undefined;
+        }
+        if (params.key !== undefined && !isUserSettingKey(params.key)) {
+            res.status(404).json({error: `Unknown setting '${params.key}'`});
+            return undefined;
+        }
+        return userId;
+    }
+
+    router.get('/user/:userId/setting', {
+        docs: {operationId: 'get-user-settings'},
+        tags: ['User'],
+        summary: 'Get All User Settings',
+        description: "Get all of a user's settings that are set, as an object keyed by setting name. Use `me` as the userId for the requesting user."
+    }, async (req, res) => {
+        const userId = userSettingTarget(req.auth!.userId, res, req.params);
+        if (userId === undefined) {
+            return;
+        }
+        const {db} = req.app.locals as ServerLocals;
+        return res.json(await getUserSettings(db, userId));
+    });
+
+    router.get('/user/:userId/setting/:key', {
+        docs: {operationId: 'get-user-setting'},
+        tags: ['User'],
+        summary: 'Get User Setting',
+        description: "Get one of a user's settings. Use `me` as the userId for the requesting user. `value` is null when the setting is not set."
+    }, async (req, res) => {
+        const userId = userSettingTarget(req.auth!.userId, res, req.params);
+        if (userId === undefined) {
+            return;
+        }
+        const {db} = req.app.locals as ServerLocals;
+        const value = await getUserSetting(db, userId, req.params.key as UserSettingKey);
+        return res.json({key: req.params.key, value: value ?? null});
+    });
+
+    router.put('/user/:userId/setting/:key', {
+        docs: {operationId: 'update-user-setting'},
+        middleware: [jsonParser],
+        bodySchema: z.object({
+            value: z.unknown().meta({description: 'Validated against the schema for this setting key'})
+        }),
+        tags: ['User'],
+        summary: 'Update User Setting',
+        description: "Set one of a user's settings. Use `me` as the userId for the requesting user."
+    }, async (req, res) => {
+        const userId = userSettingTarget(req.auth!.userId, res, req.params);
+        if (userId === undefined) {
+            return;
+        }
+        const {db} = req.app.locals as ServerLocals;
+        try {
+            const value = await setUserSetting(db, userId, req.params.key, req.body.value);
+            return res.json({key: req.params.key, value});
+        } catch (e) {
+            if (e instanceof z.ZodError) {
+                return res.status(400).json({error: `Invalid value for '${req.params.key}': ${z.prettifyError(e)}`});
+            }
+            throw e;
+        }
+    });
+
+    router.delete('/user/:userId/setting/:key', {
+        docs: {operationId: 'delete-user-setting'},
+        tags: ['User'],
+        summary: 'Reset User Setting',
+        description: "Unset one of a user's settings so the default is used. Use `me` as the userId for the requesting user."
+    }, async (req, res) => {
+        const userId = userSettingTarget(req.auth!.userId, res, req.params);
+        if (userId === undefined) {
+            return;
+        }
+        const {db} = req.app.locals as ServerLocals;
+        await deleteUserSetting(db, userId, req.params.key);
+        return res.json({key: req.params.key, value: null});
     });
 
     setupWebscrobblerRoutes(app, publicRouter, logger, scrobbleSources);

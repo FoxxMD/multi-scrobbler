@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { sqliteTable, text, integer, index, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, index, uniqueIndex, primaryKey } from "drizzle-orm/sqlite-core";
 import { customAlphabet } from "nanoid";
 
 /*
@@ -128,6 +128,17 @@ export const appSettings = sqliteTable("app_settings", {
     value: text({ mode: 'json' }),
     updatedAt: integer({ mode: 'timestamp_ms' }).default(nowMs).$onUpdate(() => new Date()).notNull(),
 });
+
+/**
+ * Per-user key/value preferences (UI/app). Separate from app_settings so instance internals are never reachable through user settings.
+ * Values are validated per key, see userSettingSchemas in common/auth/userSettings.ts
+ * */
+export const userSettings = sqliteTable("user_settings", {
+    userId: text().notNull().references(() => users.id, { onDelete: 'cascade' }),
+    key: text().notNull(),
+    value: text({ mode: 'json' }),
+    updatedAt: integer({ mode: 'timestamp_ms' }).default(nowMs).$onUpdate(() => new Date()).notNull(),
+}, (table) => [primaryKey({ columns: [table.userId, table.key] })]);
 
 /** Tables better-auth needs passed to its drizzle adapter, keyed by plural model name */
 export const authSchema = { users, sessions, accounts, verifications, apikeys };
