@@ -92,3 +92,8 @@ img.image-center {
 	font-size: 91%;
 	font-weight: 600;
 }
+
+/* Starlight makes content images display:block; keep shields.io badges inline so they wrap */
+.sl-markdown-content img[src^='https://img.shields.io'] {
+	display: inline-block;
+}
