@@ -1,5 +1,5 @@
 import { HStack, Icon, Separator, StackSeparator, type IconProps, Span, Badge, Tag } from "@chakra-ui/react";
-import { EditButton, EditIcon, EditIconRaw, getMusicServiceIcon, getMusicServiceIconElement, XButton, XIcon } from "../icons/ChakraIcons";
+import { EditButton, EditIcon, EditIconRaw, getMusicServiceIcon, getMusicServiceIconElement, getMusicServiceIconOrDefault, XButton, XIcon } from "../icons/ChakraIcons";
 import { musicServicesSchema, musicServiceIdBaseSchema, musicServiceBaseSchema, musicServiceName, type MusicServicesAny, type MusicServices, type MusicServiceBase, type MusicServiceName, type MusicServiceIdBase } from '../../../core/Atomic';
 import { capitalize } from "../../../core/StringUtils";
 import { Muted } from "../Typography";
@@ -175,7 +175,7 @@ export const MusicServiceIndicators = (props: {
 }
 
 export const getMusicServiceIconTooltip = (service: string) => {
-    const ServiceIcon = getMusicServiceIcon(service);
+    const ServiceIcon = getMusicServiceIconOrDefault(service);
     return (props: IconProps = {}) => (
         <Tooltip content={service} interactive>
             <Icon {...props}><ServiceIcon /></Icon>

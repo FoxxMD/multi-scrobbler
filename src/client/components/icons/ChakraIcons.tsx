@@ -244,7 +244,7 @@ export const UnlockButton = makeIconButton(LuLockOpen);
 
 export const availableMusicServiceIcons = ['spotify','musicbrainz','youtube','jellyfin','plex','listenbrainz','rocksky'];
 
-export const getMusicServiceIcon = (service?: string): IconType => {
+export const getMusicServiceIcon = (service?: string): IconType | undefined => {
     const lower = service === undefined ? undefined : service.toLocaleLowerCase();
     switch(lower) {
         case 'spotify':
@@ -262,19 +262,27 @@ export const getMusicServiceIcon = (service?: string): IconType => {
         case 'rocksky':
             return Rocksky as unknown as IconType;
         default:
-            return LuExternalLink;
+            return undefined;
     }
+}
+
+export const getMusicServiceIconOrDefault = (service?: string): IconType => {
+    const icon = getMusicServiceIcon(service);
+    if(icon === undefined) {
+        return LuExternalLink;
+    }
+    return icon;
 }
 
 export const hasMusicServiceIcon = (service?: string): boolean => service === undefined ? false : availableMusicServiceIcons.includes(service.toLocaleLowerCase());
 
 export const getMusicServiceIconElement = (service?: string): ReactNode => {
-    const ServiceIcon = getMusicServiceIcon(service);
+    const ServiceIcon = getMusicServiceIconOrDefault(service);
     return <ServiceIcon/>;
 }
 
 export const getMusicServiceChakraIcon = (service: string) => {
-    const ServiceIcon = getMusicServiceIcon(service);
+    const ServiceIcon = getMusicServiceIconOrDefault(service);
     return (props: IconProps = {}) => {
         if (service === 'isrc') {
             return <Badge marginX="0" colorPalette="purple"
