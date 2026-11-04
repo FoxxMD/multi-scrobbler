@@ -62,7 +62,7 @@ export const CountStats = (props: Pick<PublicDashboardData, 'scrobbles' | 'plays
         // Stat.Root has flex: 1 by default, which would stretch a wrapped item to the full row and left align it
         <Stat.Root key={i} size="lg" flex="none">
             <Stat.Label textStyle="3xl">{x.label}</Stat.Label>
-            <CountUpValueText textStyle="6xl" {...x} />
+            <CountUpValueText abbreviate={{ minDigits: 6, maxDecimals: 2 }} textStyle="6xl" {...x} />
             {x.helpText !== undefined && <Stat.HelpText textStyle="lg">{x.helpText}</Stat.HelpText>}
         </Stat.Root>
     ))}</Wrap>
