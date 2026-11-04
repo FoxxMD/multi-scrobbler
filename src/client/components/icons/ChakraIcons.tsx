@@ -57,13 +57,26 @@ import type {IconBaseProps, IconType} from "react-icons/lib";
 import LZ from "./custom/listenbrainz.svg?react";
 import Musicbrainz from "./custom/musicbrainz.svg?react";
 import Rocksky from "./custom/rocksky.svg?react";
+import AppleMusic from "./custom/apple-music.svg?react";
+import Azuracast from "./custom/azuracast.svg?react";
+import Deezer from "./custom/deezer.svg?react";
+import Discord from "./custom/discord.svg?react";
+import GoogleCast from "./custom/google-chrome.svg?react";
+import Kodi from "./custom/kodi.svg?react";
+import Koito from "./custom/koito.svg?react";
+import Lastfm from "./custom/last-fm.svg?react";
+import Maloja from "./custom/maloja.svg?react";
+import YandexMusic from "./custom/yandex.svg?react";
+import Subsonic from "./custom/subsonic.svg?react";
+import Icecast from "./custom/icecast.svg?react";
+import Webscrobbler from "./custom/webscrobbler.svg?react";
+import Jellyfin from "./custom/jellyfin.svg?react";
+import Spotify from "./custom/spotify.svg?react";
+import Youtube from "./custom/youtube.svg?react";
+import Plex from "./custom/plex.svg?react";
 
-import { 
-    SiSpotify,
-    SiYoutube,
-    SiJellyfin,
-    SiPlex
- } from "react-icons/si";
+ import { FaMixcloud } from "react-icons/fa";
+ import { FcVlc } from "react-icons/fc";
 
 export const makeIconButton = (Icon: IconType) => (props: PropsWithChildren<ComponentProps<typeof IconButton>> & { iconProps?: IconBaseProps, loading?: boolean }) => {
     const { 
@@ -248,19 +261,51 @@ export const getMusicServiceIcon = (service?: string): IconType | undefined => {
     const lower = service === undefined ? undefined : service.toLocaleLowerCase();
     switch(lower) {
         case 'spotify':
-            return SiSpotify;
+            return Spotify as unknown as IconType;
         case 'musicbrainz':
             return Musicbrainz as unknown as IconType;
         case 'youtube':
-            return SiYoutube;
+            return Youtube as unknown as IconType;
         case 'jellyfin':
-            return SiJellyfin;
+            return Jellyfin as unknown as IconType;
         case 'plex':
-            return SiPlex;
+            return Plex as unknown as IconType;
         case 'listenbrainz':
+        case 'endpointlz':
             return LZ as unknown as IconType;
         case 'rocksky':
             return Rocksky as unknown as IconType;
+        case 'applemusic':
+            return AppleMusic as unknown as IconType;
+        case 'azuracast':
+            return Azuracast as unknown as IconType;
+        case 'deezer':
+            return Deezer as unknown as IconType;
+        case 'discord':
+            return Discord as unknown as IconType;
+        case 'chromecast':
+            return GoogleCast as unknown as IconType;
+        case 'kodi':
+            return Kodi as unknown as IconType;
+        case 'koito':
+            return Koito as unknown as IconType;
+        case 'lastfm':
+        case 'endpointlfm':
+            return Lastfm as unknown as IconType;
+        case 'maloja':
+            return Maloja as unknown as IconType;
+        case 'ymbridge':
+            return YandexMusic as unknown as IconType;
+        case 'subsonic':
+            return Subsonic as unknown as IconType;
+        case 'icecast':
+            return Icecast as unknown as IconType;
+        case 'mixcloud':
+            return FaMixcloud;
+        case 'vlc':
+            return FcVlc;
+        case 'webscrobbler':
+            return Webscrobbler as unknown as IconType;
         default:
             return undefined;
     }
