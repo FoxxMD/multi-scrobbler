@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
-import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, index, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { customAlphabet } from "nanoid";
 
 /*
  * Tables used by better-auth (https://better-auth.com)
@@ -13,6 +14,9 @@ import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
 
 const nowMs = sql`(cast(unixepoch('subsecond') * 1000 as integer))`;
 
+/** no look-alike characters (0/o, 1/l/i). 10 chars ~= 49 bits, unguessable enough for "unlisted" share links */
+export const generatePublicId = customAlphabet('23456789abcdefghjkmnpqrstuvwxyz', 10);
+
 export const users = sqliteTable("users", {
     id: text().primaryKey(),
     name: text().notNull(),
@@ -24,12 +28,21 @@ export const users = sqliteTable("users", {
     // username plugin
     username: text().unique(),
     displayUsername: text(),
+    /**
+     * URL-safe identifier for addressing a user's public resources. Not the username (can change) or id (long, internal).
+     *
+     * Always set by $defaultFn on insert. Nullable + unique *index* (not an inline UNIQUE/NOT NULL) only so it could be added
+     * without a table rebuild, which would cascade-delete everything referencing users (migrations run in a transaction where PRAGMA foreign_keys=OFF is ignored)
+     * */
+    publicId: text().$defaultFn(() => generatePublicId()),
     // admin plugin
     role: text(),
     banned: integer({ mode: 'boolean' }).default(false),
     banReason: text(),
     banExpires: integer({ mode: 'timestamp_ms' }),
-});
+}, (table) => [
+    uniqueIndex("users_publicId_idx").on(table.publicId),
+]);
 
 export const sessions = sqliteTable("sessions", {
     id: text().primaryKey(),

@@ -7,6 +7,8 @@ import { components } from '../../common/database/drizzle/schema/schema.ts';
 import { ensureOwner, getAdminUsername, PLACEHOLDER_EMAIL_DOMAIN } from '../../common/auth/owner.ts';
 import { up as ownerMigration } from '../../common/database/appMigrations/007_componentOwner.ts';
 import { DrizzleComponentRepository } from '../../common/database/drizzle/repositories/ComponentRepository.ts';
+import { createAuth } from '../../common/auth/auth.ts';
+import { resolveAuthSettings } from '../../common/auth/authSettings.ts';
 
 describe('Auth Owner', function () {
 
@@ -39,6 +41,19 @@ describe('Auth Owner', function () {
         await ensureOwner(db);
         process.env.ADMIN_SETUP_USER = 'foxx';
         expect((await ensureOwner(db)).username).eq('admin');
+    });
+
+    it('generates a publicId for the owner and for users created by better-auth', async function () {
+        const db = await transientDb();
+        const owner = await ensureOwner(db);
+        expect(owner.publicId).match(/^[2-9a-hjkmnp-z]{10}$/);
+
+        const settings = resolveAuthSettings({localUrl: new URL('http://localhost:9078'), hasDefinedBaseUrl: false, env: {}});
+        const ctx = await createAuth(db, settings, {basePath: '/', logger: loggerTest}).$context;
+        const user = await ctx.internalAdapter.createUser({name: 'other', email: 'other@test.invalid', username: 'other'}, {method: 'email-password'});
+        const row = await db.query.users.findFirst({where: {id: user.id}});
+        expect(row?.publicId).match(/^[2-9a-hjkmnp-z]{10}$/);
+        expect(row?.publicId).not.eq(owner.publicId);
     });
 
     it('migration assigns existing components to owner', async function () {
