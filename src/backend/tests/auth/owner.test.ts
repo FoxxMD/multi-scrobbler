@@ -11,7 +11,7 @@ import { DrizzleComponentRepository } from '../../common/database/drizzle/reposi
 describe('Auth Owner', function () {
 
     afterEach(function () {
-        delete process.env.ADMIN_USERNAME;
+        delete process.env.ADMIN_SETUP_USER;
     });
 
     it('creates a passwordless admin owner once', async function () {
@@ -27,11 +27,18 @@ describe('Auth Owner', function () {
         expect(await db.query.accounts.findMany()).length(0);
     });
 
-    it('uses ADMIN_USERNAME, normalized', async function () {
-        process.env.ADMIN_USERNAME = ' Foxx ';
+    it('uses ADMIN_SETUP_USER, normalized', async function () {
+        process.env.ADMIN_SETUP_USER = ' Foxx ';
         expect(getAdminUsername()).eq('foxx');
         const db = await transientDb();
         expect((await ensureOwner(db)).username).eq('foxx');
+    });
+
+    it('ignores ADMIN_SETUP_USER once the owner exists', async function () {
+        const db = await transientDb();
+        await ensureOwner(db);
+        process.env.ADMIN_SETUP_USER = 'foxx';
+        expect((await ensureOwner(db)).username).eq('admin');
     });
 
     it('migration assigns existing components to owner', async function () {

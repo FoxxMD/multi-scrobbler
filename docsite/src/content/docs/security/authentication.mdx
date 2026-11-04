@@ -57,7 +57,7 @@ Prometheus metrics (`/api/metrics`) require authentication once the instance is 
 
 ## Securing Your Instance
 
-On first startup Multi-scrobbler creates a single **admin** account automatically (username `admin`). It has no password until you set one. Until then, every request is treated as the admin and the dashboard/API are accessible to anyone.
+On first startup Multi-scrobbler creates a single **admin** account automatically (username `admin`, or the value of `ADMIN_SETUP_USER`). It has no password until you set one. Until then, every request is treated as the admin and the dashboard/API are accessible to anyone.
 
 **Set the admin password in either of these ways:**
 
@@ -68,7 +68,7 @@ Visit the dashboard at <LocalStorageText client:load initialValue="YOUR_MS_DOMAI
 <TabItem value="env" label="ENV">
 Set `ADMIN_SETUP_PW` before starting multi-scrobbler. It is only used while the admin has no password, and is ignored afterwards. Leaving it set is harmless.
 
-TIP:  You can also use the ENV `ADMIN_USERNAME` to set the initial admin username non-interactively.
+TIP:  You can also use the ENV `ADMIN_SETUP_USER` to set the initial admin username non-interactively. Like `ADMIN_SETUP_PW`, it is only used when the admin account is first created and is ignored afterwards.
 </TabItem>
 </Tabs>
 
@@ -126,7 +126,9 @@ Read-only access still lets a malicious website _read_ your multi-scrobbler data
 
 </DetailsAdmo>
 
-### Changing or Resetting the Password
+### Changing Username or Password
+
+Change the username from **Settings -> Account** while logged in. This only changes the name used to log in.
 
 Change the password from **Settings -> Account** while logged in. All other sessions are logged out.
 
@@ -201,7 +203,7 @@ By default multi-scrobbler accepts requests for **any** host (IP, hostname, etc.
 | Environmental Variable | Default                       | Description                                                                                                 |
 | :--------------------- | :---------------------------- | :---------------------------------------------------------------------------------------------------------- |
 | `AUTH_MODE`            | `default`                    | `default`, or `disabled`. See [Securing Multi-Scrobbler](/security/overview#securing-multi-scrobbler)       |
-| `ADMIN_USERNAME`       | `admin`                       | Username of the admin account. 3-30 letters, numbers, underscores or dots                                   |
+| `ADMIN_SETUP_USER`     | `admin`                       | Initial admin username. Only used when the admin account is created. 3-30 letters, numbers, underscores or dots |
 | `ADMIN_SETUP_PW`       |                               | Initial admin password. Only used if the admin has no password                                              |
 | `ADMIN_RESET_PW`       |                               | Reset the admin password and log out all sessions. Remove after use                                         |
 | `AUTH_SETUP_TOKEN`     |                               | Always require the setup token. `true` for the generated token, or the token itself                         |

@@ -12,13 +12,13 @@ export const PLACEHOLDER_EMAIL_DOMAIN = 'multi-scrobbler.invalid';
 const USERNAME_REGEX = /^[a-z0-9_.]{3,30}$/;
 
 export const getAdminUsername = (): string => {
-    const name = process.env.ADMIN_USERNAME?.trim();
+    const name = process.env.ADMIN_SETUP_USER?.trim();
     if (name === undefined || name === '') {
         return DEFAULT_ADMIN_USERNAME;
     }
     const normalized = name.toLowerCase();
     if (!USERNAME_REGEX.test(normalized)) {
-        throw new Error(`ADMIN_USERNAME must be 3-30 characters of letters, numbers, underscores or dots -- given: ${name}`);
+        throw new Error(`ADMIN_SETUP_USER must be 3-30 characters of letters, numbers, underscores or dots -- given: ${name}`);
     }
     return normalized;
 }
@@ -44,6 +44,8 @@ export const deleteSetting = async (db: DbConcrete, key: string): Promise<void> 
  * The owner is the single admin user that all file-configured components (and anything else not explicitly owned) belong to.
  * It is created *without* a credential (password) so that nothing about an upgrade requires user interaction.
  * A password is attached later through setup/env (see auth setup).
+ *
+ * ADMIN_SETUP_USER is only used when the owner is created, it is ignored afterwards (the username can be changed from the dashboard).
  * */
 export const ensureOwner = async (db: DbConcrete): Promise<OwnerUser> => {
     const ownerId = await getSetting<string>(db, OWNER_SETTING_KEY);

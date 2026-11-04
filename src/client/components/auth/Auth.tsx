@@ -144,8 +144,8 @@ export const SetPasswordForm = () => {
                 <Stack gap="4">
                     <Field.Root>
                         <Field.Label>Username</Field.Label>
-                        <Input value={status?.username ?? 'admin'} readOnly autoComplete="username"/>
-                        <Field.HelperText>Change with the <Code>ADMIN_USERNAME</Code> environmental variable.</Field.HelperText>
+                        <Input value={status?.username ?? 'admin'} disabled autoComplete="username"/>
+                        <Field.HelperText>Set initially with the <Code>ADMIN_SETUP_USER</Code> environmental variable, or change it later in Settings -&gt; Account.</Field.HelperText>
                     </Field.Root>
                     <Field.Root required>
                         <Field.Label>Password</Field.Label>
@@ -310,9 +310,10 @@ export const AccountSettings = () => {
 
     return (
         <Stack gap="6" width="full">
+        <Text>Logged in as <strong>{(session.user as {username?: string}).username ?? session.user.name}</strong></Text>
+        <UsernameForm current={(session.user as {username?: string}).username ?? ''}/>
         <form onSubmit={(e: FormEvent) => { e.preventDefault(); if (!mismatch) { reset(); mutate(); } }}>
             <Stack gap="4" maxWidth="sm">
-                <Text>Logged in as <strong>{(session.user as {username?: string}).username ?? session.user.name}</strong></Text>
                 <Field.Root required>
                     <Field.Label>Current Password</Field.Label>
                     <Input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password"/>
@@ -336,6 +337,39 @@ export const AccountSettings = () => {
         <SessionList currentSessionId={session.session.id}/>
         <ApiKeyList/>
         </Stack>
+    );
+}
+
+/** Change the logged in user's username. Validation/uniqueness is done by the better-auth username plugin */
+const UsernameForm = (props: {current: string}) => {
+    const refresh = useRefreshAuth();
+    const [username, setUsername] = useState(props.current);
+
+    const {mutate, isPending, error, isSuccess, reset} = useMutation({
+        mutationFn: async () => {
+            const res = await authClient.updateUser({username: username.trim()});
+            if (res.error !== null) {
+                throw new Error(res.error.message ?? 'Could not change username');
+            }
+        },
+        onSuccess: refresh,
+    });
+
+    return (
+        <form onSubmit={(e: FormEvent) => { e.preventDefault(); reset(); mutate(); }}>
+            <Stack gap="4" maxWidth="sm">
+                <Field.Root required>
+                    <Field.Label>Username</Field.Label>
+                    <Input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username"/>
+                    <Field.HelperText>3-30 letters, numbers, underscores or dots.</Field.HelperText>
+                </Field.Root>
+                <FormError error={error !== null ? errorMessage(error) : undefined}/>
+                {isSuccess ? <Alert.Root status="success"><Alert.Indicator/><Alert.Title>Username changed.</Alert.Title></Alert.Root> : null}
+                <Box display="flex" justifyContent="right" width="full">
+                <Button type="submit" loading={isPending} disabled={username.trim() === '' || username.trim().toLowerCase() === props.current}>Change Username</Button>
+                </Box>
+            </Stack>
+        </form>
     );
 }
 
