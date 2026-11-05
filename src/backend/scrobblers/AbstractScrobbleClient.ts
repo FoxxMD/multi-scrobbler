@@ -987,8 +987,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 //let queueEmpty = await this.playRepo.hasQueueNext(CLIENT_INGRESS_QUEUE); // this.queuedLength; // this.queuedScrobbles.length === 0;
                 let nextQueued = await this.playRepo.getQueueNext(INGRESS_QUEUE);
                 if(nextQueued !== undefined) {
+                    let processed = 0;
                     while (nextQueued !== undefined) {
                         await this.handlePlayProcessing(nextQueued, signal);
+                        processed++;
                         if(this.errors.length > 0) {
                             // we made it through a scrobble without any issues so clear any issue we may have previously had
                             this.errors = [];
@@ -996,7 +998,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         }
                         nextQueued = await this.playRepo.getQueueNext(INGRESS_QUEUE)
                     }
-                    this.emitEvent('queueEmptied', {});
+                    // emitted only after draining at least one queued Play (unlike Source's queueEmptied, emitted on every idle poll)
+                    // so waiting for it after queueing a Play means "that Play has been processed". processed = Plays handled in this drain
+                    this.emitEvent('queueEmptied', {processed});
                     this.setStatus('Waiting for Plays from Sources');
                 }
                 this.updateDates({lastActiveAt: dayjs(), lastReadyAt: dayjs()});
