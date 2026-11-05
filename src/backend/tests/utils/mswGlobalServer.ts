@@ -16,6 +16,33 @@ server.listen({ onUnhandledRequest: 'bypass' });
 // reassignment, so they never see MSW's patched version without this call.
 // @see https://nodejs.org/api/module.html#modulesyncbuiltinesmexports
 syncBuiltinESMExports();
+
+export interface UnhandledLogging {
+    /** log requests no msw handler matched. Default true */
+    enabled: boolean
+    /**
+     * also log requests to loopback hosts. Default false
+     * because those are real requests on purpose (supertest, a local http server), not missing mocks
+     * */
+    loopback: boolean
+}
+const unhandledLogging: UnhandledLogging = {enabled: true, loopback: false};
+/**
+ * Change unhandled request logging. Returns the previous settings, to restore them.
+ * Prefer `withUnhandledLogging()` from networking.ts inside a describe.
+ * */
+export const setUnhandledLogging = (opts: Partial<UnhandledLogging>): UnhandledLogging => {
+    const prev = {...unhandledLogging};
+    Object.assign(unhandledLogging, opts);
+    return prev;
+}
+const loopbackHosts = ['localhost', '127.0.0.1', '[::1]'];
 server.events.on('request:unhandled', ({ request }) => {
-    console.log('MSW unhandled:', request.method, request.url)
+    if (!unhandledLogging.enabled) {
+        return;
+    }
+    if (!unhandledLogging.loopback && loopbackHosts.includes(new URL(request.url).hostname)) {
+        return;
+    }
+    console.log('MSW unhandled:', request.method, request.url);
 });

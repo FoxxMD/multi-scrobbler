@@ -1,6 +1,6 @@
 import type { setupServer, SetupServer } from 'msw/node';
 import type {NodeNetworkErrorCode, NodeNetworkException} from "../../common/errors/NodeErrors.ts";
-import { server } from './mswGlobalServer.ts';
+import { server, setUnhandledLogging, type UnhandledLogging } from './mswGlobalServer.ts';
 
 export class MockNetworkError extends Error implements NodeNetworkException {
 
@@ -32,3 +32,19 @@ export const withRequestInterception =
             server.resetHandlers();
         });
 };
+
+/**
+ * Call inside a describe to change msw unhandled request logging for its tests, restored after the describe (nesting works).
+ * EX `withUnhandledLogging({loopback: true})` for tests that mock a localhost service, or `{enabled: false}` to silence noise.
+ * */
+export const withUnhandledLogging = (opts: Partial<UnhandledLogging>) => {
+    let prev: UnhandledLogging | undefined;
+    before(() => {
+        prev = setUnhandledLogging(opts);
+    });
+    after(() => {
+        if (prev !== undefined) {
+            setUnhandledLogging(prev);
+        }
+    });
+}
