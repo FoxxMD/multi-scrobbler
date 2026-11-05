@@ -368,7 +368,8 @@ export const MusicServiceIndicatorStack = (props: {
     } = props;
     const groups = groupMusicServices(services);
     const count = countProp ?? groups.length;
-    const visible = groups.slice(0, max);
+    // isrc is not a linkable service, keep it out of the way at the end (of what is shown, it doesn't change whether it is shown). sort is stable
+    const visible = groups.slice(0, max).sort((a, b) => Number(a[0].name === 'isrc') - Number(b[0].name === 'isrc'));
     const remaining = count - visible.length;
     const remainingStr = remaining.toLocaleString(locale);
     const touch = useTouchSpread<HTMLDivElement>(visible.length > 1);
