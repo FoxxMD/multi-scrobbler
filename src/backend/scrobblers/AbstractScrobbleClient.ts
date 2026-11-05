@@ -50,7 +50,7 @@ import {
     hasAcceptableTemporalAccuracy,
 } from "../utils/TimeUtils.ts";
 import { todayAwareFormat } from "../../core/TimeUtils.ts";
-import { AsyncTask, SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
+import { AsyncTask, SimpleIntervalJob } from "toad-scheduler";
 import { getRoot } from "../ioc.ts";
 import { staggerMapper, type StaggerOptions } from "../utils/AsyncUtils.ts";
 import pMap from "p-map";
@@ -89,9 +89,6 @@ const bufferNPUpdateReasonFragments: string[] = [
 export default abstract class AbstractScrobbleClient extends AbstractComponent implements Authenticatable {
 
     declare type: ClientType;
-
-    scheduler: ToadScheduler = new ToadScheduler();
-    protected initDeadTimeout: NodeJS.Timeout | undefined;
 
     protected MAX_STORED_SCROBBLES = 40;
     protected MAX_INITIAL_SCROBBLES_FETCH = this.MAX_STORED_SCROBBLES;
@@ -225,13 +222,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     [Symbol.dispose]() {
-        this.scheduler.stop();
-        for(const job of this.scheduler.getAllJobs()) {
-            job.stop();
-            if(job.id !== undefined) {
-                this.scheduler.removeById(job.id);
-            }
-        }
+        this.stopTasks();
     }
     async [Symbol.asyncDispose]() {
         try {
@@ -360,13 +351,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     public async stop(opts: { reason?: string | Error } = {}) {
         try {
-            this.scheduler.stop();
-            for (const job of this.scheduler.getAllJobs()) {
-                job.stop();
-                if(job.id !== undefined) {
-                    this.scheduler.removeById(job.id);
-                }
-            }
+            this.stopTasks();
             await this.tryStopScrobbling(opts.reason);
             await this.tryStopDeadProcessing(opts.reason);
             this.nowPlayingLastPlay = undefined;

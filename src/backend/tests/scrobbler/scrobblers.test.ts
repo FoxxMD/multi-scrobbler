@@ -626,6 +626,24 @@ describe('Dead Scrobbles', function() {
         }
     });
 
+    it('Adds the delayed Dead task to the scheduler', async function () {
+        await using testScrobbler = await generateTestScrobbler();
+        await testScrobbler.initialize();
+        testScrobbler.initTasks({deadDelay: 0.01});
+        await sleep(50);
+        expect(testScrobbler.scheduler.existsById('dead')).to.be.true;
+    });
+
+    it('Does not add the delayed Dead task after being stopped', async function () {
+        await using testScrobbler = await generateTestScrobbler();
+        await testScrobbler.initialize();
+        // long delay so the timer is still pending when stop() returns (stop can take longer than a short delay)
+        testScrobbler.initTasks({deadDelay: 30});
+        expect(testScrobbler['initDeadTimeout']).to.not.be.undefined;
+        await testScrobbler.stop();
+        expect(testScrobbler['initDeadTimeout']).to.be.undefined;
+    });
+
 });
 
 const normalizedScrobbler = async () => {

@@ -49,6 +49,41 @@ const generateMemoryPositionalSource = async (config: MarkOptional<SourceConfig,
     return s;
 }
 
+describe('Source Scheduled Tasks', function () {
+
+    // generateSource() already calls initTasks() with the default (long) dead delay
+    // own emitter: the Dead task emits queue events that would resolve other tests' pEvent() on the shared emitter
+    const uninitializedTasksSource = async () => {
+        const source = new TestSource('spotify', 'test-tasks', {id: `test-${Date.now()}`}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  new WildcardEmitter<MSBackendEventMap>());
+        await source.initialize();
+        return source;
+    }
+
+    it('Adds the delayed Dead task to the scheduler', async function () {
+        await using source = await uninitializedTasksSource();
+        source.initTasks({deadDelay: 0.01});
+        await sleep(50);
+        expect(source.scheduler.existsById('dead')).to.be.true;
+    });
+
+    it('Does not add the delayed Dead task after being stopped', async function () {
+        await using source = await uninitializedTasksSource();
+        // long delay so the timer is still pending when stop() returns (stop can take longer than a short delay)
+        source.initTasks({deadDelay: 30});
+        expect(source['initDeadTimeout']).to.not.be.undefined;
+        await source.stop();
+        expect(source['initDeadTimeout']).to.be.undefined;
+    });
+
+    it('Does not add the delayed Dead task after being disposed', async function () {
+        const source = await uninitializedTasksSource();
+        source.initTasks({deadDelay: 0.01});
+        source[Symbol.dispose]();
+        await sleep(50);
+        expect(source.scheduler.existsById('dead')).to.be.false;
+    });
+});
+
 describe('Sources use transform plays correctly', function () {
 
     it('Transforms play on preCompare', async function() {

@@ -43,7 +43,7 @@ import { spawn, isAbortError, delay, throwIfAborted, waitForEvent } from 'abort-
 import { generateLoggableAbortReason, StageChangeError } from '../common/errors/MSErrors.ts';
 import { type QueryPlaysOpts, type RequestPlayQuery, type WithPlayRelation } from '../common/database/drizzle/repositories/PlayRepository.ts';
 import { asPlay } from '../../core/PlayMarshalUtils.ts';
-import { AsyncTask, SimpleIntervalJob, ToadScheduler } from 'toad-scheduler';
+import { AsyncTask, SimpleIntervalJob } from 'toad-scheduler';
 import { COMPONENT_STATE, type ComponentSourceApiJson, type ComponentState, type PlayApiCommonDetailed } from '../../core/Api.ts';
 import type {PaginatedResponse} from "../../core/Api.ts";
 import type { PlaySelectWithQueueStates, PlayWith } from '../common/database/drizzle/drizzleTypes.ts';
@@ -104,9 +104,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
     supportsUpstreamNowPlaying: boolean = false;
     supportsManualListening: boolean = false;
 
-    scheduler: ToadScheduler = new ToadScheduler();
-        protected initDeadTimeout: NodeJS.Timeout | undefined;
-
     protected SCROBBLE_BACKLOG_COUNT: number = 30;
 
     protected recentDiscoveredPlays: GroupedFixedPlays = new TupleMap<DeviceId, PlayUserId, FixedSizeList<ProgressAwarePlayObject>>();
@@ -158,13 +155,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
     [Symbol.dispose]() {
-        this.scheduler.stop();
-        for(const job of this.scheduler.getAllJobs()) {
-            job.stop();
-            if(job.id !== undefined) {
-                this.scheduler.removeById(job.id);
-            }
-        }
+        this.stopTasks();
     }
     async [Symbol.asyncDispose]() {
         try {
@@ -312,13 +303,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 await this.tryStopPolling(opts.reason);
             }
             await this.tryStopDiscoveryQueue(opts.reason);
-            this.scheduler.stop();
-            for (const job of this.scheduler.getAllJobs()) {
-                job.stop();
-                if(job.id !== undefined) {
-                    this.scheduler.removeById(job.id);
-                }
-            }
+            this.stopTasks();
             this.setStatus('Stopped');
             this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({state: COMPONENT_STATE.STOPPED});
         } catch (e) {

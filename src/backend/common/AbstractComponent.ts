@@ -18,6 +18,7 @@ import {
     type TransformHook
 } from "../../core/Transform.ts";
 import AbstractInitializable from "./AbstractInitializable.ts";
+import { ToadScheduler } from "toad-scheduler";
 import type TransformerManager from "./transforms/TransformerManager.ts";
 import { getRoot } from "../ioc.ts";
 import { nanoid } from "nanoid";
@@ -62,6 +63,10 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     declare config: CommonClientConfig | CommonSourceConfig;
 
+    scheduler: ToadScheduler = new ToadScheduler();
+    /** delays adding the Dead task to the scheduler, see initTasks() */
+    protected initDeadTimeout: NodeJS.Timeout | undefined;
+
     transformRules: PlayTransformRules = {};
     regexCache!: ReturnType<typeof cacheFunctions>;
     protected transformManager: TransformerManager;
@@ -73,6 +78,22 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     protected queueRepo!: DrizzleQueueRepository;
     protected playEventsRepo!: DrizzlePlayEventsRepository;
     componentId!: number;
+
+    /**
+     * Stop and remove all scheduled tasks, including the pending delayed Dead task
+     * (otherwise it adds itself to the scheduler after the component is stopped/disposed)
+     * */
+    protected stopTasks() {
+        clearTimeout(this.initDeadTimeout);
+        this.initDeadTimeout = undefined;
+        this.scheduler.stop();
+        for (const job of this.scheduler.getAllJobs()) {
+            job.stop();
+            if (job.id !== undefined) {
+                this.scheduler.removeById(job.id);
+            }
+        }
+    }
     protected retentionOpts: RetentionOptions;
     status: string = 'Waiting to initialize...';
     emitter!: EventEmitter;
