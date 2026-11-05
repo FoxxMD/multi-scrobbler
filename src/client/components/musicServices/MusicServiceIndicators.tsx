@@ -1,4 +1,4 @@
-import { Box, HStack, Icon, StackSeparator, type IconProps, Span, Badge, Tag, Popover, Portal, Stack, Link, Float, Circle, chakra } from "@chakra-ui/react";
+import { Box, HStack, Icon, StackSeparator, type IconProps, Span, Badge, Tag, Popover, Portal, Stack, Link, Float, Circle, chakra, useChakraContext } from "@chakra-ui/react";
 import { EditIcon, getMusicServiceIconElement, getMusicServiceIconOrDefault, XIcon } from "../icons/ChakraIcons";
 import { musicServicesSchema, musicServiceBaseSchema, type MusicServicesAny, type MusicServices, type MusicServiceBase, type MusicServiceIdBase } from '../../../core/Atomic';
 import { capitalize, capitalizeWords } from "../../../core/StringUtils";
@@ -356,6 +356,11 @@ export const MusicServiceIndicatorStack = (props: {
     const remaining = count - visible.length;
     const remainingStr = remaining.toLocaleString(locale);
     const touch = useTouchSpread<HTMLDivElement>(visible.length > 1);
+    // box-shadow can't take color tokens, resolve to css vars (or use as-is when not a token, ie '#fff')
+    const {token} = useChakraContext();
+    const ringColor = typeof outlineColor === 'string' ? token.var(`colors.${outlineColor}`, outlineColor) : token.var('colors.bg');
+    // second shadow sits under the first and is 2px larger, the same cutout ring as the front circle's outline
+    const mergedShadow = `6px -1px 0 0px ${token.var('colors.border.emphasized')}, 6px -1px 0 2px ${ringColor}`;
 
     if (groups.length === 0) {
         return undefined;
@@ -366,7 +371,7 @@ export const MusicServiceIndicatorStack = (props: {
     return (
         <HStack
             gap="0"
-            spaceX="-1"
+            spaceX="-1.5"
             {...rest}
             {...touch.containerProps}
             // the gaps between icons are part of the stack too, a parent (ie a combobox item) should not act on them
@@ -384,9 +389,9 @@ export const MusicServiceIndicatorStack = (props: {
                     lineHeight="0"
                     // like AvatarGroup: a filled circle with a cutout ring in the page background. outline takes no space so the stack stays compact
                     {...(ring ? {padding: '1', borderRadius: 'full', bg: 'bg.emphasized', outline: '2px solid', outlineColor} : {})}
-                    // merged: a second filled circle peeking out behind, like a stack of cards. the outline cutout separates the two
-                    boxShadow={ring && x.length > 1 ? '5px -2px 0 0px var(--chakra-colors-border-emphasized)' : undefined}
-                    marginX={ring && x.length > 1 ? 'var(--chakra-spacing-1\\.5)' : undefined}
+                    // merged: a second filled circle peeking out behind, like a stack of cards, with the same cutout ring as the front circle
+                    boxShadow={ring && x.length > 1 ? mergedShadow : undefined}
+                    marginX={ring && x.length > 1 ? 'var(--chakra-spacing-0\\.5)' : undefined}
                     // first on top, like AvatarStack. hover/lift css still raises an item above all of these
                     zIndex={visible.length - i}
                     css={spreadItemCss}
