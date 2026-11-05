@@ -38,7 +38,7 @@ describe('MusicCast Startup', function () {
             })
         ],
         async function () {
-            const source = createSource();
+            using source = createSource();
 
             await source.buildInitData();
 
@@ -66,7 +66,7 @@ describe('MusicCast State Handling', function() {
             })
         ],
         async function () {
-            const source = createSource();
+            using source = createSource();
 
             await source.buildInitData();
             source.connectionOK = true;
@@ -98,7 +98,7 @@ describe('MusicCast State Handling', function() {
             }),
         ],
         async function () {
-            const source = createSource();
+            using source = createSource();
 
             await source.buildInitData();
             source.connectionOK = true;
@@ -141,7 +141,7 @@ describe('MusicCast State Handling', function() {
             }),
         ],
         async function () {
-            const source = createSource();
+            using source = createSource();
 
             await source.buildInitData();
             source.connectionOK = true;
@@ -183,7 +183,7 @@ describe('MusicCast State Handling', function() {
             }),
         ],
         async function () {
-            const source = createSource();
+            using source = createSource();
 
             await source.buildInitData();
             source.connectionOK = true;
@@ -215,7 +215,7 @@ describe('MusicCast State Handling', function() {
             }),
         ],
         async function () {
-            const source = createSource();
+            using source = createSource();
 
             await source.buildInitData();
             source.connectionOK = true;
