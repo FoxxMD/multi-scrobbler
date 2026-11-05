@@ -9,9 +9,8 @@ import { TrackResultAlbumContent } from "./play/TrackSearch";
 import { ArtistCreditTags } from "./ArtistCreditDisplay";
 import { MusicServiceIndicators } from "./musicServices/MusicServiceIndicators";
 import { timeToHumanTimestamp } from "../../core/TimeUtils";
-import { PlayDataDataList } from "./play/PlayData";
+//import { PlayDataDataList } from "./play/PlayData";
 
-// eslint-disable-next-line arrow-body-style
 export const PublicDashboard = (props: PublicDashboardData) => {
     const {
         recent
@@ -32,7 +31,7 @@ const CallToAction = () => (
             <LinkOverlay href="https://docs.multi-scrobbler.app" target="_blank">
                 <Text textStyle="xl" letterSpacing="tight">
                     <Highlight query={['anywhere', 'everywhere']} styles={{ color: "#e1553d" }}>
-                        Listen everywhere, Scrobble anywhere
+                        Listen anywhere, Scrobble everywhere
                     </Highlight>
                 </Text>
             </LinkOverlay>
