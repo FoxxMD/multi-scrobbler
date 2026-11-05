@@ -433,11 +433,6 @@ export default class MemorySource extends AbstractSource {
         }
         return interval;
     }
-
-    public async destroy() {
-        this.scheduler.stop();
-        await super.destroy();
-    }
 }
 
 const sortByPlayDate = (a: ProgressAwarePlayObject, b: ProgressAwarePlayObject): number => {
