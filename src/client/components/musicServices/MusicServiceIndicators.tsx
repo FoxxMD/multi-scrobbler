@@ -384,7 +384,7 @@ export const MusicServiceIndicatorStack = (props: {
     return (
         <HStack
             gap="0"
-            spaceX="-1.5"
+            spaceX={ring ? '-1.5' : '-1'}
             {...rest}
             {...touch.containerProps}
             // the gaps between icons are part of the stack too, a parent (ie a combobox item) should not act on them
