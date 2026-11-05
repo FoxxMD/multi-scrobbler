@@ -531,9 +531,15 @@ describe('Upstream Scrobbles', function() {
         const play = generatePlay({playDate: dayjs().subtract(60, 's')});
         await scrobbler.queuePlay(play);
         const emptied = pEvent(scrobbler.emitter, 'queueEmptied');
-        scrobbler.startScrobbling(new AbortController().signal).then(() => null);
+        // own signal, tryStopScrobbling() only stops processing started by initScrobbleMonitoring()
+        const processing = new AbortController();
+        scrobbler.startScrobbling(processing.signal).catch((e) => {
+            if(!isAbortError(e)) {
+                console.error(e);
+            }
+        });
         await emptied;
-        scrobbler.tryStopScrobbling().then(() => null);
+        processing.abort();
         expect(sp.called).is.true;
         return;
     });
@@ -551,9 +557,15 @@ describe('Upstream Scrobbles', function() {
         const play2 = generatePlay({playDate: dayjs().subtract(1, 'm')});
         await scrobbler.queuePlay([play1, play2]);
         const emptied = pEvent(scrobbler.emitter, 'queueEmptied');
-        scrobbler.startScrobbling(new AbortController().signal).then(() => null);
+        // own signal, tryStopScrobbling() only stops processing started by initScrobbleMonitoring()
+        const processing = new AbortController();
+        scrobbler.startScrobbling(processing.signal).catch((e) => {
+            if(!isAbortError(e)) {
+                console.error(e);
+            }
+        });
         await emptied;
-        scrobbler.tryStopScrobbling().then(() => null);
+        processing.abort();
         expect(sp.callCount).to.eq(1);
         return;
     });
@@ -572,9 +584,15 @@ describe('Upstream Scrobbles', function() {
         const play3 = generatePlay({playDate: dayjs().subtract(DEFAULT_CONSOLIDATE_DURATION.add(4, 'm'))});
         await scrobbler.queuePlay([play1, play2, play3]);
         const emptied = pEvent(scrobbler.emitter, 'queueEmptied');
-        scrobbler.startScrobbling(new AbortController().signal).then(() => null);
+        // own signal, tryStopScrobbling() only stops processing started by initScrobbleMonitoring()
+        const processing = new AbortController();
+        scrobbler.startScrobbling(processing.signal).catch((e) => {
+            if(!isAbortError(e)) {
+                console.error(e);
+            }
+        });
         await emptied;
-        scrobbler.tryStopScrobbling().then(() => null);
+        processing.abort();
         expect(sp.callCount).to.eq(2);
         return;
     });
@@ -592,7 +610,13 @@ describe('Upstream Scrobbles', function() {
         const play2 = generatePlay({playDate: dayjs().subtract(1, 'm')});
         await scrobbler.queuePlay([play1]);
         const emptied = pEvent(scrobbler.emitter, 'queueEmptied');
-        scrobbler.startScrobbling(new AbortController().signal).then(() => null);
+        // own signal, tryStopScrobbling() only stops processing started by initScrobbleMonitoring()
+        const processing = new AbortController();
+        scrobbler.startScrobbling(processing.signal).catch((e) => {
+            if(!isAbortError(e)) {
+                console.error(e);
+            }
+        });
         await emptied;
         expect(sp.calledOnce).is.true;
 
@@ -600,7 +624,7 @@ describe('Upstream Scrobbles', function() {
         const emptied2 = pEvent(scrobbler.emitter, 'queueEmptied');
         await scrobbler.queuePlay([play2]);
         await emptied2;
-        scrobbler.tryStopScrobbling().then(() => null);
+        processing.abort();
         expect(sp.calledTwice).is.true;
         return;
     });

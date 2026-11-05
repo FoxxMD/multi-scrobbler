@@ -76,7 +76,8 @@ describe('Source Scheduled Tasks', function () {
     });
 
     it('Does not add the delayed Dead task after being disposed', async function () {
-        const source = await uninitializedTasksSource();
+        // await using also stops the discovery queue initialize() started, the sync dispose under test only stops tasks
+        await using source = await uninitializedTasksSource();
         source.initTasks({deadDelay: 0.01});
         source[Symbol.dispose]();
         await sleep(50);
