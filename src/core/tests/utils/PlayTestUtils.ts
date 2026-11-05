@@ -16,7 +16,7 @@ import { CALCULATED_PLAYER_STATUSES } from '../../Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../Atomic.ts';
 import type {PlayPlatformId} from '../../Atomic.ts';
 import { arrayListAnd } from '../../StringUtils.ts';
-import { nameToCredit } from "../../MusicMetadata.ts";
+import { isrcMeta, nameToCredit, spotifyMeta } from "../../MusicMetadata.ts";
 import { namesToCredits } from "../../MusicMetadata.ts";
 import { creditMbid, mbMeta, withMetadata } from '../../MusicMetadata.ts';
 import { type MBIdType } from "../../Atomic.ts";
@@ -189,11 +189,26 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: PlayMeta = {}, opt
     const duration = faker.number.int({min: 30, max: 300});
     const play: PlayObject = {
         data: {
-            track: nameToCredit(faker.music.songName()),
-            artists: namesToCredits(faker.helpers.multiple(faker.music.artist, {count: {min: 1, max: 3}})),
+            track: nameToCredit(
+                        faker.music.songName(),
+                        mbMeta(faker.helpers.arrayElement([generateMbid(), undefined]), 'recording'),
+                        mbMeta(faker.helpers.arrayElement([generateMbid(), undefined]), 'track'),
+                        isrcMeta(faker.helpers.arrayElement([generateISRC(), undefined])),
+                        spotifyMeta(faker.helpers.arrayElement([faker.string.alphanumeric(4), undefined]), 'track')
+                    ),
+            artists: faker.helpers.multiple(faker.music.artist, {count: {min: 1, max: 3}}).map((x) => nameToCredit(
+                        x,
+                        mbMeta(faker.helpers.arrayElement([generateMbid(), undefined]), 'artist'),
+                        spotifyMeta(faker.helpers.arrayElement([faker.string.alphanumeric(4), undefined]), 'artist')
+                    )),
             duration,
             playDate: dayjs().subtract(faker.number.int({min: 1, max: 800})),
-            album: nameToCredit(faker.music.album()),
+            album: nameToCredit(
+                        faker.music.album(),
+                        mbMeta(faker.helpers.arrayElement([generateMbid(), undefined]), 'release'),
+                        mbMeta(faker.helpers.arrayElement([generateMbid(), undefined]), 'release-group'),
+                        spotifyMeta(faker.helpers.arrayElement([faker.string.alphanumeric(4), undefined]), 'track')
+                    ),
             listenedFor: faker.number.int({min: duration * 0.5, max: duration}),
             ...data
         },

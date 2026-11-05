@@ -65,7 +65,7 @@ export const MusicServiceInfoIcon = (props: MusicServiceInfoIconProps) => {
         } else {
             toolTipContent = data.name;
         }
-        return <Tooltip content={toolTipContent} interactive open={tooltipOpen}><HStack>{content}</HStack></Tooltip>
+        return <Tooltip positioning={{ placement: "top-start" }} content={toolTipContent} interactive open={tooltipOpen}><HStack>{content}</HStack></Tooltip>
     }
     return content;
 }
@@ -100,7 +100,7 @@ export const MusicServiceInfoDisplay = (props: MusicServiceInfoDisplayProps) => 
         <Tag.Label>
             <HStack>
                 <Muted textStyle="xs">{idHintContent}</Muted>
-                <Tooltip interactive contentProps={{ userSelect: "all" }} closeDelay={300} content={data.id}><Span userSelect="all" maxW="200px" truncate>{data.id}</Span></Tooltip>
+                <Tooltip positioning={{ placement: "top-start" }} interactive contentProps={{ userSelect: "all" }} closeDelay={300} content={data.id}><Span userSelect="all" maxW="200px" truncate>{data.id}</Span></Tooltip>
             </HStack>
         </Tag.Label>
         {editable === true ? (
@@ -203,6 +203,8 @@ export const MusicServiceIndicatorStack = (props: {
     outlineColor?: ComponentProps<typeof Box>['outlineColor']
     /** filled circle with a cutout ring behind each icon. Default true */
     ring?: boolean
+    /** Force stack even when there is only one service */
+    force?: boolean
 } & Omit<ComponentProps<typeof HStack>, 'children' | 'outlineColor'>) => {
     const {
         services = [],
@@ -216,6 +218,7 @@ export const MusicServiceIndicatorStack = (props: {
         moreLabel = (n) => `and ${n} others`,
         outlineColor = 'bg',
         ring = true,
+        force = false,
         ...rest
     } = props;
     const visible = services.slice(0, max);
@@ -225,6 +228,9 @@ export const MusicServiceIndicatorStack = (props: {
 
     if (services.length === 0) {
         return undefined;
+    }
+    if(services.length === 1 && force !== true) {
+        return <Box display={props.display}><MusicServiceIndicator data={services[0]} iconProps={iconProps} showId={showId} link={link}/></Box>
     }
     return (
         <HStack gap="0" spaceX="-1" {...rest} {...scrub.containerProps} css={[scrubContainerCss(spread), rest.css]}>

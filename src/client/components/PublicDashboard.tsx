@@ -8,7 +8,7 @@ import { AvatarStack, type AvatarStackItem } from "./AvatarStack";
 import type { PublicDashboardData, PublicPlay } from "../../core/Api";
 import { TrackResultAlbumContent } from "./play/TrackSearch";
 import { ArtistCreditTags } from "./ArtistCreditDisplay";
-import { MusicServiceIndicators } from "./musicServices/MusicServiceIndicators";
+import { MusicServiceIndicatorStack } from "./musicServices/MusicServiceIndicators";
 import { timeToHumanTimestamp } from "../../core/TimeUtils";
 //import { PlayDataDataList } from "./play/PlayData";
 import { tanQueries } from "../queries";
@@ -133,7 +133,7 @@ export const PublicPlayCompactItem = (props: { play: PublicPlay }) => {
 
     let artistTags: React.JSX.Element | undefined = undefined;
     if (artists.length > 0) {
-        artistTags = <ArtistCreditTags data={artists} />
+        artistTags = <ArtistCreditTags data={artists} stack={{ring: false}} />
     }
 
     return (
@@ -142,7 +142,7 @@ export const PublicPlayCompactItem = (props: { play: PublicPlay }) => {
                 <Box display="flow-root">
                     {track?.name}{' '}
                     {duration !== undefined ? <Span>({timeToHumanTimestamp(duration * 1000)}) </Span> : undefined}
-                    <MusicServiceIndicators display="inline-flex" verticalAlign="middle" services={track?.metadata ?? []} />
+                    <MusicServiceIndicatorStack display="inline-flex" verticalAlign="middle" services={track?.metadata ?? []} />
                 </Box>
                 {artistTags}
                 {albumContent}

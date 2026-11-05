@@ -7,7 +7,7 @@ import { ArtistCreditTags } from "../ArtistCreditDisplay.js";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, MetadataServiceScore, type MetadataPartials } from "./MetadataResults.js";
 import { playTrackDataSchema, trackSearchToMusicService, type Credit, type TrackData } from "../../../core/Atomic.js";
 import { playImage } from "../../../core/MusicMetadata.js";
-import { MusicServiceIndicators } from "../musicServices/MusicServiceIndicators.js";
+import { MusicServiceIndicators, MusicServiceIndicatorStack } from "../musicServices/MusicServiceIndicators.js";
 import { timeToHumanTimestamp } from "../../../core/TimeUtils.js";
 import { CountryFlag } from "../Country.js";
 import dayjs from "dayjs";
@@ -50,7 +50,7 @@ export const TrackResultAlbumContent = (props: {data: Omit<AlbumSearchResult, 's
         ) : undefined;
         return (<Text color="fg.muted" textStyle="sm">
             <Flex wrap="wrap" flexDirection="row" columnGap="2">
-                {albumName} {albumHints.length > 0 ? `(${albumHints.join(' -- ')})` : ''}{locationDateInfo}<MusicServiceIndicators services={albumMetadata ?? []}/> {andCount}
+                {albumName} {albumHints.length > 0 ? `(${albumHints.join(' -- ')})` : ''}{locationDateInfo}<MusicServiceIndicatorStack services={albumMetadata ?? []}/> {andCount}
             </Flex>
         </Text>)
 }
