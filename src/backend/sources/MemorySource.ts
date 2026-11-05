@@ -57,29 +57,31 @@ export default class MemorySource extends AbstractSource {
 
     constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super(type, name, config, internal, emitter);
+    }
 
+    public override initTasks(opts: {deadDelay?: number} = {}) {
+        super.initTasks(opts);
         // player cleanup on *schedule* is needed when the Source is non-polling (ingress)
         // because if the source stops sending updates then processRecentPlays() was never called so we never remove old players
-        this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({ seconds: 10 }, new AsyncTask('Player Cleanup', (): Promise<any> => {
-            if (this.canPoll) {
-                return Promise.resolve();
-            }
-            return PromisePool
-                .withConcurrency(1)
-                .for(this.players.keys())
-                .process(async (key) => {
-                    await this.cleanupPlayer(key);
-                });
-        })));
+        // added here, not in the constructor, so it is re-added when the source is restarted (stop() removes all jobs)
+        // and so constructing a source (config parsing, tests) does not start a timer
+        if (!this.scheduler.existsById('playerCleanup')) {
+            this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({ seconds: 10 }, new AsyncTask('Player Cleanup', (): Promise<any> => {
+                if (this.canPoll) {
+                    return Promise.resolve();
+                }
+                return PromisePool
+                    .withConcurrency(1)
+                    .for(this.players.keys())
+                    .process(async (key) => {
+                        await this.cleanupPlayer(key);
+                    });
+            }), {id: 'playerCleanup'}));
+        }
     }
 
     [Symbol.dispose]() {
-        this.scheduler.stop();
-        for(const job of this.scheduler.getAllJobs()) {
-            if(job.id !== undefined) {
-                this.scheduler.removeById(job.id);
-            }
-        }
+        super[Symbol.dispose]();
         for(const p of this.players.keys()) {
             this.deletePlayer(p);
         }
@@ -87,12 +89,6 @@ export default class MemorySource extends AbstractSource {
 
     async [Symbol.asyncDispose]() {
         await super[Symbol.asyncDispose]();
-        this.scheduler.stop();
-        for(const job of this.scheduler.getAllJobs()) {
-            if(job.id !== undefined) {
-                this.scheduler.removeById(job.id);
-            }
-        }
         this[Symbol.dispose]();
     }
 

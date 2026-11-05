@@ -82,6 +82,18 @@ describe('Source Scheduled Tasks', function () {
         await sleep(50);
         expect(source.scheduler.existsById('dead')).to.be.false;
     });
+
+    it('Memory Source adds Player Cleanup task on initTasks and re-adds it after a restart', async function () {
+        await using source = new TestMemorySource('spotify', 'test-memory-tasks', {id: `test-${Date.now()}`}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  new WildcardEmitter<MSBackendEventMap>());
+        expect(source.scheduler.getAllJobs()).length(0);
+        await source.initialize();
+        source.initTasks({deadDelay: 30});
+        expect(source.scheduler.existsById('playerCleanup')).to.be.true;
+        await source.stop();
+        expect(source.scheduler.existsById('playerCleanup')).to.be.false;
+        source.initTasks({deadDelay: 30});
+        expect(source.scheduler.existsById('playerCleanup')).to.be.true;
+    });
 });
 
 describe('Sources use transform plays correctly', function () {
