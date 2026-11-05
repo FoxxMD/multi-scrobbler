@@ -41,6 +41,9 @@ export class SubsonicPlayerState extends PositionalPlayerState {
             this.logger.debug('Ended current Player listen range.');
             range.finalize();
             this.basePlayer.listenRanges.push(range);
+        } else {
+            // discarded (empty) range
+            range?.[Symbol.dispose]();
         }
         this.activeRange = undefined;
     }

@@ -104,12 +104,22 @@ export abstract class AbstractPlayerState {
     }
 
     [Symbol.dispose]() {
+        this.disposeListenRanges();
+    }
+
+    /**
+     * Dispose (stops positional ranges' realtime timer) and forget all listen ranges.
+     * Ranges must be disposed rather than only dereferenced, a playing range's timer keeps running (and keeps the range in memory) forever otherwise.
+     * */
+    protected disposeListenRanges() {
         if(this.currentListenRange !== undefined) {
             this.currentListenRange[Symbol.dispose]();
         }
         for(const lr of this.listenRanges) {
             lr[Symbol.dispose]();
         }
+        this.listenRanges = [];
+        this.currentListenRange = undefined;
     }
 
     protected abstract newListenProgress(data?: Partial<PlayProgress>): ListenProgress;
@@ -285,8 +295,7 @@ export abstract class AbstractPlayerState {
         this.currentPlay = undefined;
         this.playLastUpdatedAt = undefined;
         this.playFirstSeenAt = undefined;
-        this.listenRanges = [];
-        this.currentListenRange = undefined;
+        this.disposeListenRanges();
         this.isRepeatPlay = false;
     }
 
@@ -460,8 +469,7 @@ export abstract class AbstractPlayerState {
 
         this.currentPlay = play;
         this.playFirstSeenAt = reportedTS ?? dayjs();
-        this.listenRanges = [];
-        this.currentListenRange = undefined;
+        this.disposeListenRanges();
 
         this.logger.verbose(`New Play: ${buildTrackString(play, {include: ['trackId', 'artist', 'track', 'session']})}`);
 
@@ -548,6 +556,9 @@ export abstract class AbstractPlayerState {
         newPlayer.listenRanges = this.listenRanges;
         newPlayer.playFirstSeenAt = this.playFirstSeenAt;
         newPlayer.playLastUpdatedAt = this.playLastUpdatedAt;
+        // ranges now belong to newPlayer, this player is deleted (disposed) after transfer and must not dispose them
+        this.currentListenRange = undefined;
+        this.listenRanges = [];
     }
 }
 
