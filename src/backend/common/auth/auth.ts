@@ -17,6 +17,15 @@ export interface CreateAuthOptions {
     logger: Logger
     /** called after setup endpoints change auth state (first password) */
     onStateChange?: () => Promise<unknown>
+    /**
+     * Replace better-auth's password hashing (scrypt, ~50ms per hash/verify). Tests only, see authTestUtils.ts
+     * */
+    passwordHasher?: PasswordHasher
+}
+
+export interface PasswordHasher {
+    hash: (password: string) => Promise<string>
+    verify: (data: {hash: string, password: string}) => Promise<boolean>
 }
 
 export const authBasePath = (basePath: string) => path.posix.join(basePath, '/api/auth');
@@ -138,6 +147,7 @@ export const createAuth = (db: DbConcrete, settings: AuthSettings, opts: CreateA
             enabled: true,
             // users are only created by MS (owner bootstrap) or, in the future, by an admin
             disableSignUp: true,
+            ...(opts.passwordHasher !== undefined ? {password: opts.passwordHasher} : {}),
         },
         plugins: [
             username(),

@@ -6,8 +6,23 @@ import type { Express } from 'express';
 import request from 'supertest';
 import { initServer, type ServerOptions, type ServerLocals } from '../../server/index.ts';
 import { setUserPassword } from '../../common/auth/ownerPassword.ts';
+import type { PasswordHasher } from '../../common/auth/auth.ts';
+import { createHash, timingSafeEqual } from 'node:crypto';
 
 const internalConfig = { localUrl: new URL('http://localhost:9078'), configDir: 'fake', logger: loggerTest, version: 'test' };
+
+/**
+ * Fast stand-in for better-auth's scrypt hashing (~50ms per hash and per verify, and most auth tests do both).
+ * Still a real check (wrong passwords fail), just not a slow one. ownerPassword/hardening tests use createAuth directly and keep the real hasher.
+ * */
+export const fastPasswordHasher: PasswordHasher = {
+    hash: async (password) => `test-sha256:${createHash('sha256').update(password).digest('hex')}`,
+    verify: async ({hash, password}) => {
+        const expected = Buffer.from(hash);
+        const actual = Buffer.from(await fastPasswordHasher.hash(password));
+        return expected.length === actual.length && timingSafeEqual(expected, actual);
+    },
+};
 
 /** Build a test-mode server app. Auth instance, settings and db are available on app.locals (ServerLocals) */
 export const buildAuthApp = async (opts: ServerOptions = {}, setup?: (sources: ScrobbleSources) => Promise<void>) => {
@@ -21,7 +36,7 @@ export const buildAuthAppRouter = async (opts: ServerOptions = {}, setup?: (sour
         await setup(sources);
     }
     const clients = new ScrobbleClients(new WildcardEmitter(), new WildcardEmitter(), internalConfig, loggerTest);
-    return initServer({ sources, clients }, { testMode: true, ...opts });
+    return initServer({ sources, clients }, { testMode: true, passwordHasher: fastPasswordHasher, ...opts });
 };
 
 /** Give the owner a password so the instance is secured */

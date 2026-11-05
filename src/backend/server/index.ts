@@ -16,7 +16,7 @@ import { getAddress } from "../utils/NetworkUtils.ts";
 import { setupApi } from "./api.ts";
 import { clientIpMiddleware, errorHandlerMiddleware, safeModeMiddleware, sameOriginMiddleware, securityHeadersMiddleware, WebFault } from "./middleware.ts";
 import { toNodeHandler } from "better-auth/node";
-import { authBasePath, createAuth, type MSAuth } from "../common/auth/auth.ts";
+import { authBasePath, createAuth, type MSAuth, type PasswordHasher } from "../common/auth/auth.ts";
 import { resolveAuthSettings, type AuthSettings } from "../common/auth/authSettings.ts";
 import { getDataDir } from "../common/index.ts";
 import { applyOwnerPasswordEnv } from "../common/auth/ownerPassword.ts";
@@ -41,6 +41,8 @@ export interface ServerOptions {
     webFault?: WebFault
     /** override resolved auth settings (tests) */
     authSettings?: Partial<AuthSettings>
+    /** override password hashing (tests) */
+    passwordHasher?: PasswordHasher
 }
 
 export interface ServerLocals {
@@ -112,7 +114,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
                 }),
                 ...(opts.authSettings ?? {})
             };
-            const auth = createAuth(db, authSettings, {basePath, logger: authLogger, onStateChange: () => authState.refresh()});
+            const auth = createAuth(db, authSettings, {basePath, logger: authLogger, onStateChange: () => authState.refresh(), passwordHasher: opts.passwordHasher});
             await applyOwnerPasswordEnv(auth, db, authSettings.secret, authLogger);
             const authState: AuthStateStore = await new AuthStateStore(auth, db).refresh();
             const locals: ServerLocals = {auth, authSettings, authState, db};
