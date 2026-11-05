@@ -9,6 +9,7 @@ import { LuExternalLink } from "react-icons/lu";
 import { useId, useState, type ComponentProps } from "react";
 import { linkFromMusicService } from "../../../core/MusicMetadata";
 import { MusicServiceInput } from "./MusicServiceEditable";
+import { ChakraClip } from "../ChakraClipboard";
 import { spreadContainerCss, spreadItemCss, useTouchSpread } from "../useTouchSpread";
 
 const getMusicServiceLinkFromProps = (link: boolean | string, val: MusicServicesAny): string | undefined => {
@@ -261,7 +262,8 @@ export const MusicServiceIndicatorPopover = (props: MusicServiceIndicatorPopover
                 </Tooltip>
                 <Portal>
                     <Popover.Positioner>
-                        <Popover.Content width="auto" maxWidth="xs">
+                        {/* sized to the full ids, only capped (and ids truncated) by the viewport */}
+                        <Popover.Content width="auto" maxWidth="calc(100vw - var(--chakra-spacing-8))">
                             <Popover.Arrow />
                             <Popover.Body padding="3">
                                 <Stack gap="2" textStyle="sm">
@@ -270,11 +272,13 @@ export const MusicServiceIndicatorPopover = (props: MusicServiceIndicatorPopover
                                         const type = idTypeLabel(x) ?? 'ID';
                                         const href = getMusicServiceLinkFromProps(link, x);
                                         return (
-                                            <HStack key={i} gap="4" justify="space-between">
+                                            <HStack key={i} gap="3">
                                                 {href !== undefined
-                                                    ? <Link href={href} target="_blank" rel="noreferrer" fontWeight="medium" colorPalette="blue">{type} <LuExternalLink /></Link>
-                                                    : <Span fontWeight="medium">{type}</Span>}
-                                                <Span userSelect="all" fontFamily="mono" textStyle="xs" color="fg.muted" maxWidth="40" truncate>{x.id}</Span>
+                                                    ? <Link flexShrink="0" href={href} target="_blank" rel="noreferrer" fontWeight="medium" colorPalette="blue">{type} <LuExternalLink /></Link>
+                                                    : <Span flexShrink="0" fontWeight="medium">{type}</Span>}
+                                                {/* full id when it fits, the copy button may not work on insecure (http) origins so it must stay readable/selectable */}
+                                                <Span flex="1" minWidth="0" textAlign="end" userSelect="all" fontFamily="mono" textStyle="xs" color="fg.muted" truncate>{x.id}</Span>
+                                                <ChakraClip flexShrink="0" value={x.id}/>
                                             </HStack>
                                         );
                                     })}
