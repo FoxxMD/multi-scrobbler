@@ -244,6 +244,9 @@ export abstract class AbstractPlayerState {
                 if(sessionless) {
                     // if repeat occurred due to previous closed session
                     // then we need to force a new session or else we'll miss a listening interval
+                    // TODO: likely bug -- setCurrentPlay() below disposes this range (disposeListenRanges) and starts a new one,
+                    //  so the forced session never survives and the listening interval it is meant to capture may still be missed.
+                    //  Decide intended behavior (keep this range across setCurrentPlay? or drop this call?) and add a test.
                     this.currentListenSessionContinue(state.position, reportedTS);
                 }
                 this.logger.debug('New Play is a repeat');
