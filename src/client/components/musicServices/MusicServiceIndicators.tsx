@@ -1,4 +1,4 @@
-import { Box, HStack, Icon, StackSeparator, type IconProps, Span, Badge, Tag, Popover, Portal, Stack, Link, Float, Circle, chakra, useChakraContext } from "@chakra-ui/react";
+import { Box, HStack, Icon, StackSeparator, type IconProps, Span, Badge, Tag, Popover, Portal, Stack, Link, chakra, useChakraContext } from "@chakra-ui/react";
 import { EditIcon, getMusicServiceIconElement, getMusicServiceIconOrDefault, XIcon } from "../icons/ChakraIcons";
 import { musicServicesSchema, musicServiceBaseSchema, type MusicServicesAny, type MusicServices, type MusicServiceBase, type MusicServiceIdBase } from '../../../core/Atomic';
 import { capitalize, capitalizeWords } from "../../../core/StringUtils";
@@ -171,6 +171,20 @@ export const groupMusicServices = (services: MusicServicesAny[]): MusicServicesA
 const serviceLabel = (name: string) => name === 'isrc' ? 'ISRC' : capitalize(name);
 const idTypeLabel = (x: MusicServicesAny): string | undefined => 'idType' in x && x.idType !== undefined ? capitalizeWords(x.idType.replaceAll('-', ' ')) : undefined;
 
+/**
+ * box-shadow for a merged indicator: a second circle peeking out behind, like a stack of cards,
+ * with a cutout ring (the second shadow, 2px larger) in `outlineColor` so it is separated from the front circle and neighbours.
+ * The element it is applied to must be rounded, the shadow follows its shape.
+ * */
+const useMergedShadow = (outlineColor: ComponentProps<typeof Box>['outlineColor'] = 'bg') => {
+    // box-shadow can't take color tokens, resolve to css vars (or use as-is when not a token, ie '#fff')
+    const {token} = useChakraContext();
+    const ringColor = typeof outlineColor === 'string' ? token.var(`colors.${outlineColor}`, outlineColor) : token.var('colors.bg');
+    return `6px -1px 0 0px ${token.var('colors.border.emphasized')}, 6px -1px 0 2px ${ringColor}`;
+}
+/** extra space beside a merged indicator so its peeking circle doesn't crowd neighbours */
+const mergedMarginX = 'var(--chakra-spacing-0\\.5)';
+
 export interface MusicServiceIndicatorPopoverProps {
     /** services with the same name, more than one is shown as one merged indicator */
     services: MusicServicesAny[]
@@ -178,8 +192,10 @@ export interface MusicServiceIndicatorPopoverProps {
     link?: boolean | string
     /** false shows only the summary tooltip, no popover. Default true */
     interactive?: boolean
-    /** show the number of merged services as a badge on the icon, for when there is no ring to show it. Default false */
-    countBadge?: boolean
+    /** show merged services as a circle peeking out behind the icon. False when a parent draws it (ie the stack's ring). Default true */
+    mergedShadow?: boolean
+    /** color of the merged shadow's cutout ring, should match the background. Default 'bg' */
+    outlineColor?: ComponentProps<typeof Box>['outlineColor']
 }
 
 /**
@@ -192,7 +208,8 @@ export const MusicServiceIndicatorPopover = (props: MusicServiceIndicatorPopover
         iconProps = {},
         link = true,
         interactive = true,
-        countBadge = false,
+        mergedShadow = true,
+        outlineColor,
     } = props;
     const triggerId = useId();
     const [open, setOpen] = useState(false);
@@ -206,17 +223,15 @@ export const MusicServiceIndicatorPopover = (props: MusicServiceIndicatorPopover
     const icon = name === 'isrc'
         ? <Badge marginX="0" colorPalette="purple" size="xs" variant="subtle">ISRC</Badge>
         : <Icon size="sm" {...iconProps}>{getMusicServiceIconElement(name)}</Icon>;
-    const badge = countBadge && services.length > 1 ? (
-        <Float placement="bottom-end" offset="1">
-            <Circle size="4" bg="fg" color="bg" fontSize="2xs" fontWeight="bold" lineHeight="1" outline="1.5px solid" outlineColor="bg" aria-hidden>{services.length}</Circle>
-        </Float>
-    ) : undefined;
+    const shadow = useMergedShadow(outlineColor);
+    // no padding around a bare icon to absorb the peeking circle (unlike the stack's ring), so make room for all of its offset
+    const mergedProps = mergedShadow && services.length > 1 ? {boxShadow: shadow, marginInlineEnd: '1.5'} : {};
 
     // nothing to show in a popover
     if (!interactive || withIds.length === 0) {
         return (
             <Tooltip positioning={{ placement: "top-start" }} content={summary}>
-                <Span display="inline-flex" position="relative" lineHeight="0">{icon}{badge}</Span>
+                <Span display="inline-flex" position="relative" lineHeight="0" borderRadius="full" {...mergedProps}>{icon}</Span>
             </Tooltip>
         );
     }
@@ -238,8 +253,9 @@ export const MusicServiceIndicatorPopover = (props: MusicServiceIndicatorPopover
                             cursor="pointer"
                             borderRadius="full"
                             focusVisibleRing="outside"
+                            {...mergedProps}
                         >
-                            {icon}{badge}
+                            {icon}
                         </chakra.button>
                     </Popover.Trigger>
                 </Tooltip>
@@ -296,7 +312,7 @@ export const MusicServiceIndicators = (props: {
     }
     return (
         <HStack {...rest} separator={seperator === true ? <StackSeparator /> : undefined}>
-            {groupMusicServices(services).map((x, i) => <MusicServiceIndicatorPopover key={i} services={x} iconProps={iconProps} link={link} interactive={interactive} countBadge/>)}
+            {groupMusicServices(services).map((x, i) => <MusicServiceIndicatorPopover key={i} services={x} iconProps={iconProps} link={link} interactive={interactive}/>)}
         </HStack>
     )
 }
@@ -304,7 +320,7 @@ export const MusicServiceIndicators = (props: {
 /**
  * MusicServiceIndicators that overlap into a compact stack, spreading out while hovered and lifting the hovered icon (like AvatarStack).
  * On touch devices the first tap spreads the stack until a tap outside of it, then tapping an icon opens its popover.
- * Services with the same name are merged into one indicator, shown as stacked rings (or a count badge without rings).
+ * Services with the same name are merged into one indicator, shown as a second circle peeking out behind it.
  * Icons past `max` are replaced by a "+n" chip.
  * */
 export const MusicServiceIndicatorStack = (props: {
@@ -356,18 +372,14 @@ export const MusicServiceIndicatorStack = (props: {
     const remaining = count - visible.length;
     const remainingStr = remaining.toLocaleString(locale);
     const touch = useTouchSpread<HTMLDivElement>(visible.length > 1);
-    // box-shadow can't take color tokens, resolve to css vars (or use as-is when not a token, ie '#fff')
-    const {token} = useChakraContext();
-    const ringColor = typeof outlineColor === 'string' ? token.var(`colors.${outlineColor}`, outlineColor) : token.var('colors.bg');
-    // second shadow sits under the first and is 2px larger, the same cutout ring as the front circle's outline
-    const mergedShadow = `6px -1px 0 0px ${token.var('colors.border.emphasized')}, 6px -1px 0 2px ${ringColor}`;
+    const mergedShadow = useMergedShadow(outlineColor);
 
     if (groups.length === 0) {
         return undefined;
     }
     if(groups.length === 1 && force !== true) {
         // flex, not a line box: an inline icon sits on the text baseline, which pushes it up past the top of a short parent (ie a Tag)
-        return <Box display={props.display ?? 'inline-flex'} alignItems="center"><MusicServiceIndicatorPopover services={groups[0]} iconProps={iconProps} link={link} interactive={interactive} countBadge/></Box>
+        return <Box display={props.display ?? 'inline-flex'} alignItems="center"><MusicServiceIndicatorPopover services={groups[0]} iconProps={iconProps} link={link} interactive={interactive} outlineColor={outlineColor}/></Box>
     }
     return (
         <HStack
@@ -392,12 +404,12 @@ export const MusicServiceIndicatorStack = (props: {
                     {...(ring ? {padding: '1', borderRadius: 'full', bg: 'bg.emphasized', outline: '2px solid', outlineColor} : {})}
                     // merged: a second filled circle peeking out behind, like a stack of cards, with the same cutout ring as the front circle
                     boxShadow={ring && x.length > 1 ? mergedShadow : undefined}
-                    marginX={ring && x.length > 1 ? 'var(--chakra-spacing-0\\.5)' : undefined}
+                    marginX={ring && x.length > 1 ? mergedMarginX : undefined}
                     // first on top, like AvatarStack. hover/lift css still raises an item above all of these
                     zIndex={visible.length - i}
                     css={spreadItemCss}
                 >
-                    <MusicServiceIndicatorPopover services={x} iconProps={iconProps} link={link} interactive={interactive} countBadge={!ring}/>
+                    <MusicServiceIndicatorPopover services={x} iconProps={iconProps} link={link} interactive={interactive} mergedShadow={!ring} outlineColor={outlineColor}/>
                 </Box>
             ))}
             {remaining > 0 ? (
