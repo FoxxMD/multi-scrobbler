@@ -77,7 +77,7 @@ export const AvatarStack = (props: AvatarStackProps) => {
     }, [touch.spread]);
 
     return (
-        <AvatarGroup {...rest} {...touch.containerProps} css={[spreadContainerCss(spread), rest.css]}>
+        <AvatarGroup stacking="first-on-top" {...rest} {...touch.containerProps} css={[spreadContainerCss(spread), rest.css]}>
             {visible.map((x, i) => (
                 <StackAvatar
                     key={`${x.name}-${i}`}
@@ -90,7 +90,8 @@ export const AvatarStack = (props: AvatarStackProps) => {
             ))}
             {remaining > 0 ? (
                 // wider numbers stretch the chip into a pill
-                <Avatar.Root variant="solid" width="auto" minWidth="var(--avatar-size)" paddingX="1.5" aria-label={moreLabel(remainingStr)}>
+                // offset (not margin, the group's spacing overrides it) so it reads as separate from the list
+                <Avatar.Root insetInlineStart="1.5" variant="solid" width="auto" minWidth="var(--avatar-size)" paddingX="1.5" aria-label={moreLabel(remainingStr)}>
                     <Avatar.Fallback aria-hidden>+{remainingStr}</Avatar.Fallback>
                 </Avatar.Root>
             ) : undefined}

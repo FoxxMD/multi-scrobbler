@@ -385,15 +385,18 @@ export const MusicServiceIndicatorStack = (props: {
                     // like AvatarGroup: a filled circle with a cutout ring in the page background. outline takes no space so the stack stays compact
                     {...(ring ? {padding: '1', borderRadius: 'full', bg: 'bg.emphasized', outline: '2px solid', outlineColor} : {})}
                     // merged: a second filled circle peeking out behind, like a stack of cards. the outline cutout separates the two
-                    boxShadow={ring && x.length > 1 ? '5px -2px 0 1px var(--chakra-colors-border-emphasized)' : undefined}
+                    boxShadow={ring && x.length > 1 ? '5px -2px 0 0px var(--chakra-colors-border-emphasized)' : undefined}
                     marginX={ring && x.length > 1 ? 'var(--chakra-spacing-1\\.5)' : undefined}
+                    // first on top, like AvatarStack. hover/lift css still raises an item above all of these
+                    zIndex={visible.length - i}
                     css={spreadItemCss}
                 >
                     <MusicServiceIndicatorPopover services={x} iconProps={iconProps} link={link} interactive={interactive} countBadge={!ring}/>
                 </Box>
             ))}
             {remaining > 0 ? (
-                <Badge position="relative" size="xs" variant="solid" borderRadius="full" aria-label={moreLabel(remainingStr)}>
+                // offset (not margin, the stack's spacing overrides it) so it reads as separate from the list
+                <Badge position="relative" insetInlineStart="1" size="xs" variant="solid" borderRadius="full" aria-label={moreLabel(remainingStr)}>
                     <Span aria-hidden>+{remainingStr}</Span>
                 </Badge>
             ) : undefined}
