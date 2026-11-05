@@ -1,4 +1,4 @@
-import { describe, it, afterEach } from 'mocha';
+import { describe, it, afterEach, beforeEach } from 'mocha';
 import { loggerTest } from "@foxxmd/logging";
 import { expect } from 'chai';
 import EventEmitter from "events";
@@ -119,6 +119,11 @@ describe('Spotify - ISRC Enrichment', function () {
 });
 
 describe('Spotify - Backlog Reconcile Task', function () {
+
+    beforeEach(function () {
+        // initTasks also adds the Heartbeat task which runs immediately and would call the real Spotify API
+        sinon.stub(SpotifySource.prototype as any, 'heartbeatTask').resolves(true);
+    });
 
     afterEach(function () {
         sinon.restore();
