@@ -130,7 +130,7 @@ describe('Spotify - Backlog Reconcile Task', function () {
     });
 
     it('adds reconcile task to scheduler by default with 15 minute interval', function () {
-        const source = createSpotifySource();
+        using source = createSpotifySource();
         source.initTasks();
 
         expect(source.scheduler.existsById('reconcile')).to.be.true;
@@ -139,21 +139,21 @@ describe('Spotify - Backlog Reconcile Task', function () {
     });
 
     it('adds reconcile task when scrobbleBacklog is explicitly true', function () {
-        const source = createSpotifySource({ scrobbleBacklog: true });
+        using source = createSpotifySource({ scrobbleBacklog: true });
         source.initTasks();
 
         expect(source.scheduler.existsById('reconcile')).to.be.true;
     });
 
     it('does not add reconcile task when scrobbleBacklog is false', function () {
-        const source = createSpotifySource({ scrobbleBacklog: false });
+        using source = createSpotifySource({ scrobbleBacklog: false });
         source.initTasks();
 
         expect(source.scheduler.existsById('reconcile')).to.be.false;
     });
 
     it('does not add duplicate task if initTasks is called again', function () {
-        const source = createSpotifySource();
+        using source = createSpotifySource();
         source.initTasks();
         source.initTasks();
 
@@ -161,7 +161,7 @@ describe('Spotify - Backlog Reconcile Task', function () {
     });
 
     it('reconcile task executes processBacklog with Reconcile label when source is ready', async function () {
-        const source = createSpotifySource();
+        using source = createSpotifySource();
         const processStub = sinon.stub(source as any, 'processBacklog').resolves();
         sinon.stub(source, 'isReady').returns(true);
 
@@ -174,7 +174,7 @@ describe('Spotify - Backlog Reconcile Task', function () {
     });
 
     it('reconcile task does not execute processBacklog when source is not ready', async function () {
-        const source = createSpotifySource();
+        using source = createSpotifySource();
         const processStub = sinon.stub(source as any, 'processBacklog').resolves();
         sinon.stub(source, 'isReady').returns(false);
 
@@ -186,7 +186,7 @@ describe('Spotify - Backlog Reconcile Task', function () {
     });
 
     it('reconcile task pushes to errors when processBacklog fails', async function () {
-        const source = createSpotifySource();
+        using source = createSpotifySource();
         const error = new Error('Spotify API error');
         sinon.stub(source as any, 'processBacklog').rejects(error);
         sinon.stub(source, 'isReady').returns(true);
