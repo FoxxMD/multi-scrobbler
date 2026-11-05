@@ -1,4 +1,5 @@
 import { expect } from 'chai';
+import { spy } from 'sinon';
 import { describe, it } from 'mocha';
 import { loggerTest } from '@foxxmd/logging';
 import ScrobbleSources from '../../sources/ScrobbleSources.ts';
@@ -56,5 +57,46 @@ describe('Component Collections', function () {
         expect(client['initDeadTimeout']).to.be.undefined;
         expect(sourceEmitter.listenerCount('playerUpdate')).to.eq(0);
         expect(sourceEmitter.listenerCount('discoveredToScrobble')).to.eq(0);
+    });
+
+    it('Source sync dispose signals the running discovery queue to stop without throwing, and logs that it did not wait', async function () {
+        const source = new TestSource('spotify', 'test-sync-dispose', {id: `test-${Date.now()}`}, internalConfig, new WildcardEmitter<MSBackendEventMap>());
+        await source.initialize();
+        await source.startDiscoveryQueue();
+        const queue = source['ingressQueuePromise'];
+        expect(queue).to.not.be.undefined;
+        const debug = spy(source.logger, 'debug');
+
+        expect(() => source[Symbol.dispose]()).to.not.throw();
+
+        // not stopped yet (sync dispose does not wait) but it does stop once processing sees the abort
+        await queue;
+        expect(source['ingressQueuePromise']).to.be.undefined;
+        expect(debug.calledWithMatch(/Disposed synchronously while running discovery queue processing/)).to.be.true;
+    });
+
+    it('Client sync dispose signals running scrobble processing to stop without throwing', async function () {
+        const client = new TestScrobbler();
+        await client.initialize();
+        await client.initScrobbleMonitoring();
+        const queue = client['ingressQueuePromise'];
+        expect(queue).to.not.be.undefined;
+
+        expect(() => client[Symbol.dispose]()).to.not.throw();
+
+        await queue;
+        expect(client['ingressQueuePromise']).to.be.undefined;
+    });
+
+    it('Async dispose does not log the sync dispose warning', async function () {
+        const source = new TestSource('spotify', 'test-async-dispose', {id: `test-${Date.now()}`}, internalConfig, new WildcardEmitter<MSBackendEventMap>());
+        await source.initialize();
+        await source.startDiscoveryQueue();
+        const debug = spy(source.logger, 'debug');
+
+        await source[Symbol.asyncDispose]();
+
+        expect(source['ingressQueuePromise']).to.be.undefined;
+        expect(debug.calledWithMatch(/Disposed synchronously/)).to.be.false;
     });
 });

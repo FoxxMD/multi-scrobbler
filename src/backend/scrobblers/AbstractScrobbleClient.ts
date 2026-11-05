@@ -221,9 +221,19 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return existingScrobble(playObjPre, existingScrobbles,  this.existingPlayOpts, log);
     }
 
+    /**
+     * Synchronous, best-effort cleanup for `using`. Stops scheduled tasks and signals running processing to stop but **does not wait** for it,
+     * see abortProcessingWithoutWaiting(). Prefer [Symbol.asyncDispose] (`await using`) or stop() whenever possible,
+     * only use `using` for components that were never started.
+     * */
     [Symbol.dispose]() {
         this.stopTasks();
+        this.abortProcessingWithoutWaiting({
+            'scrobble processing': this.ingressQueueAbortController,
+            'dead queue processing': this.deadQueueAbortController,
+        });
     }
+    /** Stops the component and waits for all processing to stop. Prefer this (`await using`) over [Symbol.dispose] whenever possible */
     async [Symbol.asyncDispose]() {
         try {
             await this.stop({ reason: 'Instance is being destroyed' });

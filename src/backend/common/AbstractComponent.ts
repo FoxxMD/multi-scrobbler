@@ -94,6 +94,36 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             }
         }
     }
+
+    /**
+     * For [Symbol.dispose] only: signal running processing (polling, queues) to stop **without waiting** for it to stop.
+     *
+     * Best-effort and never throws (dispose must not). Work in progress keeps running until it reaches an abort check,
+     * so after this returns a play may still be mid-processing (DB writes, network calls) and the component may still emit events.
+     * Use [Symbol.asyncDispose] (`await using`) or stop() whenever possible, they wait for processing to actually stop.
+     * */
+    protected abortProcessingWithoutWaiting(processes: Record<string, AbortController | undefined>) {
+        const aborted: string[] = [];
+        for (const [name, controller] of Object.entries(processes)) {
+            if (controller === undefined || controller.signal.aborted) {
+                continue;
+            }
+            try {
+                controller.abort('Instance is being disposed');
+                aborted.push(name);
+            } catch (e) {
+                try {
+                    this.logger.warn(new Error(`Could not signal ${name} to stop while disposing`, {cause: e}));
+                } catch {
+                    // dispose must never throw
+                }
+            }
+        }
+        if (aborted.length > 0) {
+            this.logger.debug(`Disposed synchronously while running ${aborted.join(', ')}: signalled to stop but did not wait for it. Use [Symbol.asyncDispose] (await using) or stop() to wait for processing to stop.`);
+        }
+    }
+
     protected retentionOpts: RetentionOptions;
     status: string = 'Waiting to initialize...';
     emitter!: EventEmitter;
