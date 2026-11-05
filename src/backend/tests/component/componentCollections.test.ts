@@ -26,6 +26,18 @@ describe('Component Collections', function () {
         expect(source['initDeadTimeout']).to.be.undefined;
     });
 
+    it('Source destroy does not remove listeners other components added to the shared emitter', async function () {
+        const emitter = new WildcardEmitter<MSBackendEventMap>();
+        const other = () => undefined;
+        emitter.on('playerUpdate', other);
+        const source = new TestSource('spotify', 'test-destroy', {id: `test-${Date.now()}`}, internalConfig, emitter);
+        await source.initialize();
+
+        await source.destroy();
+
+        expect(emitter.listenerCount('playerUpdate')).to.eq(1);
+    });
+
     it('ScrobbleClients destroy stops every client and stops listening to source events', async function () {
         const sourceEmitter = new WildcardEmitter<MSBackendEventMap>();
         const clients = new ScrobbleClients(new WildcardEmitter(), sourceEmitter, internalConfig, loggerTest);

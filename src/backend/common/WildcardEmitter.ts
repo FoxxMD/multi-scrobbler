@@ -29,6 +29,8 @@ export class WildcardEmitter<T extends EventMap<T> = DefaultEventMap> extends Ev
     removeAllListeners(eventName?: unknown): this {
         if (eventName === undefined) {
             this.wildcardHandlers = [];
+            // EventEmitter only removes every listener when called with no arguments, an explicit undefined removes nothing
+            return super.removeAllListeners();
         }
         return super.removeAllListeners(eventName as Key<unknown, T>);
     }

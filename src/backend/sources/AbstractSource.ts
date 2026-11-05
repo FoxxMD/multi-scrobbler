@@ -1258,8 +1258,14 @@ export default abstract class AbstractSource extends AbstractComponent implement
         });
     }
 
+    /**
+     * Stop and dispose this Source.
+     *
+     * Does not remove listeners from `emitter`, it is shared with every other component and the app.
+     * A Source that adds its own listeners to it must remove them in its dispose.
+     * */
     public async destroy() {
-        this.emitter.removeAllListeners();
+        await this[Symbol.asyncDispose]();
     }
 
     protected async doBuildComponentLogger(): Promise<void> {
