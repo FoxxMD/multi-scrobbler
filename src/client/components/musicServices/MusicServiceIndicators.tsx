@@ -1,4 +1,4 @@
-import { HStack, Icon, Separator, StackSeparator, type IconProps, Span, Badge, Tag } from "@chakra-ui/react";
+import { Box, HStack, Icon, Separator, StackSeparator, type IconProps, Span, Badge, Tag } from "@chakra-ui/react";
 import { EditButton, EditIcon, EditIconRaw, getMusicServiceIcon, getMusicServiceIconElement, getMusicServiceIconOrDefault, XButton, XIcon } from "../icons/ChakraIcons";
 import { musicServicesSchema, musicServiceIdBaseSchema, musicServiceBaseSchema, musicServiceName, type MusicServicesAny, type MusicServices, type MusicServiceBase, type MusicServiceName, type MusicServiceIdBase } from '../../../core/Atomic';
 import { capitalize } from "../../../core/StringUtils";
@@ -9,6 +9,7 @@ import { LuExternalLink } from "react-icons/lu";
 import { useState, type ComponentProps } from "react";
 import { linkFromMusicService } from "../../../core/MusicMetadata";
 import { MusicServiceInput } from "./MusicServiceEditable";
+import { scrubContainerCss, scrubItemCss, useTouchScrub } from "../useTouchScrub";
 
 const getMusicServiceLinkFromProps = (link: boolean | string, val: MusicServicesAny): string | undefined => {
     if (typeof link === 'string') {
@@ -23,6 +24,8 @@ const getMusicServiceLinkFromProps = (link: boolean | string, val: MusicServices
 export interface MusicServiceInfoIconProps {
     link?: boolean | string
     tooltip?: boolean
+    /** control the tooltip, undefined leaves it to hover */
+    tooltipOpen?: boolean
     iconProps?: IconProps
     data: MusicServices | MusicServiceIdBase | MusicServiceBase
 }
@@ -32,6 +35,7 @@ export const MusicServiceInfoIcon = (props: MusicServiceInfoIconProps) => {
         iconProps = {},
         link = true,
         tooltip,
+        tooltipOpen,
         data,
     } = props;
 
@@ -61,7 +65,7 @@ export const MusicServiceInfoIcon = (props: MusicServiceInfoIconProps) => {
         } else {
             toolTipContent = data.name;
         }
-        return <Tooltip content={toolTipContent} interactive><HStack>{content}</HStack></Tooltip>
+        return <Tooltip content={toolTipContent} interactive open={tooltipOpen}><HStack>{content}</HStack></Tooltip>
     }
     return content;
 }
@@ -120,6 +124,7 @@ export interface MusicServiceIndicatorProps {
     onRemove?: () => void
     useWith?: string[]
     tooltip?: boolean
+    tooltipOpen?: boolean
 }
 
 export const MusicServiceIndicator = (props: MusicServiceIndicatorProps) => {
@@ -170,6 +175,63 @@ export const MusicServiceIndicators = (props: {
     return (
         <HStack {...rest} separator={seperator === true ? <StackSeparator /> : undefined}>
             {services.map((x, i) => <MusicServiceIndicator key={i} data={x} iconProps={iconProps} showId={showId} link={link} />)}
+        </HStack>
+    )
+}
+
+/**
+ * MusicServiceIndicators that overlap into a compact stack, spreading out while hovered and lifting the hovered icon (like AvatarStack).
+ * Touch devices get the same effect by long pressing and dragging over the stack.
+ * Icons past `max` are replaced by a "+n" chip.
+ * */
+export const MusicServiceIndicatorStack = (props: {
+    services: MusicServicesAny[],
+    iconProps?: IconProps,
+    showId?: boolean,
+    link?: boolean,
+    /** gap between icons while the stack is hovered. Default '1' */
+    spread?: ComponentProps<typeof HStack>['spaceX']
+    /** icons shown before the overflow chip. Default 5 */
+    max?: number
+    /** total used for the overflow chip (shows count - max). Default services.length */
+    count?: number
+    /** locale for the overflow number */
+    locale?: string
+    /** screen reader text for the overflow chip. Default `and ${n} others` */
+    moreLabel?: (n: string) => string
+} & Omit<ComponentProps<typeof HStack>, 'children'>) => {
+    const {
+        services = [],
+        iconProps,
+        showId,
+        link,
+        spread = '1',
+        max = 5,
+        count = services.length,
+        locale,
+        moreLabel = (n) => `and ${n} others`,
+        ...rest
+    } = props;
+    const visible = services.slice(0, max);
+    const remaining = count - visible.length;
+    const remainingStr = remaining.toLocaleString(locale);
+    const scrub = useTouchScrub<HTMLDivElement>();
+
+    if (services.length === 0) {
+        return undefined;
+    }
+    return (
+        <HStack gap="0" spaceX="-1" {...rest} {...scrub.containerProps} css={[scrubContainerCss(spread), rest.css]}>
+            {visible.map((x, i) => (
+                <Box key={i} position="relative" display="inline-flex" {...scrub.itemProps(i)} css={scrubItemCss}>
+                    <MusicServiceIndicator data={x} iconProps={iconProps} showId={showId} link={link} tooltipOpen={scrub.tooltipOpen(i)}/>
+                </Box>
+            ))}
+            {remaining > 0 ? (
+                <Badge position="relative" size="xs" variant="solid" borderRadius="full" aria-label={moreLabel(remainingStr)}>
+                    <Span aria-hidden>+{remainingStr}</Span>
+                </Badge>
+            ) : undefined}
         </HStack>
     )
 }

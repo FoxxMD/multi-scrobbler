@@ -16,7 +16,7 @@ const meta = preview.type<{ args: React.ComponentProps<typeof AvatarStack> }>().
         (Story) => (<Provider><Container maxWidth="8xl" pt="10"><Story /></Container></Provider>),
     ],
     args: {
-        size: 'lg',
+        size: 'xs',
         max: 5,
         items: [
             {name: 'Spotify', icon: getMusicServiceIcon('spotify'), colorPalette: 'green'},

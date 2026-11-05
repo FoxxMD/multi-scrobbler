@@ -1,6 +1,7 @@
 import React, { type ComponentProps, type ElementType } from "react";
 import { Avatar, AvatarGroup, type SystemStyleObject } from "@chakra-ui/react";
 import { Tooltip } from "./ToggleTip";
+import { scrubContainerCss, scrubItemCss, useTouchScrub } from "./useTouchScrub";
 
 export interface AvatarStackItem {
     /** shown in the tooltip, and as initials when there is no icon/image */
@@ -25,25 +26,19 @@ export interface AvatarStackProps extends Omit<ComponentProps<typeof AvatarGroup
     moreLabel?: (n: string) => string
 }
 
-const finePointer = '@media (hover: hover) and (pointer: fine)';
-
 // Avatar.Root must receive the props AvatarGroup (Group) clones onto its children (data-group-item, --group-index...)
 // but Tooltip.Root renders no element, so this component takes them and puts them on Avatar.Root itself
-const StackAvatar = (props: ComponentProps<typeof Avatar.Root> & { item: AvatarStackItem }) => {
-    const {item: {name, icon: Icon, src, colorPalette}, ...rest} = props;
+const StackAvatar = (props: ComponentProps<typeof Avatar.Root> & { item: AvatarStackItem, tooltipOpen?: boolean }) => {
+    const {item: {name, icon: Icon, src, colorPalette}, tooltipOpen, ...rest} = props;
     return (
-        <Tooltip content={name} showArrow positioning={{placement: 'top'}} openDelay={0} closeDelay={0}>
+        <Tooltip content={name} showArrow positioning={{placement: 'top'}} openDelay={0} closeDelay={0} open={tooltipOpen}>
             <Avatar.Root
                 colorPalette={colorPalette}
                 {...rest}
-                css={[{
-                    _motionSafe: {transitionProperty: 'margin, transform', transitionDuration: 'moderate', transitionTimingFunction: 'ease-out'},
-                    [finePointer]: {
-                        _hover: {zIndex: 'docked', _motionSafe: {transform: 'translateY(-0.25rem)'}},
-                    },
-                }, rest.css]}
+                css={[scrubItemCss, {'&[data-group-item]': {borderWidth: '1px'}}, rest.css]}
             >
-                <Avatar.Fallback name={name}>{Icon !== undefined ? <Icon/> : undefined}</Avatar.Fallback>
+                {/* icons scale with the avatar instead of its font size, so they fill most of the circle */}
+                <Avatar.Fallback name={name} css={{'& svg': {width: 'calc(var(--avatar-size) * 0.65)', height: 'calc(var(--avatar-size) * 0.65)'}}}>{Icon !== undefined ? <Icon/> : undefined}</Avatar.Fallback>
                 {src !== undefined ? <Avatar.Image src={src}/> : undefined}
             </Avatar.Root>
         </Tooltip>
@@ -54,7 +49,8 @@ const StackAvatar = (props: ComponentProps<typeof Avatar.Root> & { item: AvatarS
  * AvatarGroup that spreads out while hovered and lifts the hovered avatar, with a tooltip of its name.
  * Avatars past `max` are replaced by a "+n" chip.
  *
- * Hover effects only apply to devices with a fine pointer, motion is removed for prefers-reduced-motion.
+ * Hover effects only apply to devices with a fine pointer, touch devices get them by long pressing and dragging over the stack.
+ * Motion is removed for prefers-reduced-motion.
  * Inspired by https://moonarc.dev/components/avatar-stack/
  * */
 export const AvatarStack = (props: AvatarStackProps) => {
@@ -70,10 +66,11 @@ export const AvatarStack = (props: AvatarStackProps) => {
     const visible = items.slice(0, max);
     const remaining = count - visible.length;
     const remainingStr = remaining.toLocaleString(locale);
+    const scrub = useTouchScrub<HTMLDivElement>();
 
     return (
-        <AvatarGroup {...rest} css={[{[finePointer]: {_hover: {spaceX: spread}}}, rest.css]}>
-            {visible.map((x, i) => <StackAvatar key={`${x.name}-${i}`} item={x}/>)}
+        <AvatarGroup {...rest} {...scrub.containerProps} css={[scrubContainerCss(spread), rest.css]}>
+            {visible.map((x, i) => <StackAvatar key={`${x.name}-${i}`} item={x} {...scrub.itemProps(i)} tooltipOpen={scrub.tooltipOpen(i)}/>)}
             {remaining > 0 ? (
                 // wider numbers stretch the chip into a pill
                 <Avatar.Root variant="solid" width="auto" minWidth="var(--avatar-size)" paddingX="1.5" aria-label={moreLabel(remainingStr)}>
