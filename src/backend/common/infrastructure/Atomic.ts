@@ -136,6 +136,12 @@ export const DEFAULT_POLLING_MAX_INTERVAL = 30;
 
 export const DEFAULT_RETRY_MULTIPLIER: number = 1.5;
 
+/**
+ * Scales the wait between request retries (p-retry minTimeout) of every api client.
+ * Only for tests (set in tests/setup.ts) so retry tests don't wait real seconds, always 1 otherwise.
+ * */
+export const retryTiming = { scale: 1 };
+
 export const DEFAULT_CLOSE_POSITION_ABSOLUTE = 12;
 export const DEFAULT_CLOSE_POSITION_PERCENT = 0.15;
 export const DEFAULT_DURATION_REPEAT_ABSOLUTE = 120;

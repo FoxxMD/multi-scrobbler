@@ -11,7 +11,7 @@ import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../ut
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.ts";
 import { getNodeNetworkException, isNodeNetworkException } from "../errors/NodeErrors.ts";
 import { UpstreamError } from "../errors/UpstreamError.ts";
-import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type InternalConfigOptional, type PaginatedListensTimeRangeOptions, type PaginatedTimeRangeListens, type PaginatedTimeRangeListensResult } from "../infrastructure/Atomic.ts";
+import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, retryTiming, type FormatPlayObjectOptions, type InternalConfigOptional, type PaginatedListensTimeRangeOptions, type PaginatedTimeRangeListens, type PaginatedTimeRangeListensResult } from "../infrastructure/Atomic.ts";
 import type {LastfmData} from "../infrastructure/config/client/lastfm.ts";
 import AbstractApiClient from "./AbstractApiClient.ts";
 import { parseArtistCredits } from "../../utils/StringUtils.ts";
@@ -141,7 +141,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             return await pRetry(() => limitedCallFunc(), {
                 retries: maxRequestRetries,
                 factor: retryMultiplier,
-                minTimeout: 300,
+                minTimeout: 300 * retryTiming.scale,
                 maxRetryTime: 30000,
                 onFailedAttempt: (context) => {
                     const { error, attemptNumber, retriesLeft } = context;

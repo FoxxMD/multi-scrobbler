@@ -17,7 +17,7 @@ import { normalizeStr } from "../../../core/StringUtils.ts";
 import { findDelimiters } from "../../../core/StringUtils.ts";
 import { creditsWithIds, mbMeta, mergeCredit, withMetadata } from "../../../core/MusicMetadata.ts";
 import { UpstreamError } from "../errors/UpstreamError.ts";
-import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type PagelessListensTimeRangeOptions, type PagelessTimeRangeListens, type PagelessTimeRangeListensResult } from "../infrastructure/Atomic.ts";
+import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, retryTiming, type FormatPlayObjectOptions, type PagelessListensTimeRangeOptions, type PagelessTimeRangeListens, type PagelessTimeRangeListensResult } from "../infrastructure/Atomic.ts";
 import { DELIMITERS } from '../../../core/Atomic.ts';
 import { DEVELOPER_CONTACT } from "../infrastructure/Atomic.ts";
 import { type ListenBrainzClientData, MAX_ITEMS_PER_GET_LZ } from "../infrastructure/config/client/listenbrainz.ts";
@@ -144,7 +144,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
             return await pRetry(() => this.doCallApi(reqFunc()), {
                 retries: retries,
                 factor: retryMultiplier,
-                minTimeout: 1000,
+                minTimeout: 1000 * retryTiming.scale,
                 maxRetryTime: 30000,
                 onFailedAttempt: (context) => {
                     if(logFailure) {

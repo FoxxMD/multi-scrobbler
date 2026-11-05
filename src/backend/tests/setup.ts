@@ -9,6 +9,7 @@ import isToday from 'dayjs/plugin/isToday.js';
 import timezone from 'dayjs/plugin/timezone.js';
 import week from 'dayjs/plugin/weekOfYear.js';
 import utc from 'dayjs/plugin/utc.js';
+import { retryTiming } from '../common/infrastructure/Atomic.ts';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -20,3 +21,6 @@ dayjs.extend(week);
 
 const root = getRoot({cache: transientCache, logger: loggerTest, db: transientDb});
 root.items.cache().init();
+
+// request retries wait 1ms instead of 300-1000ms+ (retry behavior is still tested, just not real backoff time)
+retryTiming.scale = 0.001;
