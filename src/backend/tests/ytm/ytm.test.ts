@@ -217,10 +217,11 @@ describe('Handles interim tracks', function () {
 
         // add new track played
         const firstPlay = generatePlay({duration: 120}, { comment: 'Today' });
-        const interimPlays = [generatePlay({duration: 40}, { comment: 'Today' }), generatePlay({duration: 200}, { comment: 'Today' })]
+        // last discovered track was 2 minutes ago and 50% of both interim tracks (20s + 50s) fits in that, so both should be added
+        const interimPlays = [generatePlay({duration: 40}, { comment: 'Today' }), generatePlay({duration: 100}, { comment: 'Today' })]
         const prependedPlays = [firstPlay, ...interimPlays, ...plays];
         const prependResult = source.parseRecentAgainstResponse(prependedPlays);
-        expect(prependResult.plays).length(1);
+        expect(prependResult.plays).length(3);
         expect(prependResult.plays[prependResult.plays.length - 1].data.track?.name).eq(firstPlay.data.track?.name)
     });
 });

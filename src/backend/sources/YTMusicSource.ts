@@ -2,6 +2,7 @@ import dayjs, { type Dayjs } from "dayjs";
 import type EventEmitter from "events";
 import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type PlayObjectMinimal} from "../../core/Atomic.ts";
 import type {FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic.ts";
+import type { MSBackendEventMap } from "../common/infrastructure/MSBackendEventMap.ts";
 import type {YTMusicSourceConfig} from "../common/infrastructure/config/source/ytmusic.ts";
 import { Innertube, UniversalCache, Parser, YTNodes, type ApiResponse, type IBrowseResponse, Log, type SessionOptions } from 'youtubei.js';
 import { type GenerateAuthUrlOpts, OAuth2Client } from 'google-auth-library';
@@ -162,9 +163,24 @@ export default class YTMusicSource extends AbstractSource {
             }
         }
 
-        this.emitter.on('discovered', (play) => {
-            this.transientDiscovered.add(play);
-        })
+        this.emitter.on('discovered', this.onDiscovered);
+    }
+
+    /** emitter is shared by all components, only track this Source's own discovered plays */
+    protected onDiscovered = (payload: MSBackendEventMap['discovered'][0]) => {
+        if(payload.from === 'source' && payload.type === this.type && payload.name === this.name) {
+            this.transientDiscovered.add(payload.data.play as unknown as PlayObject);
+        }
+    }
+
+    [Symbol.dispose]() {
+        this.emitter.off('discovered', this.onDiscovered);
+        super[Symbol.dispose]();
+    }
+
+    async [Symbol.asyncDispose]() {
+        this.emitter.off('discovered', this.onDiscovered);
+        await super[Symbol.asyncDispose]();
     }
 
     public additionalApiData(): Record<string, any> {
