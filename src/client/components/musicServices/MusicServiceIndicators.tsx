@@ -366,7 +366,8 @@ export const MusicServiceIndicatorStack = (props: {
         return undefined;
     }
     if(groups.length === 1 && force !== true) {
-        return <Box display={props.display}><MusicServiceIndicatorPopover services={groups[0]} iconProps={iconProps} link={link} interactive={interactive} countBadge/></Box>
+        // flex, not a line box: an inline icon sits on the text baseline, which pushes it up past the top of a short parent (ie a Tag)
+        return <Box display={props.display ?? 'inline-flex'} alignItems="center"><MusicServiceIndicatorPopover services={groups[0]} iconProps={iconProps} link={link} interactive={interactive} countBadge/></Box>
     }
     return (
         <HStack

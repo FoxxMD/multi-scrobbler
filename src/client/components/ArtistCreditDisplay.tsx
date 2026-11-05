@@ -31,7 +31,9 @@ export const Credit = (props: { data: AC, showLinks?: boolean, showMbid?: boolea
     return <Fragment>
         <HStack minWidth="0">
             {/* truncate only the name, the indicators must not be clipped (they lift on hover) */}
-            <Span truncate>{data.name}</Span>
+            {/* nudge down: the font keeps more space below the letters (descenders) than above, so centered text looks high next to a centered icon.
+                ponytail: tuned for the app font at ~0.75px/12px, text-box-trim would fix it for any font but clips descenders with truncate's overflow: hidden */}
+            <Span truncate position="relative" top="0.0625em">{data.name}</Span>
             {indicatorContent}
         </HStack>
     </Fragment>
