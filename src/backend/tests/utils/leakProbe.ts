@@ -21,10 +21,12 @@
  * * LEAK_PROBE_TESTS  test titles listed per group. Default 3
  * * LEAK_PROBE_ALL    1 = include node_modules/internal frames when grouping (default groups by first frames, node_modules collapsed to package name)
  *
- * "created during" is the test that was running (set in a root beforeEach). Handles created in a describe-level before()
- * are attributed to the previous test, so also look at the "test file" line, which comes from the stack.
+ * "created during" is the test or hook whose async context created the handle (AsyncLocalStorage around mocha's Runnable.run),
+ * so timers re-created by a loop the test left running are still attributed to the test that started it.
+ * "from test code" comes from the stack (first frame in a test file), when there is one.
  * */
-import { createHook } from 'node:async_hooks';
+import { AsyncLocalStorage, createHook } from 'node:async_hooks';
+import Mocha from 'mocha';
 import path from 'node:path';
 
 const GRACE = Number.parseInt(process.env.LEAK_PROBE_GRACE ?? '1000');
@@ -51,11 +53,21 @@ let currentTest = '(before any test)';
 
 const cleanFrame = (frame: string) => frame.trim().replace(/^at /, '').replace('file://', '').replaceAll(`${root}${path.sep}`, '');
 
+// every test/hook runs inside its own async context (AsyncLocalStorage) so anything it starts, including loops that keep
+// re-creating timers after the test has finished, is attributed to it. mocha's own scheduling is outside of any test context
+const testContext = new AsyncLocalStorage<string>();
+const runnableTitle = (r: Mocha.Runnable) => `${path.relative(root, r.file ?? '')} :: ${r.fullTitle()}`;
+const originalRun = Mocha.Runnable.prototype.run;
+Mocha.Runnable.prototype.run = function (this: Mocha.Runnable, ...args: Parameters<typeof originalRun>) {
+    return testContext.run(runnableTitle(this), () => originalRun.apply(this, args));
+};
+
 createHook({
     init(asyncId, type, _triggerId, resource) {
         if (!TRACKED.has(type)) {
             return;
         }
+        const test = testContext.getStore() ?? currentTest;
         const prevLimit = Error.stackTraceLimit;
         Error.stackTraceLimit = 40;
         const raw = new Error().stack ?? '';
@@ -63,7 +75,7 @@ createHook({
         const stack = raw.split('\n').slice(1)
             .filter(x => !x.includes('node:internal') && !x.includes(self) && !x.includes('(node:') && x.includes('at '))
             .map(cleanFrame);
-        live.set(asyncId, {type, stack, test: currentTest, resource: resource as Tracked['resource']});
+        live.set(asyncId, {type, stack, test, resource: resource as Tracked['resource']});
     },
     destroy(asyncId) {
         live.delete(asyncId);
