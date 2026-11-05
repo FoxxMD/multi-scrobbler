@@ -46,3 +46,24 @@ server.events.on('request:unhandled', ({ request }) => {
     }
     console.log('MSW unhandled:', request.method, request.url);
 });
+
+// A handler that throws fails the request with that error, which is how MockNetworkError (networking.ts) simulates network failures (EAI_AGAIN...).
+// msw then always prints the error plus "[MSW] Encountered an unhandled exception during the handler lookup..." to console.error.
+// Its "is anyone listening for unhandledException" check only looks at a private per-request emitter, so server.events listeners cannot silence it.
+// Swallow exactly those two outputs for MockNetworkError (thrown on purpose), any other thrown error is a real handler bug and still prints.
+// ponytail: depends on msw's console output, drop this if msw adds a way to handle unhandled exceptions (checked msw 2.14.6)
+const consoleError = console.error;
+let swallowNextLookupMessage = false;
+console.error = (...args: unknown[]) => {
+    if (args.length === 1 && (args[0] as { isMockNetworkError?: boolean } | null)?.isMockNetworkError === true) {
+        swallowNextLookupMessage = true;
+        return;
+    }
+    if (swallowNextLookupMessage) {
+        swallowNextLookupMessage = false;
+        if (typeof args[0] === 'string' && args[0].startsWith('[MSW] Encountered an unhandled exception during the handler lookup')) {
+            return;
+        }
+    }
+    consoleError(...args);
+};
