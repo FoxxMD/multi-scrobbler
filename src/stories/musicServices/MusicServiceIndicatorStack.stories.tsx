@@ -33,3 +33,9 @@ export const Overflow = meta.story({
         count: 2401,
     }
 });
+
+export const NoRing = meta.story({
+    args: {
+        ring: false,
+    }
+});

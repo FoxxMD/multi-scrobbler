@@ -199,7 +199,11 @@ export const MusicServiceIndicatorStack = (props: {
     locale?: string
     /** screen reader text for the overflow chip. Default `and ${n} others` */
     moreLabel?: (n: string) => string
-} & Omit<ComponentProps<typeof HStack>, 'children'>) => {
+    /** color of the cutout ring around each icon, should match the background the stack is on (ie a card). Default 'bg' */
+    outlineColor?: ComponentProps<typeof Box>['outlineColor']
+    /** filled circle with a cutout ring behind each icon. Default true */
+    ring?: boolean
+} & Omit<ComponentProps<typeof HStack>, 'children' | 'outlineColor'>) => {
     const {
         services = [],
         iconProps,
@@ -210,6 +214,8 @@ export const MusicServiceIndicatorStack = (props: {
         count = services.length,
         locale,
         moreLabel = (n) => `and ${n} others`,
+        outlineColor = 'bg',
+        ring = true,
         ...rest
     } = props;
     const visible = services.slice(0, max);
@@ -223,7 +229,19 @@ export const MusicServiceIndicatorStack = (props: {
     return (
         <HStack gap="0" spaceX="-1" {...rest} {...scrub.containerProps} css={[scrubContainerCss(spread), rest.css]}>
             {visible.map((x, i) => (
-                <Box key={i} position="relative" display="inline-flex" {...scrub.itemProps(i)} css={scrubItemCss}>
+                <Box
+                    key={i}
+                    position="relative"
+                    display="inline-flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    // inline content (link, svg) would otherwise add line box height and stretch the circle into an oval
+                    lineHeight="0"
+                    // like AvatarGroup: a filled circle with a cutout ring in the page background. outline takes no space so the stack stays compact
+                    {...(ring ? {padding: '1', borderRadius: 'full', bg: 'bg.emphasized', outline: '2px solid', outlineColor} : {})}
+                    {...scrub.itemProps(i)}
+                    css={scrubItemCss}
+                >
                     <MusicServiceIndicator data={x} iconProps={iconProps} showId={showId} link={link} tooltipOpen={scrub.tooltipOpen(i)}/>
                 </Box>
             ))}
