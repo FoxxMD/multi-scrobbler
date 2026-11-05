@@ -1,7 +1,7 @@
-import React, { type ComponentProps, type ElementType } from "react";
+import React, { useEffect, useState, type ComponentProps, type ElementType } from "react";
 import { Avatar, AvatarGroup, type SystemStyleObject } from "@chakra-ui/react";
 import { Tooltip } from "./ToggleTip";
-import { scrubContainerCss, scrubItemCss, useTouchScrub } from "./useTouchScrub";
+import { spreadContainerCss, spreadItemCss, useTouchSpread } from "./useTouchSpread";
 
 export interface AvatarStackItem {
     /** shown in the tooltip, and as initials when there is no icon/image */
@@ -35,7 +35,7 @@ const StackAvatar = (props: ComponentProps<typeof Avatar.Root> & { item: AvatarS
             <Avatar.Root
                 colorPalette={colorPalette}
                 {...rest}
-                css={[scrubItemCss, {'&[data-group-item]': {borderWidth: '1px'}}, rest.css]}
+                css={[spreadItemCss, {'&[data-group-item]': {borderWidth: '1px'}}, rest.css]}
             >
                 {/* icons scale with the avatar instead of its font size, so they fill most of the circle */}
                 <Avatar.Fallback name={name} css={{'& svg': {width: 'calc(var(--avatar-size) * 0.65)', height: 'calc(var(--avatar-size) * 0.65)'}}}>{Icon !== undefined ? <Icon/> : undefined}</Avatar.Fallback>
@@ -49,7 +49,8 @@ const StackAvatar = (props: ComponentProps<typeof Avatar.Root> & { item: AvatarS
  * AvatarGroup that spreads out while hovered and lifts the hovered avatar, with a tooltip of its name.
  * Avatars past `max` are replaced by a "+n" chip.
  *
- * Hover effects only apply to devices with a fine pointer, touch devices get them by long pressing and dragging over the stack.
+ * Hover effects only apply to devices with a fine pointer.
+ * On touch devices the first tap spreads the stack until a tap outside of it, then tapping an avatar shows its tooltip.
  * Motion is removed for prefers-reduced-motion.
  * Inspired by https://moonarc.dev/components/avatar-stack/
  * */
@@ -66,11 +67,27 @@ export const AvatarStack = (props: AvatarStackProps) => {
     const visible = items.slice(0, max);
     const remaining = count - visible.length;
     const remainingStr = remaining.toLocaleString(locale);
-    const scrub = useTouchScrub<HTMLDivElement>();
+    const touch = useTouchSpread<HTMLDivElement>();
+    // avatar tapped while spread by touch, touch never opens a tooltip by itself
+    const [active, setActive] = useState<number | undefined>(undefined);
+    useEffect(() => {
+        if (!touch.spread) {
+            setActive(undefined);
+        }
+    }, [touch.spread]);
 
     return (
-        <AvatarGroup {...rest} {...scrub.containerProps} css={[scrubContainerCss(spread), rest.css]}>
-            {visible.map((x, i) => <StackAvatar key={`${x.name}-${i}`} item={x} {...scrub.itemProps(i)} tooltipOpen={scrub.tooltipOpen(i)}/>)}
+        <AvatarGroup {...rest} {...touch.containerProps} css={[spreadContainerCss(spread), rest.css]}>
+            {visible.map((x, i) => (
+                <StackAvatar
+                    key={`${x.name}-${i}`}
+                    item={x}
+                    data-active={touch.spread && active === i ? '' : undefined}
+                    onClick={() => setActive(i)}
+                    // undefined when not spread by touch so mouse hover works as usual
+                    tooltipOpen={touch.spread ? active === i : undefined}
+                />
+            ))}
             {remaining > 0 ? (
                 // wider numbers stretch the chip into a pill
                 <Avatar.Root variant="solid" width="auto" minWidth="var(--avatar-size)" paddingX="1.5" aria-label={moreLabel(remainingStr)}>

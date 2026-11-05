@@ -39,3 +39,21 @@ export const NoRing = meta.story({
         ring: false,
     }
 });
+
+/** same service with different id types merge into one indicator, its popover links each id type */
+export const Merged = meta.story({
+    args: {
+        services: [
+            generateMusicService({name: 'musicbrainz', idType: 'release'}),
+            generateMusicService({name: 'musicbrainz', idType: 'release-group'}),
+            generateMusicService({name: 'spotify'}),
+        ],
+    }
+});
+
+export const MergedNoRing = meta.story({
+    args: {
+        ...Merged.input.args,
+        ring: false,
+    }
+});
