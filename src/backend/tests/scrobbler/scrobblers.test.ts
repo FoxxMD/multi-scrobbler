@@ -1118,7 +1118,7 @@ describe('Now Playing', function() {
 
             await npScrobbler.queuePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}), {type: 'jellyfin', name: 'test'});
 
-            const res = await Promise.race([pEvent(npScrobbler.emitter, 'nowPlayingUpdated'), sleep(12)]);
+            const res = await pEvent(npScrobbler.emitter, 'nowPlayingUpdated', {timeout: 1000});
 
             expect(res).is.not.undefined;
         });
@@ -1134,7 +1134,7 @@ describe('Now Playing', function() {
 
             await npScrobbler.queuePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}), {type: 'jellyfin', name: 'test'});
 
-            const res = await Promise.race([pEvent(npScrobbler.emitter, 'nowPlayingUpdated'), sleep(20)]);
+            const res = await pEvent(npScrobbler.emitter, 'nowPlayingUpdated', {timeout: 1000});
 
             expect(res).is.not.undefined;
 
@@ -1142,7 +1142,7 @@ describe('Now Playing', function() {
 
             await npScrobbler.queuePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}), {type: 'jellyfin', name: 'test'});
 
-            const resUpdate = await Promise.race([pEvent(npScrobbler.emitter, 'nowPlayingUpdated'), sleep(20)]);
+            const resUpdate = await pEvent(npScrobbler.emitter, 'nowPlayingUpdated', {timeout: 1000});
 
             expect(resUpdate).is.not.undefined;
         });
