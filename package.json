@@ -11,6 +11,7 @@
     "circular:frontend": "npx madge --circular --extensions ts src/client/index.tsx",
     "test": "npm run -s test:backend",
     "test:backend": "mocha --reporter spec",
+    "test:leaks": "mocha --config ./src/backend/tests/utils/leakProbe.mocharc.cjs",
     "dev": "node src/backend/index.ts",
     "start": "NODE_ENV=production node src/backend/index.ts",
     "build:frontend": "vite build",
