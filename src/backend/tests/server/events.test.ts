@@ -13,6 +13,17 @@ const internalConfig = { localUrl: new URL('https://example.com'), configDir: 'f
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** poll until check() is true, instead of sleeping a fixed time and hoping it was long enough */
+const waitFor = async (check: () => boolean | Promise<boolean>, what: string, timeoutMs = 2000) => {
+    const deadline = Date.now() + timeoutMs;
+    while (!(await check())) {
+        if (Date.now() > deadline) {
+            throw new Error(`Timed out after ${timeoutMs}ms waiting for ${what}`);
+        }
+        await sleep(5);
+    }
+};
+
 describe('SSE Events Endpoint', function () {
 
     it('forwards component events and only pushes log events while logs are enabled for the tab, forgetting the tab on disconnect', async function () {
@@ -52,7 +63,8 @@ describe('SSE Events Endpoint', function () {
                     // aborted
                 }
             })();
-            await sleep(50);
+            // logs: false is the default so this only checks the server has registered the connection
+            await waitFor(async () => (await setLogs(false)).status === 200, 'events connection to be registered');
             sources.emitter.emit('statusChange', { type: 'endpointlz', name: 'test', componentId: 1, from: 'source', data: { status: 'ok' } });
 
             writeLog('before enable');
@@ -60,7 +72,11 @@ describe('SSE Events Endpoint', function () {
             writeLog('while enabled');
             expect((await setLogs(false)).status).to.eq(200);
             writeLog('after disable');
-            await sleep(50);
+            // log lines reach the server on a later tick (stream 'data'), let them be forwarded (or not) first.
+            // Then a component event (forwarded synchronously) marks the end, everything sent before it has been received once it is
+            await new Promise((resolve) => setImmediate(resolve));
+            sources.emitter.emit('statusChange', { type: 'endpointlz', name: 'test', componentId: 1, from: 'source', data: { status: 'end-marker' } });
+            await waitFor(() => received.includes('end-marker'), 'end marker event');
 
             expect(received, 'component events named by event name').to.include('event:statusChange');
             expect(received).to.include('event:log');
@@ -70,8 +86,8 @@ describe('SSE Events Endpoint', function () {
 
             abort.abort();
             await reading;
-            await sleep(50);
-            expect((await setLogs(true)).status, 'tab forgotten on disconnect').to.eq(404);
+            // tab forgotten on disconnect
+            await waitFor(async () => (await setLogs(true)).status === 404, 'tab to be forgotten after disconnect');
         } finally {
             server.closeAllConnections();
             server.close();
