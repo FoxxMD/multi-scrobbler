@@ -314,6 +314,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 await this.tryStopPolling(opts.reason);
             }
             await this.tryStopDiscoveryQueue(opts.reason);
+            await this.tryStopDeadProcessing(opts.reason);
             this.stopTasks();
             this.setStatus('Stopped');
             this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({state: COMPONENT_STATE.STOPPED});
@@ -906,6 +907,28 @@ export default abstract class AbstractSource extends AbstractComponent implement
         }
         if(this.ingressQueuePromise !== undefined) {
             throw new Error('Could not stop discovery processing! Or signal was lost');
+        }
+        return true;
+    }
+
+    tryStopDeadProcessing = async (reason?: string | Error) => {
+        if(this.deadQueuePromise === undefined) {
+            this.logger.verbose(`Dead queue processing is already stopped`);
+            return;
+        }
+        if(this.deadQueueAbortController === undefined) {
+            this.logger.error('No abort controller found! Nothing to stop.');
+            return false;
+        }
+        this.deadQueueAbortController.abort(reason)
+        let timePasssed = 0;
+        while(this.deadQueuePromise !== undefined && timePasssed < (this.stopPollingWaitInterval * 10)) {
+            await sleep(this.stopPollingWaitInterval);
+            timePasssed += this.stopPollingWaitInterval;
+            this.logger.verbose(`Waiting for dead queue processing stop signal to be acknowledged (waited ${timePasssed}ms)`);
+        }
+        if(this.deadQueuePromise !== undefined) {
+            throw new Error('Could not stop dead queue processing! Or signal was lost');
         }
         return true;
     }

@@ -22,6 +22,10 @@ import { nameToCredit, creditsToNames } from "../../../core/MusicMetadata.ts";
 import type { MarkOptional } from "ts-essentials";
 import { WildcardEmitter } from "../../common/WildcardEmitter.ts";
 import type { MSBackendEventMap } from "../../common/infrastructure/MSBackendEventMap.ts";
+import { INGRESS_QUEUE, QUEUE_STATUS_FAILED } from "../../../core/Atomic.ts";
+import { generateArray } from "../../../core/DataUtils.ts";
+import type { RepositoryCreatePlayOpts } from "../../common/database/drizzle/repositories/PlayRepository.ts";
+import { fixtureCreatePlay } from "../utils/databaseFixtures.ts";
 
 chai.use(asPromised);
 
@@ -94,6 +98,27 @@ describe('Source Scheduled Tasks', function () {
         expect(source.scheduler.existsById('playerCleanup')).to.be.false;
         source.initTasks({deadDelay: 30});
         expect(source.scheduler.existsById('playerCleanup')).to.be.true;
+    });
+});
+
+describe('Source stop', function () {
+
+    it('Stops running dead queue processing', async function () {
+        await using source = new TestSource('spotify', 'test-stop-dead', {id: `test-${Date.now()}`}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  new WildcardEmitter<MSBackendEventMap>());
+        source.stopPollingWaitInterval = 10;
+        await source.initialize();
+        const failed = await source.playRepo.createPlays(generateArray<RepositoryCreatePlayOpts>(2, () => ({ ...fixtureCreatePlay(), state: 'failed', input: {} }) as RepositoryCreatePlayOpts));
+        await source['queueRepo'].createMany(failed.map(x => ({queueName: INGRESS_QUEUE, queueStatus: QUEUE_STATUS_FAILED, retries: 1, playId: x.id, componentId: source.componentId})));
+
+        // sync: waits for the discovery queue to empty, which never happens since it is not started, so dead processing stays running until stopped
+        await source.processDeadLetterQueue(undefined, undefined, true);
+        const dead = source['deadQueuePromise'];
+        expect(dead).to.not.be.undefined;
+
+        await source.stop();
+
+        expect(source['deadQueuePromise']).to.be.undefined;
+        await dead;
     });
 });
 
