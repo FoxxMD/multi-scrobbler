@@ -792,9 +792,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             if (remainingDelay > 0) {
                 this.logger.debug(`Waiting ${remainingDelay}ms to scrobble so time passed since previous scrobble is at least ${scrobbleDelay}ms`);
                 if(signal !== undefined) {
-                    await delay(signal, scrobbleDelay);
+                    await delay(signal, remainingDelay);
                 } else {
-                    await sleep(scrobbleDelay);
+                    await sleep(remainingDelay);
                 }
                 
             }
