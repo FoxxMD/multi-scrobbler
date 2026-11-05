@@ -179,6 +179,8 @@ export const components = sqliteTable("components", {
   countLive: integer().notNull().default(0),
   // number of discovered/scrobbled plays from backlog/jobs
   countNonLive: integer().notNull().default(0),
+  // seconds of discovered plays (sources only), from listenedFor ?? duration
+  listenedLive: integer().notNull().default(0),
   createdAt: DayjsTimestamp('createdAt').$defaultFn(() => dayjs()),
   lastReadyAt: DayjsTimestamp('lastReadyAt'),
   lastActiveAt: DayjsTimestamp('lastActiveAt'),

@@ -50,10 +50,12 @@ export class DrizzleComponentRepository extends DrizzleBaseRepository<'component
      *
      * The addition happens in SQL so each call builds on the stored value rather than on
      * a copy read at startup. Returns the new total.
+     *
+     * `listened` (seconds) is added to listenedLive in the same update.
      */
-    incrementCountLive = async (id: number, by: number = 1): Promise<number> => {
+    incrementCountLive = async (id: number, by: number = 1, listened: number = 0): Promise<number> => {
         const res = await this.db.update(components)
-            .set({ countLive: sql`${components.countLive} + ${by}` })
+            .set({ countLive: sql`${components.countLive} + ${by}`, listenedLive: sql`${components.listenedLive} + ${listened}` })
             .where(eq(components.id, id))
             .returning({ countLive: components.countLive });
         return res[0].countLive;

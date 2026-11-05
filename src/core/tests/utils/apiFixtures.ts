@@ -152,6 +152,7 @@ export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi>
         mode,
         countLive: faker.number.int({min: 0, max: 2000}),
         countNonLive: 0,
+        listenedLive: 0,
         state,
         players,
         errors: [],

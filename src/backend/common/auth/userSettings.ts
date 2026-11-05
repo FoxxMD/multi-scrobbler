@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import * as z from 'zod';
 import { userSettings } from "../database/drizzle/schema/auth.ts";
 import type { DbConcrete } from "../database/drizzle/drizzleUtils.ts";
+import { invalidateDashboardCache } from "../dashboard.ts";
 
 const componentDetailLevel = z.enum(['count','detailed']);
 
@@ -12,8 +13,8 @@ const publicDashboardSettings = z.object({
     sources: componentDetailLevel.optional(),
     /** Show Client components as only count or count + unique (detailed) types. undefined = disabled  */
     clients: componentDetailLevel.optional(),
-    /** Show recently scrobbled Plays. undefined = disabled  */
-    recent: z.boolean().optional(),
+    /** Number of unique, recently scrobbled Plays to show. undefined = disabled  */
+    recent: z.number().int().positive().max(50).optional(),
     /** how often to expire cache, in seconds. true = never cache, always so freshest/live. */
     refresh: z.union([z.literal(true), z.number().positive()])
 })
@@ -75,9 +76,18 @@ export const setUserSetting = async <K extends UserSettingKey>(db: DbConcrete, u
     const parsed = parseUserSetting<K>(key, value);
     await db.insert(userSettings).values({userId, key, value: parsed})
         .onConflictDoUpdate({target: [userSettings.userId, userSettings.key], set: {value: parsed}});
+    invalidateIfDashboard(userId, key);
     return parsed;
 }
 
 export const deleteUserSetting = async (db: DbConcrete, userId: string, key: string): Promise<void> => {
     await db.delete(userSettings).where(and(eq(userSettings.userId, userId), eq(userSettings.key, key)));
+    invalidateIfDashboard(userId, key);
+}
+
+// a cached public dashboard may expose data the user just disabled, rebuild on next request
+const invalidateIfDashboard = (userId: string, key: string) => {
+    if (key.startsWith('publicDashboard')) {
+        invalidateDashboardCache(userId);
+    }
 }

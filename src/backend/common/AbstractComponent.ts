@@ -171,10 +171,11 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     /**
      * Add to this component's lifetime Discovered/Scrobbled total, in the database and on
-     * the in-memory row, and return the new total.
+     * the in-memory row, and return the new total. `listened` (seconds) is added to listenedLive.
      */
-    protected async incrementCountLive(by: number = 1): Promise<number> {
-        this.dbComponent.countLive = await this.componentRepo.incrementCountLive(this.dbComponent.id, by);
+    protected async incrementCountLive(by: number = 1, listened: number = 0): Promise<number> {
+        this.dbComponent.countLive = await this.componentRepo.incrementCountLive(this.dbComponent.id, by, listened);
+        this.dbComponent.listenedLive += listened;
         return this.dbComponent.countLive;
     }
 
@@ -706,6 +707,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             mode: this.dbComponent.mode,
             monitoringStatus: this.getMonitoringStatus(),
             countNonLive: this.dbComponent.countNonLive,
+            listenedLive: this.dbComponent.listenedLive,
             createdAt: this.dbComponent.createdAt?.toISOString(),
             lastReadyAt: this.lastReadyAt?.toISOString(),
             lastActiveAt: this.lastActiveAt?.toISOString(),

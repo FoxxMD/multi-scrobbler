@@ -46,6 +46,8 @@ import type { PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
 import { stripIndents } from "common-tags";
 import { nameToCredit } from "../../core/MusicMetadata.ts";
 import { asPlayCheap } from "../../core/PlayMarshalUtils.ts";
+import { getOwnerId } from "../common/auth/owner.ts";
+import { getPublicDashboard } from "../common/dashboard.ts";
 import { deleteUserSetting, getUserSetting, getUserSettings, isUserSettingKey, setUserSetting, type UserSettingKey } from "../common/auth/userSettings.ts";
 import type { ServerLocals } from "./index.ts";
 
@@ -1009,6 +1011,15 @@ Note: this is only supported by some components.`
         .set('Content-Type', 'text/plain')
         .send(metricsString);
 
+    });
+
+    publicRouter.get('/api/dashboard', {
+        docs: {operationId: 'get-dashboard'},
+        tags: ['App Meta'],
+        description: 'Data for the default public dashboard, if it is enabled'
+    }, async (req, res) => {
+        const db = await root.items.db();
+        return res.json(await getPublicDashboard(db, await getOwnerId(db), {sources: scrobbleSources.sources, clients: scrobbleClients.clients}));
     });
 
     publicRouter.get('/api/version', {docs: {operationId: 'get-version'}, tags: ['App Meta']}, async (req, res) => {

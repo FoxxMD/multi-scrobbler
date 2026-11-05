@@ -1058,7 +1058,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 this.tracksDiscovered++;
                 this.tracksDiscoveredTotal++
                 try {
-                    await this.incrementCountLive();
+                    await this.incrementCountLive(1, Math.round(preCompared.data.listenedFor ?? preCompared.data.duration ?? 0));
                 } catch (e) {
                     this.logger.warn(new Error('Unable to update discovered count', {cause: e}));
                 }

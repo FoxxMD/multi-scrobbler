@@ -181,6 +181,7 @@ describe('Require Auth', function () {
             'POST /api/webscrobbler',
             'GET /api/health',
             'GET /api/version',
+            'GET /api/dashboard',
         ];
         const [app, router] = await buildAuthAppRouter();
         await secureApp(app);
