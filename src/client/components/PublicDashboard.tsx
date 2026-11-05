@@ -1,5 +1,6 @@
 import React, { type ComponentProps } from "react"
-import { Stack, Wrap, HStack, Stat, Highlight, Flex, Text, LinkBox, LinkOverlay, Box, Span, Card, Heading } from '@chakra-ui/react';
+import { useQuery } from "@tanstack/react-query";
+import { Spinner, Stack, Wrap, HStack, Stat, Highlight, Flex, Text, LinkBox, LinkOverlay, Box, Span, Card, Heading } from '@chakra-ui/react';
 import { type CountUpStat, CountUpValueText } from "./CountUpStat";
 import { capitalize, capitalizeWords } from "../../core/StringUtils";
 import { getMusicServiceIcon } from "./icons/ChakraIcons";
@@ -10,6 +11,22 @@ import { ArtistCreditTags } from "./ArtistCreditDisplay";
 import { MusicServiceIndicators } from "./musicServices/MusicServiceIndicators";
 import { timeToHumanTimestamp } from "../../core/TimeUtils";
 //import { PlayDataDataList } from "./play/PlayData";
+import { tanQueries } from "../queries";
+import { ErrorAlert } from "./ErrorAlert";
+
+/** True when the public dashboard response has anything to show (the server returns {} when it is disabled) */
+export const isPublicDashboardEnabled = (data?: PublicDashboardData): boolean => data !== undefined && Object.keys(data).length > 0;
+
+export const PublicDashboardFetchable = () => {
+    const { isPending, isError, data, error } = useQuery(tanQueries.dashboard.public());
+    if (isPending) {
+        return <Flex justify="center" py="8"><Spinner/></Flex>;
+    }
+    if (isError) {
+        return <ErrorAlert error={error}/>;
+    }
+    return <PublicDashboard {...data}/>;
+}
 
 export const PublicDashboard = (props: PublicDashboardData) => {
     const {

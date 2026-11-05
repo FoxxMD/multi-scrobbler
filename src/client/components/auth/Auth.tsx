@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, type ComponentProps, type FormEvent, type PropsWithChildren } from "react";
-import { Alert, Badge, Box, Button, Card, Code, Field, Heading, HStack, Input, Link, NativeSelect, Spinner, Stack, Table, Text, Span } from "@chakra-ui/react";
+import { Alert, Badge, Box, Button, Card, Code, Container, Field, Heading, HStack, Input, Link, NativeSelect, Spinner, Stack, Table, Text, Span } from "@chakra-ui/react";
 import { ChakraClip } from "../ChakraClipboard";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ky from "ky";
@@ -7,6 +7,8 @@ import { Link as RouterLink, Navigate, useLocation, useNavigate } from "react-ro
 import { authClient, errorMessage, useHasAccess, useRefreshAuth, useSetupStatus, type SetupStatus } from "../../auth/authClient";
 import { LoginButton, LogoutButton } from "../icons/ChakraIcons";
 import { Tooltip } from "../ChakraTooltip";
+import { isPublicDashboardEnabled, PublicDashboardFetchable } from "../PublicDashboard";
+import { tanQueries } from "../../queries";
 
 const AuthCard = (props: PropsWithChildren<{title: string, description?: string | React.JSX.Element}>) => (
     <Box display="flex" justifyContent="center" width="full" py="8">
@@ -199,6 +201,9 @@ export const AuthGate = (props: PropsWithChildren) => {
     const {data: status} = useSetupStatus();
     const {ready, hasSession} = useHasAccess();
     const location = useLocation();
+    const needsLogin = ready && status !== undefined && status.mode !== 'disabled' && status.secured && !hasSession;
+    // only asked for when the visitor would otherwise get the login form
+    const dashboard = useQuery({...tanQueries.dashboard.public(), enabled: needsLogin});
 
     if (!ready) {
         return <Box width="full" display="flex" justifyContent="center" py="8"><Spinner/></Box>;
@@ -212,7 +217,12 @@ export const AuthGate = (props: PropsWithChildren) => {
     }
     // /logout always renders so it can finish logging out (and is never replaced by the login form)
     if (!hasSession && location.pathname !== '/login' && location.pathname !== '/logout') {
-        return <LoginForm/>;
+        if (dashboard.isPending) {
+            return <Box width="full" display="flex" justifyContent="center" py="8"><Spinner/></Box>;
+        }
+        // public dashboard replaces the login form when enabled, the header Log In button still goes to /login
+        // a failed dashboard request falls back to the login form
+        return isPublicDashboardEnabled(dashboard.data) ? <Container maxWidth="8xl" py="8"><PublicDashboardFetchable/></Container> : <LoginForm/>;
     }
     return <>{props.children}</>;
 }

@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import ky, { type Options } from 'ky';
 import qs from 'qs';
 import { baseUrl } from "../utils";
-import {type AlbumSearchResult, type ArtistSearchResult, type TrackSearchResult, type MetadataSearchStreamLine, type MetadataSearchError, type MetadataResultServiceScore, NDJSON_MEDIA_TYPE, type ComponentsApiJson, type PaginatedResponse, type PlayApiCommonDetailed, type QueryPlaysOptsJson, type QueryPlaysOptsJsonRefreshable, type TrackDataCreditBase, type ArtistSearchSimpleRequestQuery, artistSearchSimpleRequestQuerySchema, trackDataCreditBaseSchema, type TrackSearchSimpleRequestQuery, trackSearchSimpleRequestQuerySchema, type AlbumSearchSimpleRequestQuery, albumSearchSimpleRequestQuerySchema } from "../../core/Api";
+import {type AlbumSearchResult, type ArtistSearchResult, type TrackSearchResult, type MetadataSearchStreamLine, type MetadataSearchError, type MetadataResultServiceScore, NDJSON_MEDIA_TYPE, type ComponentsApiJson, type PaginatedResponse, type PlayApiCommonDetailed, type QueryPlaysOptsJson, type QueryPlaysOptsJsonRefreshable, type TrackDataCreditBase, type ArtistSearchSimpleRequestQuery, artistSearchSimpleRequestQuerySchema, trackDataCreditBaseSchema, type TrackSearchSimpleRequestQuery, trackSearchSimpleRequestQuerySchema, type AlbumSearchSimpleRequestQuery, albumSearchSimpleRequestQuerySchema, type PublicDashboardData } from "../../core/Api";
 import { type SourcePlayerJson } from "../../core/Atomic";
 import { queryPlayOptsRefreshableToJson } from "../utils/ComponentUtils";
 const components = createQueryKeys('components', {
@@ -146,7 +146,14 @@ const metadata = createQueryKeys('metadata', {
   })
 });
 
-export const tanQueries = mergeQueryKeys(components, activities, players, logs, metadata);
+const dashboard = createQueryKeys('dashboard', {
+  public: () => ({
+    queryKey: ['public'],
+    queryFn: () => ky.get('dashboard', { baseUrl }).json<PublicDashboardData>()
+  })
+});
+
+export const tanQueries = mergeQueryKeys(components, activities, players, logs, metadata, dashboard);
 
 export const useQueryState = (queryKey: Readonly<unknown[]>) => {
   const queryClient = useQueryClient()
