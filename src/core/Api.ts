@@ -423,11 +423,34 @@ export interface ComponentStat {
 }
 
 export interface PublicDashboardData {
+    /** Total count of successfuly scrobbed Plays from all components for a user.
+     * 
+     * This is equivalent to the sum of the `countLive` property on all `client` type drizzle entities */
     scrobbles?: number;
+    /** Total count of discovered Plays from all components for a user.
+     * 
+     * This is equivalent to the sum of the `countLive` property on all `source` type drizzle entities */
     plays?: number;
+    /** Total number of seconds for all discovered Plays for all components for a user.
+     * 
+     * This uses `listenedFor` on a Play if present, otherwise falls back to full `duration`, or the Play is skipped during summation. */
     listened?: number;
+    /** Data about all `source` type components for a User
+     * 
+     * * `count` is the total number of components
+     * * `types` is an array of unique component types
+     **/
     sources?: ComponentStat;
+    /** Data about all `client` type components for a User
+     * 
+     * * `count` is the total number of components
+     * * `types` is an array of unique component types
+     **/
     clients?: ComponentStat;
+    /** A list of unique, recently scrobbled Plays.
+     * 
+     * Unique in that they all have distinct PlayData, rather than the same Discovered Play sent to 3x clients (but its all the same data)
+     **/
     recent?: PublicPlay[]
 }
 

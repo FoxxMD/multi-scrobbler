@@ -3,6 +3,21 @@ import * as z from 'zod';
 import { userSettings } from "../database/drizzle/schema/auth.ts";
 import type { DbConcrete } from "../database/drizzle/drizzleUtils.ts";
 
+const componentDetailLevel = z.enum(['count','detailed']);
+
+const publicDashboardSettings = z.object({
+    /** Show listening stats like total Plays, Scrobbles, and Listened (minutes). undefined = disabled */
+    listenStats: z.boolean().optional(),
+    /** Show Source components as only count or count + unique (detailed) types. undefined = disabled  */
+    sources: componentDetailLevel.optional(),
+    /** Show Client components as only count or count + unique (detailed) types. undefined = disabled  */
+    clients: componentDetailLevel.optional(),
+    /** Show recently scrobbled Plays. undefined = disabled  */
+    recent: z.boolean().optional(),
+    /** how often to expire cache, in seconds. true = never cache, always so freshest/live. */
+    refresh: z.union([z.literal(true), z.number().positive()])
+})
+
 /**
  * Every allowed user setting key and the schema its value must satisfy.
  *
@@ -10,7 +25,9 @@ import type { DbConcrete } from "../database/drizzle/drizzleUtils.ts";
  * If a schema changes, stored values that no longer parse are treated as unset (the client falls back to its default).
  * */
 export const userSettingSchemas = {
-    theme: z.enum(['light', 'dark', 'system']),
+    /** Enable the public dashboard for unauthenticated users */
+    publicDashboardEnabled: z.boolean().optional(),
+    publicDashboardSettings: publicDashboardSettings.optional()
 } satisfies Record<string, z.ZodType>;
 
 export type UserSettingKey = keyof typeof userSettingSchemas;
