@@ -6,6 +6,7 @@ import qs from 'qs';
 import { baseUrl } from "../utils";
 import {type AlbumSearchResult, type ArtistSearchResult, type TrackSearchResult, type MetadataSearchStreamLine, type MetadataSearchError, type MetadataResultServiceScore, NDJSON_MEDIA_TYPE, type ComponentsApiJson, type PaginatedResponse, type PlayApiCommonDetailed, type QueryPlaysOptsJson, type QueryPlaysOptsJsonRefreshable, type TrackDataCreditBase, type ArtistSearchSimpleRequestQuery, artistSearchSimpleRequestQuerySchema, trackDataCreditBaseSchema, type TrackSearchSimpleRequestQuery, trackSearchSimpleRequestQuerySchema, type AlbumSearchSimpleRequestQuery, albumSearchSimpleRequestQuerySchema, type PublicDashboardData } from "../../core/Api";
 import { type SourcePlayerJson } from "../../core/Atomic";
+import type { UserSettingKey, UserSettingResponse, UserSettingValue } from "../../core/UserSettings";
 import { queryPlayOptsRefreshableToJson } from "../utils/ComponentUtils";
 const components = createQueryKeys('components', {
     list: () => ({
@@ -153,7 +154,18 @@ const dashboard = createQueryKeys('dashboard', {
   })
 });
 
-export const tanQueries = mergeQueryKeys(components, activities, players, logs, metadata, dashboard);
+// always the logged in user, the api resolves `me`
+const userSettings = createQueryKeys('userSettings', {
+  setting: <K extends UserSettingKey>(key: K) => ({
+    queryKey: [key],
+    queryFn: () => ky.get(`user/me/setting/${key}`, { baseUrl }).json<UserSettingResponse<K>>()
+  })
+});
+
+export const putUserSetting = <K extends UserSettingKey>(key: K, value: UserSettingValue<K>) =>
+  ky.put(`user/me/setting/${key}`, { baseUrl, json: { value } }).json<UserSettingResponse<K>>();
+
+export const tanQueries = mergeQueryKeys(components, activities, players, logs, metadata, dashboard, userSettings);
 
 export const useQueryState = (queryKey: Readonly<unknown[]>) => {
   const queryClient = useQueryClient()
