@@ -45,7 +45,7 @@ export const ArtistCreditTags = (props: { data: AC[], showLinks?: boolean, showM
         {props.data.map((x, index) => (
             <Tag.Root key={index}>
                 {/* recipe lineClamp sets overflow: hidden, which clips the indicator stack when it lifts. Credit truncates the name instead */}
-                <Tag.Label userSelect="text" display="flex" minWidth="0" overflow="visible"><Credit data={x} showLinks={props.showLinks} showMbid={props.showMbid} stack={props.stack} /></Tag.Label>
+                <Tag.Label userSelect="text" display="flex" minWidth="0" overflow="visible"><Credit data={x} showLinks={props.showLinks} showMbid={props.showMbid} stack={props.stack ?? {ring: false}} /></Tag.Label>
             </Tag.Root>
         ))}
     </HStack>
