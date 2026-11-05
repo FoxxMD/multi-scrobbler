@@ -1,4 +1,4 @@
-import React, { type ComponentProps } from "react"
+import React, { type ComponentProps, useLayoutEffect, useRef } from "react"
 import { useQuery } from "@tanstack/react-query";
 import { Spinner, Stack, Wrap, HStack, Stat, Highlight, Flex, Text, LinkBox, LinkOverlay, Box, Span, Card, Heading } from '@chakra-ui/react';
 import { type CountUpStat, CountUpValueText } from "./CountUpStat";
@@ -82,6 +82,23 @@ export const CountStats = (props: Pick<PublicDashboardData, 'scrobbles' | 'plays
 
 export const ComponentStats = (props: Pick<PublicDashboardData, 'sources' | 'clients'>) => {
     const componentStats: React.JSX.Element[] = [];
+    const wrapRef = useRef<HTMLDivElement>(null);
+    // every stat gets the width of the widest one, so when they wrap (each centered in its own row) their left aligned headers still line up.
+    // css can't do "equal to the widest item" and wrap at the same time (auto-fit grids need a fixed track size)
+    useLayoutEffect(() => {
+        const wrap = wrapRef.current;
+        if (wrap === null) {
+            return;
+        }
+        const stats = Array.from(wrap.querySelectorAll<HTMLElement>('[data-component-stat]'));
+        const measure = () => {
+            const widest = Math.max(...stats.map(x => x.getBoundingClientRect().width));
+            wrap.style.setProperty('--component-stat-width', `${Math.ceil(widest)}px`);
+        };
+        const observer = new ResizeObserver(measure);
+        stats.forEach(x => observer.observe(x));
+        return () => observer.disconnect();
+    }, [props.sources, props.clients]);
     for (const [key, val] of Object.entries(props)) {
         if (key !== 'sources' && key !== 'clients') {
             continue;
@@ -101,8 +118,9 @@ export const ComponentStats = (props: Pick<PublicDashboardData, 'sources' | 'cli
                 }
             })
         }
-        componentStats.push(<HStack key={key}>
-            <Stat.Root>
+        componentStats.push(<HStack key={key} minWidth="var(--component-stat-width)">
+            {/* flex none: measured at its content width, not stretched to the shared width */}
+            <Stat.Root flex="none" data-component-stat="">
                 <Stat.Label textStyle="3xl">{capitalize(key)}</Stat.Label>
                 <HStack>
                     <CountUpValueText delay={componentStats.length * 300} textStyle="6xl" value={val.count} />
@@ -114,7 +132,7 @@ export const ComponentStats = (props: Pick<PublicDashboardData, 'sources' | 'cli
     if (componentStats.length === 0) {
         return undefined;
     }
-    return <Wrap gap="10" justify="space-evenly">{componentStats}</Wrap>
+    return <Wrap ref={wrapRef} gap="10" justify="space-evenly">{componentStats}</Wrap>
 }
 
 export const PublicPlayCompactItem = (props: { play: PublicPlay }) => {
