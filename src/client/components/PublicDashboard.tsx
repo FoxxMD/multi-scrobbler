@@ -1,30 +1,26 @@
 import React, { type ComponentProps } from "react"
-import { Stack, Wrap, HStack, Stat, Highlight, Flex, Text, LinkBox, LinkOverlay } from '@chakra-ui/react';
-import type { ClientType, SourceType } from "../../core/Atomic";
+import { Stack, Wrap, HStack, Stat, Highlight, Flex, Text, LinkBox, LinkOverlay, Box, Span, Card, Heading } from '@chakra-ui/react';
 import { type CountUpStat, CountUpValueText } from "./CountUpStat";
 import { capitalize, capitalizeWords } from "../../core/StringUtils";
 import { getMusicServiceIcon } from "./icons/ChakraIcons";
 import { AvatarStack, type AvatarStackItem } from "./AvatarStack";
-
-export interface ComponentStat {
-    count: number,
-    types?: (SourceType | ClientType)[]
-}
-
-export interface PublicDashboardData {
-    scrobbles?: number
-    plays?: number
-    listened?: number
-    sources?: ComponentStat
-    clients?: ComponentStat
-}
+import type { PublicDashboardData, PublicPlay } from "../../core/Api";
+import { TrackResultAlbumContent } from "./play/TrackSearch";
+import { ArtistCreditTags } from "./ArtistCreditDisplay";
+import { MusicServiceIndicators } from "./musicServices/MusicServiceIndicators";
+import { timeToHumanTimestamp } from "../../core/TimeUtils";
+import { PlayDataDataList } from "./play/PlayData";
 
 // eslint-disable-next-line arrow-body-style
 export const PublicDashboard = (props: PublicDashboardData) => {
+    const {
+        recent
+    } = props;
     return (
         <Stack gap="10">
             <CountStats {...props} />
             <ComponentStats {...props} />
+            <RecentPublicPlays data={recent} />
             <CallToAction />
         </Stack>
     )
@@ -103,4 +99,82 @@ export const ComponentStats = (props: Pick<PublicDashboardData, 'sources' | 'cli
         return undefined;
     }
     return <Wrap gap="10" justify="space-evenly">{componentStats}</Wrap>
+}
+
+export const PublicPlayCompactItem = (props: { play: PublicPlay }) => {
+
+    const {
+        track,
+        album,
+        duration,
+        artists = []
+    } = props.play.data;
+
+    let albumContent: React.JSX.Element | undefined = undefined;
+    if (album !== undefined) {
+        albumContent = <TrackResultAlbumContent data={{ ...album, id: 'noop' }} />;
+    }
+
+    let artistTags: React.JSX.Element | undefined = undefined;
+    if (artists.length > 0) {
+        artistTags = <ArtistCreditTags data={artists} />
+    }
+
+    return (
+        <HStack gap="4" flexGrow="1">
+            <Stack gap="1" flexGrow="1">
+                <Box display="flow-root">
+                    {track?.name}{' '}
+                    {duration !== undefined ? <Span>({timeToHumanTimestamp(duration * 1000)}) </Span> : undefined}
+                    <MusicServiceIndicators display="inline-flex" verticalAlign="middle" services={track?.metadata ?? []} />
+                </Box>
+                {artistTags}
+                {albumContent}
+            </Stack>
+        </HStack>
+    )
+}
+
+// eslint-disable-next-line arrow-body-style
+export const PublicPlayData = (props: { play: PublicPlay }) => {
+    return (<Box>
+        {/* <Box hideBelow="md">
+            <PlayDataDataList dates={false} play={props.play} />
+        </Box>
+        <Box hideFrom="md">
+            <PublicPlayCompactItem play={props.play} />
+        </Box> */}
+        <PublicPlayCompactItem play={props.play} />
+    </Box>)
+
+}
+
+export const RecentPublicPlays = (props: { data?: PublicPlay[] }) => {
+    if (props.data === undefined) {
+        return undefined;
+    }
+    let recentContent: React.JSX.Element;
+    if (props.data.length === 0) {
+        recentContent = <Flex justify="space-evenly"><Text>Nothing played recently!</Text></Flex>
+    } else {
+        recentContent = (
+            <Stack gapY={3} >
+                {props.data.map((x, i) => (
+                    <Card.Root width="full" variant="subtle" key={i} size="sm">
+                        <Card.Body>
+                            <PublicPlayData play={x} />
+                        </Card.Body>
+                    </Card.Root>
+                ))}
+            </Stack>
+        )
+    }
+    return (
+        <Flex justify="center">
+            <Stack width="full" maxW="500px">
+                <Heading color="fg.muted" textStyle="2xl">Recent</Heading>
+                {recentContent}
+            </Stack>
+        </Flex>
+    )
 }

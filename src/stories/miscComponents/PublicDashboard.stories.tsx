@@ -7,6 +7,7 @@ import { Provider } from "../../client/components/Provider.js";
 import { faker } from "@faker-js/faker";
 import { generateArray } from "../../core/DataUtils.js";
 import { clientTypes, sourceTypes } from "../../core/Atomic.js";
+import { generateJsonPlays } from "../../core/tests/utils/PlayTestUtils.js";
 
 const meta = preview.type<{ args: React.ComponentProps<typeof PublicDashboard> }>().meta({
     title: 'Misc Components/Public Dashboard',
@@ -36,6 +37,7 @@ export const Default = meta.story({
         listened: faker.number.int({min: 4_215_380, max: 999_999_999}),
         sources: {count: sourceCount, types: sTypes},
         clients: {count: clientCount, types: cTypes},
+        recent: generateJsonPlays(3)
     },
     render: function Render(args) {
         return <PublicDashboard key={JSON.stringify(args)} {...args} />;

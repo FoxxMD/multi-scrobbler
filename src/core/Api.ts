@@ -1,6 +1,6 @@
 import type { CompareOpKey, ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
 import { creditSchema, playTrackDataSchema, type ClientType, type ComponentAuthType, type MonitoringStatus, type QueueContext, type MusicServices, type Replace, creditBaseSchema, trackSearchHash, albumSearchHash, artistSearchHash } from "./Atomic.ts"
-import type { LogEvent, SourceType } from "./Atomic.ts"
+import type { LogEvent, SourceType, TrackData } from "./Atomic.ts"
 import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, QueueName, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.ts"
 import type { Dayjs } from "dayjs"
 import type { ErrorIsh } from "./ErrorUtils.ts"
@@ -416,3 +416,22 @@ export const artistSearchSimpleRequestQuerySchema = z.object({
 export type ArtistSearchSimpleRequestQuery = z.infer<typeof artistSearchSimpleRequestQuerySchema>;
 
 export const EXTERNAL_ART_URL_REGEX = new RegExp(/api\/components\/\d+\/art/);
+
+export interface ComponentStat {
+    count: number;
+    types?: (SourceType | ClientType)[];
+}
+
+export interface PublicDashboardData {
+    scrobbles?: number;
+    plays?: number;
+    listened?: number;
+    sources?: ComponentStat;
+    clients?: ComponentStat;
+    recent?: PublicPlay[]
+}
+
+export type PublicPlay = {
+    data: TrackData & Pick<JsonPlayObject['data'], 'listenedFor' | 'repeat'>,
+    meta: Pick<JsonPlayObject['meta'], 'source' | 'musicService' | 'url'>,
+}

@@ -14,6 +14,7 @@ import { EditIconRaw, EllipsisButton, EyeClosedIcon, EyeIcon, hasMusicServiceIco
 import type { IconType } from 'react-icons/lib';
 import { capitalize, capitalizeWords } from '../../../core/StringUtils.js';
 import { getMusicServiceIconTooltip, MusicServiceIndicators } from '../musicServices/MusicServiceIndicators.js';
+import type { PublicPlay } from '../../../core/Api.js';
 
 const EmptyPlayData = () => {
     return (
@@ -158,7 +159,7 @@ const SourceMaybeLink = (props: PropsWithChildren<{link?: string}>) => {
     return <Link key="weblink" variant="underline" target="_blank" href={props.link}>{props.children}</Link>
 }
 
-export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDates, showMbid?: boolean }) => {
+export const PlayDataDataList = (props: { play: PublicPlay, dates?: DisplayDates, showMbid?: boolean }) => {
 
     const {
         play,
@@ -230,7 +231,7 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
                         </HStack>
                     </DataList.ItemValue>
                 </DataList.Item>
-                <PlayDatesStack play={play} dates={dates} />
+                {dates !== undefined ? <PlayDatesStack play={play} dates={dates} /> : undefined}
                 <DataList.Item>
                     <DataList.ItemLabel>Duration</DataList.ItemLabel>
                     <DataList.ItemValue>
