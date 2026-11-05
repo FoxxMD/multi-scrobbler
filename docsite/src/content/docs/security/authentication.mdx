@@ -1,0 +1,231 @@
+---
+title: Built-In Authentication
+description: Securing the dashboard and API with an admin account
+sidebar:
+  order: 2
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 4
+---
+
+import {LocalStorageText} from '@site/src/components/Storage/Text';
+
+Multi-scrobbler has built-in authentication for the dashboard and most API endpoints.
+
+This [Authentication Mode](/security/overview#securing-multi-scrobbler) is the **default** when no config is present. It can be explicitly set through the ENV `AUTH_MODE=default` or AIO `auth.mode: 'default'` [`config.json`](/configuration/?configType=aio#configuration-types).
+
+
+## What Is Protected?
+
+**Once your instance is [secured](#securing-your-instance)** the dashboard and all API endpoints, except those listed below, require authenticated access.
+
+### Open Endpoints
+
+These endpoints are always unsecure or use their own authentication via config.
+
+<DetailsAdmo type="info" summary="Sources With Ingress Endpoints">
+
+Sources that use [**Ingress**](/configuration/sources/#by-communication-method) endpoints for capturing listening activity are always unauthenticated or use their own auth/token via config.
+
+
+[**Listenbrainz Endpoint** Source](/configuration/sources/listenbrainz-endpoint)
+
+* `/1/*` - standard route
+* `/api/listenbrainz*` - custom Listenbrainz Endpoint with slug
+
+[**Last.fm Endpoint** Source](/configuration/sources/lastfm-endpoint)
+
+* `/2.0/` - standard route
+* `/api/lastfm*` - custom Last.fm Endpoint with slug
+
+[**Webscrobbler** Source](/configuration/sources/webscrobbler)
+
+* `/api/webscrobbler*` - standard/custom route
+
+</DetailsAdmo>
+
+<DetailsAdmo type="info" summary="Multi-Scrobbler Basic Info and Metrics">
+
+These routes provide basic health/info which is safe to expose.
+
+* `/api/health` (only the status code unless authenticated)
+* `/api/version`
+
+Prometheus metrics (`/api/metrics`) require authentication once the instance is secured. Scrape them with a **Read** [API key](#api-keys). Set `PROMETHEUS=false` to remove the endpoint entirely.
+
+</DetailsAdmo>
+
+## Securing Your Instance
+
+On first startup Multi-scrobbler creates a single **admin** account automatically (username `admin`, or the value of `ADMIN_SETUP_USER`). It has no password until you set one. Until then, every request is treated as the admin and the dashboard/API are accessible to anyone.
+
+**Set the admin password in either of these ways:**
+
+<Tabs groupId="adminPassword">
+<TabItem value="dashboard" label="Dashboard">
+Visit the dashboard at <LocalStorageText client:load initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/> and click **Set an admin password** in the displayed warning banner (or open `/setup`). You are logged in once it is set.
+</TabItem>
+<TabItem value="env" label="ENV">
+Set `ADMIN_SETUP_PW` before starting multi-scrobbler. It is only used while the admin has no password, and is ignored afterwards. Leaving it set is harmless.
+
+TIP:  You can also use the ENV `ADMIN_SETUP_USER` to set the initial admin username non-interactively. Like `ADMIN_SETUP_PW`, it is only used when the admin account is first created and is ignored afterwards.
+</TabItem>
+</Tabs>
+
+<Aside type="important">
+
+**Until a password is set, anyone who can reach the dashboard can use it.** Multi-scrobbler limits what can happen while it is unsecured (see [Unsecured Instance Protections](#unsecured-instance-protections)), but if your instance may be reachable by others, set a password as soon as possible.
+
+</Aside>
+
+### Unsecured Instance Protections
+
+Depending on how it is accessed, **while MS is insecure** (no password is set and `AUTH_MODE` is not `disabled`) it protects itself in a few ways: 
+
+<Tabs groupId="insecureProtection">
+<TabItem value="token" label="Setup Token">
+A random [setup token](#setup-token) is generated on every startup and printed in the console/docker logs and log file. It is **not** shown in the dashboard's logs. It is required to set the password from the dashboard when:
+  * you appear to be connecting from the **internet** (a public IP address), or
+  * you are using the dashboard through a **domain it does not recognize**
+</TabItem>
+<TabItem value="unrecognized-domain" label="Unrecognized Domains">
+While MS is insecure, a malicious website you visit can point its own domain at your multi-scrobbler instance ([DNS rebinding](https://en.wikipedia.org/wiki/DNS_rebinding)) and use it from your browser.
+
+To prevent that site from changing anything, the dashboard and API are **read-only**, and setup requires a Token, when used through a domain multi-scrobbler does not recognize. Recognized are:
+  * IP addresses and `localhost`
+  * single-word hostnames like `nas` or `docker-host`
+  * names ending in `.local`, `.lan`, `.home.arpa`, `.internal`, `.localhost` or `.ts.net`
+  * the [`BASE_URL`](/configuration#base-url) host and anything in [`ALLOWED_HOSTS`](#hosts-cookies-and-reverse-proxies)
+</TabItem>
+<TabItem value="warnings" label="Warnings">
+A banner on the Dashboard warns when you appear to be connecting from the internet.
+
+Additionally, multi-scrobbler logs a warning (at most hourly) when it is used from a public IP.
+</TabItem>
+</Tabs>
+
+<Aside type="caution">
+
+Read-only access still lets a malicious website _read_ your multi-scrobbler data through DNS rebinding. Set a password to prevent it.
+
+</Aside>
+
+<DetailsAdmo type="tip" summary="Common Deployment Setups and How To Secure Them">
+
+| Setup | Setup token needed? | Unsecured dashboard | How to secure |
+| :--- | :--- | :--- | :--- |
+| LAN, dashboard by IP (`192.168.0.101:9078`) | No | Full access | Open `/setup` and set a password |
+| LAN, by `nas:9078`, `mycoolsite.local`, `ms.lan` | No | Full access | Open `/setup` and set a password |
+| LAN, by your own domain on local DNS or a hosts file (`ms.mydomain.com`), no `BASE_URL` | Yes | Read-only | Enter the token from the console output on `/setup`; or open `/setup` by IP; or set `ALLOWED_HOSTS`/`BASE_URL` |
+| Tailscale, by `100.x.y.z`, MagicDNS name or `*.ts.net` | No | Full access | Open `/setup` and set a password |
+| Reverse proxy on your LAN, `BASE_URL` set to its domain | No | Full access | Open `/setup` and set a password |
+| Reverse proxy or Cloudflare Tunnel reachable from the internet, used from outside | Yes | Full access by the `BASE_URL` domain, else read-only | Enter the token from the console output on `/setup` |
+| Port forwarded to the internet | Yes | Full access by IP, read-only by a dynamic DNS name | Enter the token from the console output on `/setup` |
+| Authenticating reverse proxy (Authelia, Authentik...) | - | - | Use `AUTH_MODE=disabled` |
+| Any | - | - | Set `ADMIN_SETUP_PW` and restart |
+
+</DetailsAdmo>
+
+### Changing Username or Password
+
+Change the username from **Settings -> Account** while logged in. This only changes the name used to log in.
+
+Change the password from **Settings -> Account** while logged in. All other sessions are logged out.
+
+If you have forgotten it, set `ADMIN_RESET_PW` and restart. The password is reset, and all admin sessions are logged out. The same value is only applied once, so the reset does not happen again on every restart, but **remove `ADMIN_RESET_PW` after you have logged in.**
+
+### Sessions
+
+A login lasts **7 days** since the dashboard was last used. Each visit extends it, so you stay logged in as long as you use the dashboard at least once in that period.
+
+Change the lifetime with `AUTH_SESSION_EXPIRES` (or `auth.sessionExpires`), using the same duration formats as [retention](/configuration#retention): a number of seconds (`86400`), a duration string (`12 hours`, `30 days`), or an ISO 8601 duration (`P30D`). The minimum is 60 seconds.
+
+### API Keys
+
+API keys let scripts, Prometheus and other tools use the API without logging in. Create and delete them from **Settings -> Account** while logged in. The key is only shown once, when it is created.
+
+Each key has a scope:
+
+* **Read** can only make `GET` requests, including metrics.
+* **Write** can use every endpoint, including those that change data.
+
+Send the key in the `Authorization` header:
+
+```shell
+curl -H "Authorization: Bearer ms_..." http://localhost:9078/api/components
+```
+
+Scraping metrics with Prometheus:
+
+```yaml title="prometheus.yml"
+scrape_configs:
+  - job_name: multi-scrobbler
+    metrics_path: /api/metrics
+    authorization:
+      credentials: ms_...
+    static_configs:
+      - targets: ['localhost:9078']
+```
+
+Requests with an invalid key are logged as `Invalid API key from <ip>`.
+
+### Setup Token
+
+A setup token is generated on every startup while the instance is not secured, and printed in the console/docker output and log file. It is only required in [some situations](#unsecured-instance-protections).
+
+Set `AUTH_SETUP_TOKEN` to **always** require it when setting the first password from the dashboard:
+
+* `AUTH_SETUP_TOKEN=true` uses the generated token.
+* Any other value is used as the token.
+
+## Hosts, Cookies and Reverse Proxies
+
+By default multi-scrobbler accepts requests for **any** host (IP, hostname, etc.), so no configuration is needed. Logins are protected against cross-site requests regardless. These settings can additionally be configured to expand or restrict what types of requests MS trusts:
+
+<Tabs groupId="betterAuthSettings">
+<TabItem value="allowedHosts" label="Allowed Hosts">
+**`ALLOWED_HOSTS`** (or `auth.allowedHosts`): comma-separated hosts (with port, wildcards allowed, like `ms.mydomain.tld,192.168.0.101:9078`) the dashboard is accessed from. Restricting this adds another layer of origin checks. If you set [`BASE_URL`](/configuration#base-url) multi-scrobbler logs a hint with the host to use.
+</TabItem>
+<TabItem value="secureCookies" label="Secure Cookies">
+**`SECURE_COOKIES`** (or `auth.secureCookies`): marks the login cookie as https-only. It defaults to `true` only when `BASE_URL` is `https://...`. If you access the dashboard over **plain http**, this must be `false` or logging in will silently fail.
+</TabItem>
+<TabItem value="trustProxy" label="Trusted Proxies">
+**`TRUST_PROXY`** (or `auth.trustProxy`): trust `X-Forwarded-Host`/`X-Forwarded-Proto`/`X-Forwarded-For` from your reverse proxy. Used for correct client IP detection and rate limiting.
+
+**Only set this if multi-scrobbler can _only_ be reached through your proxy.** Otherwise clients can fake their IP address, which lets them get around the login rate limit and put fake IPs in the logs.
+</TabItem>
+</Tabs>
+
+## Configuration
+
+<Tabs groupId="configType">
+<TabItem value="env" label="ENV">
+| Environmental Variable | Default                       | Description                                                                                                 |
+| :--------------------- | :---------------------------- | :---------------------------------------------------------------------------------------------------------- |
+| `AUTH_MODE`            | `default`                    | `default`, or `disabled`. See [Securing Multi-Scrobbler](/security/overview#securing-multi-scrobbler)       |
+| `ADMIN_SETUP_USER`     | `admin`                       | Initial admin username. Only used when the admin account is created. 3-30 letters, numbers, underscores or dots |
+| `ADMIN_SETUP_PW`       |                               | Initial admin password. Only used if the admin has no password                                              |
+| `ADMIN_RESET_PW`       |                               | Reset the admin password and log out all sessions. Remove after use                                         |
+| `AUTH_SETUP_TOKEN`     |                               | Always require the setup token. `true` for the generated token, or the token itself                         |
+| `ALLOWED_HOSTS`        | `*`                           | Comma-separated hosts the dashboard is accessed from                                                        |
+| `SECURE_COOKIES`       | `true` if `BASE_URL` is https | Only set https-only cookies                                                                                 |
+| `TRUST_PROXY`          | `false`                       | Trust `X-Forwarded-*` headers                                                                               |
+| `AUTH_SESSION_EXPIRES` | `7 days`                      | How long a login lasts since the dashboard was last used. See [Sessions](#sessions)                         |
+| `BETTER_AUTH_SECRET`   | generated                     | Secret used to sign sessions. If not set, one is generated and saved as `auth.secret` in the data directory |
+</TabItem>
+<TabItem value="aio" label="AIO">
+```json title="config.json"
+{
+  "auth": {
+    "mode": "default",
+    "allowedHosts": ["ms.mydomain.tld"],
+    "secureCookies": true,
+    "trustProxy": false,
+    "sessionExpires": "30 days"
+  }
+}
+```
+
+ENV variables take precedence over `config.json`. Passwords can only be set with ENV or the dashboard.
+</TabItem>
+</Tabs>

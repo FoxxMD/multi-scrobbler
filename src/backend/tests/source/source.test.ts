@@ -22,6 +22,10 @@ import { nameToCredit, creditsToNames } from "../../../core/MusicMetadata.ts";
 import type { MarkOptional } from "ts-essentials";
 import { WildcardEmitter } from "../../common/WildcardEmitter.ts";
 import type { MSBackendEventMap } from "../../common/infrastructure/MSBackendEventMap.ts";
+import { INGRESS_QUEUE, QUEUE_STATUS_FAILED } from "../../../core/Atomic.ts";
+import { generateArray } from "../../../core/DataUtils.ts";
+import type { RepositoryCreatePlayOpts } from "../../common/database/drizzle/repositories/PlayRepository.ts";
+import { fixtureCreatePlay } from "../utils/databaseFixtures.ts";
 
 chai.use(asPromised);
 
@@ -48,6 +52,75 @@ const generateMemoryPositionalSource = async (config: MarkOptional<SourceConfig,
     s.scheduler.stop();
     return s;
 }
+
+describe('Source Scheduled Tasks', function () {
+
+    // generateSource() already calls initTasks() with the default (long) dead delay
+    // own emitter: the Dead task emits queue events that would resolve other tests' pEvent() on the shared emitter
+    const uninitializedTasksSource = async () => {
+        const source = new TestSource('spotify', 'test-tasks', {id: `test-${Date.now()}`}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  new WildcardEmitter<MSBackendEventMap>());
+        await source.initialize();
+        return source;
+    }
+
+    it('Adds the delayed Dead task to the scheduler', async function () {
+        await using source = await uninitializedTasksSource();
+        source.initTasks({deadDelay: 0.01});
+        await sleep(50);
+        expect(source.scheduler.existsById('dead')).to.be.true;
+    });
+
+    it('Does not add the delayed Dead task after being stopped', async function () {
+        await using source = await uninitializedTasksSource();
+        // long delay so the timer is still pending when stop() returns (stop can take longer than a short delay)
+        source.initTasks({deadDelay: 30});
+        expect(source['initDeadTimeout']).to.not.be.undefined;
+        await source.stop();
+        expect(source['initDeadTimeout']).to.be.undefined;
+    });
+
+    it('Does not add the delayed Dead task after being disposed', async function () {
+        // await using also stops the discovery queue initialize() started, the sync dispose under test only stops tasks
+        await using source = await uninitializedTasksSource();
+        source.initTasks({deadDelay: 0.01});
+        source[Symbol.dispose]();
+        await sleep(50);
+        expect(source.scheduler.existsById('dead')).to.be.false;
+    });
+
+    it('Memory Source adds Player Cleanup task on initTasks and re-adds it after a restart', async function () {
+        await using source = new TestMemorySource('spotify', 'test-memory-tasks', {id: `test-${Date.now()}`}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  new WildcardEmitter<MSBackendEventMap>());
+        expect(source.scheduler.getAllJobs()).length(0);
+        await source.initialize();
+        source.initTasks({deadDelay: 30});
+        expect(source.scheduler.existsById('playerCleanup')).to.be.true;
+        await source.stop();
+        expect(source.scheduler.existsById('playerCleanup')).to.be.false;
+        source.initTasks({deadDelay: 30});
+        expect(source.scheduler.existsById('playerCleanup')).to.be.true;
+    });
+});
+
+describe('Source stop', function () {
+
+    it('Stops running dead queue processing', async function () {
+        await using source = new TestSource('spotify', 'test-stop-dead', {id: `test-${Date.now()}`}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  new WildcardEmitter<MSBackendEventMap>());
+        source.stopPollingWaitInterval = 10;
+        await source.initialize();
+        const failed = await source.playRepo.createPlays(generateArray<RepositoryCreatePlayOpts>(2, () => ({ ...fixtureCreatePlay(), state: 'failed', input: {} }) as RepositoryCreatePlayOpts));
+        await source['queueRepo'].createMany(failed.map(x => ({queueName: INGRESS_QUEUE, queueStatus: QUEUE_STATUS_FAILED, retries: 1, playId: x.id, componentId: source.componentId})));
+
+        // sync: waits for the discovery queue to empty, which never happens since it is not started, so dead processing stays running until stopped
+        await source.processDeadLetterQueue(undefined, undefined, true);
+        const dead = source['deadQueuePromise'];
+        expect(dead).to.not.be.undefined;
+
+        await source.stop();
+
+        expect(source['deadQueuePromise']).to.be.undefined;
+        await dead;
+    });
+});
 
 describe('Sources use transform plays correctly', function () {
 

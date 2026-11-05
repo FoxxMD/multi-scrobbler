@@ -531,9 +531,15 @@ describe('Upstream Scrobbles', function() {
         const play = generatePlay({playDate: dayjs().subtract(60, 's')});
         await scrobbler.queuePlay(play);
         const emptied = pEvent(scrobbler.emitter, 'queueEmptied');
-        scrobbler.startScrobbling(new AbortController().signal).then(() => null);
+        // own signal, tryStopScrobbling() only stops processing started by initScrobbleMonitoring()
+        const processing = new AbortController();
+        scrobbler.startScrobbling(processing.signal).catch((e) => {
+            if(!isAbortError(e)) {
+                console.error(e);
+            }
+        });
         await emptied;
-        scrobbler.tryStopScrobbling().then(() => null);
+        processing.abort();
         expect(sp.called).is.true;
         return;
     });
@@ -551,9 +557,15 @@ describe('Upstream Scrobbles', function() {
         const play2 = generatePlay({playDate: dayjs().subtract(1, 'm')});
         await scrobbler.queuePlay([play1, play2]);
         const emptied = pEvent(scrobbler.emitter, 'queueEmptied');
-        scrobbler.startScrobbling(new AbortController().signal).then(() => null);
+        // own signal, tryStopScrobbling() only stops processing started by initScrobbleMonitoring()
+        const processing = new AbortController();
+        scrobbler.startScrobbling(processing.signal).catch((e) => {
+            if(!isAbortError(e)) {
+                console.error(e);
+            }
+        });
         await emptied;
-        scrobbler.tryStopScrobbling().then(() => null);
+        processing.abort();
         expect(sp.callCount).to.eq(1);
         return;
     });
@@ -572,9 +584,15 @@ describe('Upstream Scrobbles', function() {
         const play3 = generatePlay({playDate: dayjs().subtract(DEFAULT_CONSOLIDATE_DURATION.add(4, 'm'))});
         await scrobbler.queuePlay([play1, play2, play3]);
         const emptied = pEvent(scrobbler.emitter, 'queueEmptied');
-        scrobbler.startScrobbling(new AbortController().signal).then(() => null);
+        // own signal, tryStopScrobbling() only stops processing started by initScrobbleMonitoring()
+        const processing = new AbortController();
+        scrobbler.startScrobbling(processing.signal).catch((e) => {
+            if(!isAbortError(e)) {
+                console.error(e);
+            }
+        });
         await emptied;
-        scrobbler.tryStopScrobbling().then(() => null);
+        processing.abort();
         expect(sp.callCount).to.eq(2);
         return;
     });
@@ -592,7 +610,13 @@ describe('Upstream Scrobbles', function() {
         const play2 = generatePlay({playDate: dayjs().subtract(1, 'm')});
         await scrobbler.queuePlay([play1]);
         const emptied = pEvent(scrobbler.emitter, 'queueEmptied');
-        scrobbler.startScrobbling(new AbortController().signal).then(() => null);
+        // own signal, tryStopScrobbling() only stops processing started by initScrobbleMonitoring()
+        const processing = new AbortController();
+        scrobbler.startScrobbling(processing.signal).catch((e) => {
+            if(!isAbortError(e)) {
+                console.error(e);
+            }
+        });
         await emptied;
         expect(sp.calledOnce).is.true;
 
@@ -600,7 +624,7 @@ describe('Upstream Scrobbles', function() {
         const emptied2 = pEvent(scrobbler.emitter, 'queueEmptied');
         await scrobbler.queuePlay([play2]);
         await emptied2;
-        scrobbler.tryStopScrobbling().then(() => null);
+        processing.abort();
         expect(sp.calledTwice).is.true;
         return;
     });
@@ -624,6 +648,24 @@ describe('Dead Scrobbles', function() {
         for(const p of updatedPlays) {
             expect(p.state === 'scrobbled');
         }
+    });
+
+    it('Adds the delayed Dead task to the scheduler', async function () {
+        await using testScrobbler = await generateTestScrobbler();
+        await testScrobbler.initialize();
+        testScrobbler.initTasks({deadDelay: 0.01});
+        await sleep(50);
+        expect(testScrobbler.scheduler.existsById('dead')).to.be.true;
+    });
+
+    it('Does not add the delayed Dead task after being stopped', async function () {
+        await using testScrobbler = await generateTestScrobbler();
+        await testScrobbler.initialize();
+        // long delay so the timer is still pending when stop() returns (stop can take longer than a short delay)
+        testScrobbler.initTasks({deadDelay: 30});
+        expect(testScrobbler['initDeadTimeout']).to.not.be.undefined;
+        await testScrobbler.stop();
+        expect(testScrobbler['initDeadTimeout']).to.be.undefined;
     });
 
 });
@@ -759,13 +801,16 @@ const normalizedMonitoringScrobbler = async () => {
 
 describe('Manages scrobble queue', function() {
 
+    // after queueing, resolves once the processing loop has drained at least one Play (client queueEmptied is only emitted after processing)
+    const drained = (scrobbler: TestScrobbler) => pEvent(scrobbler.emitter, 'queueEmptied', {timeout: 3000, filter: (e: {data: {processed: number}}) => e.data.processed > 0});
+
     it('Scrobbles a uniquely queued play', async function() {
         await using testScrobbler = await normalizedMonitoringScrobbler();
         const newScrobble = generatePlay({
             playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate!.add(3, 'seconds')
         });
         await testScrobbler.queuePlay(newScrobble);
-        const res = await Promise.race([pEvent(testScrobbler.emitter, 'scrobble'), sleep(3000)]);
+        const res = await pEvent(testScrobbler.emitter, 'scrobble', {timeout: 3000});
 
         assert.isDefined(res);
         assert.isDefined(res.data);
@@ -773,7 +818,6 @@ describe('Manages scrobble queue', function() {
 
     it('Does not Scrobble a duplicate play queued after original is scrobbled', async function() {
         await using testScrobbler = await normalizedMonitoringScrobbler();
-        this.timeout(20000);
 
         const newScrobble = generatePlay({
             playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate!.add(3, 'seconds')
@@ -782,20 +826,16 @@ describe('Manages scrobble queue', function() {
         dupScrobble.data.playDate = newScrobble.data.playDate!.add(2, 'seconds');
 
         await testScrobbler.queuePlay(newScrobble);
-        const res = await Promise.race([pEvent(testScrobbler.emitter, 'scrobble'), sleep(1500)]);
-
-        assert.isDefined(res);
+        const res = await pEvent(testScrobbler.emitter, 'scrobble', {timeout: 3000});
         assert.isDefined(res.data);
 
-        await testScrobbler.queuePlay(dupScrobble);
-        const resDup = await Promise.race([pEvent(testScrobbler.emitter, 'scrobble'), sleep(1100)]);
-
-        assert.isUndefined(resDup);
+        // duplicate of an existing (scrobbled) Play is rejected before it is queued, so it can never be scrobbled
+        expect(await testScrobbler.queuePlay(dupScrobble)).length(0);
+        expect((await testScrobbler.playRepoTest.getQueued(INGRESS_QUEUE)).data).length(0);
     });
 
     it('Does not Scrobble a duplicate play queued before original is scrobbled', async function() {
         await using testScrobbler = await normalizedMonitoringScrobbler();
-        this.timeout(3500);
 
         const newScrobble = generatePlay({
             playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate!.add(3, 'seconds')
@@ -803,21 +843,40 @@ describe('Manages scrobble queue', function() {
         const dupScrobble = clone(newScrobble);
         dupScrobble.data.playDate = newScrobble.data.playDate!.add(2, 'seconds');
 
-        await testScrobbler.queuePlay(newScrobble);
-        await testScrobbler.queuePlay(dupScrobble);
-        const res = await Promise.race([pEvent(testScrobbler.emitter, 'scrobble'), sleep(1500)]);
+        const scrobbles: unknown[] = [];
+        testScrobbler.emitter.on('scrobble', (e) => scrobbles.push(e));
+        const processed = drained(testScrobbler);
 
-        assert.isDefined(res);
-        assert.isDefined(res.data);
+        expect(await testScrobbler.queuePlay(newScrobble)).length(1);
+        // duplicate of a still-queued Play is rejected before it is queued
+        expect(await testScrobbler.queuePlay(dupScrobble)).length(0);
 
-        const resDup = await Promise.race([pEvent(testScrobbler.emitter, 'scrobble'), sleep(1100)]);
+        await processed;
+        expect(scrobbles).length(1);
+    });
 
-        assert.isUndefined(resDup);
+    it('Does not Scrobble a duplicate of an upstream scrobble found while processing', async function() {
+        await using testScrobbler = await normalizedMonitoringScrobbler();
+
+        // only exists upstream (testRecentScrobbles), not as a local Play, so it passes the pre-queue check and is only found to be a duplicate during processing
+        const upstreamDup = clone(normalizedWithMixedDur[normalizedWithMixedDur.length - 3]);
+        upstreamDup.data.playDate = upstreamDup.data.playDate!.add(2, 'seconds');
+
+        const scrobbles: unknown[] = [];
+        testScrobbler.emitter.on('scrobble', (e) => scrobbles.push(e));
+        const processed = drained(testScrobbler);
+
+        const queued = await testScrobbler.queuePlay(upstreamDup);
+        expect(queued).length(1);
+
+        await processed;
+        expect(scrobbles).length(0);
+        const [play] = await testScrobbler.playRepoTest.findPlays({uid: queued.map(x => x.uid)});
+        expect(play.state).eq('duped');
     });
 
     it('Delays scrobbles when many are queued', async function () {
         await using testScrobbler = await normalizedMonitoringScrobbler();
-        this.timeout(3500);
 
         const newScrobble1 = generatePlay({
             playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate!.add(3, 'seconds')
@@ -829,22 +888,35 @@ describe('Manages scrobble queue', function() {
             playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate!.add(160, 'seconds')
         });
 
-        testScrobbler.scrobbleDelay = 600;
+        const scrobbleDelay = 50;
+        testScrobbler.scrobbleDelay = scrobbleDelay;
+
+        const scrobbledAt: number[] = [];
+        testScrobbler.emitter.on('scrobble', () => scrobbledAt.push(Date.now()));
+        const processed = drained(testScrobbler);
 
         await testScrobbler.queuePlay([newScrobble1, newScrobble2, newScrobble3]);
-        await pEvent(testScrobbler.emitter, 'scrobble');
-        const initial = dayjs();
-        await pEvent(testScrobbler.emitter, 'scrobble');
-        await pEvent(testScrobbler.emitter, 'scrobble');
+        await processed;
 
-        const end = dayjs();
-
-        // roughly...
-        assert.closeTo(end.diff(initial, 'ms'), 1200, 200);
+        expect(scrobbledAt).length(3);
+        // lower bound only, a slow machine can only make the gap longer. Small allowance for timer granularity
+        expect(scrobbledAt[1] - scrobbledAt[0]).to.be.gte(scrobbleDelay - 5);
+        expect(scrobbledAt[2] - scrobbledAt[1]).to.be.gte(scrobbleDelay - 5);
     });
 
-    after(async function () {
-       this.timeout(3500);
+    it('Only waits the remaining scrobble delay since the last scrobble', async function () {
+        await using testScrobbler = await generateTestScrobbler();
+        await testScrobbler.initialize();
+        testScrobbler.testRecentScrobbles = [];
+        testScrobbler.scrobbleDelay = 1000;
+        // last scrobble was 950ms ago so only ~50ms of the delay remains
+        testScrobbler.lastScrobbleAttempt = dayjs().subtract(950, 'ms');
+
+        const start = Date.now();
+        await testScrobbler.scrobble(generatePlay());
+
+        // generous upper bound, waiting the full delay again would be >= 1000ms
+        expect(Date.now() - start).to.be.lt(500);
     });
 });
 
@@ -1046,7 +1118,7 @@ describe('Now Playing', function() {
 
             await npScrobbler.queuePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}), {type: 'jellyfin', name: 'test'});
 
-            const res = await Promise.race([pEvent(npScrobbler.emitter, 'nowPlayingUpdated'), sleep(12)]);
+            const res = await pEvent(npScrobbler.emitter, 'nowPlayingUpdated', {timeout: 1000});
 
             expect(res).is.not.undefined;
         });
@@ -1062,7 +1134,7 @@ describe('Now Playing', function() {
 
             await npScrobbler.queuePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}), {type: 'jellyfin', name: 'test'});
 
-            const res = await Promise.race([pEvent(npScrobbler.emitter, 'nowPlayingUpdated'), sleep(20)]);
+            const res = await pEvent(npScrobbler.emitter, 'nowPlayingUpdated', {timeout: 1000});
 
             expect(res).is.not.undefined;
 
@@ -1070,7 +1142,7 @@ describe('Now Playing', function() {
 
             await npScrobbler.queuePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}), {type: 'jellyfin', name: 'test'});
 
-            const resUpdate = await Promise.race([pEvent(npScrobbler.emitter, 'nowPlayingUpdated'), sleep(20)]);
+            const resUpdate = await pEvent(npScrobbler.emitter, 'nowPlayingUpdated', {timeout: 1000});
 
             expect(resUpdate).is.not.undefined;
         });

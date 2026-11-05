@@ -50,7 +50,7 @@ import {
     hasAcceptableTemporalAccuracy,
 } from "../utils/TimeUtils.ts";
 import { todayAwareFormat } from "../../core/TimeUtils.ts";
-import { AsyncTask, SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
+import { AsyncTask, SimpleIntervalJob } from "toad-scheduler";
 import { getRoot } from "../ioc.ts";
 import { staggerMapper, type StaggerOptions } from "../utils/AsyncUtils.ts";
 import pMap from "p-map";
@@ -89,9 +89,6 @@ const bufferNPUpdateReasonFragments: string[] = [
 export default abstract class AbstractScrobbleClient extends AbstractComponent implements Authenticatable {
 
     declare type: ClientType;
-
-    scheduler: ToadScheduler = new ToadScheduler();
-    protected initDeadTimeout: NodeJS.Timeout | undefined;
 
     protected MAX_STORED_SCROBBLES = 40;
     protected MAX_INITIAL_SCROBBLES_FETCH = this.MAX_STORED_SCROBBLES;
@@ -224,15 +221,19 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return existingScrobble(playObjPre, existingScrobbles,  this.existingPlayOpts, log);
     }
 
+    /**
+     * Synchronous, best-effort cleanup for `using`. Stops scheduled tasks and signals running processing to stop but **does not wait** for it,
+     * see abortProcessingWithoutWaiting(). Prefer [Symbol.asyncDispose] (`await using`) or stop() whenever possible,
+     * only use `using` for components that were never started.
+     * */
     [Symbol.dispose]() {
-        this.scheduler.stop();
-        for(const job of this.scheduler.getAllJobs()) {
-            job.stop();
-            if(job.id !== undefined) {
-                this.scheduler.removeById(job.id);
-            }
-        }
+        this.stopTasks();
+        this.abortProcessingWithoutWaiting({
+            'scrobble processing': this.ingressQueueAbortController,
+            'dead queue processing': this.deadQueueAbortController,
+        });
     }
+    /** Stops the component and waits for all processing to stop. Prefer this (`await using`) over [Symbol.dispose] whenever possible */
     async [Symbol.asyncDispose]() {
         try {
             await this.stop({ reason: 'Instance is being destroyed' });
@@ -360,13 +361,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     public async stop(opts: { reason?: string | Error } = {}) {
         try {
-            this.scheduler.stop();
-            for (const job of this.scheduler.getAllJobs()) {
-                job.stop();
-                if(job.id !== undefined) {
-                    this.scheduler.removeById(job.id);
-                }
-            }
+            this.stopTasks();
             await this.tryStopScrobbling(opts.reason);
             await this.tryStopDeadProcessing(opts.reason);
             this.nowPlayingLastPlay = undefined;
@@ -797,9 +792,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             if (remainingDelay > 0) {
                 this.logger.debug(`Waiting ${remainingDelay}ms to scrobble so time passed since previous scrobble is at least ${scrobbleDelay}ms`);
                 if(signal !== undefined) {
-                    await delay(signal, scrobbleDelay);
+                    await delay(signal, remainingDelay);
                 } else {
-                    await sleep(scrobbleDelay);
+                    await sleep(remainingDelay);
                 }
                 
             }
@@ -992,8 +987,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 //let queueEmpty = await this.playRepo.hasQueueNext(CLIENT_INGRESS_QUEUE); // this.queuedLength; // this.queuedScrobbles.length === 0;
                 let nextQueued = await this.playRepo.getQueueNext(INGRESS_QUEUE);
                 if(nextQueued !== undefined) {
+                    let processed = 0;
                     while (nextQueued !== undefined) {
                         await this.handlePlayProcessing(nextQueued, signal);
+                        processed++;
                         if(this.errors.length > 0) {
                             // we made it through a scrobble without any issues so clear any issue we may have previously had
                             this.errors = [];
@@ -1001,7 +998,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         }
                         nextQueued = await this.playRepo.getQueueNext(INGRESS_QUEUE)
                     }
-                    this.emitEvent('queueEmptied', {});
+                    // emitted only after draining at least one queued Play (unlike Source's queueEmptied, emitted on every idle poll)
+                    // so waiting for it after queueing a Play means "that Play has been processed". processed = Plays handled in this drain
+                    this.emitEvent('queueEmptied', {processed});
                     this.setStatus('Waiting for Plays from Sources');
                 }
                 this.updateDates({lastActiveAt: dayjs(), lastReadyAt: dayjs()});

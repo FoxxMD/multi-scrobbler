@@ -1,13 +1,13 @@
 import { useListCollection, Stack, Text, HStack, Span, Badge, Box, Flex } from "@chakra-ui/react"
 import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.js";
-import { type TrackDataCreditBase, type TrackSearchResult, type TrackSearchSimpleRequestQuery } from "../../../core/Api.js";
+import { type AlbumSearchResult, type TrackDataCreditBase, type TrackSearchResult, type TrackSearchSimpleRequestQuery } from "../../../core/Api.js";
 import React, { useCallback, useEffect, useState } from "react";
 import { ArtistCreditTags } from "../ArtistCreditDisplay.js";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, MetadataServiceScore, type MetadataPartials } from "./MetadataResults.js";
 import { playTrackDataSchema, trackSearchToMusicService, type Credit, type TrackData } from "../../../core/Atomic.js";
 import { playImage } from "../../../core/MusicMetadata.js";
-import { MusicServiceIndicators } from "../musicServices/MusicServiceIndicators.js";
+import { MusicServiceIndicators, MusicServiceIndicatorStack } from "../musicServices/MusicServiceIndicators.js";
 import { timeToHumanTimestamp } from "../../../core/TimeUtils.js";
 import { CountryFlag } from "../Country.js";
 import dayjs from "dayjs";
@@ -18,28 +18,16 @@ const trackPartials: MetadataPartials<TrackSearchResult> = {
     album: { label: 'Track + duration + album', pick: ({ artists, ...rest }) => rest },
 };
 
-export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?: (val: TrackSearchResult) => void }) => {
-
-    const { onPick } = props;
-
-    const {
-        track,
-        album,
-        albumCount,
-        duration,
-        artists = []
-    } = props.data;
-
-    let albumContent: React.JSX.Element | undefined = undefined;
-    if (album !== undefined) {
+export const TrackResultAlbumContent = (props: {data: Omit<AlbumSearchResult, 'service'> & {albumCount?: number} }) => {
         const {
             albumType,
             albumTypeHint,
             country,
             date,
             name: albumName,
-            metadata: albumMetadata
-        } = album;
+            metadata: albumMetadata,
+            albumCount
+        } = props.data;
 
         const countryElm: React.JSX.Element | undefined = country !== undefined ? <CountryFlag iso={country} tooltip={(val) => `Released in ${val}`}/> : undefined;
         let locationDateInfo: React.JSX.Element | undefined = undefined;
@@ -60,11 +48,28 @@ export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?:
                 and {albumCount} more albums...
             </Text>
         ) : undefined;
-        albumContent = (<Text color="fg.muted" textStyle="sm">
+        return (<Text color="fg.muted" textStyle="sm">
             <Flex wrap="wrap" flexDirection="row" columnGap="2">
-                {albumName} {albumHints.length > 0 ? `(${albumHints.join(' -- ')})` : ''}{locationDateInfo}<MusicServiceIndicators services={albumMetadata ?? []}/> {andCount}
+                {albumName} {albumHints.length > 0 ? `(${albumHints.join(' -- ')})` : ''}{locationDateInfo}<MusicServiceIndicatorStack services={albumMetadata ?? []}/> {andCount}
             </Flex>
         </Text>)
+}
+
+export const TrackSearchResultItem = (props: { data: TrackSearchResult, onPick?: (val: TrackSearchResult) => void }) => {
+
+    const { onPick } = props;
+
+    const {
+        track,
+        album,
+        albumCount,
+        duration,
+        artists = []
+    } = props.data;
+
+    let albumContent: React.JSX.Element | undefined = undefined;
+    if (album !== undefined) {
+        albumContent = <TrackResultAlbumContent data={{...album, albumCount}}/>;
     }
 
     let artistTags: React.JSX.Element | undefined = undefined;

@@ -91,6 +91,7 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
     }
 
     router.post('/api/listenbrainz{*splat}', {
+        docs: {operationId: 'accept-a-listenbrainz-scrobble-slug'},
         bodySchema: submitPayloadSchema,
         middleware: middleware as Writable<typeof middleware>,
         tags: ['Listenbrainz Ingress'],
@@ -101,6 +102,7 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
         EX \`slug=myCoolSlug\` => \`submit-listens\` payload to \`/api/listenbrainz/myCoolSlug\``,
     }, submitRoute);
     router.post('/1/submit-listens', {
+        docs: {operationId: 'accept-a-listenbrainz-scrobble-standard'},
         middleware: middleware as Writable<typeof middleware>,
         bodySchema: submitPayloadSchema,
         tags: ['Listenbrainz Ingress'],
@@ -109,6 +111,7 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
     }, submitRoute);
 
     router.get('/1/user/:username/playing-now',{
+        docs: {operationId: 'get-playing-now'},
         tags: ['Listenbrainz Ingress'],
         summary: 'Get Playing Now',
         description: stripIndents`Tries to match username with the username set in the config of an LZ Endpoint Source.
@@ -147,6 +150,7 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
     });  
 
     router.get('/1/validate-token', {
+        docs: {operationId: 'validate-token'},
         tags: ['Listenbrainz Ingress'],
         summary: 'Validate Token',
         description: stripIndents`Always returns valid as long as any endpointlz source is configured.

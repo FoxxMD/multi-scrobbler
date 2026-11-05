@@ -3,7 +3,7 @@ import {commonClientOptionsSchema} from "./client/index.ts";
 import {requestRetryOptionsSchema} from "./common.ts";
 import {webhookConfigSchema} from "./health/webhooks.ts";
 import {commonSourceOptionsSchema, fileLogOptionsSchema, logLevelSchema, sourceRetryOptionsSchema} from "./source/index.ts";
-import {cacheConfigUserSchema} from "../Atomic.ts";
+import {cacheConfigUserSchema, durationValueSchema} from "../Atomic.ts";
 import {retentionConfigDurationValueSchema} from "./database.ts";
 import { metadataPreferredProviderSchema } from "../../../../core/Transform.ts";
 
@@ -42,6 +42,36 @@ export const metadaConfigSchema = z.object({
     preferred: metadataPreferredProviderSchema.optional()
 });
 export type MetadataConfig = z.infer<typeof metadaConfigSchema>;
+
+export const authModeSchema = z.enum(['disabled', 'default']);
+
+export const authConfigSchema = z.object({
+    mode: authModeSchema.optional().meta({
+        description: "How authentication is enforced. 'default': auth is dormant until an admin password is set. 'disabled': no authentication (use when MS is behind your own auth proxy). Can also be set with ENV AUTH_MODE",
+        default: 'optional',
+        examples: ['optional']
+    }),
+    allowedHosts: z.array(z.string()).optional().meta({
+        description: "Hosts (with optional port, wildcards allowed) the dashboard is accessed from. Restricting this enables additional origin checks. Can also be set with ENV ALLOWED_HOSTS (comma-separated)",
+        default: ['*'],
+        examples: [['ms.myDomain.tld', '192.168.0.101:9078']]
+    }),
+    secureCookies: z.boolean().optional().meta({
+        description: "Set the Secure attribute on auth cookies. Only enable if the dashboard is accessed over https. Defaults to true if baseUrl is https. Can also be set with ENV SECURE_COOKIES",
+    }),
+    trustProxy: z.boolean().optional().meta({
+        description: "Trust X-Forwarded-Host/Proto headers from a reverse proxy. Can also be set with ENV TRUST_PROXY",
+        default: false
+    }),
+    sessionExpires: durationValueSchema.optional().meta({
+        description: "How long a login lasts without using the dashboard. Each use extends it. Number of seconds, a duration string like '7 days', or ISO 8601 duration. Can also be set with ENV AUTH_SESSION_EXPIRES",
+        default: '7 days',
+        examples: ['7 days', '12 hours', 86400]
+    }),
+});
+
+export type AuthConfig = z.infer<typeof authConfigSchema>;
+export type AuthMode = z.infer<typeof authModeSchema>;
 
 export const aioConfigSchema = z.object({
     sourceDefaults: sourceDefaultsSchema.optional(),
@@ -120,6 +150,8 @@ export const aioConfigSchema = z.object({
     database: z.object({
         retention: retentionConfigDurationValueSchema.optional(),
     }).optional(),
+
+    auth: authConfigSchema.optional().meta({description: 'Configuration for dashboard/API authentication'}),
 });
 
 export type AIOConfig = z.infer<typeof aioConfigSchema>;

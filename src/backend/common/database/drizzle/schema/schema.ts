@@ -7,6 +7,8 @@ import type {ExternalMetadataTerm, PlayTransformPartsConfig, SearchAndReplaceTer
 import type {JobRangeCount, JobRangeTime} from "../../../infrastructure/Job.ts";
 import { serializeError, deserializeError } from "serialize-error";
 import { generatePlayUid } from "../../../../../core/StringUtils.ts";
+import { users, sessions, accounts, verifications, appSettings, apikeys, userSettings } from "./auth.ts";
+
 
 const DayjsTimestamp = customType<
   {
@@ -177,12 +179,17 @@ export const components = sqliteTable("components", {
   countLive: integer().notNull().default(0),
   // number of discovered/scrobbled plays from backlog/jobs
   countNonLive: integer().notNull().default(0),
+  // seconds of discovered plays (sources only), from listenedFor ?? duration
+  listenedLive: integer().notNull().default(0),
   createdAt: DayjsTimestamp('createdAt').$defaultFn(() => dayjs()),
   lastReadyAt: DayjsTimestamp('lastReadyAt'),
-  lastActiveAt: DayjsTimestamp('lastActiveAt')
+  lastActiveAt: DayjsTimestamp('lastActiveAt'),
+  // owner. Nullable at the SQL level only so the column could be added to existing databases, app always sets it.
+  userId: text().references(() => users.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
 },
 (table) => [
-  uniqueIndex('uid_mode_type_idx').on(table.uid,table.mode,table.type)
+  uniqueIndex('user_uid_mode_type_idx').on(table.userId, table.uid, table.mode, table.type),
+  index('component_user_id_idx').on(table.userId)
 ]);
 
 export const componentMigrations = sqliteTable("component_migrations", {
@@ -210,8 +217,12 @@ export const jobs = sqliteTable("jobs", {
   scrobbled: integer().notNull().default(0),
   createdAt: DayjsTimestamp('createdAt').notNull().$defaultFn(() => dayjs()),
   updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()).$onUpdate(() => dayjs()),
-  completedAt: DayjsTimestamp('completedAt')
-});
+  completedAt: DayjsTimestamp('completedAt'),
+  // owner. Nullable at the SQL level only so the column could be added to existing databases, app always sets it.
+  userId: text().references(() => users.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
+}, (table) => [
+  index('job_user_id_idx').on(table.userId)
+]);
 
 export const playEvents = sqliteTable("play_events", {
   id: integer({ mode: 'number' }).primaryKey(),
@@ -224,7 +235,7 @@ export const playEvents = sqliteTable("play_events", {
   index('play_event_id_idx').on(table.playId)
 ]);
 
-const playRelations = defineRelations({ plays, queueStates, playEvents, playInputs, components, jobs, componentMigrations,playsHistorical }, (r) => ({
+const playRelations = defineRelations({ plays, queueStates, playEvents, playInputs, components, jobs, componentMigrations, playsHistorical, users, sessions, accounts, verifications, appSettings, apikeys, userSettings }, (r) => ({
   plays: {
     queueStates: r.many.queueStates(),
     input: r.one.playInputs({
@@ -270,6 +281,10 @@ const playRelations = defineRelations({ plays, queueStates, playEvents, playInpu
     playsHistorical: r.many.plays(),
     queueStates: r.many.queueStates(),
     migrations: r.many.componentMigrations(),
+    user: r.one.users({
+      from: r.components.userId,
+      to: r.users.id,
+    }),
   },
   componentMigrations: {
     component: r.one.components({
@@ -278,13 +293,51 @@ const playRelations = defineRelations({ plays, queueStates, playEvents, playInpu
     })
   },
   jobs: {
-    plays: r.many.plays()
+    plays: r.many.plays(),
+    user: r.one.users({
+      from: r.jobs.userId,
+      to: r.users.id,
+    }),
   },
   playEvents: {
     play: r.one.plays({
       from: r.playEvents.playId,
       to: r.plays.id
     }),
+  },
+  users: {
+    sessions: r.many.sessions({
+      from: r.users.id,
+      to: r.sessions.userId,
+    }),
+    accounts: r.many.accounts({
+      from: r.users.id,
+      to: r.accounts.userId,
+    }),
+    components: r.many.components(),
+    jobs: r.many.jobs(),
+    apikeys: r.many.apikeys({
+      from: r.users.id,
+      to: r.apikeys.referenceId,
+    }),
+  },
+  sessions: {
+    user: r.one.users({
+      from: r.sessions.userId,
+      to: r.users.id,
+    })
+  },
+  accounts: {
+    user: r.one.users({
+      from: r.accounts.userId,
+      to: r.users.id,
+    })
+  },
+  apikeys: {
+    user: r.one.users({
+      from: r.apikeys.referenceId,
+      to: r.users.id,
+    })
   },
 }));
 
@@ -315,4 +368,5 @@ export const schema = {playInputs, plays, playEvents, components, componentMigra
 
 export type TSchema = typeof relations;
 export type Schema = typeof schema;
-export type TableName = keyof TSchema;
+/** App (non-auth) tables managed through MS repositories */
+export type TableName = Exclude<keyof TSchema, 'users' | 'sessions' | 'accounts' | 'verifications' | 'appSettings' | 'apikeys' | 'userSettings'>;

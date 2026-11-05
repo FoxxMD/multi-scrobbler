@@ -43,7 +43,7 @@ import { spawn, isAbortError, delay, throwIfAborted, waitForEvent } from 'abort-
 import { generateLoggableAbortReason, StageChangeError } from '../common/errors/MSErrors.ts';
 import { type QueryPlaysOpts, type RequestPlayQuery, type WithPlayRelation } from '../common/database/drizzle/repositories/PlayRepository.ts';
 import { asPlay } from '../../core/PlayMarshalUtils.ts';
-import { AsyncTask, SimpleIntervalJob, ToadScheduler } from 'toad-scheduler';
+import { AsyncTask, SimpleIntervalJob } from 'toad-scheduler';
 import { COMPONENT_STATE, type ComponentSourceApiJson, type ComponentState, type PlayApiCommonDetailed } from '../../core/Api.ts';
 import type {PaginatedResponse} from "../../core/Api.ts";
 import type { PlaySelectWithQueueStates, PlayWith } from '../common/database/drizzle/drizzleTypes.ts';
@@ -104,9 +104,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
     supportsUpstreamNowPlaying: boolean = false;
     supportsManualListening: boolean = false;
 
-    scheduler: ToadScheduler = new ToadScheduler();
-        protected initDeadTimeout: NodeJS.Timeout | undefined;
-
     protected SCROBBLE_BACKLOG_COUNT: number = 30;
 
     protected recentDiscoveredPlays: GroupedFixedPlays = new TupleMap<DeviceId, PlayUserId, FixedSizeList<ProgressAwarePlayObject>>();
@@ -157,15 +154,20 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return existingScrobble(playObjPre, existingScrobbles,  this.existingPlayOpts, log);
     }
 
+    /**
+     * Synchronous, best-effort cleanup for `using`. Stops scheduled tasks and signals running processing to stop but **does not wait** for it,
+     * see abortProcessingWithoutWaiting(). Prefer [Symbol.asyncDispose] (`await using`) or stop() whenever possible,
+     * only use `using` for components that were never started.
+     * */
     [Symbol.dispose]() {
-        this.scheduler.stop();
-        for(const job of this.scheduler.getAllJobs()) {
-            job.stop();
-            if(job.id !== undefined) {
-                this.scheduler.removeById(job.id);
-            }
-        }
+        this.stopTasks();
+        this.abortProcessingWithoutWaiting({
+            'polling': this.abortController,
+            'discovery queue processing': this.ingressQueueAbortController,
+            'dead queue processing': this.deadQueueAbortController,
+        });
     }
+    /** Stops the component and waits for all processing to stop. Prefer this (`await using`) over [Symbol.dispose] whenever possible */
     async [Symbol.asyncDispose]() {
         try {
             await this.stop({ reason: 'Instance is being destroyed' });
@@ -312,13 +314,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 await this.tryStopPolling(opts.reason);
             }
             await this.tryStopDiscoveryQueue(opts.reason);
-            this.scheduler.stop();
-            for (const job of this.scheduler.getAllJobs()) {
-                job.stop();
-                if(job.id !== undefined) {
-                    this.scheduler.removeById(job.id);
-                }
-            }
+            await this.tryStopDeadProcessing(opts.reason);
+            this.stopTasks();
             this.setStatus('Stopped');
             this.emitComponentUpdate<Partial<ComponentSourceApiJson>>({state: COMPONENT_STATE.STOPPED});
         } catch (e) {
@@ -914,6 +911,28 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return true;
     }
 
+    tryStopDeadProcessing = async (reason?: string | Error) => {
+        if(this.deadQueuePromise === undefined) {
+            this.logger.verbose(`Dead queue processing is already stopped`);
+            return;
+        }
+        if(this.deadQueueAbortController === undefined) {
+            this.logger.error('No abort controller found! Nothing to stop.');
+            return false;
+        }
+        this.deadQueueAbortController.abort(reason)
+        let timePasssed = 0;
+        while(this.deadQueuePromise !== undefined && timePasssed < (this.stopPollingWaitInterval * 10)) {
+            await sleep(this.stopPollingWaitInterval);
+            timePasssed += this.stopPollingWaitInterval;
+            this.logger.verbose(`Waiting for dead queue processing stop signal to be acknowledged (waited ${timePasssed}ms)`);
+        }
+        if(this.deadQueuePromise !== undefined) {
+            throw new Error('Could not stop dead queue processing! Or signal was lost');
+        }
+        return true;
+    }
+
     protected processDiscoveryQueue = async (signal: AbortSignal) => {
         signal.throwIfAborted();
 
@@ -1058,7 +1077,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 this.tracksDiscovered++;
                 this.tracksDiscoveredTotal++
                 try {
-                    await this.incrementCountLive();
+                    await this.incrementCountLive(1, Math.round(preCompared.data.listenedFor ?? preCompared.data.duration ?? 0));
                 } catch (e) {
                     this.logger.warn(new Error('Unable to update discovered count', {cause: e}));
                 }
@@ -1273,8 +1292,14 @@ export default abstract class AbstractSource extends AbstractComponent implement
         });
     }
 
+    /**
+     * Stop and dispose this Source.
+     *
+     * Does not remove listeners from `emitter`, it is shared with every other component and the app.
+     * A Source that adds its own listeners to it must remove them in its dispose.
+     * */
     public async destroy() {
-        this.emitter.removeAllListeners();
+        await this[Symbol.asyncDispose]();
     }
 
     protected async doBuildComponentLogger(): Promise<void> {

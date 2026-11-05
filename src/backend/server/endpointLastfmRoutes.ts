@@ -157,6 +157,7 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
     }
 
     router.post('/api/lastfm{*splat}', {
+        docs: {operationId: 'accept-a-last-fm-scrobble-slug'},
         middleware: middleware as Writable<typeof middleware>,
         bodySchema: lastfmRequestSchema,
         querySchema: looseQuery,
@@ -169,6 +170,7 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
     }, submitRoute);
 
     router.post('/2.0/', {
+        docs: {operationId: 'accept-a-last-fm-scrobble-standard'},
         middleware: middleware as Writable<typeof middleware>,
         bodySchema: lastfmRequestSchema,
         querySchema: looseQuery,

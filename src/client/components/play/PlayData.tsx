@@ -13,7 +13,8 @@ import { MSErrorBoundary } from '../ErrorBoundary.js';
 import { EditIconRaw, EllipsisButton, EyeClosedIcon, EyeIcon, hasMusicServiceIcon } from '../icons/ChakraIcons.js';
 import type { IconType } from 'react-icons/lib';
 import { capitalize, capitalizeWords } from '../../../core/StringUtils.js';
-import { getMusicServiceIconTooltip, MusicServiceIndicators } from '../musicServices/MusicServiceIndicators.js';
+import { getMusicServiceIconTooltip, MusicServiceIndicators, MusicServiceIndicatorStack } from '../musicServices/MusicServiceIndicators.js';
+import type { PublicPlay } from '../../../core/Api.js';
 
 const EmptyPlayData = () => {
     return (
@@ -158,7 +159,7 @@ const SourceMaybeLink = (props: PropsWithChildren<{link?: string}>) => {
     return <Link key="weblink" variant="underline" target="_blank" href={props.link}>{props.children}</Link>
 }
 
-export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDates, showMbid?: boolean }) => {
+export const PlayDataDataList = (props: { play: PublicPlay, dates?: DisplayDates, showMbid?: boolean }) => {
 
     const {
         play,
@@ -205,7 +206,7 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
         sourceElm = <SourceMaybeLink link={webUrl ?? originUrl}>{hasMusicServiceIcon(source) ? getMusicServiceIconTooltip(source)({size: 'md'}) : capitalizeWords(source)}</SourceMaybeLink>
     }
 
-    const titleElm = <HStack><Span>{track?.name}</Span><MusicServiceIndicators services={track?.metadata ?? []} showId={showMbid} link/></HStack>
+    const titleElm = <HStack><Span>{track?.name}</Span><MusicServiceIndicatorStack services={track?.metadata ?? []} showId={showMbid} link/></HStack>
 
     return (
             <DataList.Root className='playDataGrid'>
@@ -226,11 +227,11 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
                     <DataList.ItemValue alignItems="flex-start">
                         <HStack>
                             {play.data.album?.name}
-                            <MusicServiceIndicators services={play.data.album?.metadata ?? []} showId={showMbid} link/>
+                            <MusicServiceIndicatorStack services={play.data.album?.metadata ?? []} showId={showMbid} link/>
                         </HStack>
                     </DataList.ItemValue>
                 </DataList.Item>
-                <PlayDatesStack play={play} dates={dates} />
+                {dates !== undefined ? <PlayDatesStack play={play} dates={dates} /> : undefined}
                 <DataList.Item>
                     <DataList.ItemLabel>Duration</DataList.ItemLabel>
                     <DataList.ItemValue>

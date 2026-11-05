@@ -1,0 +1,1 @@
+ALTER TABLE `components` ADD `listenedLive` integer DEFAULT 0 NOT NULL;

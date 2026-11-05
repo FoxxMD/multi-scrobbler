@@ -157,10 +157,17 @@ export default class MixcloudSource extends AbstractSource {
         }
     }
 
+    /** Mixcloud OAuth has no `state` parameter so it is carried in the redirect uri, which must be identical for authorize and token exchange */
+    protected stateRedirectUri = () => {
+        const u = new URL(this.redirectUri!);
+        u.searchParams.set('state', this.oauthState);
+        return u.toString();
+    }
+
     createAuthUrl = () => {
         const u = new URL(`${this.oauthBaseUrl}/authorize`);
         u.searchParams.set('client_id', this.config.data.clientId!);
-        u.searchParams.set('redirect_uri', this.redirectUri!);
+        u.searchParams.set('redirect_uri', this.stateRedirectUri());
         return u.toString();
     }
 
@@ -179,7 +186,7 @@ export default class MixcloudSource extends AbstractSource {
                 .query({
                     client_id: this.config.data.clientId,
                     client_secret: this.config.data.clientSecret,
-                    redirect_uri: this.redirectUri,
+                    redirect_uri: this.stateRedirectUri(),
                     code
                 });
             const token = resp.body?.access_token;

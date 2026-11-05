@@ -1,4 +1,5 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
+import { randomBytes } from "node:crypto";
 import {
     cacheFunctions,
 } from "@foxxmd/regex-buddy-core";
@@ -17,6 +18,7 @@ import {
     type TransformHook
 } from "../../core/Transform.ts";
 import AbstractInitializable from "./AbstractInitializable.ts";
+import { ToadScheduler } from "toad-scheduler";
 import type TransformerManager from "./transforms/TransformerManager.ts";
 import { getRoot } from "../ioc.ts";
 import { nanoid } from "nanoid";
@@ -61,6 +63,10 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     declare config: CommonClientConfig | CommonSourceConfig;
 
+    scheduler: ToadScheduler = new ToadScheduler();
+    /** delays adding the Dead task to the scheduler, see initTasks() */
+    protected initDeadTimeout: NodeJS.Timeout | undefined;
+
     transformRules: PlayTransformRules = {};
     regexCache!: ReturnType<typeof cacheFunctions>;
     protected transformManager: TransformerManager;
@@ -72,6 +78,52 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     protected queueRepo!: DrizzleQueueRepository;
     protected playEventsRepo!: DrizzlePlayEventsRepository;
     componentId!: number;
+
+    /**
+     * Stop and remove all scheduled tasks, including the pending delayed Dead task
+     * (otherwise it adds itself to the scheduler after the component is stopped/disposed)
+     * */
+    protected stopTasks() {
+        clearTimeout(this.initDeadTimeout);
+        this.initDeadTimeout = undefined;
+        this.scheduler.stop();
+        for (const job of this.scheduler.getAllJobs()) {
+            job.stop();
+            if (job.id !== undefined) {
+                this.scheduler.removeById(job.id);
+            }
+        }
+    }
+
+    /**
+     * For [Symbol.dispose] only: signal running processing (polling, queues) to stop **without waiting** for it to stop.
+     *
+     * Best-effort and never throws (dispose must not). Work in progress keeps running until it reaches an abort check,
+     * so after this returns a play may still be mid-processing (DB writes, network calls) and the component may still emit events.
+     * Use [Symbol.asyncDispose] (`await using`) or stop() whenever possible, they wait for processing to actually stop.
+     * */
+    protected abortProcessingWithoutWaiting(processes: Record<string, AbortController | undefined>) {
+        const aborted: string[] = [];
+        for (const [name, controller] of Object.entries(processes)) {
+            if (controller === undefined || controller.signal.aborted) {
+                continue;
+            }
+            try {
+                controller.abort('Instance is being disposed');
+                aborted.push(name);
+            } catch (e) {
+                try {
+                    this.logger.warn(new Error(`Could not signal ${name} to stop while disposing`, {cause: e}));
+                } catch {
+                    // dispose must never throw
+                }
+            }
+        }
+        if (aborted.length > 0) {
+            this.logger.debug(`Disposed synchronously while running ${aborted.join(', ')}: signalled to stop but did not wait for it. Use [Symbol.asyncDispose] (await using) or stop() to wait for processing to stop.`);
+        }
+    }
+
     protected retentionOpts: RetentionOptions;
     status: string = 'Waiting to initialize...';
     emitter!: EventEmitter;
@@ -85,6 +137,17 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     protected componentType!: ComponentType;
     type!: ClientType | SourceType;
     name!: string;
+
+    /**
+     * Secret sent through third-party auth flows (OAuth `state`, or in the callback URL) and checked when the callback returns.
+     * Ties a callback to an auth flow started from this instance, so a link carrying someone else's authorization code
+     * can't connect this component to their account. Rotated after each successful authorization.
+     * */
+    oauthState: string = randomBytes(16).toString('base64url');
+
+    rotateOAuthState() {
+        this.oauthState = randomBytes(16).toString('base64url');
+    }
 
     lastActiveAt?: Dayjs;
     lastReadyAt?: Dayjs;
@@ -159,10 +222,11 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     /**
      * Add to this component's lifetime Discovered/Scrobbled total, in the database and on
-     * the in-memory row, and return the new total.
+     * the in-memory row, and return the new total. `listened` (seconds) is added to listenedLive.
      */
-    protected async incrementCountLive(by: number = 1): Promise<number> {
-        this.dbComponent.countLive = await this.componentRepo.incrementCountLive(this.dbComponent.id, by);
+    protected async incrementCountLive(by: number = 1, listened: number = 0): Promise<number> {
+        this.dbComponent.countLive = await this.componentRepo.incrementCountLive(this.dbComponent.id, by, listened);
+        this.dbComponent.listenedLive += listened;
         return this.dbComponent.countLive;
     }
 
@@ -694,6 +758,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             mode: this.dbComponent.mode,
             monitoringStatus: this.getMonitoringStatus(),
             countNonLive: this.dbComponent.countNonLive,
+            listenedLive: this.dbComponent.listenedLive,
             createdAt: this.dbComponent.createdAt?.toISOString(),
             lastReadyAt: this.lastReadyAt?.toISOString(),
             lastActiveAt: this.lastActiveAt?.toISOString(),

@@ -29,6 +29,9 @@ const createYtSource = async (opts?: {
         emitter = new EventEmitter
     } = opts || {};
     const source = new YTMusicSource('test', {id: `test-${Date.now()}`, ...config}, { localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test' }, emitter);
+    // production defaults idle 1s before the discovery queue reports empty (queueEmptied) and poll stop() every 200ms
+    source.queueIdleMs = 1;
+    source.stopPollingWaitInterval = 10;
     await source.buildDatabase();
     await source.buildTransformRules();
     return source;
@@ -217,10 +220,11 @@ describe('Handles interim tracks', function () {
 
         // add new track played
         const firstPlay = generatePlay({duration: 120}, { comment: 'Today' });
-        const interimPlays = [generatePlay({duration: 40}, { comment: 'Today' }), generatePlay({duration: 200}, { comment: 'Today' })]
+        // last discovered track was 2 minutes ago and 50% of both interim tracks (20s + 50s) fits in that, so both should be added
+        const interimPlays = [generatePlay({duration: 40}, { comment: 'Today' }), generatePlay({duration: 100}, { comment: 'Today' })]
         const prependedPlays = [firstPlay, ...interimPlays, ...plays];
         const prependResult = source.parseRecentAgainstResponse(prependedPlays);
-        expect(prependResult.plays).length(1);
+        expect(prependResult.plays).length(3);
         expect(prependResult.plays[prependResult.plays.length - 1].data.track?.name).eq(firstPlay.data.track?.name)
     });
 });

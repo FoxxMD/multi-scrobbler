@@ -15,6 +15,9 @@ import { MSComponentListFetchable } from './components/msComponent/MSComponentLi
 import { Provider } from './components/Provider';
 import { SettingsContainer } from './components/settings/settings';
 import { Toaster } from './components/Toaster';
+import { AuthGate, LoginForm, LogOut, SetPasswordForm } from './components/auth/Auth';
+import { useHasAccess } from './auth/authClient';
+import type { PropsWithChildren } from 'react';
 
 function NoMatch() {
     const location = useLocation();
@@ -61,7 +64,7 @@ const Layout = () => {
     </Box>
     <Container display="flex">
         <Box hideBelow="md" display="flex" flexDir="column" pr="2" gap="6" flexShrink="1"></Box>
-        <Outlet/>
+        <AuthGate><Outlet/></AuthGate>
     </Container>
     </>);
 }
@@ -78,6 +81,18 @@ const routesNested: RouteObject[] = [
         {
             path: "components/:componentId",
             element: <Container boxSize="full" p="0" maxWidth="8xl"><MSErrorBoundary><ComponentDetailedRoutable/></MSErrorBoundary></Container>
+        },
+        {
+            path: "login",
+            element: <LoginForm/>
+        },
+        {
+            path: "logout",
+            element: <LogOut/>
+        },
+        {
+            path: "setup",
+            element: <SetPasswordForm/>
         },
         {
             path: "settings",
@@ -110,14 +125,20 @@ export const sseProviderOptions = {
     coordination: {enabled: true}
 }
 
+/** live events stream is gated like the rest of the API, only connect once the user has access */
+const AuthAwareSSEProvider = (props: PropsWithChildren) => {
+    const {ready, hasAccess} = useHasAccess();
+    return <SSEProvider<MsSseEvent> options={{...sseProviderOptions, enabled: ready && hasAccess}}>{props.children}</SSEProvider>;
+}
+
 function App() {
   return (
       <Provider>
             <Toaster/>
         {/* <Box px="4" py="2" pb="4"><AppHeader fetchable/></Box> */}
-            <SSEProvider<MsSseEvent> options={sseProviderOptions}>
+            <AuthAwareSSEProvider>
             <RouterProvider router={router}/>
-            </SSEProvider>
+            </AuthAwareSSEProvider>
       </Provider>
   );
 }

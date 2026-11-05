@@ -18,7 +18,7 @@ import type {DbConcrete} from "./common/database/drizzle/drizzleUtils.ts";
 import type { MSBackendEventMap } from "./common/infrastructure/MSBackendEventMap.ts";
 import { setRootCommon } from "./iocCommon.ts";
 import type { RockskySingletonMap } from "./common/vendor/rocksky/RockskyClientWrapped.ts";
-import type { MetadataConfig } from "./common/infrastructure/config/aioConfig.ts";
+import type { AuthConfig, MetadataConfig } from "./common/infrastructure/config/aioConfig.ts";
 let root: ReturnType<typeof createRoot>;
 export interface RootOptions {
     baseUrl?: string,
@@ -34,6 +34,7 @@ export interface RootOptions {
     transformers?: TransformerCommonConfig[]
     metadata?: MetadataConfig
     db?: DbConcrete | (() => Promise<DbConcrete>)
+    auth?: AuthConfig
 }
 
 const discovered = new prom.Counter({
@@ -81,6 +82,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         caMap,
         db,
         metadata,
+        auth: authConfig,
         transformers = []
     } = options || {};
     let disableWeb = dw;
@@ -209,6 +211,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         rsMap: () => maybeSingletonRs !== undefined ? () => maybeSingletonRs : rsFunc,
         caMap: () => maybeSingletonCa !== undefined ? () => maybeSingletonCa : caFunc,
         coverArtApi,
+        authConfig,
         db: () => dbFunc
     }).add((items) => {
         const localUrl = generateBaseURL(baseUrl, items.port)

@@ -16,7 +16,7 @@ import { CALCULATED_PLAYER_STATUSES } from '../../Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../Atomic.ts';
 import type {PlayPlatformId} from '../../Atomic.ts';
 import { arrayListAnd } from '../../StringUtils.ts';
-import { nameToCredit } from "../../MusicMetadata.ts";
+import { isrcMeta, nameToCredit, spotifyMeta } from "../../MusicMetadata.ts";
 import { namesToCredits } from "../../MusicMetadata.ts";
 import { creditMbid, mbMeta, withMetadata } from '../../MusicMetadata.ts';
 import { type MBIdType } from "../../Atomic.ts";
@@ -179,21 +179,51 @@ export const generatePlayerStateData = (options: Omit<PlayerStateDataMaybePlay, 
 export interface GeneratePlayOpts {
     playDateCompleted?: boolean,
     listenRanges?: boolean
+    /** randomly add music service ids (mbids, isrc, spotify) to track, artists and album. Default generatePlayDefaults.serviceIds */
+    serviceIds?: boolean
 }
+
+/**
+ * Defaults for generatePlay.
+ *
+ * serviceIds is off so tests get plays without ids unless they ask for them (many assert on missing ids),
+ * storybook turns it on (.storybook/preview.ts) so UI stories render realistic service indicators.
+ * */
+export const generatePlayDefaults = {
+    serviceIds: false,
+};
 export const generatePlay = (data: ObjectPlayData = {}, meta: PlayMeta = {}, opts: GeneratePlayOpts = {}): PlayObject => {
     const {
         playDateCompleted = false,
         listenRanges = false,
+        serviceIds = generatePlayDefaults.serviceIds,
     } = opts;
+    // a random id, or undefined (no id) half the time. always undefined without serviceIds
+    const maybe = <T,>(gen: () => T): T | undefined => serviceIds ? faker.helpers.arrayElement([gen(), undefined]) : undefined;
 
     const duration = faker.number.int({min: 30, max: 300});
     const play: PlayObject = {
         data: {
-            track: nameToCredit(faker.music.songName()),
-            artists: namesToCredits(faker.helpers.multiple(faker.music.artist, {count: {min: 1, max: 3}})),
+            track: nameToCredit(
+                        faker.music.songName(),
+                        mbMeta(maybe(generateMbid), 'recording'),
+                        mbMeta(maybe(generateMbid), 'track'),
+                        isrcMeta(maybe(generateISRC)),
+                        spotifyMeta(maybe(() => faker.string.alphanumeric(4)), 'track')
+                    ),
+            artists: faker.helpers.multiple(faker.music.artist, {count: {min: 1, max: 3}}).map((x) => nameToCredit(
+                        x,
+                        mbMeta(maybe(generateMbid), 'artist'),
+                        spotifyMeta(maybe(() => faker.string.alphanumeric(4)), 'artist')
+                    )),
             duration,
             playDate: dayjs().subtract(faker.number.int({min: 1, max: 800})),
-            album: nameToCredit(faker.music.album()),
+            album: nameToCredit(
+                        faker.music.album(),
+                        mbMeta(maybe(generateMbid), 'release'),
+                        mbMeta(maybe(generateMbid), 'release-group'),
+                        spotifyMeta(maybe(() => faker.string.alphanumeric(4)), 'track')
+                    ),
             listenedFor: faker.number.int({min: duration * 0.5, max: duration}),
             ...data
         },

@@ -88,11 +88,7 @@ services:
 
 <Aside type="important">
 
-
-If your machine is accessible from the public internet consider installing multi-scrobbler on a different, private machine.
-
-**Read [Securing Multi-Scrobbler](/configuration/security)**
-
+**Read [Securing Multi-Scrobbler](/security/overview)**
 
 </Aside>
 
@@ -461,14 +457,6 @@ When parsing these ENVs MS will resolve relative directories but *not* bash expa
 ## Reverse Proxy Recommended
 
 Multi-Scrobbler's UI performs best when it is behind a reverse proxy, like NGINX (NPM) Traefik or Caddy.
-
-<details>
-
-<summary>Why: Security</summary>
-
-Most reverse proxies have easy ways to set up basic authentication [which a necessity](/configuration/security/) if you plan on running Multi-Scrobbler on a machine directly exposed to the internet.
-
-</details>
 
 <details>
 

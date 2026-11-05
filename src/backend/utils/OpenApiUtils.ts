@@ -8,6 +8,10 @@ import { writeFileSync } from "node:fs";
 import { resolve } from "path";
 import { projectRootDir } from "../common/infrastructure/Atomic.ts";
 import { stripIndents } from "common-tags";
+import { getRoot } from "../ioc.ts";
+import { getMigratedDb } from "../common/database/appMigrator.ts";
+import { MEMORY_DB_NAME } from "../common/database/Database.ts";
+import { SECURITY_SCHEMES } from "../server/requireAuth.ts";
 
 const description = stripIndents`
 The Multi-Scrobbler server API is documented in **OpenAPI format** and includes
@@ -32,6 +36,8 @@ The endpoints documented here, other than those in Ingress categories, are **sub
 `
 
 export const getOpenApiDoc = async () => {
+    // server setup (auth) needs a database, an in-memory one is enough to build the spec
+    getRoot({logger: loggerTest, db: async () => (await getMigratedDb(MEMORY_DB_NAME))[0]});
     const internalConfig = { localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test' };
     const clients = new ScrobbleClients(new WildcardEmitter(), new WildcardEmitter(), internalConfig, loggerTest);
     const sources = new ScrobbleSources(new WildcardEmitter(), internalConfig, loggerTest);
@@ -40,21 +46,9 @@ export const getOpenApiDoc = async () => {
     const spec = await generateOpenApiSpec(router, {
         title: 'Multi-Scrobbler API',
         version: '0.1.0',
-        description: description
+        description: description,
+        securitySchemes: SECURITY_SCHEMES,
     });
-    // express-typed-router can't set operationId, so derive it from the summary.
-    // The docs site (starlight-openapi) uses it as the page slug: /api/operations/<operationId>/
-    const operationIds = new Set<string>();
-    for (const [path, pathItem] of Object.entries(spec.paths)) {
-        for (const [method, op] of Object.entries(pathItem as Record<string, { summary: string, operationId?: string }>)) {
-            const id = op.summary.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-            if (operationIds.has(id)) {
-                throw new Error(`Duplicate operationId '${id}' for ${method.toUpperCase()} ${path}. Give this route a unique summary.`);
-            }
-            operationIds.add(id);
-            op.operationId = id;
-        }
-    }
     return spec;
 }
 

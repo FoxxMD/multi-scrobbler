@@ -1,0 +1,59 @@
+import preview from "../../../.storybook/preview.js";
+import React from 'react';
+import { Container } from '@chakra-ui/react';
+
+import { Provider } from "../../client/components/Provider.js";
+import { MusicServiceIndicatorStack } from "../../client/components/musicServices/MusicServiceIndicators.js";
+import { generateMusicService } from "../../core/tests/utils/apiFixtures.js";
+
+const meta = preview.type<{ args: React.ComponentProps<typeof MusicServiceIndicatorStack> }>().meta({
+    title: 'Music Service/Indicator Stack',
+    component: MusicServiceIndicatorStack,
+    parameters: {
+        layout: 'padded',
+    },
+    decorators: [
+        (Story) => (<Provider><Container maxWidth="8xl" pt="10"><Story /></Container></Provider>),
+    ],
+    args: {
+        services: [
+            generateMusicService({name: 'musicbrainz'}),
+            generateMusicService({name: 'spotify'}),
+            generateMusicService({name: 'isrc'}),
+            generateMusicService({name: 'musicbrainz'}),
+        ],
+    },
+});
+
+export const Default = meta.story({});
+
+export const Overflow = meta.story({
+    args: {
+        max: 2,
+        count: 2401,
+    }
+});
+
+export const NoRing = meta.story({
+    args: {
+        ring: false,
+    }
+});
+
+/** same service with different id types merge into one indicator, its popover links each id type */
+export const Merged = meta.story({
+    args: {
+        services: [
+            generateMusicService({name: 'musicbrainz', idType: 'release'}),
+            generateMusicService({name: 'musicbrainz', idType: 'release-group'}),
+            generateMusicService({name: 'spotify'}),
+        ],
+    }
+});
+
+export const MergedNoRing = meta.story({
+    args: {
+        ...Merged.input.args,
+        ring: false,
+    }
+});

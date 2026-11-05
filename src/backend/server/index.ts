@@ -1,12 +1,12 @@
 import express from 'express';
-import type { Express } from 'express';
+import { randomBytes } from 'node:crypto';
+import type { Express, RequestHandler } from 'express';
 import { childLogger, loggerTest, type LogDataPretty, type Logger } from "@foxxmd/logging";
 import bodyParser from 'body-parser';
 import { stripIndents } from "common-tags";
 import session from 'express-session';
 import type { Server } from "node:http";
 import type { PassThrough } from "node:stream";
-import passport from 'passport';
 import path from "path";
 import qs from 'qs';
 import ViteExpress from "vite-express";
@@ -14,12 +14,20 @@ import { getRoot } from "../ioc.ts";
 import { parseBool } from "../utils.ts";
 import { getAddress } from "../utils/NetworkUtils.ts";
 import { setupApi } from "./api.ts";
-import { errorHandlerMiddleware, safeModeMiddleware, WebFault } from "./middleware.ts";
+import { clientIpMiddleware, errorHandlerMiddleware, safeModeMiddleware, sameOriginMiddleware, securityHeadersMiddleware, WebFault } from "./middleware.ts";
+import { toNodeHandler } from "better-auth/node";
+import { authBasePath, createAuth, type MSAuth, type PasswordHasher } from "../common/auth/auth.ts";
+import { resolveAuthSettings, type AuthSettings } from "../common/auth/authSettings.ts";
+import { getDataDir } from "../common/index.ts";
+import { applyOwnerPasswordEnv } from "../common/auth/ownerPassword.ts";
+import { AuthStateStore } from "../common/auth/authState.ts";
+import { optionalAuth, requireAuth, SECURITY_PUBLIC, SECURITY_REQUIRED } from "./requireAuth.ts";
+import type { DbConcrete } from "../common/database/drizzle/drizzleUtils.ts";
 import type ScrobbleSources from '../sources/ScrobbleSources.ts';
 import type ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
 import { qsOptions } from '../../core/Atomic.ts';
 import { projectRootDir } from "../common/infrastructure/Atomic.ts";
-import { createTypedRouter } from "@minisylar/express-typed-router";
+import { createTypedRouter, type ValidationFailureHook } from "@minisylar/express-typed-router";
 
 export interface ServerArgs {
     sources: ScrobbleSources
@@ -31,6 +39,17 @@ export interface ServerOptions {
     initialOutput?: LogDataPretty[]
     testMode?: boolean
     webFault?: WebFault
+    /** override resolved auth settings (tests) */
+    authSettings?: Partial<AuthSettings>
+    /** override password hashing (tests) */
+    passwordHasher?: PasswordHasher
+}
+
+export interface ServerLocals {
+    auth: MSAuth
+    authSettings: AuthSettings
+    authState: AuthStateStore
+    db: DbConcrete
 }
 
 export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Promise<[Express, ReturnType<typeof createTypedRouter>, Server?]> => {
@@ -51,10 +70,19 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
     const webFault = opts.webFault ?? new WebFault(logger);
 
 
-    const router = createTypedRouter().onValidationFailure((info) => {
+    const onValidationFailure: ValidationFailureHook = (info) => {
         const {req, ...rest} = info;
         logger.warn(rest, 'Request failed validation');
-    });
+    };
+    // Routes that never require auth: ingress Sources (own auth), health/version/metrics.
+    // Mounted first so they are matched before anything that requires auth.
+    const publicRouter = createTypedRouter().onValidationFailure(onValidationFailure).security(SECURITY_PUBLIC);
+    // Everything else under /api. Requires auth via router-level middleware (added below once auth is set up)
+    // so any new route is protected by default. Mounted at /api so that middleware never runs for the dashboard/static assets.
+    const apiRouter = createTypedRouter().onValidationFailure(onValidationFailure).security(SECURITY_REQUIRED);
+    const router = createTypedRouter().onValidationFailure(onValidationFailure);
+    router.use(publicRouter);
+    router.use('/api', apiRouter);
 
     try {
         const root = getRoot();
@@ -67,7 +95,47 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
 
         // mount API routes under the same prefix the frontend's relative
         // `api/...` fetches resolve against
+        app.use(securityHeadersMiddleware);
         app.use(basePath, safeModeMiddleware(webFault));
+
+        let optionalAuthMiddleware: RequestHandler | undefined;
+        const hiddenFromWeb: string[] = [];
+        if(!root.get('disableWeb')) {
+            const authLogger = childLogger(logger, 'Auth');
+            const db = await root.items.db();
+            const authSettings: AuthSettings = {
+                ...resolveAuthSettings({
+                    config: root.get('authConfig'),
+                    localUrl: local,
+                    hasDefinedBaseUrl: localDefined,
+                    // tests use an ephemeral secret
+                    dataDir: opts.testMode === true ? undefined : getDataDir(),
+                    logger: authLogger
+                }),
+                ...(opts.authSettings ?? {})
+            };
+            const auth = createAuth(db, authSettings, {basePath, logger: authLogger, onStateChange: () => authState.refresh(), passwordHasher: opts.passwordHasher});
+            await applyOwnerPasswordEnv(auth, db, authSettings.secret, authLogger);
+            const authState: AuthStateStore = await new AuthStateStore(auth, db).refresh();
+            const locals: ServerLocals = {auth, authSettings, authState, db};
+            Object.assign(app.locals, locals);
+            // must be mounted before the router (and its body parsing) so better-auth gets the raw request
+            // and so /api/auth/callback/* is not caught by the source auth callback route
+            // client IP for better-auth's rate limiter and the login/API key audit logs
+            app.use(clientIpMiddleware({trustProxy: authSettings.trustProxy}));
+            app.all(`${authBasePath(basePath)}/*splat`, sameOriginMiddleware({trustProxy: authSettings.trustProxy}), toNodeHandler(auth));
+            apiRouter.useMiddleware(requireAuth({auth, settings: authSettings, state: authState, logger: authLogger, basePath}));
+            hiddenFromWeb.push(authSettings.setupToken);
+            optionalAuthMiddleware = optionalAuth({auth, settings: authSettings, state: authState, logger: authLogger});
+            if(authSettings.mode !== 'disabled' && !authState.secured) {
+                authLogger.warn('Dashboard and API are not secured! Set an admin password from the dashboard or with ADMIN_SETUP_PW.');
+                if(authSettings.setupTokenGenerated) {
+                    authLogger.warn(`Setup token (required to secure this instance from the dashboard${authSettings.setupTokenAlways ? '' : ' when connecting from what looks like the internet, or through a domain it does not recognize'}): ${authSettings.setupToken}`);
+                }
+            }
+            authLogger.verbose(`Auth mode: ${authSettings.mode} | Allowed Hosts: ${authSettings.allowedHosts.join(', ')} | Secure Cookies: ${authSettings.secureCookies ? 'Yes' : 'No'} | Trust Proxy: ${authSettings.trustProxy ? 'Yes' : 'No'} | Session Expires: ${authSettings.sessionExpiresIn}s`);
+        }
+
         app.use(basePath, router.getRouter());
         app.use(bodyParser.json());
         app.use(
@@ -78,10 +146,8 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
 
         //app.use(express.static(buildDir));
 
-        router.use(session({secret: 'keyboard cat', resave: false, saveUninitialized: false}));
-        app.use(session({secret: 'keyboard cat', resave: false, saveUninitialized: false}));
-        app.use(passport.initialize());
-        app.use(passport.session());
+        // only holds dashboard log view preferences, in memory, so a per-process random secret is enough
+        apiRouter.use(session({secret: randomBytes(32).toString('hex'), resave: false, saveUninitialized: false}));
 
         if(root.get('disableWeb')) {
             logger.warn('API and Dashboard have been DISABLED. Note that any ingress sources (Webscrobbler, Listenbrainz/Lastfm Endpoint Sources, etc...) will be unusable');
@@ -89,7 +155,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
             return [app, router];
         }
 
-        setupApi({app, router, scrobbleSources: sources, scrobbleClients: clients}, {...opts, logger, webFault});
+        setupApi({app, router: apiRouter, publicRouter, optionalAuth: optionalAuthMiddleware, hiddenFromWeb, scrobbleSources: sources, scrobbleClients: clients}, {...opts, initialLogOutput: opts.initialOutput, logger, webFault});
         app.use(errorHandlerMiddleware(logger));
 
         if(opts.testMode === true) {

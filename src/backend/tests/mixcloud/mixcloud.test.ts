@@ -168,7 +168,8 @@ describe('Mixcloud Source', function () {
                 const url = new URL(source.createAuthUrl()!);
                 expect(url.origin + url.pathname).to.equal('https://www.mixcloud.com/oauth/authorize');
                 expect(url.searchParams.get('client_id')).to.equal('cid');
-                expect(url.searchParams.get('redirect_uri')).to.equal('http://test/api/mixcloud/callback?name=Test');
+                // Mixcloud has no OAuth state param so the state is carried in the redirect uri
+                expect(url.searchParams.get('redirect_uri')).to.equal(`http://test/api/mixcloud/callback?name=Test&state=${source.oauthState}`);
             } finally {
                 cleanup();
             }
@@ -196,7 +197,8 @@ describe('Mixcloud Source', function () {
                     const expected = {
                         client_id: 'cid',
                         client_secret: 'secret',
-                        redirect_uri: 'http://test/api/mixcloud/callback?name=Test',
+                        // must be identical to the authorize request's, including the state
+                        redirect_uri: 'http://test/api/mixcloud/callback?name=Test&state=testState',
                         code: 'thecode'
                     };
                     for (const [key, value] of Object.entries(expected)) {
@@ -218,6 +220,7 @@ describe('Mixcloud Source', function () {
                 const { source, cleanup } = createAuthSource();
                 try {
                     await source.buildInitData();
+                    source.oauthState = 'testState';
                     const result = await source.handleAuthCodeCallback({ code: 'thecode' });
                     expect(result).to.be.true;
                     expect(source.accessToken).to.equal('tok123');

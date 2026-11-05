@@ -1,14 +1,16 @@
-import { HStack, Icon, Separator, StackSeparator, type IconProps, Span, Badge, Tag } from "@chakra-ui/react";
-import { EditButton, EditIcon, EditIconRaw, getMusicServiceIcon, getMusicServiceIconElement, XButton, XIcon } from "../icons/ChakraIcons";
-import { musicServicesSchema, musicServiceIdBaseSchema, musicServiceBaseSchema, musicServiceName, type MusicServicesAny, type MusicServices, type MusicServiceBase, type MusicServiceName, type MusicServiceIdBase } from '../../../core/Atomic';
-import { capitalize } from "../../../core/StringUtils";
+import { Box, HStack, Icon, StackSeparator, type IconProps, Span, Badge, Tag, Popover, Portal, Stack, Link, chakra, useChakraContext } from "@chakra-ui/react";
+import { EditIcon, getMusicServiceIconElement, getMusicServiceIconOrDefault, XIcon } from "../icons/ChakraIcons";
+import { musicServicesSchema, musicServiceBaseSchema, type MusicServicesAny, type MusicServices, type MusicServiceBase, type MusicServiceIdBase } from '../../../core/Atomic';
+import { capitalize, capitalizeWords } from "../../../core/StringUtils";
 import { Muted } from "../Typography";
 import { Tooltip } from "../ChakraTooltip";
 import type React from "react";
 import { LuExternalLink } from "react-icons/lu";
-import { useState, type ComponentProps } from "react";
+import { useId, useState, type ComponentProps } from "react";
 import { linkFromMusicService } from "../../../core/MusicMetadata";
 import { MusicServiceInput } from "./MusicServiceEditable";
+import { ChakraClip } from "../ChakraClipboard";
+import { spreadContainerCss, spreadItemCss, useTouchSpread } from "../useTouchSpread";
 
 const getMusicServiceLinkFromProps = (link: boolean | string, val: MusicServicesAny): string | undefined => {
     if (typeof link === 'string') {
@@ -61,7 +63,7 @@ export const MusicServiceInfoIcon = (props: MusicServiceInfoIconProps) => {
         } else {
             toolTipContent = data.name;
         }
-        return <Tooltip content={toolTipContent} interactive><HStack>{content}</HStack></Tooltip>
+        return <Tooltip positioning={{ placement: "top-start" }} content={toolTipContent} interactive><HStack>{content}</HStack></Tooltip>
     }
     return content;
 }
@@ -96,7 +98,7 @@ export const MusicServiceInfoDisplay = (props: MusicServiceInfoDisplayProps) => 
         <Tag.Label>
             <HStack>
                 <Muted textStyle="xs">{idHintContent}</Muted>
-                <Tooltip interactive contentProps={{ userSelect: "all" }} closeDelay={300} content={data.id}><Span userSelect="all" maxW="200px" truncate>{data.id}</Span></Tooltip>
+                <Tooltip positioning={{ placement: "top-start" }} interactive contentProps={{ userSelect: "all" }} closeDelay={300} content={data.id}><Span userSelect="all" maxW="200px" truncate>{data.id}</Span></Tooltip>
             </HStack>
         </Tag.Label>
         {editable === true ? (
@@ -120,6 +122,8 @@ export interface MusicServiceIndicatorProps {
     onRemove?: () => void
     useWith?: string[]
     tooltip?: boolean
+    /** false shows only the summary tooltip, no popover */
+    interactive?: boolean
 }
 
 export const MusicServiceIndicator = (props: MusicServiceIndicatorProps) => {
@@ -142,10 +146,150 @@ export const MusicServiceIndicator = (props: MusicServiceIndicatorProps) => {
     }
 
     if (musicServiceBaseSchema.validate(data)) {
-        return <MusicServiceInfoIcon tooltip {...props} />
+        return <MusicServiceIndicatorPopover services={[data]} iconProps={rest.iconProps} link={rest.link} interactive={rest.interactive}/>
     }
 
     return <Icon tooltip {...rest}><LuExternalLink /></Icon>
+}
+
+/**
+ * Group services by name, keeping first seen order.
+ * The same service with different idTypes (ie musicbrainz release + release-group) becomes one merged indicator.
+ * */
+export const groupMusicServices = (services: MusicServicesAny[]): MusicServicesAny[][] => {
+    const groups = new Map<string, MusicServicesAny[]>();
+    for (const x of services) {
+        const group = groups.get(x.name);
+        if (group === undefined) {
+            groups.set(x.name, [x]);
+        } else {
+            group.push(x);
+        }
+    }
+    return Array.from(groups.values());
+}
+
+const serviceLabel = (name: string) => name === 'isrc' ? 'ISRC' : capitalize(name);
+const idTypeLabel = (x: MusicServicesAny): string | undefined => 'idType' in x && x.idType !== undefined ? capitalizeWords(x.idType.replaceAll('-', ' ')) : undefined;
+
+/**
+ * box-shadow for a merged indicator: a second circle peeking out behind, like a stack of cards,
+ * with a cutout ring (the second shadow, 2px larger) in `outlineColor` so it is separated from the front circle and neighbours.
+ * The element it is applied to must be rounded, the shadow follows its shape.
+ * */
+const useMergedShadow = (outlineColor: ComponentProps<typeof Box>['outlineColor'] = 'bg') => {
+    // box-shadow can't take color tokens, resolve to css vars (or use as-is when not a token, ie '#fff')
+    const {token} = useChakraContext();
+    const ringColor = typeof outlineColor === 'string' ? token.var(`colors.${outlineColor}`, outlineColor) : token.var('colors.bg');
+    return `6px -1px 0 0px ${token.var('colors.border.emphasized')}, 6px -1px 0 2px ${ringColor}`;
+}
+/** extra space beside a merged indicator so its peeking circle doesn't crowd neighbours */
+const mergedMarginX = 'var(--chakra-spacing-0\\.5)';
+
+export interface MusicServiceIndicatorPopoverProps {
+    /** services with the same name, more than one is shown as one merged indicator */
+    services: MusicServicesAny[]
+    iconProps?: IconProps
+    link?: boolean | string
+    /** false shows only the summary tooltip, no popover. Default true */
+    interactive?: boolean
+    /** show merged services as a circle peeking out behind the icon. False when a parent draws it (ie the stack's ring). Default true */
+    mergedShadow?: boolean
+    /** color of the merged shadow's cutout ring, should match the background. Default 'bg' */
+    outlineColor?: ComponentProps<typeof Box>['outlineColor']
+}
+
+/**
+ * Service icon with a summary tooltip (service + id types) on hover.
+ * Click/tap opens a popover with each id and its link, so merged services keep a link per id type.
+ * */
+export const MusicServiceIndicatorPopover = (props: MusicServiceIndicatorPopoverProps) => {
+    const {
+        services,
+        iconProps = {},
+        link = true,
+        interactive = true,
+        mergedShadow = true,
+        outlineColor,
+    } = props;
+    const triggerId = useId();
+    const [open, setOpen] = useState(false);
+
+    const name = services[0].name;
+    const label = serviceLabel(name);
+    const types = services.map(idTypeLabel).filter(x => x !== undefined);
+    const summary = types.length > 0 ? `${label}: ${types.join(', ')}` : label;
+    const withIds = services.filter((x): x is MusicServices => 'id' in x);
+
+    const icon = name === 'isrc'
+        ? <Badge marginX="0" colorPalette="purple" size="xs" variant="subtle">ISRC</Badge>
+        : <Icon size="sm" {...iconProps}>{getMusicServiceIconElement(name)}</Icon>;
+    const shadow = useMergedShadow(outlineColor);
+    // no padding around a bare icon to absorb the peeking circle (unlike the stack's ring), so make room for all of its offset
+    const mergedProps = mergedShadow && services.length > 1 ? {boxShadow: shadow, marginInlineEnd: '1.5'} : {};
+
+    // nothing to show in a popover
+    if (!interactive || withIds.length === 0) {
+        return (
+            <Tooltip positioning={{ placement: "top-start" }} content={summary}>
+                <Span display="inline-flex" position="relative" lineHeight="0" borderRadius="full" {...mergedProps}>{icon}</Span>
+            </Tooltip>
+        );
+    }
+
+    return (
+        // popover content is portaled but still bubbles through the React tree, stop it here so a parent (ie a combobox item) does not act on it
+        // Escape is let through, the popover closes on it from a document listener
+        <Span display="contents" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key !== 'Escape') { e.stopPropagation(); } }}>
+            <Popover.Root ids={{ trigger: triggerId }} open={open} onOpenChange={(e) => setOpen(e.open)} lazyMount unmountOnExit positioning={{ placement: "top-start" }}>
+                {/* shared trigger id so tooltip and popover use the same element, tooltip is hidden while the popover is open */}
+                <Tooltip ids={{ trigger: triggerId }} positioning={{ placement: "top-start" }} content={summary} open={open ? false : undefined}>
+                    <Popover.Trigger asChild>
+                        <chakra.button
+                            type="button"
+                            aria-label={services.length > 1 ? `${label}, ${services.length} IDs` : `${label} ${types[0] ?? 'ID'}`}
+                            display="inline-flex"
+                            position="relative"
+                            lineHeight="0"
+                            cursor="pointer"
+                            borderRadius="full"
+                            focusVisibleRing="outside"
+                            {...mergedProps}
+                        >
+                            {icon}
+                        </chakra.button>
+                    </Popover.Trigger>
+                </Tooltip>
+                <Portal>
+                    <Popover.Positioner>
+                        {/* sized to the full ids, only capped (and ids truncated) by the viewport */}
+                        <Popover.Content width="auto" maxWidth="calc(100vw - var(--chakra-spacing-8))">
+                            <Popover.Arrow />
+                            <Popover.Body padding="3">
+                                <Stack gap="2" textStyle="sm">
+                                    <Popover.Title fontWeight="semibold">{label}</Popover.Title>
+                                    {withIds.map((x, i) => {
+                                        const type = idTypeLabel(x) ?? 'ID';
+                                        const href = getMusicServiceLinkFromProps(link, x);
+                                        return (
+                                            <HStack key={i} gap="3">
+                                                {href !== undefined
+                                                    ? <Link flexShrink="0" href={href} target="_blank" rel="noreferrer" fontWeight="medium" colorPalette="blue">{type} <LuExternalLink /></Link>
+                                                    : <Span flexShrink="0" fontWeight="medium">{type}</Span>}
+                                                {/* full id when it fits, the copy button may not work on insecure (http) origins so it must stay readable/selectable */}
+                                                <Span flex="1" minWidth="0" textAlign="end" userSelect="all" fontFamily="mono" textStyle="xs" color="fg.muted" truncate>{x.id}</Span>
+                                                <ChakraClip flexShrink="0" value={x.id}/>
+                                            </HStack>
+                                        );
+                                    })}
+                                </Stack>
+                            </Popover.Body>
+                        </Popover.Content>
+                    </Popover.Positioner>
+                </Portal>
+            </Popover.Root>
+        </Span>
+    );
 }
 
 export const MusicServiceIndicators = (props: {
@@ -154,6 +298,8 @@ export const MusicServiceIndicators = (props: {
     showId?: boolean,
     link?: boolean,
     seperator?: boolean
+    /** false shows only the summary tooltips, no popovers */
+    interactive?: boolean
 } & Omit<ComponentProps<typeof HStack>, 'children'>) => {
     const {
         services = [],
@@ -161,6 +307,7 @@ export const MusicServiceIndicators = (props: {
         showId,
         link,
         seperator,
+        interactive,
         ...rest
     } = props;
 
@@ -169,13 +316,119 @@ export const MusicServiceIndicators = (props: {
     }
     return (
         <HStack {...rest} separator={seperator === true ? <StackSeparator /> : undefined}>
-            {services.map((x, i) => <MusicServiceIndicator key={i} data={x} iconProps={iconProps} showId={showId} link={link} />)}
+            {groupMusicServices(services).map((x, i) => <MusicServiceIndicatorPopover key={i} services={x} iconProps={iconProps} link={link} interactive={interactive}/>)}
+        </HStack>
+    )
+}
+
+/**
+ * MusicServiceIndicators that overlap into a compact stack, spreading out while hovered and lifting the hovered icon (like AvatarStack).
+ * On touch devices the first tap spreads the stack until a tap outside of it, then tapping an icon opens its popover.
+ * Services with the same name are merged into one indicator, shown as a second circle peeking out behind it.
+ * Icons past `max` are replaced by a "+n" chip.
+ * */
+export const MusicServiceIndicatorStack = (props: {
+    services: MusicServicesAny[],
+    iconProps?: IconProps,
+    showId?: boolean,
+    link?: boolean,
+    /** gap between icons while the stack is hovered. Default '1' */
+    spread?: ComponentProps<typeof HStack>['spaceX']
+    /** gap between icons while the stack is spread by touch, wider so a finger can hit them. Default '2' */
+    touchSpread?: ComponentProps<typeof HStack>['spaceX']
+    /** false shows only the summary tooltips, no popovers */
+    interactive?: boolean
+    /** icons shown before the overflow chip. Default 5 */
+    max?: number
+    /** total used for the overflow chip (shows count - max). Default number of indicators (after merging) */
+    count?: number
+    /** locale for the overflow number */
+    locale?: string
+    /** screen reader text for the overflow chip. Default `and ${n} others` */
+    moreLabel?: (n: string) => string
+    /** color of the cutout ring around each icon, should match the background the stack is on (ie a card). Default 'bg' */
+    outlineColor?: ComponentProps<typeof Box>['outlineColor']
+    /** filled circle with a cutout ring behind each icon. Default true */
+    ring?: boolean
+    /** Force stack even when there is only one service */
+    force?: boolean
+} & Omit<ComponentProps<typeof HStack>, 'children' | 'outlineColor'>) => {
+    const {
+        services = [],
+        iconProps,
+        showId,
+        link,
+        spread = '1',
+        touchSpread = '2',
+        interactive,
+        max = 5,
+        count: countProp,
+        locale,
+        moreLabel = (n) => `and ${n} others`,
+        outlineColor = 'bg',
+        ring = true,
+        force = false,
+        ...rest
+    } = props;
+    const groups = groupMusicServices(services);
+    const count = countProp ?? groups.length;
+    // isrc is not a linkable service, keep it out of the way at the end (of what is shown, it doesn't change whether it is shown). sort is stable
+    const visible = groups.slice(0, max).sort((a, b) => Number(a[0].name === 'isrc') - Number(b[0].name === 'isrc'));
+    const remaining = count - visible.length;
+    const remainingStr = remaining.toLocaleString(locale);
+    const touch = useTouchSpread<HTMLDivElement>(visible.length > 1);
+    const mergedShadow = useMergedShadow(outlineColor);
+
+    if (groups.length === 0) {
+        return undefined;
+    }
+    if(groups.length === 1 && force !== true) {
+        // flex, not a line box: an inline icon sits on the text baseline, which pushes it up past the top of a short parent (ie a Tag)
+        return <Box display={props.display ?? 'inline-flex'} alignItems="center"><MusicServiceIndicatorPopover services={groups[0]} iconProps={iconProps} link={link} interactive={interactive} outlineColor={outlineColor}/></Box>
+    }
+    return (
+        <HStack
+            gap="0"
+            spaceX={ring ? '-1.5' : '-1'}
+            {...rest}
+            {...touch.containerProps}
+            // the gaps between icons are part of the stack too, a parent (ie a combobox item) should not act on them
+            onClick={(e) => e.stopPropagation()}
+            css={[spreadContainerCss(spread, touchSpread), rest.css]}
+        >
+            {visible.map((x, i) => (
+                <Box
+                    key={i}
+                    position="relative"
+                    display="inline-flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    // inline content (link, svg) would otherwise add line box height and stretch the circle into an oval
+                    lineHeight="0"
+                    // like AvatarGroup: a filled circle with a cutout ring in the page background. outline takes no space so the stack stays compact
+                    {...(ring ? {padding: '1', borderRadius: 'full', bg: 'bg.emphasized', outline: '2px solid', outlineColor} : {})}
+                    // merged: a second filled circle peeking out behind, like a stack of cards, with the same cutout ring as the front circle
+                    boxShadow={ring && x.length > 1 ? mergedShadow : undefined}
+                    marginX={ring && x.length > 1 ? mergedMarginX : undefined}
+                    // first on top, like AvatarStack. hover/lift css still raises an item above all of these
+                    zIndex={visible.length - i}
+                    css={spreadItemCss}
+                >
+                    <MusicServiceIndicatorPopover services={x} iconProps={iconProps} link={link} interactive={interactive} mergedShadow={!ring} outlineColor={outlineColor}/>
+                </Box>
+            ))}
+            {remaining > 0 ? (
+                // offset (not margin, the stack's spacing overrides it) so it reads as separate from the list
+                <Badge position="relative" insetInlineStart="1" size="xs" variant="solid" borderRadius="full" aria-label={moreLabel(remainingStr)}>
+                    <Span aria-hidden>+{remainingStr}</Span>
+                </Badge>
+            ) : undefined}
         </HStack>
     )
 }
 
 export const getMusicServiceIconTooltip = (service: string) => {
-    const ServiceIcon = getMusicServiceIcon(service);
+    const ServiceIcon = getMusicServiceIconOrDefault(service);
     return (props: IconProps = {}) => (
         <Tooltip content={service} interactive>
             <Icon {...props}><ServiceIcon /></Icon>

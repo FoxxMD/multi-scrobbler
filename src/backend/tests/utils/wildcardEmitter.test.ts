@@ -50,4 +50,15 @@ describe('WildcardEmitter', function () {
 
         expect(calls).to.eq(0);
     });
+
+    it('removeAllListeners with no args clears event listeners', function () {
+        const emitter = new WildcardEmitter();
+        let calls = 0;
+        emitter.on('foo', () => { calls++; });
+
+        emitter.removeAllListeners();
+        emitter.emit('foo');
+
+        expect(calls).to.eq(0);
+    });
 });

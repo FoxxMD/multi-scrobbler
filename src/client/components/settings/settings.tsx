@@ -5,7 +5,8 @@ import {
     SegmentGroup,
     Group,
     Box,
-    Button
+    Button,
+    Tabs
 } from "@chakra-ui/react"
 import { useTheme } from "next-themes"
 import { BsCircleHalf } from "react-icons/bs";
@@ -15,6 +16,8 @@ import { useMutation } from "@tanstack/react-query";
 import ky from "ky";
 import type { CacheClearType } from "../../../core/Api";
 import { EphemeralElement } from "../Badges";
+import { AccountSettings } from "../auth/Auth";
+import { PublicDashboardSettingsFetchable } from "./PublicDashboardSettings";
 
 const DarkIcon = makeChakraIcon(LuMoon);
 const LightIcon = makeChakraIcon(LuSun);
@@ -42,9 +45,18 @@ export const SettingsContainer = () => {
     });
 
     return (
-        <VStack alignItems="flex-start">
-            <Heading my="3">Appearance</Heading>
-            <VStack>
+        <Tabs.Root defaultValue="account" lazyMount unmountOnExit width="full">
+            <Tabs.List>
+                <Tabs.Trigger value="account">Account</Tabs.Trigger>
+                <Tabs.Trigger value="appearance">Appearance</Tabs.Trigger>
+                <Tabs.Trigger value="publicDashboard">Public Dashboard</Tabs.Trigger>
+                <Tabs.Trigger value="cache">Cache</Tabs.Trigger>
+            </Tabs.List>
+            <Tabs.Content value="account">
+                <AccountSettings/>
+            </Tabs.Content>
+            <Tabs.Content value="appearance">
+            <VStack alignItems="flex-start">
                 <SegmentGroup.Root size="md" value={theme === 'system' ? 'system' : resolvedTheme} onValueChange={(val) => val.value !== null && setThemeCB(val.value)}>
                     <SegmentGroup.Indicator />
                     <SegmentGroup.Item key="dark" value="dark">
@@ -63,7 +75,11 @@ export const SettingsContainer = () => {
                     </SegmentGroup.Item>
                 </SegmentGroup.Root>
             </VStack>
-            <Heading my="3">Cache</Heading>
+            </Tabs.Content>
+            <Tabs.Content value="publicDashboard">
+                <PublicDashboardSettingsFetchable/>
+            </Tabs.Content>
+            <Tabs.Content value="cache">
             <Box>
             <Group attached>
                 <Button colorPalette="red"
@@ -84,6 +100,7 @@ export const SettingsContainer = () => {
                 </Button>
             </Group>
             </Box>
-        </VStack>
+            </Tabs.Content>
+        </Tabs.Root>
     )
 }

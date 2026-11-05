@@ -58,17 +58,35 @@ export default class ScrobbleClients {
             logger: this.logger
         }
 
-        this.sourceEmitter.on('playerUpdate', async (payload) => {
-            if(payload.data.options.wasMonitored) {
-                // agressively update Now Playing so scrobblers that display based on duration are mostly synced
-                // but aggressively *stop* updating if state becomes stale/orphaned
-                this.playingNow(payload.data, {...payload.data.options, scrobbleFrom: { type: payload.type, name: payload.name}});
-            }
-        });
+        this.sourceEmitter.on('playerUpdate', this.onPlayerUpdate);
+        this.sourceEmitter.on('discoveredToScrobble', this.onDiscoveredToScrobble);
+    }
 
-        this.sourceEmitter.on('discoveredToScrobble', async (payload) => {
-            await this.scrobble(payload.data.data, payload.data.options);
-        });
+    protected onPlayerUpdate = async (payload: MSBackendEventMap['playerUpdate'][0]) => {
+        if(payload.data.options.wasMonitored) {
+            // agressively update Now Playing so scrobblers that display based on duration are mostly synced
+            // but aggressively *stop* updating if state becomes stale/orphaned
+            this.playingNow(payload.data, {...payload.data.options, scrobbleFrom: { type: payload.type, name: payload.name}});
+        }
+    }
+
+    protected onDiscoveredToScrobble = async (payload: MSBackendEventMap['discoveredToScrobble'][0]) => {
+        await this.scrobble(payload.data.data, payload.data.options);
+    }
+
+    /**
+     * Stop listening to source events and stop and dispose every client (scheduled tasks, scrobble/dead processing).
+     * For tests and anything else that builds clients outside of the app lifecycle, the app's own shutdown stops them in index.ts
+     * */
+    async destroy() {
+        this.sourceEmitter.off('playerUpdate', this.onPlayerUpdate);
+        this.sourceEmitter.off('discoveredToScrobble', this.onDiscoveredToScrobble);
+        // asyncDispose logs and swallows its own errors
+        await Promise.all(this.clients.map(x => x[Symbol.asyncDispose]()));
+    }
+
+    async [Symbol.asyncDispose]() {
+        await this.destroy();
     }
 
     getByName = (name: any, safe: boolean = false) => this.clients.find(x => (safe ? x.getSafeExternalName() : x.name) === name)

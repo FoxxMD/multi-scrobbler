@@ -36,6 +36,9 @@ export class GenericPlayerState extends AbstractPlayerState {
             this.logger.debug('Ended current Player listen range.')
             this.currentListenRange.finalize();
             this.listenRanges.push(this.currentListenRange);
+        } else {
+            // discarded (empty) range
+            this.currentListenRange?.[Symbol.dispose]();
         }
         this.currentListenRange = undefined;
     }

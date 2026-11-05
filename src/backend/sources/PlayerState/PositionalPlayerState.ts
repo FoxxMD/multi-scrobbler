@@ -116,6 +116,9 @@ export class PositionalPlayerState extends AbstractPlayerState {
             }
             this.currentListenRange.finalize(finalPosition);
             this.listenRanges.push(this.currentListenRange);
+        } else {
+            // discarded (empty) range, dispose so its realtime timer does not keep running
+            this.currentListenRange?.[Symbol.dispose]();
         }
         this.currentListenRange = undefined;
     }

@@ -6,7 +6,7 @@ import type {Logger} from "@foxxmd/logging";
 import type { Response } from 'superagent';
 import type request from 'superagent';
 import pRetry, { type RetryContext, type Options } from 'p-retry';
-import { DEFAULT_RETRY_MULTIPLIER, type ExpressRequest } from "../common/infrastructure/Atomic.ts";
+import { DEFAULT_RETRY_MULTIPLIER, retryTiming, type ExpressRequest } from "../common/infrastructure/Atomic.ts";
 import { SimpleError } from "../common/errors/MSErrors.ts";
 import { loggerNoop } from '../common/MaybeLogger.ts';
 import { findCauseByFunc } from "./ErrorUtils.ts";
@@ -120,7 +120,7 @@ export const tryApiCall = async <T = Response>(reqFunc: () => T, opts: TryApiCal
     const retryOpts: Options = {
         retries: retries,
         factor: retryMultiplier,
-        minTimeout: 1000,
+        minTimeout: 1000 * retryTiming.scale,
         maxRetryTime: 30000,
     }
 

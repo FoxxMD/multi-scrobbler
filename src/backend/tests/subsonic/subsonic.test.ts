@@ -129,28 +129,28 @@ describe('Subsonic now-playing expiration', () => {
 
     it('filters expired now-playing rows by default', () => {
         MockDate.set('2026-01-01T12:05:30Z');
-        const source = createSource();
+        using source = createSource();
 
         expect(source.filterNowPlaying([SubsonicSource.formatPlayObj(entry(4))])).to.be.empty;
     });
 
     it('filters expired now-playing rows when detecting stale entries is enabled by configuration', () => {
         MockDate.set('2026-01-01T12:05:30Z');
-        const source = createSource(true);
+        using source = createSource(true);
 
         expect(source.filterNowPlaying([SubsonicSource.formatPlayObj(entry(4))])).to.be.empty;
     });
 
     it('keeps expired now-playing rows when minutesAgo detection is disabled', () => {
         MockDate.set('2026-01-01T12:05:30Z');
-        const source = createSource(false);
+        using source = createSource(false);
 
         expect(source.filterNowPlaying([SubsonicSource.formatPlayObj(entry(4))])).to.have.length(1);
     });
 
     it('uses minutesAgo expiration only when no playback report fields are present', () => {
         MockDate.set('2026-01-01T12:05:30Z');
-        const source = createSource();
+        using source = createSource();
         const stale = entry(4);
 
         expect(source.filterNowPlaying([
@@ -161,7 +161,7 @@ describe('Subsonic now-playing expiration', () => {
     });
 
     it('retains a state without a play safely', () => {
-        const source = createSource();
+        using source = createSource();
         const state: PlayerStateDataMaybePlay = {platformId: ['player-id', 'user']};
 
         expect(source.filterNowPlaying([state])).to.deep.equal([state]);
@@ -213,7 +213,7 @@ describe('Subsonic player tracking', () => {
     const player = (source: TestSubsonicSource) => Array.from(source.players.values())[0];
 
     it('tracks positionless legacy playback using timestamps', async () => {
-        const source = createSource();
+        using source = createSource();
 
         await source.processRecentPlays([state(0)], at(0));
         await source.processRecentPlays([state(10)], at(10));
@@ -222,7 +222,7 @@ describe('Subsonic player tracking', () => {
     });
 
     it('tracks reported playback using position deltas', async () => {
-        const source = createSource();
+        using source = createSource();
 
         await source.processRecentPlays([state(0, {state: 'playing', positionMs: 0})], at(0));
         await source.processRecentPlays([state(10, {state: 'playing', positionMs: 10000})], at(10));
@@ -232,7 +232,7 @@ describe('Subsonic player tracking', () => {
     });
 
     it('ends a timestamp range before switching to reported positions', async () => {
-        const source = createSource();
+        using source = createSource();
 
         await source.processRecentPlays([state(0)], at(0));
         await source.processRecentPlays([state(10)], at(10));
@@ -243,7 +243,7 @@ describe('Subsonic player tracking', () => {
     });
 
     it('ends a reported-position range before switching to timestamps', async () => {
-        const source = createSource();
+        using source = createSource();
 
         await source.processRecentPlays([state(0, {state: 'playing', positionMs: 0})], at(0));
         await source.processRecentPlays([state(10, {state: 'playing', positionMs: 10000})], at(10));
@@ -254,7 +254,7 @@ describe('Subsonic player tracking', () => {
     });
 
     it('does not apply the legacy repeat fallback to positioned playback', async () => {
-        const source = createSource();
+        using source = createSource();
 
         await source.processRecentPlays([state(0, {state: 'playing', positionMs: 0})], at(0));
         await source.processRecentPlays([state(64, {state: 'playing', positionMs: 64000})], at(64));
@@ -296,7 +296,7 @@ describe('Subsonic playback report capability discovery', () => {
         ping(),
         extensions([{name: 'playbackReport', versions: [1]}])
     ], async () => {
-        const source = createSource();
+        using source = createSource();
 
         expect(await source.doCheckConnection()).to.be.true;
         expect(source.playbackReportSupported).to.be.true;
@@ -306,7 +306,7 @@ describe('Subsonic playback report capability discovery', () => {
         ping(),
         extensions([])
     ], async () => {
-        const source = createSource();
+        using source = createSource();
 
         expect(await source.doCheckConnection()).to.be.true;
         expect(source.playbackReportSupported).to.be.false;
@@ -330,7 +330,7 @@ describe('Subsonic playback report capability discovery', () => {
                 });
             })
         ], async () => {
-            const source = createSource();
+            using source = createSource();
             source.config.options!.maxRequestRetries = 1;
 
             expect(await source.doCheckConnection()).to.be.true;
@@ -349,7 +349,7 @@ describe('Subsonic playback report capability discovery', () => {
             ping(),
             http.get('https://example.com/rest/getOpenSubsonicExtensions', extensionResponse)
         ], async () => {
-            const source = createSource();
+            using source = createSource();
 
             expect(await source.doCheckConnection()).to.be.true;
             expect(source.playbackReportSupported).to.be.false;
@@ -362,7 +362,7 @@ describe('Subsonic playback report capability discovery', () => {
             throw new Error('Extensions must not be probed after a bare HTTP ping failure');
         })
     ], async () => {
-        const source = createSource();
+        using source = createSource();
         source.config.options!.maxRequestRetries = 0;
         let error: unknown;
 
@@ -386,7 +386,7 @@ describe('Subsonic playback report capability discovery', () => {
         })),
         extensions([{name: 'playbackReport', versions: [1]}])
     ], async () => {
-        const source = createSource();
+        using source = createSource();
 
         expect(await source.doCheckConnection()).to.be.true;
         expect(source.playbackReportSupported).to.be.true;
@@ -402,7 +402,7 @@ describe('Subsonic playback report capability discovery', () => {
         })),
         http.get('https://example.com/rest/getOpenSubsonicExtensions', () => new HttpResponse(null, {status: 404}))
     ], async () => {
-        const source = createSource();
+        using source = createSource();
 
         expect(await source.doCheckConnection()).to.be.true;
         expect(source.playbackReportSupported).to.be.false;

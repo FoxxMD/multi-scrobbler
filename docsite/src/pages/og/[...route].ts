@@ -5,7 +5,7 @@ export const { getStaticPaths, GET } = await OGImageRoute({
 	pages: ogImagePages,
 	getImageOptions: (_path, page) => ({
 		title: page.title,
-		description: page.description ?? 'Listen everywhere, Scrobble anywhere',
+		description: page.description ?? 'Listen anywhere, Scrobble everywhere',
 		// icon + "Multi-Scrobbler" in one image, since the card layout only stacks logo/title/description. Regenerate with:
 		// magick icon.png -resize 120x120 i.png; magick -background none -fill 'rgb(240,240,240)' -font fonts/AdwaitaSans-Regular-Static.ttf -pointsize 112 label:'Multi-Scrobbler' -trim +repage t.png
 		// magick i.png \( -size 28x120 xc:none \) \( t.png -background none -gravity center -extent x120 \) -background none +append +repage -define png:color-type=6 og-logo.png

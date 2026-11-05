@@ -3,9 +3,12 @@
 import { ChakraProvider, createSystem, defaultConfig, defineConfig, defineSlotRecipe } from "@chakra-ui/react"
 import { timelineAnatomy } from "@chakra-ui/react/anatomy";
 import {
+  MutationCache,
   QueryClient,
   QueryClientProvider
 } from '@tanstack/react-query'
+import { HTTPError } from 'ky'
+import { toaster } from './Toaster'
 import '../index.css'
 import {
   ColorModeProvider,
@@ -21,7 +24,22 @@ const timelineSlotRecipe = defineSlotRecipe({
     }
 });
 
-const queryClient = new QueryClient()
+export const queryClient = new QueryClient({
+  // surface auth failures from any dashboard action in one place
+  mutationCache: new MutationCache({
+    onError: (error) => {
+      if (!(error instanceof HTTPError)) {
+        return;
+      }
+      const code = (error.data as {code?: string} | undefined)?.code;
+      if (error.response.status === 401 && code === 'auth_required') {
+        toaster.create({type: 'error', title: 'Log in required', description: 'Log in to make changes on this instance.'});
+      } else if (error.response.status === 403 && code === 'unsecured_read_only') {
+        toaster.create({type: 'error', title: 'Read-only', description: (error.data as {error?: string}).error});
+      }
+    }
+  })
+})
 
 const customConfig = defineConfig({
   globalCss: {

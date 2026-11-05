@@ -562,3 +562,46 @@ describe('Player listen ranges', function () {
         });
     });
 });
+
+describe('Player listen range realtime timers', function () {
+
+    // positional ranges start a realtime timer (RealtimePlayer) as soon as they are created, it must be stopped when the range is no longer used
+    const isTicking = (range: ListenRangePositional) => range.rtPlayer.scheduler.getAllJobs().some(x => x.getStatus() === 'running');
+
+    it('Disposes a discarded (empty) listen range when a new Play starts', function () {
+        using player = new PositionalPlayerState(logger, [NO_DEVICE, NO_USER]);
+        const firstPlay = generatePlay({duration: 300});
+        player.update(testState({play: firstPlay, status: REPORTED_PLAYER_STATUSES.playing, position: 0}));
+        const firstRange = player.currentListenRange as ListenRangePositional;
+        expect(isTicking(firstRange)).to.be.true;
+
+        // new Play before any listening progressed, first range has no duration and is discarded
+        player.update(testState({play: generatePlay({duration: 300}), status: REPORTED_PLAYER_STATUSES.playing, position: 0}));
+
+        expect(player.currentListenRange).to.not.eq(firstRange);
+        expect(isTicking(firstRange)).to.be.false;
+    });
+
+    it('Keeps transferred listen ranges running after the old Player is disposed', function () {
+        const oldPlayer = new PositionalPlayerState(logger, [NO_DEVICE, NO_USER]);
+        using newPlayer = new PositionalPlayerState(logger, ['newDevice', NO_USER]);
+        oldPlayer.update(testState({play: generatePlay({duration: 300}), status: REPORTED_PLAYER_STATUSES.playing, position: 0}));
+        const range = oldPlayer.currentListenRange as ListenRangePositional;
+
+        oldPlayer.transferToNewPlayer(newPlayer);
+        oldPlayer[Symbol.dispose]();
+
+        expect(newPlayer.currentListenRange).to.eq(range);
+        expect(isTicking(range)).to.be.true;
+    });
+
+    it('Stops listen range timers when the Player is disposed', function () {
+        const player = new PositionalPlayerState(logger, [NO_DEVICE, NO_USER]);
+        player.update(testState({play: generatePlay({duration: 300}), status: REPORTED_PLAYER_STATUSES.playing, position: 0}));
+        const range = player.currentListenRange as ListenRangePositional;
+
+        player[Symbol.dispose]();
+
+        expect(isTicking(range)).to.be.false;
+    });
+});

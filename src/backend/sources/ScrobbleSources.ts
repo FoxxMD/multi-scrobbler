@@ -42,6 +42,19 @@ export default class ScrobbleSources {
         }
     }
 
+    /**
+     * Stop and dispose every source (scheduled tasks, polling, discovery queue).
+     * For tests and anything else that builds sources outside of the app lifecycle, the app's own shutdown stops them in index.ts
+     * */
+    async destroy() {
+        // asyncDispose logs and swallows its own errors
+        await Promise.all(this.sources.map(x => x[Symbol.asyncDispose]()));
+    }
+
+    async [Symbol.asyncDispose]() {
+        await this.destroy();
+    }
+
     getByName = (name: any, safe: boolean = false) => this.sources.find(x => (safe ? x.getSafeExternalName() : x.name) === name)
 
     getByType = (type: any) => this.sources.filter(x => x.type === type)

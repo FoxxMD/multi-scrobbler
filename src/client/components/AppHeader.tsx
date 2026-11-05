@@ -9,10 +9,10 @@ import { TerminalIcon } from "./icons/ChakraIcons";
 import { useSSEContext, useSSEStatus } from "@flamefrontend/sse-runtime-react";
 import type {ErrorLike} from "../../core/Atomic";
 import { ErrorAlert } from "./ErrorAlert";
-import { ExternaLinksMenu } from "./ExternaLinksMenu";
 import { FloatingLogs } from "./LogsNext";
 import { ToggleTip } from "./ToggleTip";
 import { ColorModeButton } from './Color-Mode';
+import { useHasAccess } from '../auth/authClient';
 
 export const AppTitle = (props: { fetchable?: boolean } = {}) => {
     const {
@@ -121,12 +121,26 @@ const SSEStatusLive = () => {
 }
 
 
+/** live status and logs use gated API endpoints, only show them once the user has access */
+const LiveHeaderItems = () => {
+    const {hasAccess} = useHasAccess();
+    if (!hasAccess) {
+        return null;
+    }
+    return <>
+        <SSEStatus live/>
+        <FloatingLogs streamable/>
+    </>;
+}
+
 export const AppHeader = (props: PropsWithChildren<{ fetchable?: boolean }>) => (
         <Flex justify="space-between">
             <AppTitle fetchable={props.fetchable} />
             <Flex justify="flex-start" gap="1.5" alignItems="flex-end">
-                <SSEStatus live={props.fetchable}/>
-                <FloatingLogs streamable={props.fetchable}/>
+                {props.fetchable ? <LiveHeaderItems/> : <>
+                    <SSEStatus/>
+                    <FloatingLogs/>
+                </>}
                 <ColorModeButton/>
             </Flex>
         </Flex>
