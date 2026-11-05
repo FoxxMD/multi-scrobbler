@@ -106,7 +106,7 @@ export const ComponentStats = (props: Pick<PublicDashboardData, 'sources' | 'cli
                 <Stat.Label textStyle="3xl">{capitalize(key)}</Stat.Label>
                 <HStack>
                     <CountUpValueText delay={componentStats.length * 300} textStyle="6xl" value={val.count} />
-                    {avatarItems.length > 0 ? <AvatarStack spread="0.5" items={avatarItems} /> : undefined}
+                    {avatarItems.length > 0 ? <AvatarStack spread="0.5" reserveSpread items={avatarItems} /> : undefined}
                 </HStack>
             </Stat.Root>
         </HStack>);

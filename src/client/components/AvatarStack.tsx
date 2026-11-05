@@ -1,7 +1,7 @@
 import React, { useEffect, useState, type ComponentProps, type ElementType } from "react";
-import { Avatar, AvatarGroup, type SystemStyleObject } from "@chakra-ui/react";
+import { Avatar, AvatarGroup, useChakraContext, type SystemStyleObject } from "@chakra-ui/react";
 import { Tooltip } from "./ToggleTip";
-import { spreadContainerCss, spreadItemCss, useTouchSpread } from "./useTouchSpread";
+import { finePointer, spreadContainerCss, spreadItemCss, useTouchSpread } from "./useTouchSpread";
 
 export interface AvatarStackItem {
     /** shown in the tooltip, and as initials when there is no icon/image */
@@ -24,6 +24,8 @@ export interface AvatarStackProps extends Omit<ComponentProps<typeof AvatarGroup
     locale?: string
     /** screen reader text for the overflow chip. Default `and ${n} others` */
     moreLabel?: (n: string) => string
+    /** reserve the spread width while collapsed (as trailing space) so spreading never changes layout, ie never makes neighbours wrap. Default false */
+    reserveSpread?: boolean
 }
 
 // Avatar.Root must receive the props AvatarGroup (Group) clones onto its children (data-group-item, --group-index...)
@@ -62,12 +64,36 @@ export const AvatarStack = (props: AvatarStackProps) => {
         spread = '1',
         locale,
         moreLabel = (n) => `and ${n} others`,
+        reserveSpread = false,
         ...rest
     } = props;
     const visible = items.slice(0, max);
     const remaining = count - visible.length;
     const remainingStr = remaining.toLocaleString(locale);
     const touch = useTouchSpread<HTMLDivElement>();
+    const {token} = useChakraContext();
+
+    let reserveCss: SystemStyleObject | undefined;
+    const gaps = visible.length + (remaining > 0 ? 1 : 0) - 1;
+    if (reserveSpread && gaps > 0) {
+        // spreading only widens the gaps, from the group overlap (AvatarGroup's spaceX, -3) to `spread`.
+        // padding the end by the total of that difference, removed in step with the spread (same transition), keeps the width constant
+        // negative spacing ('-3') has no token of its own, it is the positive token negated
+        const spacing = (val: unknown): string => {
+            if (typeof val !== 'string' && typeof val !== 'number') {
+                return '0px';
+            }
+            const str = String(val);
+            return str.startsWith('-') ? `(${spacing(str.slice(1))} * -1)` : token.var(`spacing.${str}`, str);
+        };
+        const delta = `(${spacing(spread)} - ${spacing(rest.spaceX ?? '-3')})`;
+        reserveCss = {
+            paddingInlineEnd: `calc(${gaps} * ${delta})`,
+            _motionSafe: {transitionProperty: 'padding', transitionDuration: 'moderate', transitionTimingFunction: 'ease-out'},
+            [finePointer]: {_hover: {paddingInlineEnd: '0'}},
+            '&[data-spread]': {paddingInlineEnd: '0'},
+        };
+    }
     // avatar tapped while spread by touch, touch never opens a tooltip by itself
     const [active, setActive] = useState<number | undefined>(undefined);
     useEffect(() => {
@@ -77,7 +103,7 @@ export const AvatarStack = (props: AvatarStackProps) => {
     }, [touch.spread]);
 
     return (
-        <AvatarGroup stacking="first-on-top" {...rest} {...touch.containerProps} css={[spreadContainerCss(spread), rest.css]}>
+        <AvatarGroup stacking="first-on-top" {...rest} {...touch.containerProps} css={[spreadContainerCss(spread), reserveCss, rest.css]}>
             {visible.map((x, i) => (
                 <StackAvatar
                     key={`${x.name}-${i}`}

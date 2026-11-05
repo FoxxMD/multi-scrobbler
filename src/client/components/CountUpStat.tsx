@@ -1,4 +1,4 @@
-import { type ComponentProps, type ReactNode, useEffect, useEffectEvent, useRef, useState } from "react";
+import { type ComponentProps, type ReactNode, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { Stat, VisuallyHidden } from "@chakra-ui/react";
 import { type NumberFormatOpts, useNumberFormatter } from "./AbbreviatedNumber.js";
 
@@ -106,17 +106,41 @@ export const CountUpValueText = (props: CountUpOptions & Omit<ComponentProps<typ
         }
     }, [value, reduced]);
 
+    // widest text the count passes through, reserved from the start so the layout never changes while counting (ie neighbours wrapping).
+    // usually the final value, but abbreviated counts can be wider just below a unit boundary (999.99K on the way to 1.2M).
+    // ponytail: checks one number per order of magnitude that fills every digit/decimal (0.987654321 * 10^k) and compares by length, fine with tabular-nums.
+    // a custom formatter can return any ReactNode so only the final value is reserved for it
+    const widest = useMemo(() => {
+        const finalText = format(value);
+        if (reduced || typeof finalText !== 'string') {
+            return finalText;
+        }
+        let best = finalText;
+        for (let p = 10; p < Math.abs(value); p *= 10) {
+            const candidate = format(Math.sign(value) * p * 0.987654321);
+            if (typeof candidate === 'string' && candidate.length > best.length) {
+                best = candidate;
+            }
+        }
+        return best;
+    }, [format, value, reduced]);
+
     const display = reduced ? value : animValue;
     const final = <>{prefix}{format(value)}{suffix}</>;
 
-    if (display === value) {
+    if (reduced) {
         return <Stat.ValueText ref={ref} {...rest}>{final}</Stat.ValueText>;
     }
 
+    // same structure for the whole animation (and after), swapping it at the end could shift the width a little
     return (
         <Stat.ValueText ref={ref} fontVariantNumeric="tabular-nums" {...rest}>
             <VisuallyHidden>{final}</VisuallyHidden>
-            <span aria-hidden="true">{prefix}{format(display)}{suffix}</span>
+            {/* every child in the same grid cell, the invisible widest text sizes it */}
+            <span aria-hidden="true" style={{display: 'inline-grid'}}>
+                <span style={{gridArea: '1 / 1', visibility: 'hidden'}}>{prefix}{widest}{suffix}</span>
+                <span style={{gridArea: '1 / 1'}}>{prefix}{format(display)}{suffix}</span>
+            </span>
         </Stat.ValueText>
     );
 }
