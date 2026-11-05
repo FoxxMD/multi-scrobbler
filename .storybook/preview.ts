@@ -4,6 +4,10 @@ import { definePreview } from "@storybook/react-vite";
 
 import { themes } from 'storybook/theming';
 import { initialize, mswLoader, getWorker } from 'msw-storybook-addon';
+import { generatePlayDefaults } from '../src/core/tests/utils/PlayTestUtils.js';
+
+// stories render service indicators, so generated plays get random service ids (tests keep the default, no ids)
+generatePlayDefaults.serviceIds = true;
 
 // https://github.com/mswjs/msw-storybook-addon/issues/82#issuecomment-3894302575
 try {
