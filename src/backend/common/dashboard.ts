@@ -1,21 +1,35 @@
 import { eq, sql } from "drizzle-orm";
 import type { ComponentStat, PublicDashboardData, PublicPlay } from "../../core/Api.ts";
-import type { PlayObject } from "../../core/Atomic.ts";
+import { CALCULATED_PLAYER_STATUSES, type PlayObject, type SourcePlayerObj } from "../../core/Atomic.ts";
+import type { PublicNowPlaying } from "../../core/UserSettings.ts";
 import { getUserSettings, type UserSettingsValues } from "./auth/userSettings.ts";
 import { components } from "./database/drizzle/schema/schema.ts";
 import type { DbConcrete } from "./database/drizzle/drizzleUtils.ts";
 
+/** A Source with players (MemorySource), only the parts needed to pick a public Now Playing */
+export interface NowPlayingSource {
+    type: string
+    getUid(): string
+    isMonitoring(): boolean
+    players: Map<string, {getApiState(): SourcePlayerObj}>
+}
+
 export interface DashboardComponents {
-    sources: {type: string}[]
+    sources: ({type: string} | NowPlayingSource)[]
     clients: {type: string}[]
 }
 
+const hasPlayers = (source: DashboardComponents['sources'][number]): source is NowPlayingSource => 'players' in source;
+
 // ponytail: in-process cache, move to MSCache if the dashboard is ever served by multiple instances
 const cache = new Map<string, {expires: number, data: PublicDashboardData}>();
+/** key of the player last shown as Now Playing, per user, so the pick does not flip-flop between players that are playing at the same time */
+const lastNowPlaying = new Map<string, string>();
 
 /** Drop the cached dashboard so the next request is rebuilt (called when any publicDashboard setting changes) */
 export const invalidateDashboardCache = (userId: string) => {
     cache.delete(userId);
+    lastNowPlaying.delete(userId);
 }
 
 const componentStat = (list: {type: string}[], level: 'count' | 'detailed'): ComponentStat => ({
@@ -30,6 +44,37 @@ const toPublicPlay = (play: PlayObject): PublicPlay => {
         data: {artists, albumArtists, album, track, duration, meta, listenedFor, repeat},
         meta: {source, musicService, url},
     };
+}
+
+/**
+ * Pick the public Now Playing from Source players.
+ *
+ * Only players that are playing (paused/stopped/stale/orphaned are hidden) from Sources that are monitoring, like scrobble clients do.
+ * When several are playing keep showing the last picked one, otherwise sort by source then platform so the pick is deterministic.
+ * Returns null when nothing is playing or the configured Source does not exist (anymore).
+ * */
+export const sourceNowPlaying = (userId: string, sources: DashboardComponents['sources'], from: PublicNowPlaying): PublicPlay | null => {
+    const candidates: {key: string, sourceType: string, play: PlayObject}[] = [];
+    for (const source of sources) {
+        if (!hasPlayers(source) || (from.from === 'source' && source.getUid() !== from.uid) || !source.isMonitoring()) {
+            continue;
+        }
+        for (const player of source.players.values()) {
+            const {platformId, play, status} = player.getApiState();
+            if (play !== undefined && status.calculated === CALCULATED_PLAYER_STATUSES.playing && status.stale !== true && status.orphaned !== true) {
+                candidates.push({key: `${source.type}-${source.getUid()}-${platformId}`, sourceType: source.type, play: play as PlayObject});
+            }
+        }
+    }
+    if (candidates.length === 0) {
+        lastNowPlaying.delete(userId);
+        return null;
+    }
+    const picked = candidates.find(x => x.key === lastNowPlaying.get(userId)) ?? candidates.sort((a, b) => a.key.localeCompare(b.key))[0];
+    lastNowPlaying.set(userId, picked.key);
+    const publicPlay = toPublicPlay(picked.play);
+    publicPlay.meta.source = picked.sourceType;
+    return publicPlay;
 }
 
 /**
@@ -85,6 +130,10 @@ export const buildPublicDashboard = async (db: DbConcrete, userId: string, comps
             }
         }
         data.recent = recent;
+    }
+
+    if (settings.nowPlaying !== undefined) {
+        data.nowPlaying = sourceNowPlaying(userId, comps.sources, settings.nowPlaying);
     }
     return data;
 }

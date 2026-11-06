@@ -452,6 +452,11 @@ export interface PublicDashboardData {
      * Unique in that they all have distinct PlayData, rather than the same Discovered Play sent to 3x clients (but its all the same data)
      **/
     recent?: PublicPlay[]
+    /** The currently playing Play, null when nothing is playing. undefined = Now Playing is not enabled
+     *
+     * `meta.source` is the type of the component it came from (spotify, jellyfin...), never its name
+     * */
+    nowPlaying?: PublicPlay | null
 }
 
 export type PublicPlay = {

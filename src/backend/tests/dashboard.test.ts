@@ -8,12 +8,30 @@ import { fixtureCreateComponent, fixtureCreatePlay } from './utils/databaseFixtu
 import { generatePlay } from '../../core/tests/utils/PlayTestUtils.ts';
 import { ensureOwner } from '../common/auth/owner.ts';
 import { setUserSetting } from '../common/auth/userSettings.ts';
-import { getPublicDashboard } from '../common/dashboard.ts';
+import { getPublicDashboard, type NowPlayingSource } from '../common/dashboard.ts';
+import type { SourcePlayerObj } from '../../core/Atomic.ts';
 import { components, plays } from '../common/database/drizzle/schema/schema.ts';
 import { up as listenedMigration } from '../common/database/appMigrations/008_listenedCounter.ts';
 import { buildAuthApp } from './utils/authTestUtils.ts';
 
 const comps = {sources: [{type: 'jellyfin'}, {type: 'jellyfin'}, {type: 'spotify'}], clients: [{type: 'lastfm'}]};
+
+const fakePlayer = (platformId: string, track: string, status: Partial<SourcePlayerObj['status']> = {}) => ({
+    getApiState: (): SourcePlayerObj => ({
+        platformId,
+        play: generatePlay({track: {name: track}}),
+        playerLastUpdatedAt: dayjs().toISOString(),
+        listenedDuration: 0,
+        status: {reported: 'playing', calculated: 'playing', stale: false, orphaned: false, ...status},
+    })
+});
+
+const fakeSource = (type: string, uid: string, players: ReturnType<typeof fakePlayer>[], monitoring = true): NowPlayingSource => ({
+    type,
+    getUid: () => uid,
+    isMonitoring: () => monitoring,
+    players: new Map(players.map((x, i) => [String(i), x])),
+});
 
 const setup = async () => {
     const db = await transientDb();
@@ -94,6 +112,78 @@ describe('Public Dashboard', function () {
         const rows = await db.select().from(components);
         expect(rows.find(x => x.id === source.id)?.listenedLive).eq(150);
         expect(rows.find(x => x.id === client.id)?.listenedLive).eq(0);
+    });
+
+    describe('Now Playing from Sources', function () {
+
+        const enableNowPlaying = async (db: Awaited<ReturnType<typeof setup>>['db'], userId: string, nowPlaying: object) => {
+            await setUserSetting(db, userId, 'publicDashboardEnabled', true);
+            await setUserSetting(db, userId, 'publicDashboardSettings', {nowPlaying, refresh: true} as any);
+        }
+
+        it('is undefined when not enabled and null when nothing is playing', async function () {
+            const {db, owner} = await setup();
+            await setUserSetting(db, owner.id, 'publicDashboardEnabled', true);
+            await setUserSetting(db, owner.id, 'publicDashboardSettings', {listenStats: true, refresh: true});
+            const sources = [fakeSource('jellyfin', 'a', [fakePlayer('p1', 'Song A')])];
+            expect(await getPublicDashboard(db, owner.id, {sources, clients: []})).to.not.have.property('nowPlaying');
+
+            await enableNowPlaying(db, owner.id, {from: 'anySource'});
+            expect((await getPublicDashboard(db, owner.id, {sources: [fakeSource('jellyfin', 'a', [])], clients: []})).nowPlaying).eq(null);
+        });
+
+        it('only shows playing players from monitoring sources', async function () {
+            const {db, owner} = await setup();
+            await enableNowPlaying(db, owner.id, {from: 'anySource'});
+            const sources = [
+                fakeSource('jellyfin', 'a', [
+                    fakePlayer('p1', 'Paused', {calculated: 'paused'}),
+                    fakePlayer('p2', 'Stale', {stale: true}),
+                    fakePlayer('p3', 'Orphaned', {orphaned: true}),
+                ]),
+                fakeSource('plex', 'b', [fakePlayer('p1', 'Not Monitored')], false),
+                {type: 'lastfm'},
+            ];
+            expect((await getPublicDashboard(db, owner.id, {sources, clients: []})).nowPlaying).eq(null);
+        });
+
+        it('strips private data and shows the source type, not its name', async function () {
+            const {db, owner} = await setup();
+            await enableNowPlaying(db, owner.id, {from: 'anySource'});
+            const {nowPlaying} = await getPublicDashboard(db, owner.id, {sources: [fakeSource('jellyfin', 'My Home Server', [fakePlayer('user-device', 'Song A')])], clients: []});
+            expect(nowPlaying?.data.track?.name).eq('Song A');
+            expect(nowPlaying?.meta.source).eq('jellyfin');
+            expect(nowPlaying).to.not.have.nested.property('data.playDate');
+            expect(JSON.stringify(nowPlaying)).to.not.include('user-device').and.not.include('My Home Server');
+        });
+
+        it('only uses the configured source', async function () {
+            const {db, owner} = await setup();
+            const sources = [fakeSource('jellyfin', 'a', [fakePlayer('p1', 'Song A')]), fakeSource('plex', 'b', [fakePlayer('p1', 'Song B')])];
+            await enableNowPlaying(db, owner.id, {from: 'source', uid: 'b'});
+            expect((await getPublicDashboard(db, owner.id, {sources, clients: []})).nowPlaying?.data.track?.name).eq('Song B');
+
+            await enableNowPlaying(db, owner.id, {from: 'source', uid: 'removed'});
+            expect((await getPublicDashboard(db, owner.id, {sources, clients: []})).nowPlaying).eq(null);
+        });
+
+        it('sticks with the shown player while it keeps playing', async function () {
+            const {db, owner} = await setup();
+            await enableNowPlaying(db, owner.id, {from: 'anySource'});
+            const later = fakePlayer('p2', 'Song B');
+            const first = await getPublicDashboard(db, owner.id, {sources: [fakeSource('jellyfin', 'a', [later])], clients: []});
+            expect(first.nowPlaying?.data.track?.name).eq('Song B');
+
+            // p1 sorts first but p2 is already shown
+            const sources = [fakeSource('jellyfin', 'a', [fakePlayer('p1', 'Song A'), later])];
+            for (let i = 0; i < 3; i++) {
+                expect((await getPublicDashboard(db, owner.id, {sources, clients: []})).nowPlaying?.data.track?.name).eq('Song B');
+            }
+
+            // p2 stops, falls back to the deterministic pick
+            const stopped = [fakeSource('jellyfin', 'a', [fakePlayer('p1', 'Song A'), fakePlayer('p2', 'Song B', {calculated: 'stopped'})])];
+            expect((await getPublicDashboard(db, owner.id, {sources: stopped, clients: []})).nowPlaying?.data.track?.name).eq('Song A');
+        });
     });
 
     it('is served without auth', async function () {
