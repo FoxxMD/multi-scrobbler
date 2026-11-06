@@ -9,6 +9,7 @@ import { LoginButton, LogoutButton } from "../icons/ChakraIcons";
 import { Tooltip } from "../ChakraTooltip";
 import { isPublicDashboardEnabled, PublicDashboardFetchable } from "../PublicDashboard";
 import { tanQueries } from "../../queries";
+import { InfoPopover } from "../ToggleTip";
 
 const AuthCard = (props: PropsWithChildren<{title: string, description?: string | React.JSX.Element}>) => (
     <Box display="flex" justifyContent="center" width="full" py="8">
@@ -33,7 +34,18 @@ const SetupTokenField = (props: {value: string, onChange: (val: string) => void}
     <Field.Root required>
         <Field.Label>Setup Token</Field.Label>
         <Input value={props.value} onChange={(e) => props.onChange(e.target.value)} autoComplete="off"/>
-        <Field.HelperText>Printed on startup in the multi-scrobbler console output, docker logs, or log file. It is hidden from the dashboard logs.</Field.HelperText>
+        <Field.HelperText>
+            Printed on startup in the multi-scrobbler console output, docker logs, or log file. It is hidden from the dashboard logs.
+            <InfoPopover title={<Heading>Finding Setup Token</Heading>}>
+                <Stack>
+                    <Text>The token is always printed in logs with the label <Code>[Auth]</Code> in the message.</Text>
+                    <Text>
+                        If you can't find it or it has been some time since startup you can trigger the code to be printed again by trying to <strong>Set Password</strong> with an incorrect token now.
+                        The correct token will be logged.
+                    </Text>
+                </Stack>
+            </InfoPopover>
+        </Field.HelperText>
     </Field.Root>
 );
 
