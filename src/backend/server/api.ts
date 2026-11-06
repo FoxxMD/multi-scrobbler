@@ -47,7 +47,7 @@ import { stripIndents } from "common-tags";
 import { nameToCredit } from "../../core/MusicMetadata.ts";
 import { asPlayCheap } from "../../core/PlayMarshalUtils.ts";
 import { getOwnerId } from "../common/auth/owner.ts";
-import { getPublicDashboard } from "../common/dashboard.ts";
+import { getNowPlayingOptions, getPublicDashboardEntry } from "../common/dashboard.ts";
 import { deleteUserSetting, getUserSetting, getUserSettings, isUserSettingKey, setUserSetting, type UserSettingKey } from "../common/auth/userSettings.ts";
 import type { ServerLocals } from "./index.ts";
 
@@ -1019,8 +1019,17 @@ Note: this is only supported by some components.`
         description: 'Data for the default public dashboard, if it is enabled'
     }, async (req, res) => {
         const db = await root.items.db();
-        return res.json(await getPublicDashboard(db, await getOwnerId(db), {sources: scrobbleSources.sources, clients: scrobbleClients.clients}));
+        const {data, expires} = await getPublicDashboardEntry(db, await getOwnerId(db), {sources: scrobbleSources.sources, clients: scrobbleClients.clients}, logger);
+        // the same for every viewer. Clients poll at max-age, express adds the ETag and answers If-None-Match with 304
+        res.set('Cache-Control', `public, max-age=${Math.max(0, Math.ceil((expires - Date.now()) / 1000))}`);
+        return res.json(data);
     });
+
+    router.get('/dashboard/now-playing-options', {
+        docs: {operationId: 'get-dashboard-now-playing-options'},
+        tags: ['App Meta'],
+        description: 'Sources and clients that can be used as Now Playing for the public dashboard'
+    }, async (req, res) => res.json(getNowPlayingOptions({sources: scrobbleSources.sources, clients: scrobbleClients.clients})));
 
     publicRouter.get('/api/version', {docs: {operationId: 'get-version'}, tags: ['App Meta']}, async (req, res) => {
        return res.json({version: root.get('version')});

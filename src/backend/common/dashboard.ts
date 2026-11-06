@@ -1,6 +1,8 @@
 import { eq, sql } from "drizzle-orm";
-import type { ComponentStat, PublicDashboardData, PublicPlay } from "../../core/Api.ts";
-import { CALCULATED_PLAYER_STATUSES, type PlayObject, type SourcePlayerObj } from "../../core/Atomic.ts";
+import type { Logger } from "@foxxmd/logging";
+import dayjs from "dayjs";
+import type { ComponentStat, NowPlayingOption, PublicDashboardData, PublicPlay } from "../../core/Api.ts";
+import { CALCULATED_PLAYER_STATUSES, type PlayObject, type SourcePlayerJson, type SourcePlayerObj } from "../../core/Atomic.ts";
 import type { PublicNowPlaying } from "../../core/UserSettings.ts";
 import { getUserSettings, type UserSettingsValues } from "./auth/userSettings.ts";
 import { components } from "./database/drizzle/schema/schema.ts";
@@ -14,23 +16,55 @@ export interface NowPlayingSource {
     players: Map<string, {getApiState(): SourcePlayerObj}>
 }
 
+/** A scrobble client (AbstractScrobbleClient), only the parts needed to mirror its Now Playing */
+export interface NowPlayingClient {
+    type: string
+    getUid(): string
+    supportsNowPlaying: boolean
+    nowPlayingEnabled: boolean
+    /** Source the current Now Playing came from */
+    nowPlayingLastSource?: {type: string}
+    getNowPlayingPlayers(): Record<string, SourcePlayerJson & {expiration?: string}>
+}
+
+/** Every component also has a name, only used for the (authenticated) Now Playing options */
+type Named = {name?: string};
+
 export interface DashboardComponents {
-    sources: ({type: string} | NowPlayingSource)[]
-    clients: {type: string}[]
+    sources: (({type: string} | NowPlayingSource) & Named)[]
+    clients: (({type: string} | NowPlayingClient) & Named)[]
 }
 
 const hasPlayers = (source: DashboardComponents['sources'][number]): source is NowPlayingSource => 'players' in source;
+const canNowPlay = (client: DashboardComponents['clients'][number]): client is NowPlayingClient => 'getNowPlayingPlayers' in client && client.supportsNowPlaying && client.nowPlayingEnabled;
+
+/** The dashboard is cached at least this long, even with refresh: true, so unauthenticated polling can't force a rebuild on every request */
+export const MIN_DASHBOARD_TTL = 5;
+
+export interface DashboardCacheEntry {
+    /** epoch ms */
+    expires: number
+    data: PublicDashboardData
+}
 
 // ponytail: in-process cache, move to MSCache if the dashboard is ever served by multiple instances
-const cache = new Map<string, {expires: number, data: PublicDashboardData}>();
+const cache = new Map<string, DashboardCacheEntry>();
 /** key of the player last shown as Now Playing, per user, so the pick does not flip-flop between players that are playing at the same time */
 const lastNowPlaying = new Map<string, string>();
+/** configured Now Playing components that were not found, so each is only logged once */
+const missingNowPlaying = new Set<string>();
 
 /** Drop the cached dashboard so the next request is rebuilt (called when any publicDashboard setting changes) */
 export const invalidateDashboardCache = (userId: string) => {
     cache.delete(userId);
     lastNowPlaying.delete(userId);
 }
+
+/** Sources and clients that can be picked as publicDashboardSettings.nowPlaying */
+export const getNowPlayingOptions = (comps: DashboardComponents): NowPlayingOption[] => [
+    ...comps.sources.filter(hasPlayers).map(x => ({from: 'source' as const, uid: x.getUid(), name: (x as Named).name ?? x.getUid(), type: x.type})),
+    ...comps.clients.filter(canNowPlay).map(x => ({from: 'client' as const, uid: x.getUid(), name: (x as Named).name ?? x.getUid(), type: x.type})),
+];
 
 const componentStat = (list: {type: string}[], level: 'count' | 'detailed'): ComponentStat => ({
     count: list.length,
@@ -53,7 +87,7 @@ const toPublicPlay = (play: PlayObject): PublicPlay => {
  * When several are playing keep showing the last picked one, otherwise sort by source then platform so the pick is deterministic.
  * Returns null when nothing is playing or the configured Source does not exist (anymore).
  * */
-export const sourceNowPlaying = (userId: string, sources: DashboardComponents['sources'], from: PublicNowPlaying): PublicPlay | null => {
+export const sourceNowPlaying = (userId: string, sources: DashboardComponents['sources'], from: Exclude<PublicNowPlaying, {from: 'client'}>): PublicPlay | null => {
     const candidates: {key: string, sourceType: string, play: PlayObject}[] = [];
     for (const source of sources) {
         if (!hasPlayers(source) || (from.from === 'source' && source.getUid() !== from.uid) || !source.isMonitoring()) {
@@ -78,10 +112,50 @@ export const sourceNowPlaying = (userId: string, sources: DashboardComponents['s
 }
 
 /**
+ * Mirror the Now Playing a scrobble client last reported upstream.
+ *
+ * Non-realtime clients (last.fm, listenbrainz...) only update Now Playing while a player is playing, never when it pauses/stops,
+ * so their Now Playing is only shown until it expires upstream. Realtime clients clear it themselves.
+ * Returns null when nothing is playing or the client cannot report Now Playing.
+ * */
+export const clientNowPlaying = (client: NowPlayingClient): PublicPlay | null => {
+    if (!client.supportsNowPlaying || !client.nowPlayingEnabled) {
+        return null;
+    }
+    const [player] = Object.values(client.getNowPlayingPlayers());
+    if (player?.play === undefined || (player.expiration !== undefined && !dayjs(player.expiration).isAfter(dayjs()))) {
+        return null;
+    }
+    const publicPlay = toPublicPlay(player.play as unknown as PlayObject);
+    publicPlay.meta.source = client.nowPlayingLastSource?.type;
+    return publicPlay;
+}
+
+const resolveNowPlaying = (userId: string, comps: DashboardComponents, from: PublicNowPlaying, logger?: Logger): PublicPlay | null => {
+    if (from.from !== 'anySource') {
+        const list: {getUid?: () => string}[] = from.from === 'client' ? comps.clients.filter(canNowPlay) : comps.sources.filter(hasPlayers);
+        const found = list.find(x => x.getUid?.() === from.uid);
+        const missingKey = `${userId}-${from.from}-${from.uid}`;
+        if (found === undefined) {
+            if (!missingNowPlaying.has(missingKey)) {
+                missingNowPlaying.add(missingKey);
+                logger?.verbose(`Public dashboard Now Playing ${from.from} '${from.uid}' does not exist or cannot report Now Playing, nothing will be shown`);
+            }
+            return null;
+        }
+        missingNowPlaying.delete(missingKey);
+        if (from.from === 'client') {
+            return clientNowPlaying(found as NowPlayingClient);
+        }
+    }
+    return sourceNowPlaying(userId, comps.sources, from as Exclude<PublicNowPlaying, {from: 'client'}>);
+}
+
+/**
  * Build the public dashboard for a user, including only what is enabled in their publicDashboardSettings.
  * Returns an empty object when the dashboard is not enabled.
  * */
-export const buildPublicDashboard = async (db: DbConcrete, userId: string, comps: DashboardComponents, userSettings: UserSettingsValues): Promise<PublicDashboardData> => {
+export const buildPublicDashboard = async (db: DbConcrete, userId: string, comps: DashboardComponents, userSettings: UserSettingsValues, logger?: Logger): Promise<PublicDashboardData> => {
     const {publicDashboardEnabled, publicDashboardSettings: settings} = userSettings;
     if (publicDashboardEnabled !== true || settings === undefined) {
         return {};
@@ -114,7 +188,8 @@ export const buildPublicDashboard = async (db: DbConcrete, userId: string, comps
             where: {state: 'scrobbled', component: {mode: 'client', userId}},
             orderBy: {playedAt: 'desc'},
             limit: settings.recent * 5,
-            with: {parent: true},
+            // source type, from the component that discovered the play
+            with: {parent: {with: {component: {columns: {type: true}}}}},
         });
         const seen = new Set<number>();
         const recent: PublicPlay[] = [];
@@ -124,7 +199,10 @@ export const buildPublicDashboard = async (db: DbConcrete, userId: string, comps
                 continue;
             }
             seen.add(key);
-            recent.push(toPublicPlay((row.parent ?? row).play));
+            const publicPlay = toPublicPlay((row.parent ?? row).play);
+            // the play's own meta.source is whatever the source set (sometimes its name), only expose the type
+            publicPlay.meta.source = row.parent?.component?.type;
+            recent.push(publicPlay);
             if (recent.length === settings.recent) {
                 break;
             }
@@ -133,24 +211,27 @@ export const buildPublicDashboard = async (db: DbConcrete, userId: string, comps
     }
 
     if (settings.nowPlaying !== undefined) {
-        data.nowPlaying = sourceNowPlaying(userId, comps.sources, settings.nowPlaying);
+        data.nowPlaying = resolveNowPlaying(userId, comps, settings.nowPlaying, logger);
     }
     return data;
 }
 
-/** buildPublicDashboard, cached for publicDashboardSettings.refresh seconds (refresh: true never caches) */
-export const getPublicDashboard = async (db: DbConcrete, userId: string, comps: DashboardComponents): Promise<PublicDashboardData> => {
+/**
+ * buildPublicDashboard, cached for publicDashboardSettings.refresh seconds.
+ * refresh: true (always live) is still cached for MIN_DASHBOARD_TTL seconds.
+ * */
+export const getPublicDashboardEntry = async (db: DbConcrete, userId: string, comps: DashboardComponents, logger?: Logger): Promise<DashboardCacheEntry> => {
     const cached = cache.get(userId);
     if (cached !== undefined && cached.expires > Date.now()) {
-        return cached.data;
+        return cached;
     }
     const userSettings = await getUserSettings(db, userId);
-    const data = await buildPublicDashboard(db, userId, comps, userSettings);
+    const data = await buildPublicDashboard(db, userId, comps, userSettings, logger);
     const refresh = userSettings.publicDashboardSettings?.refresh;
-    if (typeof refresh === 'number') {
-        cache.set(userId, {expires: Date.now() + refresh * 1000, data});
-    } else {
-        cache.delete(userId);
-    }
-    return data;
+    const entry = {expires: Date.now() + Math.max(typeof refresh === 'number' ? refresh : 0, MIN_DASHBOARD_TTL) * 1000, data};
+    cache.set(userId, entry);
+    return entry;
 }
+
+export const getPublicDashboard = async (db: DbConcrete, userId: string, comps: DashboardComponents, logger?: Logger): Promise<PublicDashboardData> =>
+    (await getPublicDashboardEntry(db, userId, comps, logger)).data;

@@ -7,10 +7,12 @@ export const componentDetailLevel = z.enum(['count','detailed']);
  *
  * * anySource -- any Source with players, picked deterministically when several are playing
  * * source -- only the Source with this uid (AbstractComponent.getUid())
+ * * client -- mirror the Now Playing of the scrobble client with this uid, which must have Now Playing enabled
  * */
 export const publicNowPlayingSchema = z.discriminatedUnion('from', [
     z.object({from: z.literal('anySource')}),
     z.object({from: z.literal('source'), uid: z.string().min(1)}),
+    z.object({from: z.literal('client'), uid: z.string().min(1)}),
 ]);
 
 export const publicDashboardSettingsSchema = z.object({
@@ -24,7 +26,7 @@ export const publicDashboardSettingsSchema = z.object({
     recent: z.number().int().positive().max(50).optional(),
     /** Show what is currently playing. undefined = disabled */
     nowPlaying: publicNowPlayingSchema.optional(),
-    /** how often to expire cache, in seconds. true = never cache, always so freshest/live. */
+    /** how often to expire cache, in seconds. true = always live (still cached for a few seconds, see MIN_DASHBOARD_TTL) */
     refresh: z.union([z.literal(true), z.number().positive()])
 })
 

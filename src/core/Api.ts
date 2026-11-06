@@ -459,6 +459,14 @@ export interface PublicDashboardData {
     nowPlaying?: PublicPlay | null
 }
 
+/** A Source or client that can be picked as the public dashboard's Now Playing (publicDashboardSettings.nowPlaying) */
+export interface NowPlayingOption {
+    from: 'source' | 'client'
+    uid: string
+    name: string
+    type: string
+}
+
 export type PublicPlay = {
     data: TrackData & Pick<JsonPlayObject['data'], 'listenedFor' | 'repeat'>,
     meta: Pick<JsonPlayObject['meta'], 'source' | 'musicService' | 'url'>,

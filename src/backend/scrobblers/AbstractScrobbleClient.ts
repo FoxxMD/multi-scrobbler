@@ -125,6 +125,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     nowPlayingLastUpdated?: Dayjs;
     nowPlayingExpirationDate?: Dayjs;
     nowPlayingLastPlay?: SourcePlayerObj;
+    /** Source nowPlayingLastPlay came from */
+    nowPlayingLastSource?: SourceIdentifier;
     nowPlayingQueue: NowPlayingQueue = new Map();
     nowPlayingTaskInterval: number = 5000;
     npLogger: Logger;
@@ -365,6 +367,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             await this.tryStopScrobbling(opts.reason);
             await this.tryStopDeadProcessing(opts.reason);
             this.nowPlayingLastPlay = undefined;
+            this.nowPlayingLastSource = undefined;
             this.nowPlayingLastUpdated = undefined;
             this.setStatus('Stopped');
             this.emitComponentUpdate<Partial<ComponentClientApiJson>>({state: COMPONENT_STATE.STOPPED});
@@ -1395,6 +1398,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     this.npLogger.warn(new Error('Error occurred while trying to update upstream Client, will ignore', {cause: e}));
                 }
                 this.nowPlayingLastPlay = sourcePlayerData.player;
+                this.nowPlayingLastSource = sourcePlayerData.source;
                 this.nowPlayingLastUpdated = dayjs();
             } else {
                 if(sourcePlayerData.player.play?.meta?.sourceSOT === SOURCE_SOT.INGRESS && bufferNPUpdateReasonFragments.every((x) => npUpdateTopReason.includes(x))) {
