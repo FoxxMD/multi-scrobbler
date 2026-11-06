@@ -71,12 +71,23 @@ const componentStat = (list: {type: string}[], level: 'count' | 'detailed'): Com
     ...(level === 'detailed' ? {types: Array.from(new Set(list.map(x => x.type))) as ComponentStat['types']} : {})
 });
 
+/** Only absolute http(s) URLs, anything else (javascript:, data:, relative...) is dropped. Play urls can come from anyone who can send to an ingress Source */
+const httpUrl = (val?: string): string | undefined => {
+    try {
+        return val !== undefined && ['http:', 'https:'].includes(new URL(val).protocol) ? val : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
 const toPublicPlay = (play: PlayObject): PublicPlay => {
     const {artists, albumArtists, album, track, duration, meta, listenedFor, repeat} = play.data;
     const {source, musicService, url} = play.meta;
+    const web = httpUrl(url?.web);
+    const origin = httpUrl(url?.origin);
     return {
         data: {artists, albumArtists, album, track, duration, meta, listenedFor, repeat},
-        meta: {source, musicService, url},
+        meta: {source, musicService, url: web === undefined && origin === undefined ? undefined : {web, origin}},
     };
 }
 

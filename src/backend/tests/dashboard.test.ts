@@ -176,6 +176,23 @@ describe('Public Dashboard', function () {
             expect(JSON.stringify(nowPlaying)).to.not.include('user-device').and.not.include('My Home Server');
         });
 
+        it('only keeps http(s) play urls', async function () {
+            const {db, owner} = await setup();
+            await enableNowPlaying(db, owner.id, {from: 'anySource'});
+            const player = (url: {web?: string, origin?: string}) => {
+                const p = fakePlayer('p1', 'Song A');
+                return {getApiState: () => {
+                    const state = p.getApiState();
+                    state.play!.meta.url = url;
+                    return state;
+                }};
+            };
+            const nowPlaying = async (url: {web?: string, origin?: string}) => (await build(db, owner.id, {sources: [fakeSource('jellyfin', 'a', [player(url)])], clients: []})).nowPlaying;
+            expect((await nowPlaying({web: 'https://open.spotify.com/track/1', origin: 'http://youtube.com/watch'}))?.meta.url).eql({web: 'https://open.spotify.com/track/1', origin: 'http://youtube.com/watch'});
+            expect((await nowPlaying({web: 'javascript:alert(1)', origin: 'https://ok.example'}))?.meta.url).eql({web: undefined, origin: 'https://ok.example'});
+            expect((await nowPlaying({web: 'data:text/html,hi', origin: '/relative'}))?.meta.url).eq(undefined);
+        });
+
         it('only uses the configured source', async function () {
             const {db, owner} = await setup();
             const sources = [fakeSource('jellyfin', 'a', [fakePlayer('p1', 'Song A')]), fakeSource('plex', 'b', [fakePlayer('p1', 'Song B')])];
