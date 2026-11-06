@@ -68,7 +68,7 @@ export const applyOwnerPasswordEnv = async (auth: MSAuth, db: DbConcrete, secret
                 logger.error(new Error('Could not reset admin password from ADMIN_RESET_PW', {cause: e}));
             }
         } else {
-            logger.verbose('ADMIN_RESET_PW was already applied, not resetting again');
+            logger.warn('ADMIN_RESET_PW was NOT applied: this value was already used for a reset once, so it is ignored to avoid overwriting passwords set since then. To reset the password again, set ADMIN_RESET_PW to a different value.');
         }
         return;
     }

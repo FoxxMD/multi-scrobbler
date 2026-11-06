@@ -20,6 +20,8 @@ import { authBasePath, createAuth, type MSAuth, type PasswordHasher } from "../c
 import { resolveAuthSettings, type AuthSettings } from "../common/auth/authSettings.ts";
 import { getDataDir } from "../common/index.ts";
 import { applyOwnerPasswordEnv } from "../common/auth/ownerPassword.ts";
+import { ensureOwner } from "../common/auth/owner.ts";
+import { redactString } from "@foxxmd/redact-string";
 import { AuthStateStore } from "../common/auth/authState.ts";
 import { optionalAuth, requireAuth, SECURITY_PUBLIC, SECURITY_REQUIRED } from "./requireAuth.ts";
 import type { DbConcrete } from "../common/database/drizzle/drizzleUtils.ts";
@@ -132,6 +134,9 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
                 if(authSettings.setupTokenGenerated) {
                     authLogger.warn(`Setup token (required to secure this instance from the dashboard${authSettings.setupTokenAlways ? '' : ' when connecting from what looks like the internet, or through a domain it does not recognize'}): ${authSettings.setupToken}`);
                 }
+            } else if(authSettings.mode !== 'disabled') {
+                // the login form does not prefill the username once secured, this is the only place to recover a forgotten one
+                authLogger.info(`Dashboard and API are secured. Admin username: '${redactString((await ensureOwner(db)).username ?? 'null', 3, {replaceFrom: 'end'})}' (forgot the password? Use ADMIN_RESET_PW)`);
             }
             authLogger.verbose(`Auth mode: ${authSettings.mode} | Allowed Hosts: ${authSettings.allowedHosts.join(', ')} | Secure Cookies: ${authSettings.secureCookies ? 'Yes' : 'No'} | Trust Proxy: ${authSettings.trustProxy ? 'Yes' : 'No'} | Session Expires: ${authSettings.sessionExpiresIn}s`);
         }
