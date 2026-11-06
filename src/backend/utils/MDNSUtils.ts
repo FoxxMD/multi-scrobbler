@@ -1,21 +1,8 @@
 import { Browser, type Service, ServiceType } from "@astronautlabs/mdns";
 import type {Logger} from "@foxxmd/logging";
-import AvahiBrowser from 'avahi-browse';
 import type {MdnsDeviceInfo} from "../common/infrastructure/Atomic.ts";
 import { MaybeLogger } from '../common/MaybeLogger.ts';
 import { sleep } from "../utils.ts";
-import { debounce, type DebouncedFunction } from "./debounce.ts";
-
-export interface AvahiService {
-    service_name: string
-    target: {
-        service_type: string
-        domain: string
-        host: string
-        hostname: string
-        port: string
-    }
-}
 
 export interface DiscoveryOptions<T> {
     sanity?: boolean
@@ -23,81 +10,6 @@ export interface DiscoveryOptions<T> {
     onDnsError?: (err: Error) => void
     duration?: number,
     logger?: Logger
-}
-
-export const discoveryAvahi = async (service: string, options?: DiscoveryOptions<AvahiService>) => {
-    const {
-        logger,
-        duration = 10000,
-        sanity = false,
-        onDiscover,
-        onDnsError
-    } = options ?? {};
-
-    const maybeLogger = new MaybeLogger(logger, 'Avahi mDNS');
-    maybeLogger.debug(`Starting mDNS discovery with Avahi => Listening for ${(duration / 1000).toFixed(2)}s`);
-    let anyDiscovered = false;
-
-    const services = new Map<string, MdnsDeviceInfo>();
-
-    const triggerDiscovery = () => {
-        for(const [k,v] of services.entries()) {
-            maybeLogger.debug(`Discovered device "${v.name}" with ${v.addresses.length} interfaces`);
-            onDiscover?.(v);
-            services.delete(k);
-        }
-    }
-
-    let debouncedFunc: DebouncedFunction;
-
-    try {
-        const browser = new AvahiBrowser(service);
-        browser.on(AvahiBrowser.EVENT_SERVICE_UP, async (service: AvahiService) => {
-            anyDiscovered = true;
-
-            if(onDiscover !== undefined) {
-
-                let foundService = services.get(service.service_name);
-                if(foundService === undefined) {
-                    foundService = {
-                        name: service.service_name,
-                        addresses: [service.target.host],
-                        type: service.target.service_type,
-                    }
-                } else {
-                    foundService.addresses.push(service.target.host);
-                }
-                services.set(foundService.name, foundService);
-
-                if(debouncedFunc === undefined) {
-                    debouncedFunc = debounce(() => triggerDiscovery(), 1000);
-                } else {
-                    await debouncedFunc();
-                }
-            }
-        });
-        browser.on(AvahiBrowser.EVENT_DNSSD_ERROR, (err: any) => {
-            const e = new Error('Error occurred while using avahi-browse', {cause: err});
-            if (onDnsError) {
-                onDnsError(e)
-            } else {
-                maybeLogger.error(e);
-            }
-        });
-        browser.start();
-        if (sanity) {
-            await sleep(1500);
-            if (!anyDiscovered) {
-                maybeLogger.debug('Did not find any mdns services after 1.5s! Do you have port 5353 open?');
-            }
-            await sleep(duration - 1500);
-        } else {
-            await sleep(duration);
-        }
-        maybeLogger.debug('Stopped discovery');
-    } catch (e) {
-        maybeLogger.warn(new Error('mDNS device discovery with avahi-browse failed', {cause: e}));
-    }
 }
 
 export const discoveryNative = async (service: string, options?: DiscoveryOptions<Service>) => {

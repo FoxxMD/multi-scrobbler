@@ -6,7 +6,6 @@ RUN \
   echo "**** install base packages ****" && \
     apt-get update && \
     apt-get install --no-install-recommends -y \
-        avahi-utils \
         curl && \
     apt-get install --only-upgrade ca-certificates -y && \
   echo "**** cleanup ****" && \

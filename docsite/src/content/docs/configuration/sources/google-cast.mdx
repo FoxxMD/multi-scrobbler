@@ -13,13 +13,6 @@ import ENVConfig from "@site/src/content/docs/configuration/sources/_env_configs
 
 If your media device can be **Cast** to using this button ![Chromecast Icon](https://upload.wikimedia.org/wikipedia/commons/2/26/Chromecast_cast_button_icon.svg) on your phone/computer then multi-scrobbler can monitor it in order to scrobble music you play.
 
-
-:::note 
-
-Google Cast support is **experimental**. You may experience crashes and errors while using this Source. Please open an issue if you experience problems and include all information detailed in the issue template to help debug your issue.
-
-:::
-
 :::note 
 
 This source relies on common, **basic** music data provided by the cast device which will always be less exhaustive than data parsed from full source integrations. If there is an existing [Source](/configuration/sources) it is recommended to configure for it and blacklist the app on Google Cast, rather than relying solely on Google Cast for scrobbling.
@@ -30,40 +23,66 @@ This source relies on common, **basic** music data provided by the cast device w
 
 Cast devices can be manually configured using file-based configuration OR automatically discovered using **mDNS.**
 
-###### mDNS Discovery
+##### Manual Configuration
 
-The host machine running multi-scrobbler must be configured to allow [mDNS traffic on port 5353/UDP](https://book.hacktricks.xyz/network-services-pentesting/5353-udp-multicast-dns-mdns).
+Add each device's name and IP address to `devices` in the file-based config. This works with every installation method, including Docker with default (bridge) networking. When `devices` is set, mDNS discovery is disabled unless `useAutoDiscovery` is explicitly set to `true`.
 
-<details>
+```json5 title="chromecast.json"
+[
+  {
+    "name": "MyCast",
+    "type": "chromecast",
+    "data": {
+      "devices": [
+        {"name": "Living Room TV", "address": "192.168.0.115"}
+      ]
+    }
+  }
+]
+```
 
-    <summary>OS Specific Instructions</summary>
+##### mDNS Discovery
 
-<Tabs>
-    <TabItem value="linux" label="Linux">
-        **Docker**
+MS can also discover cast devices by listening for mDNS traffic on port 5353/UDP. The machine running MS must be able to send and receive multicast traffic on the same network as your cast devices.
 
-        The host machine must have [avahi-daemon](https://avahi.org/) running to circumvent limitations with DNS resolution due to musl in Alpine. Most major linux distributions package avahi and many have it built-in. Once avahi is running you must pass D-Bus and the avahi daemon socket to your container like so:
+* **Local installation:** no additional setup is required, other than allowing 5353/UDP through the host's firewall.
+* **Docker with [host networking](https://docs.docker.com/engine/network/drivers/host/)** (`network_mode: host`): no additional setup is required.
+* **Docker with default (bridge) networking:** containers can't see multicast traffic from the host's network. Configure devices [manually](#manual-configuration) or add an mDNS reflector to your stack as described below.
 
-        ```shell wrap
-        docker run ... -v /var/run/dbus:/var/run/dbus -v  	/var/run/avahi-daemon/socket:/var/run/avahi-daemon/socket ... foxxmd/multi-scrobbler
-        ```
+<Aside type="caution" title="Avahi support was removed">
 
-        **Flatpak/Nodejs**
+Previous versions of MS used the host's Avahi daemon for discovery in Docker. This is no longer supported. If you mounted `/var/run/dbus` and `/var/run/avahi-daemon/socket` into the container or set `useAvahi` in your config, remove them.
 
-        No additional steps are required.
-    </TabItem>
-    <TabItem value="windows" label="Windows">
-        **Docker**
+</Aside>
 
-        Unsupported at this time.
+<DetailsAdmo type="note" summary="mDNS Reflector with Docker">
 
-        **Nodejs**
+[`dockurr/mdns`](https://github.com/dockur/mdns) runs on the host's network and copies mDNS traffic between your LAN and the Docker network MS uses, so MS can discover devices while staying on a bridge network.
 
-        No additional steps are required.
-    </TabItem>
-</Tabs>
+Add it to the same compose stack as MS and give MS's network a fixed bridge name:
 
-</details>
+```yaml title="docker-compose.yml" placeholder="LAN_INTERFACE,br-ms"
+services:
+  multi-scrobbler:
+    image: foxxmd/multi-scrobbler
+    # ...your existing environment, volumes, ports, etc.
+    networks: # [!code highlight]
+      - ms # [!code highlight]
+
+  mdns: # [!code highlight]
+    image: dockurr/mdns # [!code highlight]
+    network_mode: host # [!code highlight] [!ref] The host's firewall must allow 5353/UDP on both interfaces.
+    environment: # [!code highlight]
+      INTERFACES: "LAN_INTERFACE br-ms" # [!code highlight] [!ref] Replace `LAN_INTERFACE` with the name of the host's network interface on your LAN, such as `eth0`, `enp3s0` or `wlan0`. [!ref] The second interface name must match `com.docker.network.bridge.name`. If MS already uses a network you created, add the same `driver_opts` to it and recreate the network.
+    restart: on-failure:3 # [!code highlight] [!ref] The reflector exits if the LAN interface is not connected, for example while Wi-Fi is still connecting at boot. `restart: on-failure:3` retries a few times instead of restarting forever.
+
+networks: # [!code highlight]
+  ms: # [!code highlight]
+    driver_opts: # [!code highlight]
+      com.docker.network.bridge.name: br-ms # [!code highlight] [!ref] Be aware that **all** mDNS traffic is copied between your LAN and the `ms` network, not only Google Cast traffic.
+```
+
+</DetailsAdmo>
 
 #### What Media Does MS Scrobble?
 

@@ -75,15 +75,13 @@ export const chromecastDataSchema = z.object({
     }),
 
     /**
-     * Try to use Avahi and avahi-browse to resolve mDNS devices instead of native mDNS querying
+     * (DEPRECATED) Avahi discovery has been removed and this option does nothing. Native mDNS discovery is always used.
      *
-     * Useful for docker (alpine) container where mDNS resolution is not yet supported. Avahi socket must be exposed to the container and avahi-tools must be installed.
-     *
-     * @default false
+     * @deprecated
      * */
     useAvahi: z.boolean().optional().meta({
-        description: "Try to use Avahi and avahi-browse to resolve mDNS devices instead of native mDNS querying",
-        default: false
+        description: "(DEPRECATED) Avahi discovery has been removed and this option does nothing. Native mDNS discovery is always used.",
+        deprecated: true
     }),
 
     /**
