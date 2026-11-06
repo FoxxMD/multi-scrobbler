@@ -1,13 +1,14 @@
 import React from "react";
-import { Box, Button, Flex, Heading, HStack, Link, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Code, Flex, Heading, HStack, Link, Spinner, Stack, Text } from "@chakra-ui/react";
 import { formOptions, useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
-import { componentDetailLevel, publicDashboardSettingsSchema, type PublicDashboardSettings, type PublicNowPlaying, type UserSettingValue } from "../../../core/UserSettings";
+import { componentDetailLevel, embedAncestorSchema, publicDashboardSettingsSchema, type PublicDashboardSettings, type PublicNowPlaying, type UserSettingValue } from "../../../core/UserSettings";
 import type { NowPlayingOption } from "../../../core/Api";
 import { capitalizeWords } from "../../../core/StringUtils";
 import { putUserSetting, tanQueries } from "../../queries";
-import { FormCheckbox, FormNativeSelect, FormNumberInput, FormRadio, FormSwitch, type RadioFormItem, type SelectFormGroup } from "../form/formComponents";
+import { FormCheckbox, FormNativeSelect, FormNumberInput, FormRadio, FormSwitch, FormTextarea, type RadioFormItem, type SelectFormGroup } from "../form/formComponents";
+import { ChakraClip } from "../ChakraClipboard";
 import { ErrorAlert } from "../ErrorAlert";
 import { EphemeralElement } from "../Badges";
 import { CheckIcon, ExclamationCircleIcon } from "../icons/ChakraIcons";
@@ -31,6 +32,26 @@ const valueToNowPlaying = (val: string): PublicNowPlaying | undefined => {
     return {from: val.slice(0, i), uid: val.slice(i + 1)} as PublicNowPlaying;
 }
 
+/** allowed sites, one per line */
+const toLines = (val: string) => val.split('\n').map(x => x.trim()).filter(x => x !== '');
+
+/** iframe + resize script to paste into another site */
+const embedSnippet = () => {
+    const basePath = window.__MS_RUNTIME__?.basePath ?? '/';
+    const url = `${window.location.origin}${basePath === '/' ? '' : basePath}/embed`;
+    return `<iframe id="ms-embed" src="${url}?type=recent" title="Multi-Scrobbler" loading="lazy"
+  style="width: 100%; max-width: 500px; height: 400px; border: 0;"
+  sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+<script>
+  // optional: resize the iframe to fit its content
+  window.addEventListener('message', (e) => {
+    if (e.origin === '${window.location.origin}' && e.data?.type === 'multi-scrobbler-embed') {
+      document.getElementById('ms-embed').style.height = e.data.height + 'px';
+    }
+  });
+</script>`;
+}
+
 // the real setting schema always has the last word on what is saved
 const savedSchema = z.object({publicDashboardEnabled: z.boolean(), publicDashboardSettings: publicDashboardSettingsSchema});
 
@@ -42,6 +63,8 @@ const formSchema = z.object({
     recent: z.literal(0).or(recent.unwrap()),
     nowPlaying: z.string(),
     refresh: z.literal(0).or(refresh.options[1]),
+    embed: z.boolean(),
+    embedAncestors: z.string().refine((val) => toLines(val).every(x => embedAncestorSchema.safeParse(x).success), 'Each line must be an origin like https://blog.example.com or https://*.example.com'),
 }).transform((v): z.input<typeof savedSchema> => ({
     publicDashboardEnabled: v.enabled,
     publicDashboardSettings: {
@@ -51,6 +74,7 @@ const formSchema = z.object({
         recent: v.recent === 0 ? undefined : v.recent,
         nowPlaying: valueToNowPlaying(v.nowPlaying),
         refresh: v.refresh === 0 ? true : v.refresh,
+        embed: v.embed ? {ancestors: toLines(v.embedAncestors).length > 0 ? toLines(v.embedAncestors) : undefined} : undefined,
     }
 })).pipe(savedSchema);
 
@@ -66,6 +90,8 @@ const toFormValues = (enabled: boolean | undefined, settings: PublicDashboardSet
     recent: 10,
     nowPlaying: 'off',
     refresh: 300,
+    embed: false,
+    embedAncestors: '',
 } : {
     enabled: enabled ?? false,
     listenStats: settings.listenStats ?? false,
@@ -74,6 +100,8 @@ const toFormValues = (enabled: boolean | undefined, settings: PublicDashboardSet
     recent: settings.recent ?? 0,
     nowPlaying: nowPlayingToValue(settings.nowPlaying),
     refresh: settings.refresh === true ? 0 : settings.refresh,
+    embed: settings.embed !== undefined,
+    embedAncestors: (settings.embed?.ancestors ?? []).join('\n'),
 };
 
 const detailItems: RadioFormItem<z.infer<typeof detailLevel>>[] = [
@@ -185,6 +213,44 @@ export const PublicDashboardSettingsForm = (props: PublicDashboardSettingsFormPr
                                         </Stack>
                                     </InfoPopover></HStack>}
                                     helperText="How long the dashboard is cached before it is rebuilt, 0 to always show live data (rebuilt at most every few seconds)"/>}
+                            />
+                            <form.Field
+                                name="embed"
+                                children={(field) => <FormSwitch
+                                    field={field}
+                                    disabled={!isEnabled}
+                                    label={<HStack gap="1">Allow Embedding <InfoPopover question title={<Heading size="sm">Embedding</Heading>}>
+                                        <Stack maxWidth="sm">
+                                            <Text>Lets other sites show your Now Playing and Recent plays (or stats) in an iframe of <Code>/embed</Code>. It shows the same data as the public dashboard, nothing more.</Text>
+                                            <Text>Every visitor of that site connects to this instance, so it sees their IP addresses and the page they are on, and the site makes your instance's address public.</Text>
+                                            <Text>Options for the iframe url: <Code>type=recent|now|stats</Code>, <Code>n=5</Code> (max recent plays), <Code>theme=light|dark</Code>, <Code>transparent=1</Code>, <Code>cta=0</Code> (hide the multi-scrobbler link)</Text>
+                                        </Stack>
+                                    </InfoPopover></HStack>}
+                                    helperText="Allow other sites to embed the public dashboard"
+                                />}
+                            />
+                            <form.Subscribe
+                                selector={(state) => state.values.embed}
+                                children={(embedOn) => isEnabled && embedOn ? (
+                                    <Stack gap="5">
+                                        <form.Field
+                                            name="embedAncestors"
+                                            children={(field) => <FormTextarea
+                                                field={field}
+                                                maxWidth="sm"
+                                                autoresize
+                                                placeholder={'https://blog.example.com\nhttps://*.example.org'}
+                                                label="Allowed Sites"
+                                                helperText="One per line. Leave empty to allow any site."
+                                            />}
+                                        />
+                                        <Stack gap="1">
+                                            <HStack><Text fontWeight="medium" textStyle="sm">Embed Code</Text><ChakraClip value={embedSnippet()}/></HStack>
+                                            <Box as="pre" textStyle="xs" fontFamily="mono" bg="bg.muted" p="3" borderRadius="md" overflowX="auto">{embedSnippet()}</Box>
+                                            <Text textStyle="xs" color="fg.muted">Save to apply.</Text>
+                                        </Stack>
+                                    </Stack>
+                                ) : undefined}
                             />
                         </Stack>
                     )}

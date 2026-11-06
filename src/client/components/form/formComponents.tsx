@@ -1,5 +1,5 @@
 import type { FieldWithValue } from '@tanstack/react-form'
-import { Checkbox, Field, RadioGroup, HStack, NativeSelect, NumberInput, Switch } from '@chakra-ui/react';
+import { Checkbox, Field, RadioGroup, HStack, NativeSelect, NumberInput, Switch, Textarea, type TextareaProps } from '@chakra-ui/react';
 import type { ReactNode } from 'react';
 import React from 'react';
 
@@ -157,6 +157,24 @@ export const FormNativeSelect = ({
       </NativeSelect.Field>
       <NativeSelect.Indicator />
     </NativeSelect.Root>
+    {helperText !== undefined ? <Field.HelperText>{helperText}</Field.HelperText> : undefined}
+    <FormFieldErrors field={field}/>
+  </Field.Root>;
+
+export const FormTextarea = ({
+  field,
+  label,
+  helperText,
+  disabled,
+  ...rest
+}: {
+  field: FieldWithValue<string>
+  label: string | ReactNode
+  helperText?: ReactNode
+  disabled?: boolean
+} & Omit<TextareaProps, 'value' | 'onChange' | 'onBlur' | 'disabled'>) => <Field.Root invalid={field.errors.length > 0} disabled={disabled}>
+    <Field.Label>{label}</Field.Label>
+    <Textarea {...rest} value={field.value} onChange={(e) => field.handleChange(e.currentTarget.value)} onBlur={field.handleBlur}/>
     {helperText !== undefined ? <Field.HelperText>{helperText}</Field.HelperText> : undefined}
     <FormFieldErrors field={field}/>
   </Field.Root>;

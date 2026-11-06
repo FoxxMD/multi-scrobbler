@@ -41,6 +41,8 @@ export default defineConfig(({ mode }) => {
             rolldownOptions: {
                 input: {
                     main: resolve(import.meta.dirname, 'index.html'),
+                    // the only framable document, see src/client/embed.tsx
+                    embed: resolve(import.meta.dirname, 'embed.html'),
                     // next: resolve(import.meta.dirname, 'next/index.html'),
                 },
                 //keepNames: true,

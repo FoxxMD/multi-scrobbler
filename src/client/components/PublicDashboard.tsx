@@ -1,6 +1,6 @@
 import React, { type ComponentProps, useLayoutEffect, useRef } from "react"
 import { useQuery } from "@tanstack/react-query";
-import { Spinner, Stack, Wrap, HStack, Stat, Highlight, Flex, Text, LinkBox, LinkOverlay, Box, Span, Card, Heading, ScrollArea, Status, IconButton } from '@chakra-ui/react';
+import { Spinner, Stack, Wrap, HStack, Stat, Highlight, Flex, Text, LinkBox, LinkOverlay, Box, Span, Card, Heading, ScrollArea, Status, IconButton, Image, type TextProps } from '@chakra-ui/react';
 import { type CountUpStat, CountUpValueText } from "./CountUpStat";
 import { capitalize, capitalizeWords } from "../../core/StringUtils";
 import { getMusicServiceIcon } from "./icons/ChakraIcons";
@@ -22,18 +22,21 @@ export const isPublicDashboardEnabled = (data?: PublicDashboardData): boolean =>
 /** Never poll faster than this, the server keeps the dashboard at least a few seconds anyway */
 const MIN_REFETCH_SECONDS = 10;
 
+/** The public dashboard, polled right after the server cache expires while Now Playing is enabled */
+export const usePublicDashboard = () => useQuery({
+    ...tanQueries.dashboard.public(),
+    // only Now Playing needs to stay current
+    refetchInterval: (query) => {
+        const res = query.state.data;
+        if (res?.data.nowPlaying === undefined) {
+            return false;
+        }
+        return Math.max((res.maxAge ?? 0) + 1, MIN_REFETCH_SECONDS) * 1000;
+    },
+});
+
 export const PublicDashboardFetchable = () => {
-    const { isPending, isError, data, error } = useQuery({
-        ...tanQueries.dashboard.public(),
-        // only Now Playing needs to stay current, poll right after the server cache expires
-        refetchInterval: (query) => {
-            const res = query.state.data;
-            if (res?.data.nowPlaying === undefined) {
-                return false;
-            }
-            return Math.max((res.maxAge ?? 0) + 1, MIN_REFETCH_SECONDS) * 1000;
-        },
-    });
+    const { isPending, isError, data, error } = usePublicDashboard();
     if (isPending) {
         return <Flex justify="center" py="8"><Spinner/></Flex>;
     }
@@ -58,15 +61,19 @@ export const PublicDashboard = (props: PublicDashboardData) => {
     )
 }
 
-const CallToAction = () => (
+/** Link to the docs, with the logo in front when `logo` (the embed has no header that shows it) */
+export const CallToAction = (props: {textStyle?: TextProps['textStyle'], logo?: boolean}) => (
     <Flex justify="space-evenly">
         <LinkBox>
-            <LinkOverlay href="https://docs.multi-scrobbler.app" target="_blank">
-                <Text textStyle="xl" letterSpacing="tight">
-                    <Highlight query={['anywhere', 'everywhere']} styles={{ color: "#e1553d" }}>
-                        Listen anywhere, Scrobble everywhere
-                    </Highlight>
-                </Text>
+            <LinkOverlay href="https://docs.multi-scrobbler.app" target="_blank" rel="noopener">
+                <HStack gap="2">
+                    {props.logo ? <Image src="icon.svg" alt="" height="1.5em" width="auto"/> : undefined}
+                    <Text textStyle={props.textStyle ?? 'xl'} letterSpacing="tight">
+                        <Highlight query={['anywhere', 'everywhere']} styles={{ color: "#e1553d" }}>
+                            Listen anywhere, Scrobble everywhere
+                        </Highlight>
+                    </Text>
+                </HStack>
             </LinkOverlay>
         </LinkBox>
     </Flex>
