@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import ky, { type Options } from 'ky';
 import qs from 'qs';
 import { baseUrl } from "../utils";
-import {type AlbumSearchResult, type ArtistSearchResult, type TrackSearchResult, type MetadataSearchStreamLine, type MetadataSearchError, type MetadataResultServiceScore, NDJSON_MEDIA_TYPE, type ComponentsApiJson, type PaginatedResponse, type PlayApiCommonDetailed, type QueryPlaysOptsJson, type QueryPlaysOptsJsonRefreshable, type TrackDataCreditBase, type ArtistSearchSimpleRequestQuery, artistSearchSimpleRequestQuerySchema, trackDataCreditBaseSchema, type TrackSearchSimpleRequestQuery, trackSearchSimpleRequestQuerySchema, type AlbumSearchSimpleRequestQuery, albumSearchSimpleRequestQuerySchema, type PublicDashboardData } from "../../core/Api";
+import {type AlbumSearchResult, type ArtistSearchResult, type TrackSearchResult, type MetadataSearchStreamLine, type MetadataSearchError, type MetadataResultServiceScore, NDJSON_MEDIA_TYPE, type ComponentsApiJson, type PaginatedResponse, type PlayApiCommonDetailed, type QueryPlaysOptsJson, type QueryPlaysOptsJsonRefreshable, type TrackDataCreditBase, type ArtistSearchSimpleRequestQuery, artistSearchSimpleRequestQuerySchema, trackDataCreditBaseSchema, type TrackSearchSimpleRequestQuery, trackSearchSimpleRequestQuerySchema, type AlbumSearchSimpleRequestQuery, albumSearchSimpleRequestQuerySchema, type PublicDashboardData, type NowPlayingOption } from "../../core/Api";
 import { type SourcePlayerJson } from "../../core/Atomic";
 import type { UserSettingKey, UserSettingResponse, UserSettingValue } from "../../core/UserSettings";
 import { queryPlayOptsRefreshableToJson } from "../utils/ComponentUtils";
@@ -147,10 +147,26 @@ const metadata = createQueryKeys('metadata', {
   })
 });
 
+export interface PublicDashboardResponse {
+  data: PublicDashboardData
+  /** seconds until the server rebuilds the dashboard, from Cache-Control max-age */
+  maxAge?: number
+}
+
 const dashboard = createQueryKeys('dashboard', {
   public: () => ({
     queryKey: ['public'],
-    queryFn: () => ky.get('dashboard', { baseUrl }).json<PublicDashboardData>()
+    queryFn: async (): Promise<PublicDashboardResponse> => {
+      // no-cache: always revalidate (cheap 304 with the ETag) instead of serving the browser cache until max-age,
+      // so a settings change shows up immediately
+      const res = await ky.get('dashboard', { baseUrl, cache: 'no-cache' });
+      const maxAge = /max-age=(\d+)/.exec(res.headers.get('cache-control') ?? '')?.[1];
+      return {data: await res.json<PublicDashboardData>(), maxAge: maxAge !== undefined ? Number(maxAge) : undefined};
+    }
+  }),
+  nowPlayingOptions: () => ({
+    queryKey: ['nowPlayingOptions'],
+    queryFn: () => ky.get('dashboard/now-playing-options', { baseUrl }).json<NowPlayingOption[]>()
   })
 });
 

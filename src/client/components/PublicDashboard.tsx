@@ -1,6 +1,6 @@
 import React, { type ComponentProps, useLayoutEffect, useRef } from "react"
 import { useQuery } from "@tanstack/react-query";
-import { Spinner, Stack, Wrap, HStack, Stat, Highlight, Flex, Text, LinkBox, LinkOverlay, Box, Span, Card, Heading, ScrollArea } from '@chakra-ui/react';
+import { Spinner, Stack, Wrap, HStack, Stat, Highlight, Flex, Text, LinkBox, LinkOverlay, Box, Span, Card, Heading, ScrollArea, Status, IconButton } from '@chakra-ui/react';
 import { type CountUpStat, CountUpValueText } from "./CountUpStat";
 import { capitalize, capitalizeWords } from "../../core/StringUtils";
 import { getMusicServiceIcon } from "./icons/ChakraIcons";
@@ -14,30 +14,45 @@ import { timeToHumanTimestamp } from "../../core/TimeUtils";
 import { tanQueries } from "../queries";
 import { ErrorAlert } from "./ErrorAlert";
 import { scrollShadowCss } from "./ScrollArea";
+import { ToggleTip } from "./ToggleTip";
 
 /** True when the public dashboard response has anything to show (the server returns {} when it is disabled) */
 export const isPublicDashboardEnabled = (data?: PublicDashboardData): boolean => data !== undefined && Object.keys(data).length > 0;
 
+/** Never poll faster than this, the server keeps the dashboard at least a few seconds anyway */
+const MIN_REFETCH_SECONDS = 10;
+
 export const PublicDashboardFetchable = () => {
-    const { isPending, isError, data, error } = useQuery(tanQueries.dashboard.public());
+    const { isPending, isError, data, error } = useQuery({
+        ...tanQueries.dashboard.public(),
+        // only Now Playing needs to stay current, poll right after the server cache expires
+        refetchInterval: (query) => {
+            const res = query.state.data;
+            if (res?.data.nowPlaying === undefined) {
+                return false;
+            }
+            return Math.max((res.maxAge ?? 0) + 1, MIN_REFETCH_SECONDS) * 1000;
+        },
+    });
     if (isPending) {
         return <Flex justify="center" py="8"><Spinner/></Flex>;
     }
     if (isError) {
         return <ErrorAlert error={error}/>;
     }
-    return <PublicDashboard {...data}/>;
+    return <PublicDashboard {...data.data}/>;
 }
 
 export const PublicDashboard = (props: PublicDashboardData) => {
     const {
-        recent
+        recent,
+        nowPlaying
     } = props;
     return (
         <Stack gap="10">
             <CountStats {...props} />
             <ComponentStats {...props} />
-            <RecentPublicPlaysScrollable data={recent} />
+            <RecentPublicPlaysScrollable data={recent} nowPlaying={nowPlaying} />
             <CallToAction />
         </Stack>
     )
@@ -184,31 +199,53 @@ export const PublicPlayData = (props: { play: PublicPlay }) => {
 
 }
 
-export const RecentPublicPlaysList = (props: { data?: PublicPlay[] }) => {
-    if (props.data === undefined) {
-        return undefined;
-    }
-    let recentContent: React.JSX.Element;
-    if (props.data.length === 0) {
-        recentContent = <Flex justify="space-evenly"><Text>Nothing played recently!</Text></Flex>
-    } else {
-        recentContent = (
-            <Stack gapY={3} >
-                {props.data.map((x, i) => (
-                    <Card.Root width="full" variant="subtle" key={i} size="sm">
-                        <Card.Body>
-                            <PublicPlayData play={x} />
-                        </Card.Body>
-                    </Card.Root>
-                ))}
-            </Stack>
-        )
-    }
-    return recentContent;
+export interface RecentPublicPlaysProps {
+    data?: PublicPlay[]
+    /** shown first, marked as Now Playing */
+    nowPlaying?: PublicPlay | null
 }
 
-export const RecentPublicPlaysPlain = (props: { data?: PublicPlay[] }) => {
-    if (props.data === undefined) {
+const NowPlayingIndicator = () => (
+    <ToggleTip content="Now Playing" showArrow positioning={{placement: 'top'}}>
+        <IconButton variant="ghost" size="2xs" aria-label="Now Playing">
+            <Status.Root>
+                <Status.Indicator colorPalette="green" style={{animation: 'icon-fade-half 3s infinite linear'}}/>
+            </Status.Root>
+        </IconButton>
+    </ToggleTip>
+);
+
+/** Hidden when both Recent and Now Playing are disabled */
+export const RecentPublicPlaysList = (props: RecentPublicPlaysProps) => {
+    const {data, nowPlaying} = props;
+    if (data === undefined && nowPlaying === undefined) {
+        return undefined;
+    }
+    const plays = [
+        ...(nowPlaying !== undefined && nowPlaying !== null ? [{play: nowPlaying, now: true}] : []),
+        ...(data ?? []).map(play => ({play, now: false})),
+    ];
+    if (plays.length === 0) {
+        return <Flex justify="space-evenly"><Text>Nothing played recently!</Text></Flex>;
+    }
+    return (
+        <Stack gapY={3} >
+            {plays.map((x, i) => (
+                <Card.Root width="full" variant="subtle" key={i} size="sm">
+                    <Card.Body>
+                        <HStack align="start">
+                            <Box flexGrow="1"><PublicPlayData play={x.play} /></Box>
+                            {x.now ? <NowPlayingIndicator/> : undefined}
+                        </HStack>
+                    </Card.Body>
+                </Card.Root>
+            ))}
+        </Stack>
+    );
+}
+
+export const RecentPublicPlaysPlain = (props: RecentPublicPlaysProps) => {
+    if (props.data === undefined && props.nowPlaying === undefined) {
         return undefined;
     }
     return (
@@ -221,8 +258,8 @@ export const RecentPublicPlaysPlain = (props: { data?: PublicPlay[] }) => {
     )
 }
 
-export const RecentPublicPlaysScrollable = (props: { data?: PublicPlay[] }) => {
-    if (props.data === undefined) {
+export const RecentPublicPlaysScrollable = (props: RecentPublicPlaysProps) => {
+    if (props.data === undefined && props.nowPlaying === undefined) {
         return undefined;
     }
     // base + sm 25rem

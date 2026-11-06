@@ -1,18 +1,35 @@
 import React from "react";
-import { Box, Button, Flex, HStack, Spinner, Stack } from "@chakra-ui/react";
+import { Box, Button, Flex, Heading, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
 import { formOptions, useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
-import { componentDetailLevel, publicDashboardSettingsSchema, type PublicDashboardSettings, type UserSettingValue } from "../../../core/UserSettings";
+import { componentDetailLevel, publicDashboardSettingsSchema, type PublicDashboardSettings, type PublicNowPlaying, type UserSettingValue } from "../../../core/UserSettings";
+import type { NowPlayingOption } from "../../../core/Api";
+import { capitalizeWords } from "../../../core/StringUtils";
 import { putUserSetting, tanQueries } from "../../queries";
-import { FormCheckbox, FormNumberInput, FormRadio, FormSwitch, type RadioFormItem } from "../form/formComponents";
+import { FormCheckbox, FormNativeSelect, FormNumberInput, FormRadio, FormSwitch, type RadioFormItem, type SelectFormGroup } from "../form/formComponents";
 import { ErrorAlert } from "../ErrorAlert";
 import { EphemeralElement } from "../Badges";
 import { CheckIcon } from "../icons/ChakraIcons";
+import { InfoPopover } from "../ToggleTip";
 
 // form fields can't be undefined, so "disabled" settings are 'off' / 0 in the form and become undefined when saved
 const detailLevel = z.enum(['off', ...componentDetailLevel.options]);
 const {recent, refresh} = publicDashboardSettingsSchema.shape;
+
+/** Now Playing as one select value: 'off', 'anySource' or '<from>:<uid>' */
+const nowPlayingToValue = (np?: PublicNowPlaying): string => np === undefined ? 'off' : np.from === 'anySource' ? 'anySource' : `${np.from}:${np.uid}`;
+const valueToNowPlaying = (val: string): PublicNowPlaying | undefined => {
+    if (val === 'off') {
+        return undefined;
+    }
+    if (val === 'anySource') {
+        return {from: 'anySource'};
+    }
+    // uids may contain ':', only split on the first
+    const i = val.indexOf(':');
+    return {from: val.slice(0, i), uid: val.slice(i + 1)} as PublicNowPlaying;
+}
 
 // the real setting schema always has the last word on what is saved
 const savedSchema = z.object({publicDashboardEnabled: z.boolean(), publicDashboardSettings: publicDashboardSettingsSchema});
@@ -23,6 +40,7 @@ const formSchema = z.object({
     sources: detailLevel,
     clients: detailLevel,
     recent: z.literal(0).or(recent.unwrap()),
+    nowPlaying: z.string(),
     refresh: z.literal(0).or(refresh.options[1]),
 }).transform((v): z.input<typeof savedSchema> => ({
     publicDashboardEnabled: v.enabled,
@@ -31,6 +49,7 @@ const formSchema = z.object({
         sources: v.sources === 'off' ? undefined : v.sources,
         clients: v.clients === 'off' ? undefined : v.clients,
         recent: v.recent === 0 ? undefined : v.recent,
+        nowPlaying: valueToNowPlaying(v.nowPlaying),
         refresh: v.refresh === 0 ? true : v.refresh,
     }
 })).pipe(savedSchema);
@@ -45,6 +64,7 @@ const toFormValues = (enabled: boolean | undefined, settings: PublicDashboardSet
     sources: 'detailed',
     clients: 'detailed',
     recent: 10,
+    nowPlaying: 'off',
     refresh: 300,
 } : {
     enabled: enabled ?? false,
@@ -52,6 +72,7 @@ const toFormValues = (enabled: boolean | undefined, settings: PublicDashboardSet
     sources: settings.sources ?? 'off',
     clients: settings.clients ?? 'off',
     recent: settings.recent ?? 0,
+    nowPlaying: nowPlayingToValue(settings.nowPlaying),
     refresh: settings.refresh === true ? 0 : settings.refresh,
 };
 
@@ -61,16 +82,32 @@ const detailItems: RadioFormItem<z.infer<typeof detailLevel>>[] = [
     {value: 'detailed', label: 'Count and Types'},
 ];
 
+/** Off, any source, then each source and client. A saved value that is no longer available is kept (and marked) so saving does not silently change it */
+const nowPlayingGroups = (options: NowPlayingOption[], saved: string): SelectFormGroup[] => {
+    const item = (x: NowPlayingOption) => ({value: `${x.from}:${x.uid}`, label: `${x.name} (${capitalizeWords(x.type)})`});
+    const groups: SelectFormGroup[] = [
+        {items: [{value: 'off', label: 'Hidden'}, {value: 'anySource', label: 'Any Source'}]},
+        {label: 'Source', items: options.filter(x => x.from === 'source').map(x => item(x))},
+        {label: 'Client', items: options.filter(x => x.from === 'client').map(x => item(x))},
+    ];
+    if (!groups.some(g => g.items.some(x => x.value === saved))) {
+        groups[0].items.push({value: saved, label: `${saved.slice(saved.indexOf(':') + 1)} (unavailable)`});
+    }
+    return groups.filter(g => g.items.length > 0);
+}
+
 export interface PublicDashboardSettingsFormProps {
     enabled?: boolean
     settings?: PublicDashboardSettings
+    nowPlayingOptions?: NowPlayingOption[]
     onSubmit: (vals: FormOutput) => void
     isSubmitting?: boolean
     isSuccess?: boolean
 }
 
 export const PublicDashboardSettingsForm = (props: PublicDashboardSettingsFormProps) => {
-    const {enabled, settings, onSubmit, isSubmitting = false, isSuccess = false} = props;
+    const {enabled, settings, nowPlayingOptions = [], onSubmit, isSubmitting = false, isSuccess = false} = props;
+    const savedNowPlaying = nowPlayingToValue(settings?.nowPlaying);
 
     const form = useForm({
         ...formOptions.strictSchema(formSchema, {
@@ -115,8 +152,25 @@ export const PublicDashboardSettingsForm = (props: PublicDashboardSettingsFormPr
                                 children={(field) => <FormNumberInput field={field} disabled={!isEnabled} width="32" min={0} max={recent.unwrap().maxValue ?? undefined} label="Recent Plays" helperText="Number of recently scrobbled Plays to show, 0 to hide"/>}
                             />
                             <form.Field
+                                name="nowPlaying"
+                                children={(field) => <FormNativeSelect
+                                    field={field}
+                                    disabled={!isEnabled}
+                                    maxWidth="sm"
+                                    label={<HStack gap="1">Now Playing <InfoPopover question title={<Heading size="sm">Now Playing</Heading>}>
+                                        <Stack maxWidth="sm">
+                                            <Text>Updated as often as Refresh allows. Visitors can see <i>when</i> you are listening.</Text>
+                                            <Text><strong>Any Source</strong> or a <strong>Source</strong> shows only tracks that are playing.</Text>
+                                            <Text>A <strong>Client</strong> mirrors what that client shows as Now Playing. For last.fm/ListenBrainz style clients a paused or stopped track stays until it expires there.</Text>
+                                        </Stack>
+                                    </InfoPopover></HStack>}
+                                    groups={nowPlayingGroups(nowPlayingOptions, savedNowPlaying)}
+                                    helperText="Show what is currently playing, uses Refresh."
+                                />}
+                            />
+                            <form.Field
                                 name="refresh"
-                                children={(field) => <FormNumberInput field={field} disabled={!isEnabled} width="32" min={0} step={60} label="Refresh (seconds)" helperText="How long the dashboard is cached before it is rebuilt, 0 to always show live data"/>}
+                                children={(field) => <FormNumberInput field={field} disabled={!isEnabled} width="32" min={0} step={60} label="Refresh (seconds)" helperText="How long the dashboard is cached before it is rebuilt, 0 to always show live data (rebuilt at most every few seconds)"/>}
                             />
                         </Stack>
                     )}
@@ -139,6 +193,7 @@ export const PublicDashboardSettingsFetchable = () => {
     const queryClient = useQueryClient();
     const enabledQuery = useQuery(tanQueries.userSettings.setting('publicDashboardEnabled'));
     const settingsQuery = useQuery(tanQueries.userSettings.setting('publicDashboardSettings'));
+    const optionsQuery = useQuery(tanQueries.dashboard.nowPlayingOptions());
 
     const {mutate, isPending, isSuccess, error: saveError} = useMutation({
         mutationFn: async (vals: FormOutput) => [
@@ -152,7 +207,7 @@ export const PublicDashboardSettingsFetchable = () => {
         }
     });
 
-    if (enabledQuery.isPending || settingsQuery.isPending) {
+    if (enabledQuery.isPending || settingsQuery.isPending || optionsQuery.isPending) {
         return <Flex justify="center" py="8"><Spinner/></Flex>;
     }
     if (enabledQuery.isError) {
@@ -160,6 +215,9 @@ export const PublicDashboardSettingsFetchable = () => {
     }
     if (settingsQuery.isError) {
         return <ErrorAlert error={settingsQuery.error}/>;
+    }
+    if (optionsQuery.isError) {
+        return <ErrorAlert error={optionsQuery.error}/>;
     }
     return (
         <Box>
@@ -170,6 +228,7 @@ export const PublicDashboardSettingsFetchable = () => {
                 // query-key-factory loses the per-key generic
                 enabled={(enabledQuery.data.value as UserSettingValue<'publicDashboardEnabled'> | null) ?? undefined}
                 settings={(settingsQuery.data.value as UserSettingValue<'publicDashboardSettings'> | null) ?? undefined}
+                nowPlayingOptions={optionsQuery.data}
                 onSubmit={(vals) => mutate(vals)}
                 isSubmitting={isPending}
                 isSuccess={isSuccess}

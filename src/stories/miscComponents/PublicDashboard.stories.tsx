@@ -58,3 +58,19 @@ export const ManyRecent = meta.story({
         return <PublicDashboard key={JSON.stringify(args)} {...args} />;
     }
 });
+
+export const WithNowPlaying = meta.story({
+    args: {
+        plays: faker.number.int({min: 14_000, max: 2_000_000}),
+        scrobbles: faker.number.int({min: 14_000, max: 2_000_000}),
+        // seconds
+        listened: faker.number.int({min: 4_215_380, max: 999_999_999}),
+        sources: {count: sourceCount, types: sTypes},
+        clients: {count: clientCount, types: cTypes},
+        nowPlaying: generateJsonPlays(1)[0],
+        recent: generateJsonPlays(5)
+    },
+    render: function Render(args) {
+        return <PublicDashboard key={JSON.stringify(args)} {...args} />;
+    }
+});

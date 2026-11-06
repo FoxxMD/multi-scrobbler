@@ -1,5 +1,5 @@
 import type { FieldWithValue } from '@tanstack/react-form'
-import { Checkbox, Field, RadioGroup, HStack, NumberInput, Switch } from '@chakra-ui/react';
+import { Checkbox, Field, RadioGroup, HStack, NativeSelect, NumberInput, Switch } from '@chakra-ui/react';
 import type { ReactNode } from 'react';
 import React from 'react';
 
@@ -127,6 +127,36 @@ export const FormNumberInput = ({
       <NumberInput.Control />
       <NumberInput.Input />
     </NumberInput.Root>
+    {helperText !== undefined ? <Field.HelperText>{helperText}</Field.HelperText> : undefined}
+    <FormFieldErrors field={field}/>
+  </Field.Root>;
+
+export type SelectFormGroup = { label?: string, items: RadioFormItem<string>[] };
+/** Native select, items in an optgroup when the group has a label */
+export const FormNativeSelect = ({
+  field,
+  label,
+  helperText,
+  groups,
+  disabled,
+  ...rest
+}: {
+  field: FieldWithValue<string>
+  label: string | ReactNode
+  helperText?: ReactNode
+  groups: SelectFormGroup[]
+  disabled?: boolean
+} & Omit<NativeSelect.RootProps, 'disabled'>) => <Field.Root invalid={field.errors.length > 0} disabled={disabled}>
+    <Field.Label>{label}</Field.Label>
+    <NativeSelect.Root {...rest}>
+      <NativeSelect.Field value={field.value} onChange={(e) => field.handleChange(e.currentTarget.value)} onBlur={field.handleBlur}>
+        {groups.map((group, i) => {
+          const options = group.items.map(item => <option key={item.value} value={item.value}>{item.label}</option>);
+          return group.label === undefined ? <React.Fragment key={i}>{options}</React.Fragment> : <optgroup key={i} label={group.label}>{options}</optgroup>;
+        })}
+      </NativeSelect.Field>
+      <NativeSelect.Indicator />
+    </NativeSelect.Root>
     {helperText !== undefined ? <Field.HelperText>{helperText}</Field.HelperText> : undefined}
     <FormFieldErrors field={field}/>
   </Field.Root>;

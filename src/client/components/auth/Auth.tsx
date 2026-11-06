@@ -234,7 +234,7 @@ export const AuthGate = (props: PropsWithChildren) => {
         }
         // public dashboard replaces the login form when enabled, the header Log In button still goes to /login
         // a failed dashboard request falls back to the login form
-        return isPublicDashboardEnabled(dashboard.data) ? <Container maxWidth="8xl" py="8"><PublicDashboardFetchable/></Container> : <LoginForm/>;
+        return isPublicDashboardEnabled(dashboard.data?.data) ? <Container maxWidth="8xl" py="8"><PublicDashboardFetchable/></Container> : <LoginForm/>;
     }
     return <>{props.children}</>;
 }
