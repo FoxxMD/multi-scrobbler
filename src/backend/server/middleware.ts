@@ -8,6 +8,7 @@ import type { TypedMiddleware } from "@minisylar/express-typed-router";
 import { timingSafeEqual } from "node:crypto";
 import { BlockList, isIP, isIPv4 } from "node:net";
 import type { AuthSettings } from "../common/auth/authSettings.ts";
+import type { PublicDashboardEmbed } from "../../core/UserSettings.ts";
 
 export const nonEmptyBody = (logger: Logger, origin: string = 'Origin'): TypedMiddleware => async (req, res, next) => {
     const bodyEmpty = req.body === undefined || req.body === null || (typeof req.body === 'object' && Object.keys(req.body).length === 0);
@@ -350,6 +351,34 @@ export const securityHeadersMiddleware: RequestHandler = (req, res, next) => {
     res.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'same-origin');
+    next();
+}
+
+/**
+ * Paths of the embeddable dashboard document (embed.html), matched exactly.
+ * vite-express serves the full SPA (index.html) for anything else under /embed, like /embed/ or /embed/settings,
+ * so a prefix match would make the logged in dashboard framable.
+ * */
+export const EMBED_PATHS = ['/embed', '/embed.html'];
+
+/**
+ * Allow framing of the embeddable dashboard document only, by the origins in its embed settings (any when none are set).
+ *
+ * `getEmbed` returns the embed settings, or undefined when embedding (or the public dashboard) is disabled, then the baseline DENY is kept.
+ * Mount under the base path, after securityHeadersMiddleware. X-Frame-Options can't allowlist origins so it is removed and CSP frame-ancestors is used.
+ * */
+export const embedFramingMiddleware = (getEmbed: () => Promise<PublicDashboardEmbed | undefined>): RequestHandler => async (req, res, next) => {
+    if (req.method !== 'GET' || !EMBED_PATHS.includes(req.path)) {
+        next();
+        return;
+    }
+    // a cached copy must never outlive (or be served with) different framing headers
+    res.setHeader('Cache-Control', 'no-store');
+    const embed = await getEmbed();
+    if (embed !== undefined) {
+        res.removeHeader('X-Frame-Options');
+        res.setHeader('Content-Security-Policy', `frame-ancestors ${embed.ancestors !== undefined && embed.ancestors.length > 0 ? embed.ancestors.join(' ') : '*'}`);
+    }
     next();
 }
 

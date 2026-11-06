@@ -14,13 +14,14 @@ import { getRoot } from "../ioc.ts";
 import { parseBool } from "../utils.ts";
 import { getAddress } from "../utils/NetworkUtils.ts";
 import { setupApi } from "./api.ts";
-import { clientIpMiddleware, errorHandlerMiddleware, safeModeMiddleware, sameOriginMiddleware, securityHeadersMiddleware, WebFault } from "./middleware.ts";
+import { clientIpMiddleware, embedFramingMiddleware, errorHandlerMiddleware, safeModeMiddleware, sameOriginMiddleware, securityHeadersMiddleware, WebFault } from "./middleware.ts";
 import { toNodeHandler } from "better-auth/node";
 import { authBasePath, createAuth, type MSAuth, type PasswordHasher } from "../common/auth/auth.ts";
 import { resolveAuthSettings, type AuthSettings } from "../common/auth/authSettings.ts";
 import { getDataDir } from "../common/index.ts";
 import { applyOwnerPasswordEnv } from "../common/auth/ownerPassword.ts";
-import { ensureOwner } from "../common/auth/owner.ts";
+import { ensureOwner, getOwnerId } from "../common/auth/owner.ts";
+import { getUserSettings } from "../common/auth/userSettings.ts";
 import { redactString } from "@foxxmd/redact-string";
 import { AuthStateStore } from "../common/auth/authState.ts";
 import { optionalAuth, requireAuth, SECURITY_PUBLIC, SECURITY_REQUIRED } from "./requireAuth.ts";
@@ -121,6 +122,10 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
             const authState: AuthStateStore = await new AuthStateStore(auth, db).refresh();
             const locals: ServerLocals = {auth, authSettings, authState, db};
             Object.assign(app.locals, locals);
+            app.use(basePath, embedFramingMiddleware(async () => {
+                const settings = await getUserSettings(db, await getOwnerId(db));
+                return settings.publicDashboardEnabled === true ? settings.publicDashboardSettings?.embed : undefined;
+            }));
             // must be mounted before the router (and its body parsing) so better-auth gets the raw request
             // and so /api/auth/callback/* is not caught by the source auth callback route
             // client IP for better-auth's rate limiter and the login/API key audit logs

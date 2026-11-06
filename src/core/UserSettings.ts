@@ -15,6 +15,14 @@ export const publicNowPlayingSchema = z.discriminatedUnion('from', [
     z.object({from: z.literal('client'), uid: z.string().min(1)}),
 ]);
 
+/** An origin allowed to embed the dashboard, used in CSP frame-ancestors so it must never contain spaces or ';' */
+export const embedAncestorSchema = z.string().trim().toLowerCase().regex(/^https?:\/\/(\*\.)?[a-z0-9-]+(\.[a-z0-9-]+)*(:\d{1,5})?$/, 'Must be an origin like https://blog.example.com or https://*.example.com');
+
+export const publicDashboardEmbedSchema = z.object({
+    /** Origins allowed to embed. undefined or empty = any site */
+    ancestors: embedAncestorSchema.array().max(20).optional(),
+});
+
 export const publicDashboardSettingsSchema = z.object({
     /** Show listening stats like total Plays, Scrobbles, and Listened (minutes). undefined = disabled */
     listenStats: z.boolean().optional(),
@@ -26,6 +34,8 @@ export const publicDashboardSettingsSchema = z.object({
     recent: z.number().int().positive().max(50).optional(),
     /** Show what is currently playing. undefined = disabled */
     nowPlaying: publicNowPlayingSchema.optional(),
+    /** Allow the dashboard to be embedded on other sites (iframe of /embed). undefined = disabled */
+    embed: publicDashboardEmbedSchema.optional(),
     /** how often to expire cache, in seconds. true = always live (still cached for a few seconds, see MIN_DASHBOARD_TTL) */
     refresh: z.union([z.literal(true), z.number().positive()])
 })
@@ -48,6 +58,7 @@ export type UserSettingsValues = { [K in UserSettingKey]?: UserSettingValue<K> }
 
 export type PublicDashboardSettings = z.infer<typeof publicDashboardSettingsSchema>;
 export type PublicNowPlaying = z.infer<typeof publicNowPlayingSchema>;
+export type PublicDashboardEmbed = z.infer<typeof publicDashboardEmbedSchema>;
 
 /** Response for GET/PUT/DELETE /api/user/:userId/setting/:key, value is null when unset */
 export interface UserSettingResponse<K extends UserSettingKey = UserSettingKey> {
