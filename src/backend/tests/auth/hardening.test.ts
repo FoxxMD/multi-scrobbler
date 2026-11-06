@@ -99,6 +99,24 @@ describe('Hardening', function () {
         });
     });
 
+    describe('Username cannot be removed', function () {
+
+        it('rejects a non-string username on update-user and owner can still sign in', async function () {
+            const app = await buildAuthApp();
+            await secureApp(app);
+            const cookie = await signIn(app);
+            for (const username of [null, 123, {}]) {
+                const res = await request(app).post('/api/auth/update-user')
+                    .set('Host', 'localhost:9078')
+                    .set('Origin', 'http://localhost:9078')
+                    .set('Cookie', cookie)
+                    .send({username});
+                expect(res.status, JSON.stringify(username)).eq(400);
+            }
+            await signIn(app);
+        });
+    });
+
     describe('Login audit log', function () {
 
         it('logs failed and successful logins with the client IP', async function () {

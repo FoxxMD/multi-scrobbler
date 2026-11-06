@@ -2,7 +2,7 @@ import * as path from "node:path";
 import { betterAuth } from "better-auth";
 import { username } from "better-auth/plugins";
 import { apiKey } from "@better-auth/api-key";
-import { createAuthMiddleware, isAPIError } from "better-auth/api";
+import { APIError, createAuthMiddleware, isAPIError } from "better-auth/api";
 import { CLIENT_IP_HEADER } from "../../server/middleware.ts";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
 import type { Logger } from "@foxxmd/logging";
@@ -63,6 +63,23 @@ export const loginAuditHook = (logger: Logger) => createAuthMiddleware(async (ct
         } else {
             logger.info(`Admin password set from the dashboard by ${ip}`);
         }
+    }
+});
+
+/**
+ * Reject /update-user with a non-string username.
+ *
+ * The username plugin only validates string usernames and passes anything else through, so {"username": null}
+ * would clear the username. The owner could then never sign in (they don't know the placeholder email) and
+ * ADMIN_RESET_PW would not help, since it only sets the password.
+ * */
+export const usernameGuardHook = createAuthMiddleware(async (ctx) => {
+    if (ctx.path !== '/update-user') {
+        return;
+    }
+    const body = ctx.body as Record<string, unknown> | undefined;
+    if (body !== undefined && body !== null && 'username' in body && typeof body.username !== 'string') {
+        throw new APIError('BAD_REQUEST', {message: 'Username must be a string', code: 'INVALID_USERNAME'});
     }
 });
 
@@ -166,6 +183,7 @@ export const createAuth = (db: DbConcrete, settings: AuthSettings, opts: CreateA
             }),
         ],
         hooks: {
+            before: usernameGuardHook,
             after: loginAuditHook(logger),
         },
         telemetry: {
