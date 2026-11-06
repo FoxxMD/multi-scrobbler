@@ -1,4 +1,4 @@
-import { type SystemStyleObject, Box, EmptyState, HStack, ScrollArea, Separator, Spinner, Text, VStack } from '@chakra-ui/react';
+import { Box, EmptyState, HStack, ScrollArea, Separator, Spinner, Text, VStack } from '@chakra-ui/react';
 import type {UseInfiniteQueryResult} from '@tanstack/react-query';
 import { useVirtualizer } from "@tanstack/react-virtual";
 import React, { type ComponentProps, useCallback, useMemo } from "react";
@@ -6,6 +6,7 @@ import { LuCaptionsOff } from "react-icons/lu";
 import { ActivityCollapsible } from '../ActivityDetail.js';
 import { type ActivityLogProps, generateFlatItems, GroupHeader, type GroupInfo, isGroupHeader, isGroupInfo } from './ListParts.js';
 import type { PlayApiCommonDetailed } from '../../../core/Api.js';
+import { scrollShadowCss } from '../ScrollArea.js';
 
 const itemContainerStyle: React.ComponentProps<"div"> = {
   style: {
@@ -23,23 +24,6 @@ const containerStyle: React.ComponentProps<"div"> = {
     position: "relative",
   }
 }
-
-const scrollShadowCss: SystemStyleObject = {
-  "--scroll-shadow-size": "4rem",
-  maskImage: "linear-gradient(#000, #000)",
-  "&[data-overflow-y]": {
-    maskImage:
-      "linear-gradient(#000,#000,transparent 0,#000 var(--scroll-shadow-size),#000 calc(100% - var(--scroll-shadow-size)),transparent)",
-    "&[data-at-top]": {
-      maskImage:
-        "linear-gradient(180deg,#000 calc(100% - var(--scroll-shadow-size)),transparent)",
-    },
-    "&[data-at-bottom]": {
-      maskImage:
-        "linear-gradient(0deg,#000 calc(100% - var(--scroll-shadow-size)),transparent)",
-    },
-  },
-};
 
 export const VirtualizedListDynamic = (props: ActivityLogProps & Pick<UseInfiniteQueryResult, 'hasNextPage' | 'isFetchingNextPage' | 'fetchNextPage'>) => {
   const {

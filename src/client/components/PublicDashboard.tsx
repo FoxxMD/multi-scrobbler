@@ -1,6 +1,6 @@
 import React, { type ComponentProps, useLayoutEffect, useRef } from "react"
 import { useQuery } from "@tanstack/react-query";
-import { Spinner, Stack, Wrap, HStack, Stat, Highlight, Flex, Text, LinkBox, LinkOverlay, Box, Span, Card, Heading } from '@chakra-ui/react';
+import { Spinner, Stack, Wrap, HStack, Stat, Highlight, Flex, Text, LinkBox, LinkOverlay, Box, Span, Card, Heading, ScrollArea } from '@chakra-ui/react';
 import { type CountUpStat, CountUpValueText } from "./CountUpStat";
 import { capitalize, capitalizeWords } from "../../core/StringUtils";
 import { getMusicServiceIcon } from "./icons/ChakraIcons";
@@ -13,6 +13,7 @@ import { timeToHumanTimestamp } from "../../core/TimeUtils";
 //import { PlayDataDataList } from "./play/PlayData";
 import { tanQueries } from "../queries";
 import { ErrorAlert } from "./ErrorAlert";
+import { scrollShadowCss } from "./ScrollArea";
 
 /** True when the public dashboard response has anything to show (the server returns {} when it is disabled) */
 export const isPublicDashboardEnabled = (data?: PublicDashboardData): boolean => data !== undefined && Object.keys(data).length > 0;
@@ -36,7 +37,7 @@ export const PublicDashboard = (props: PublicDashboardData) => {
         <Stack gap="10">
             <CountStats {...props} />
             <ComponentStats {...props} />
-            <RecentPublicPlays data={recent} />
+            <RecentPublicPlaysScrollable data={recent} />
             <CallToAction />
         </Stack>
     )
@@ -183,7 +184,7 @@ export const PublicPlayData = (props: { play: PublicPlay }) => {
 
 }
 
-export const RecentPublicPlays = (props: { data?: PublicPlay[] }) => {
+export const RecentPublicPlaysList = (props: { data?: PublicPlay[] }) => {
     if (props.data === undefined) {
         return undefined;
     }
@@ -203,11 +204,39 @@ export const RecentPublicPlays = (props: { data?: PublicPlay[] }) => {
             </Stack>
         )
     }
+    return recentContent;
+}
+
+export const RecentPublicPlaysPlain = (props: { data?: PublicPlay[] }) => {
+    if (props.data === undefined) {
+        return undefined;
+    }
     return (
         <Flex justify="center">
             <Stack width="full" maxW="500px">
                 <Heading color="fg.muted" textStyle="2xl">Recent</Heading>
-                {recentContent}
+                <RecentPublicPlaysList {...props}/>
+            </Stack>
+        </Flex>
+    )
+}
+
+export const RecentPublicPlaysScrollable = (props: { data?: PublicPlay[] }) => {
+    if (props.data === undefined) {
+        return undefined;
+    }
+    // base + sm 25rem
+    return (
+        <Flex justify="center">
+            <Stack width="full" maxW="500px">
+                <Heading color="fg.muted" textStyle="2xl">Recent</Heading>
+                <ScrollArea.Root mdDown={{maxHeight: '25rem'}} maxHeight="35rem">
+                    <ScrollArea.Viewport css={scrollShadowCss}>
+                        <ScrollArea.Content spaceY="4">
+                            <RecentPublicPlaysList {...props}/>
+                        </ScrollArea.Content>
+                    </ScrollArea.Viewport>
+                </ScrollArea.Root>
             </Stack>
         </Flex>
     )
