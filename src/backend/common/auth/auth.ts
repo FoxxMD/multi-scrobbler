@@ -98,6 +98,8 @@ export const loginAuditHook = (logger: Logger) => createAuthMiddleware(async (ct
  *      To let users enter their own email use user.changeEmail {enabled: true, updateEmailWithoutVerification: true},
  *      which only applies while the user is unverified (why placeholders must stay emailVerified: false).
  *   3. By username: custom code, see above. Email is irrelevant.
+ * - Never enable emailAndPassword.requireEmailVerification. It is a sign-in gate (username and email sign-in) that rejects
+ *   every user with emailVerified: false, which includes every placeholder user (the owner too), so they could never log in again.
  * - Decide on account.encryptOAuthTokens BEFORE releasing OAuth. Enabling it later leaves already stored tokens in plaintext.
  *   It derives from the auth secret, which lives in its own file, so encrypted tokens stay valid across db copies only with that file.
  * - Optional: unique index on accounts(providerId, accountId). better-auth looks accounts up by that pair but does not
