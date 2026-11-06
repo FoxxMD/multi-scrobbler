@@ -35,9 +35,24 @@ Exposing an insecure MS instance can potentially leak **personally identifiable 
 * some Services, like Spotify, have descriptive device names that can be seen in MS like `bobs-android-auto` or `marys-apartment-roku`
   * these can potentially tell a bad actor *where you are* or what you are currently *not* doing (at home? in the car?)
   * if the device name is named after a location it's even worse, like an airbnb: `123-fun-street-samsung-tv`
+
+This is information is generally accessible when your instance is **insecure**. It is **not** accessible from the Public Dashboard or when the instance is **secured**.
+
+</DetailsAdmo>
+
+<DetailsAdmo type="important" summary="Habit Tracking">
+
+Exposing an insecure MS instance can potentially leak **your personal habits** Consider:
+
 * general listening activity can be a sign of your daily routine
   * EX listening usually stops at 11:45pm -> you go to sleep before midnight
   * EX high listening activity between 7:30 - 8:30am -> you are commuting
+
+This is information is generally accessible when your instance is **insecure**.
+
+On **secure** instances this is **also** a risk if you enable the Public Dashboard and choose to use **Now Playing**: enabling this with a low refresh interval (near realtime, EX 5-10 minutes) allows someone to track when your activity changes and infer your habits. You should only enable these settings if this an acceptable risk to you.
+
+You can generally avoid this by not using the Public Dashboard's **Now Playing** feature and keeping the refresh interval reasonably high (an hour or longer).
 
 </DetailsAdmo>
 

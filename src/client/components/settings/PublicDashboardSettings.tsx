@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Button, Flex, Heading, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Heading, HStack, Link, Spinner, Stack, Text } from "@chakra-ui/react";
 import { formOptions, useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
@@ -10,7 +10,7 @@ import { putUserSetting, tanQueries } from "../../queries";
 import { FormCheckbox, FormNativeSelect, FormNumberInput, FormRadio, FormSwitch, type RadioFormItem, type SelectFormGroup } from "../form/formComponents";
 import { ErrorAlert } from "../ErrorAlert";
 import { EphemeralElement } from "../Badges";
-import { CheckIcon } from "../icons/ChakraIcons";
+import { CheckIcon, ExclamationCircleIcon } from "../icons/ChakraIcons";
 import { InfoPopover } from "../ToggleTip";
 
 // form fields can't be undefined, so "disabled" settings are 'off' / 0 in the form and become undefined when saved
@@ -160,8 +160,9 @@ export const PublicDashboardSettingsForm = (props: PublicDashboardSettingsFormPr
                                     label={<HStack gap="1">Now Playing <InfoPopover question title={<Heading size="sm">Now Playing</Heading>}>
                                         <Stack maxWidth="sm">
                                             <Text>Updated as often as Refresh allows. Visitors can see <i>when</i> you are listening.</Text>
-                                            <Text><strong>Any Source</strong> or a <strong>Source</strong> shows only tracks that are playing.</Text>
+                                            <Text><strong>Any Source</strong> or a <strong>Source</strong> shows only tracks that are currently playing.</Text>
                                             <Text>A <strong>Client</strong> mirrors what that client shows as Now Playing. For last.fm/ListenBrainz style clients a paused or stopped track stays until it expires there.</Text>
+                                            <Text><ExclamationCircleIcon color="orange"/> Be aware that enabling Now Playing can allow anyone to <Link textDecorationLine="underline" target="_blank" href="/docs/security/overview/#why-secure-it">track your habits</Link>. Understand the risks before enabling it.</Text>
                                         </Stack>
                                     </InfoPopover></HStack>}
                                     groups={nowPlayingGroups(nowPlayingOptions, savedNowPlaying)}
@@ -170,7 +171,20 @@ export const PublicDashboardSettingsForm = (props: PublicDashboardSettingsFormPr
                             />
                             <form.Field
                                 name="refresh"
-                                children={(field) => <FormNumberInput field={field} disabled={!isEnabled} width="32" min={0} step={60} label="Refresh (seconds)" helperText="How long the dashboard is cached before it is rebuilt, 0 to always show live data (rebuilt at most every few seconds)"/>}
+                                children={(field) => <FormNumberInput 
+                                    field={field}
+                                    disabled={!isEnabled}
+                                    width="32"
+                                    min={0}
+                                    step={60}
+                                    label={<HStack gap="1">Refresh (seconds) <InfoPopover question title={<Heading size="sm">Refresh Interval</Heading>}>
+                                        <Stack maxWidth="sm">
+                                            <Text>How long the dashboard is cached before it is rebuilt, 0 to always show live data (rebuilt at most every few seconds)</Text>
+                                            <Text>
+                                            <ExclamationCircleIcon color="orange"/> Be aware that short intervals can enable anyone to <Link textDecorationLine="underline" target="_blank" href="/docs/security/overview/#why-secure-it">track your habits</Link>. Understand the risks before setting this to a near real-time value.</Text>
+                                        </Stack>
+                                    </InfoPopover></HStack>}
+                                    helperText="How long the dashboard is cached before it is rebuilt, 0 to always show live data (rebuilt at most every few seconds)"/>}
                             />
                         </Stack>
                     )}
