@@ -56,6 +56,19 @@ You can generally avoid this by not using the Public Dashboard's **Now Playing**
 
 </DetailsAdmo>
 
+<DetailsAdmo type="important" summary="Embedding the Public Dashboard">
+
+**Allow Embedding** (in the Public Dashboard settings) lets other sites show parts of the (enabled) Public Dashboard in an iframe of `/embed`.
+
+Things to consider before enabling it:
+
+* Every visitor of the site embedding it connects to your MS instance. MS (and anything in front of it like a reverse proxy) sees their IP addresses and which page they are on. If you run that site you may need to mention this to your visitors.
+* The site makes the address of your MS instance public, so expect more automated traffic like scanners and login attempts. Keep your instance [secured](#securing-multi-scrobbler).
+* With **Now Playing** enabled every visitor's iframe refreshes as often as the Refresh interval allows, which adds load to your instance. See **Habit Tracking** above for the risks of short intervals.
+* By default any site can embed it. Use **Allowed Sites** to limit it to your own sites (EX `https://blog.example.com` or `https://*.example.com`).
+
+</DetailsAdmo>
+
 ## Securing Multi-Scrobbler
 
 There are two primary ways to secure your instance, set through the ENV `AUTH_MODE` or AIO `auth.mode` [`config.json`](/configuration/?configType=aio#configuration-types).
