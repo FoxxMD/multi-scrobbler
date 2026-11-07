@@ -96,7 +96,7 @@ export class SpotifyApiClient extends AbstractApiClient {
         const q = `isrc:${isrcNoHyphens(isrc)}`;
         const cacheKey = `spotify-search-${hashObject({ q, limit, market, locale })}`;
         this.logger.trace({ labels: ['ISRC Search'] }, `Search Query => ${q} | market: ${market ?? '(none)'} | locale: ${locale ?? '(none)'}`);
-        const res = await this.callApi((api) => api.searchTracks(q, removeUndefinedKeys({ limit, market })), { cacheKey, useCachedResult });
+        const res = await this.callApi((api) => api.searchTracks(q, removeUndefinedKeys({ limit, market, locale })), { cacheKey, useCachedResult });
         return res.body.tracks?.items ?? [];
     }
 
@@ -120,7 +120,7 @@ export class SpotifyApiClient extends AbstractApiClient {
         const q = parts.join(' ');
         const cacheKey = `spotify-search-track-${hashObject({ q, limit, market, locale })}`;
         this.logger.trace({ labels: ['Basic Search'] }, `Search Query => ${q} | market: ${market ?? '(none)'} | locale: ${locale ?? '(none)'}`);
-        const res = await this.callApi((api) => api.searchTracks(q, removeUndefinedKeys({ limit, market })), { cacheKey, useCachedResult });
+        const res = await this.callApi((api) => api.searchTracks(q, removeUndefinedKeys({ limit, market, locale })), { cacheKey, useCachedResult });
         return res.body.tracks?.items ?? [];
     }
 
@@ -130,7 +130,7 @@ export class SpotifyApiClient extends AbstractApiClient {
         const q = `artist:${luceneQuoteIfNeeded(credit.name)}`;
         const cacheKey = `spotify-search-artist-${hashObject({ q, limit, market, locale })}`;
         this.logger.trace({ labels: ['Basic Search Artist'] }, `Search Query => ${q} | market: ${market ?? '(none)'} | locale: ${locale ?? '(none)'}`);
-        const res = await this.callApi((api) => api.searchArtists(q, removeUndefinedKeys({ limit, market })), { cacheKey, useCachedResult });
+        const res = await this.callApi((api) => api.searchArtists(q, removeUndefinedKeys({ limit, market, locale })), { cacheKey, useCachedResult });
         return res.body.artists?.items ?? [];
     }
 
@@ -144,7 +144,7 @@ export class SpotifyApiClient extends AbstractApiClient {
         }
         const cacheKey = `spotify-search-album-${hashObject({ q, limit, market, locale })}`;
         this.logger.trace({ labels: ['Basic Search Album'] }, `Search Query => ${q} | market: ${market ?? '(none)'} | locale: ${locale ?? '(none)'}`);
-        const res = await this.callApi((api) => api.searchAlbums(q, removeUndefinedKeys({ limit, market })), { cacheKey, useCachedResult });
+        const res = await this.callApi((api) => api.searchAlbums(q, removeUndefinedKeys({ limit, market, locale })), { cacheKey, useCachedResult });
         return res.body.albums?.items ?? [];
     }
 
