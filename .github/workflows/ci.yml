@@ -1,0 +1,145 @@
+name: CI
+
+# Runs for every PR (including forks) and for pushes to master/tags.
+#
+# Nothing in this workflow uses secrets or a write token. Code from the PR is installed, built and run here,
+# so it must stay that way. Publishing is done separately by trusted workflows that only push the image
+# artifacts uploaded by this workflow, they never build or run them.
+
+on:
+  pull_request:
+    branches:
+      - 'master'
+  push:
+    branches:
+      - 'master'
+    tags:
+      - '*.*.*'
+    # don't trigger if just updating docs
+    paths-ignore:
+      - 'README.md'
+      - 'flatpak/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Use Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f #6.3.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --no-audit
+
+      - name: Test
+        run: npm run test
+
+  build:
+    name: Build and Smoke Test (${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: amd64
+            platform: linux/amd64
+          - os: ubuntu-24.04-arm
+            arch: arm64
+            platform: linux/arm64
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Get App Version
+        id: appversion
+        # untrusted values (branch names) are only passed through env, never interpolated into the script
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          short="${SHA:0:7}"
+          if [[ "$REF_TYPE" == "tag" ]]; then
+            version="$REF_NAME"
+          elif [[ "$EVENT_NAME" == "pull_request" ]]; then
+            version="pr${PR_NUMBER}-${short}"
+          else
+            version="${REF_NAME}-${short}"
+          fi
+          echo "appversion=$version" >> "$GITHUB_OUTPUT"
+          echo "builddate=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 #v3.11.1
+
+      # type=docker archives can be loaded with `docker load` for the smoke test and are also an OCI layout
+      # that the publish workflow pushes as-is (digest is preserved)
+      - name: Build image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
+        with:
+          context: .
+          target: app
+          build-args: |
+            APP_BUILD_VERSION=${{ steps.appversion.outputs.appversion }}
+            BUILD_DATE=${{ steps.appversion.outputs.builddate }}
+          platforms: ${{ matrix.platform }}
+          outputs: type=docker,dest=/tmp/images/app.tar,name=multi-scrobbler-ci:app
+
+      - name: Load image
+        run: docker load -i /tmp/images/app.tar
+
+      # start the image like a user would and wait for it to report healthy
+      - name: Smoke test
+        run: |
+          docker run -d --name ms -p 9078:9078 multi-scrobbler-ci:app
+          healthy=false
+          for i in $(seq 1 60); do
+            if [[ "$(docker inspect -f '{{.State.Running}}' ms)" != "true" ]]; then
+              echo "::error::Container exited before becoming healthy"
+              break
+            fi
+            if curl -fsS -o /dev/null http://localhost:9078/api/health; then
+              healthy=true
+              echo "Healthy after ${i}s"
+              break
+            fi
+            sleep 1
+          done
+          echo "::group::Container logs"
+          docker logs ms
+          echo "::endgroup::"
+          docker rm -f ms > /dev/null
+          if [[ "$healthy" != "true" ]]; then
+            echo "::error::Image did not become healthy"
+            exit 1
+          fi
+
+      - name: Upload image
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #7.0.0
+        with:
+          name: images-linux-${{ matrix.arch }}
+          path: /tmp/images/*.tar
+          # image layers are already compressed
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 7
