@@ -1,0 +1,287 @@
+---
+title: From < 0.21.0
+description: Upgrading to 0.21.0
+sidebar:
+  order: 2
+---
+
+import RequiredUpgrade from "@site/src/components/snippets/_upgrade-required.mdx";
+import NamedVolume from "_named_volume_upgrade.mdx";
+
+<RequiredUpgrade before='< 0.21.0' current='0.21.0' old='0.20.3' />
+
+## File Permissions For Config/Data
+
+The previous docker image used a [Linuxserver.io](https://www.linuxserver.io/) base image that used [`PUID`/`PGID` `environment` variables](https://docs.linuxserver.io/general/understanding-puid-and-pgid/) to set the user to use for file permissions in the container.
+
+The new docker image is based on a hardened, [distroless](https://github.com/GoogleContainerTools/distroless) image that does not have these variables and defaults to a different non-root user `65532:65532`. If you had previously set `PUID` and `PGID` **you can still use this user setup** with a slightly modified setup.
+
+In any scenario, follow the directions below:
+
+#### 1. Remove PUID/PGID
+
+If you had set `PUID` and `PGID`, write the values down somewhere and then remove them from your docker compose stack now.
+
+```yaml del={5,6} title="docker-compose.yml" placeholder="1000,1001"
+services:
+  multi-scrobbler:
+    # ...
+    # [!code focus:4]
+    environment:
+      - PUID=1000
+      - PGID=1001
+      # ...
+    volumes:
+      # ...
+```
+
+#### 2. Fix Permissions and Set `user`
+
+Use the tabs below to pick how you run docker and mount directories into the multi-scrobbler container.
+
+Each tab will tell you how to migrate MS-related volume permissions (like `/config` and the optional `/data` directory) and set a `user` to use for ownership with the new image. Not every scenario needs permission or `user` changes.
+
+<Tabs groupId="host" queryString>
+<TabItem value="linux" label="Linux Host">
+
+*You use a **Linux** OS on the physical machine/VM. Docker runs on this machine. (This includes LXC containers.)*
+
+<Tabs groupId="linux-fileType" queryString>
+<TabItem value="bindMountPUID" label="Bind Mount with PUID/PGID">
+
+*You used `PUID`/`PGID` environmental variables and host-mounted directories for volumes.*
+
+Replace `PUID`/`PGID` with [`user`](https://docs.docker.com/reference/compose-file/services/#user), using the same values:
+
+```yaml title="docker-compose.yml" placeholder="1000,1001"
+services:
+  multi-scrobbler:
+    # ...
+    # [!code focus:1]
+    # [!code highlight]
+    user: 1000:1001 # PUID:PGID
+    environment:
+      # ...
+    volumes:
+      - /my/host/dir/msConfig:/config
+      # ...
+```
+
+</TabItem>
+<TabItem value="bindMount" label="Bind Mount without PUID/PGID">
+
+*You **did not** use `PUID`/`PGID` environmental variables but have host-mounted directories for volumes.*
+
+<h5> 1. Stop Multi-Scrobbler </h5>
+
+Stop the multi-scrobbler container
+
+<h5> 2. Get `UID` and `GID` </h5>
+
+Run these commands from a shell to get your `UID` and `GID`
+
+```shell placeholder="1000,1001"
+$ id -u
+1000
+$ id -g
+1001
+```
+
+<h5> 3. Change Directory Permissions </h5>
+
+Make yourself the owner of each directory mounted into multi-scrobbler:
+
+```shell placeholder="1000,1001"
+sudo chown -R 1000:1001 /my/host/dir/msConfig
+```
+
+<h5> 4. Set `user` </h5>
+
+Then set [`user`](https://docs.docker.com/reference/compose-file/services/#user) to your UID and GID:
+
+```yaml title="docker-compose.yml" placeholder="1000,1001"
+services:
+  multi-scrobbler:
+    # ...
+    # [!code focus:1]
+    # [!code highlight]
+    user: 1000:1001 # [!ref] results of `id -u` and `id -g`
+    environment:
+      # ...
+    volumes:
+      - /my/host/dir/msConfig:/config
+      # ...
+```
+
+</TabItem>
+<TabItem value="namedVolume" label="Named Volumes">
+
+<NamedVolume/>
+
+</TabItem>
+</Tabs>
+
+</TabItem>
+<TabItem value="win" label="Windows Host">
+
+*You use a **Windows** OS on the physical machine/VM. Docker runs with Docker Desktop or inside WSL.*
+
+<Tabs groupId="win-fileType" queryString>
+<TabItem value="windowsFolder" label="Bind Mount from Windows Folder">
+
+*You have host-mounted directories for volumes and your compose stack/directories are **outside** WSL in a regular Windows folder, like `C:\Users\you\multi-scrobbler\config`*
+
+<details>
+
+<summary>Example</summary>
+
+```yaml title="C:\Users\you\multi-scrobbler\docker-compose.yml"
+services:
+  multi-scrobbler:
+    # ...
+    environment:
+      - TZ=America/New_York
+    # [!code focus:2]
+    volumes:
+      - ./config:/config #[!ref] or an absolute Windows path like `C:/Users/you/multi-scrobbler/config:/config`
+    # ...
+```
+
+</details>
+
+No other action *should* be needed.
+
+</TabItem>
+<TabItem value="wslFolder" label="Bind Mount from WSL Folder">
+
+*You have host-mounted directories for volumes and your compose stack/directories are inside WSL, like `~/multi-scrobbler/config` or `\\wsl$\...`*
+
+<details>
+
+<summary>Example</summary>
+
+```yaml title="~/multi-scrobbler/docker-compose.yml (inside WSL)"
+services:
+  multi-scrobbler:
+    # ...
+    # [!code focus:2]
+    volumes:
+      - /home/you/multi-scrobbler/config:/config
+    # ...
+```
+
+</details>
+
+<h5> 1. Stop Multi-Scrobbler </h5>
+
+Stop the multi-scrobbler container
+
+<h5> 2. Get `UID` and `GID` </h5>
+
+Run these commands from a shell inside WSL to get your `UID` and `GID`
+
+```shell placeholder="1000,1001"
+$ id -u
+1000
+$ id -g
+1001
+```
+
+<h5> 3. Change Directory Permissions </h5>
+
+In your WSL terminal, make yourself the owner of each directory mounted into multi-scrobbler:
+
+```shell placeholder="1000,1001"
+sudo chown -R 1000:1001 /home/you/multi-scrobbler/config
+```
+
+<h5> 4. Set `user` </h5>
+
+Then set [`user`](https://docs.docker.com/reference/compose-file/services/#user) to your WSL UID and GID (from `id -u` and `id -g`, usually `1000`):
+
+```yaml title="~/multi-scrobbler/docker-compose.yml (inside WSL)" placeholder="1000,1001"
+services:
+  multi-scrobbler:
+    # ...
+    # [!code focus:1]
+    # [!code highlight]
+    user: 1000:1001 #[!ref] results of `id -u` and `id -g`
+    # ...
+    volumes:
+      - /home/you/multi-scrobbler/config:/config
+      # ...
+```
+
+</TabItem>
+<TabItem value="namedVolume" label="Named Volume">
+
+<NamedVolume/>
+
+</TabItem>
+</Tabs>
+
+</TabItem>
+<TabItem value="mac" label="MacOS Host">
+
+*You use a **MacOS** on the physical machine/VM. Docker runs with Docker Desktop.*
+
+<Tabs groupId="mac-fileType" queryString>
+<TabItem value="bindMount" label="Bind Mount">
+
+*You have host-mounted directories for volumes.*
+
+No other action *should* be needed.
+
+If MS exits with a `/config is not writable` error...
+
+<h5> 1. Stop Multi-Scrobbler </h5>
+
+Stop the multi-scrobbler container
+
+<h5> 2. Get `UID` and `GID` </h5>
+
+Run these commands from a shell to get your `UID` and `GID`
+
+```shell placeholder="501,20"
+$ id -u
+501
+$ id -g
+20
+```
+
+<h5> 3. Set `user` </h5>
+
+Set [`user`](https://docs.docker.com/reference/compose-file/services/#user) to your Mac UID and GID:
+
+```yaml title="docker-compose.yml" placeholder="501,20"
+services:
+  multi-scrobbler:
+    # ...
+    # [!code highlight]
+    user: 501:20 #[!ref] result of `id -u` and `id -g`
+```
+
+</TabItem>
+<TabItem value="namedVolume" label="Named Volume">
+
+<NamedVolume/>
+
+</TabItem>
+</Tabs>
+
+</TabItem>
+</Tabs>
+
+<Aside type="tip">
+
+If MS can't write to your config/data directory it will exit on startup with a `/config is not writable` error.
+
+Double check that the correct `UID:GID` are set and that that user, on the host, has permissions to read/write to the config/data directories **and** has permissions for the existing files in those directories.
+
+</Aside>
+
+<Aside type="tip">
+
+If you are planning to (or already have) [publicly exposed Multi-Scrobbler](/security/overview) then consider using the [**Unprivileged**](/installation#user-and-permissions) container user to harden your instance.
+
+</Aside>
