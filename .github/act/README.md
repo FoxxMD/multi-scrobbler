@@ -18,14 +18,15 @@ Run the following **from this directory** to make use of `.actrc` and proper wor
 
 Runs the real [`ci.yml`](../workflows/ci.yml) workflow as a pull request. `publish` is skipped because it only runs when registry variables (`DOCKERHUB_SLUG`/`GHCR_SLUG`) are set.
 
-```shell
-# tests only
-act pull_request -W '.github/workflows/ci.yml' -e '.github/act/actPREvent.json' -j test
+Tests run inside the Dockerfile's `test` stage as the first step of `build`.
 
-# image build and smoke test, amd64 only (there is no arm64 runner image mapped)
+```shell
+# tests, image build and smoke test, amd64 only (there is no arm64 runner image mapped)
 # the smoke test publishes port 9078 on the host so nothing else can be using it
 act pull_request -W '.github/workflows/ci.yml' -e '.github/act/actPREvent.json' -j build --matrix arch:amd64
 ```
+
+To only run the tests, without act: `docker buildx build --target test .`
 
 Use `push` and `.github/act/actBranchEvent.json` instead to run it as a push to a branch.
 

@@ -96,11 +96,13 @@ RUN npm install -g concurrently
 
 #
 #
-# 
-FROM builder AS app-build
+#
+FROM builder AS app-src
 #
 #
 #
+
+# dev dependencies and source, shared by the test and app-build stages
 
 WORKDIR /app
 
@@ -126,6 +128,26 @@ RUN npm run install:parallel \
     && chown -R root:root docsite/node_modules
 
 COPY --chown=abc:abc . /app
+
+#
+#
+#
+FROM app-src AS test
+#
+#
+#
+
+# Runs the test suite as part of the image build, used by CI with `--target test`.
+# Not a dependency of the app target so a normal build skips it.
+RUN npm run test
+
+#
+#
+#
+FROM app-src AS app-build
+#
+#
+#
 
 # need to set before build so server/client build is optimized and has constants (if needed)
 ENV NODE_ENV=production

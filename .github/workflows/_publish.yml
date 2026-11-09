@@ -42,13 +42,53 @@ jobs:
     name: Push and Merge Images
     runs-on: ubuntu-latest
     steps:
-      - name: Download images
+      # download exact artifact names so an extra artifact in the run can't be published
+      - name: Download amd64 image
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c #8.0.1
         with:
-          pattern: images-linux-*
-          path: /tmp/images
+          name: images-linux-amd64
+          path: /tmp/images/amd64
           run-id: ${{ inputs.run-id }}
           github-token: ${{ github.token }}
+
+      - name: Download arm64 image
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c #8.0.1
+        with:
+          name: images-linux-arm64
+          path: /tmp/images/arm64
+          run-id: ${{ inputs.run-id }}
+          github-token: ${{ github.token }}
+
+      # the archives are untrusted data: check they contain exactly what build produces before pushing anything
+      - name: Verify images
+        run: |
+          for arch in amd64 arm64; do
+            dir="/tmp/images/$arch"
+            files=$(find "$dir" -type f -printf '%P\n')
+            if [[ "$files" != "app.tar" ]]; then
+              echo "::error::Artifact images-linux-$arch must contain only app.tar, found: $files"
+              exit 1
+            fi
+            archive="$dir/app.tar"
+            index=$(tar -xOf "$archive" index.json)
+            if [[ "$(jq '.manifests | length' <<< "$index")" != "1" ]]; then
+              echo "::error::$arch archive must contain exactly one manifest"
+              exit 1
+            fi
+            media_type=$(jq -r '.manifests[0].mediaType' <<< "$index")
+            case "$media_type" in
+              application/vnd.docker.distribution.manifest.v2+json|application/vnd.oci.image.manifest.v1+json) ;;
+              *) echo "::error::$arch archive has unexpected manifest type $media_type"; exit 1;;
+            esac
+            digest=$(jq -er '.manifests[0].digest' <<< "$index")
+            config_digest=$(tar -xOf "$archive" "blobs/sha256/${digest#sha256:}" | jq -er '.config.digest')
+            platform=$(tar -xOf "$archive" "blobs/sha256/${config_digest#sha256:}" | jq -r '.os + "/" + .architecture')
+            if [[ "$platform" != "linux/$arch" ]]; then
+              echo "::error::images-linux-$arch contains a $platform image"
+              exit 1
+            fi
+            echo "$arch: $digest ($media_type)"
+          done
 
       - name: Login to Docker Hub
         if: ${{ vars.DOCKERHUB_SLUG != '' }}
@@ -76,7 +116,8 @@ jobs:
           [[ -n "$VARS_DOCKERHUB_SLUG" ]] && slugs+=("$VARS_DOCKERHUB_SLUG")
           [[ -n "$VARS_GHCR_SLUG" ]] && slugs+=("$VARS_GHCR_SLUG")
           mkdir -p /tmp/digests
-          for archive in /tmp/images/images-linux-*/app.tar; do
+          for arch in amd64 arm64; do
+            archive="/tmp/images/$arch/app.tar"
             digest=$(tar -xOf "$archive" index.json | jq -er '.manifests[0].digest')
             for slug in "${slugs[@]}"; do
               echo "Pushing $archive to $slug@$digest"
