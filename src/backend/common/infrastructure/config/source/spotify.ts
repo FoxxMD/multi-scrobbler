@@ -1,6 +1,7 @@
 import * as z from "zod";
 import {pollingOptionsSchema} from "../common.ts";
 import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
+import { envMetaNormalize, transformSplitMaybeString } from "../../../../utils/ZodUtils.ts";
 
 const {interval, ...restPollingOptions} = pollingOptionsSchema.shape;
 
@@ -56,6 +57,17 @@ export const spotifySourceDataSchema = z.object({
         default: 10,
         examples: [10]
     }),
+    /**
+     * A list of playlists whose tracks should never be scrobbled
+     *
+     * Each entry may be a playlist ID, URI (spotify:playlist:...) or share URL (https://open.spotify.com/playlist/...)
+     *
+     * @examples [["abcdefghijklmnopqrstuv"]]
+     * */
+    playlistsBlock: z.union([z.string(), z.array(z.string())]).optional().meta({
+        description: "A list of playlists whose tracks should never be scrobbled. Each entry may be a playlist ID, URI (spotify:playlist:...) or share URL (https://open.spotify.com/playlist/...)",
+        examples: [["abcdefghijklmnopqrstuv"]]
+    }),
     ...restPollingOptions,
     ...commonSourceDataSchema.shape,
 });
@@ -84,6 +96,7 @@ const envDataSchema = z.object({
     SPOTIFY_CLIENT_ID: spotifySourceDataSchema.shape.clientId,
     SPOTIFY_CLIENT_SECRET: spotifySourceDataSchema.shape.clientSecret,
     SPOTIFY_REDIRECT_URI: spotifySourceDataSchema.shape.redirectUri,
+    SPOTIFY_PLAYLISTS_BLOCK: z.string().optional().pipe(transformSplitMaybeString).optional().meta(envMetaNormalize(spotifySourceDataSchema.shape.playlistsBlock.meta())),
     SPOTIFY_SCROBBLE_BACKLOG: z.stringbool().optional().meta({
         description: "Should backlogging and history reconciliation be enabled? (see [Scrobbling Backlog and Reconciling History](#scrobbling-backlog-and-reconciling-history)).",
         default: true
@@ -97,7 +110,8 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, SpotifySourceConf
             data: {
                 clientId: partial.SPOTIFY_CLIENT_ID,
                 clientSecret: partial.SPOTIFY_CLIENT_SECRET,
-                redirectUri: partial.SPOTIFY_REDIRECT_URI
+                redirectUri: partial.SPOTIFY_REDIRECT_URI,
+                playlistsBlock: partial.SPOTIFY_PLAYLISTS_BLOCK,
             },
             options: {
                 scrobbleBacklog: partial.SPOTIFY_SCROBBLE_BACKLOG,

@@ -31,6 +31,7 @@ import { writeFile } from '../utils/FSUtils.ts';
 import { readJson } from '../utils/DataUtils.ts';
 import { findCauseByFunc } from "../utils/ErrorUtils.ts";
 import { joinedUrl } from "../utils/NetworkUtils.ts";
+import { parseArrayFromMaybeString } from "../utils/StringUtils.ts";
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 // import SpotifyApi.AlbumObjectSimplified = SpotifyApi.SpotifyApi.AlbumObjectSimplified;
 // import SpotifyApi.ArtistObjectSimplified = SpotifyApi.SpotifyApi.ArtistObjectSimplified;
@@ -63,11 +64,14 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
 
     getScrobblesForTimeRange: TimeRangeListensFetcher
 
+    blockedPlaylistIds: Set<string>;
+
     constructor(name: any, config: SpotifySourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('spotify', name, config, internal, emitter);
         const {
             data: {
                 interval = DEFAULT_POLLING_INTERVAL,
+                playlistsBlock,
             } = {}
         } = config;
 
@@ -82,6 +86,30 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
         // https://developer.spotify.com/documentation/web-api/reference/get-recently-played
         this.SCROBBLE_BACKLOG_COUNT = 50
         this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this, this.logger);
+
+        this.blockedPlaylistIds = new Set();
+        for(const entry of parseArrayFromMaybeString(playlistsBlock)) {
+            const playlistId = parseSpotifyPlaylistId(entry);
+            if(playlistId === undefined) {
+                this.logger.warn(`Could not parse a Spotify playlist ID from playlistsBlock entry '${entry}', it will be ignored`);
+            } else {
+                this.blockedPlaylistIds.add(playlistId);
+            }
+        }
+        if(this.blockedPlaylistIds.size > 0) {
+            this.logger.verbose(`Will not scrobble tracks played from playlists: ${Array.from(this.blockedPlaylistIds).join(', ')}`);
+        }
+    }
+
+    /**
+     * Returns true if the play context is a playlist the user has blocked with `playlistsBlock`
+     * */
+    isFromBlockedPlaylist = (context: SpotifyApi.ContextObject | null | undefined): boolean => {
+        if(this.blockedPlaylistIds.size === 0 || context === null || context === undefined || context.type !== 'playlist') {
+            return false;
+        }
+        const playlistId = parseSpotifyPlaylistId(context.uri);
+        return playlistId !== undefined && this.blockedPlaylistIds.has(playlistId);
     }
 
     static formatPlayObj(obj: SpotifyApi.PlayHistoryObject | SpotifyApi.CurrentlyPlayingObject, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -383,6 +411,8 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             if(state.playerState !== undefined) {
                 if(state.device?.is_private_session) {
                     this.logger.debug(`Will not track play on Device ${state.device.name} because it is in a private session.`);
+                } else if(this.isFromBlockedPlaylist(state.context)) {
+                    this.logger.debug(`Will not track play on Device ${state.device?.name} because it is from a blocked playlist (${state.context?.uri}).`);
                 } else {
                     plays.push(state.playerState);
                 }
@@ -446,8 +476,16 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
                 more = false;
             }
 
+            const allowedItems = result.body.items.filter((x: SpotifyApi.PlayHistoryObject) => {
+                if(this.isFromBlockedPlaylist(x.context)) {
+                    this.logger.debug(`Ignoring history play of '${x.track.name}' at ${x.played_at} because it is from a blocked playlist (${x.context?.uri}).`);
+                    return false;
+                }
+                return true;
+            });
+
             return {
-                data: result.body.items.map((x: SpotifyApi.PlayHistoryObject) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate),
+                data: allowedItems.map((x: SpotifyApi.PlayHistoryObject) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate),
                 meta: {
                     ...params,
                     total: result.body.total,
@@ -478,7 +516,11 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
         const func = (api: SpotifyWebApi) => api.getMyCurrentPlayingTrack();
         const playingRes = await this.callApi<ReturnType<typeof this.spotifyApi.getMyCurrentPlayingTrack>>(func);
 
-        const {body: {item}} = playingRes;
+        const {body: {item, context}} = playingRes;
+        if(this.isFromBlockedPlaylist(context)) {
+            this.logger.debug(`Will not track currently playing track because it is from a blocked playlist (${context?.uri}).`);
+            return undefined;
+        }
         if(item !== undefined && item !== null) {
            const play = SpotifySource.formatPlayObj(playingRes.body, {newFromSource: true});
            return await this.enrichIsrc(play, item.id);
@@ -520,7 +562,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
         return play;
     }
 
-    getCurrentPlaybackState = async (logError = true): Promise<{device?: SpotifyApi.UserDevice, playerState?: PlayerStateDataMaybePlay}> => {
+    getCurrentPlaybackState = async (logError = true): Promise<{device?: SpotifyApi.UserDevice, context?: SpotifyApi.ContextObject | null, playerState?: PlayerStateDataMaybePlay}> => {
         try {
             const funcState = (api: SpotifyWebApi) => api.getMyCurrentPlaybackState();
             const res = await this.callApi<ReturnType<typeof this.spotifyApi.getMyCurrentPlaybackState>>(funcState);
@@ -531,6 +573,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
                     is_playing,
                     timestamp,
                     progress_ms,
+                    context,
                 } = {}
             } = res;
             if(device !== undefined && item !== undefined && item !== null) {
@@ -547,6 +590,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
                 }
                 return {
                     device,
+                    context,
                     playerState: {
                         platformId: [combinePartsToString([shortDeviceId(device.id), device.name]) ?? NO_DEVICE, NO_USER],
                         status,
@@ -694,6 +738,26 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
     }
 
     protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) => await this.getPlayHistory({formatted: true, ...options})
+}
+
+/**
+ * Get a playlist ID from a playlist ID, URI (spotify:playlist:ID) or share URL (https://open.spotify.com/playlist/ID?si=...)
+ * */
+export const parseSpotifyPlaylistId = (value: string): string | undefined => {
+    const trimmed = value.trim();
+    const uriMatch = trimmed.match(/^spotify:(?:user:[^:]+:)?playlist:([A-Za-z0-9]+)$/);
+    if(uriMatch !== null) {
+        return uriMatch[1];
+    }
+    const urlMatch = trimmed.match(/^https?:\/\/open\.spotify\.com\/(?:[^/]+\/)?playlist\/([A-Za-z0-9]+)/);
+    if(urlMatch !== null) {
+        return urlMatch[1];
+    }
+    // bare playlist IDs are 22 base62 characters, requiring that catches playlist names entered by mistake
+    if(/^[A-Za-z0-9]{22}$/.test(trimmed)) {
+        return trimmed;
+    }
+    return undefined;
 }
 
 const asPlayHistoryObject = (obj: object): obj is SpotifyApi.PlayHistoryObject => 'played_at' in obj

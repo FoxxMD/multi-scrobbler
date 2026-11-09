@@ -5,7 +5,7 @@ import EventEmitter from "events";
 import sinon from 'sinon';
 import clone from 'clone';
 import { SimpleIntervalJob } from 'toad-scheduler';
-import SpotifySource from "../../sources/SpotifySource.ts";
+import SpotifySource, { parseSpotifyPlaylistId } from "../../sources/SpotifySource.ts";
 import { envSchemas, type SpotifySourceConfig } from "../../common/infrastructure/config/source/spotify.ts";
 import currentlyPlayingNoIsrcPayload from '../plays/spotifyCurrentlyPlayingNoIsrc.json' with { type: "json" };
 import playbackState from '../plays/spotifyCurrentPlaybackState.json' with { type: "json" };
@@ -17,6 +17,20 @@ const createSpotifySource = (options: SpotifySourceConfig['options'] = {}): Spot
         data: {
             clientId: 'test-client',
             clientSecret: 'test-secret',
+        },
+        options
+    } as unknown as SpotifySourceConfig;
+
+    return new SpotifySource('test', config, { localUrl: new URL('http://test'), configDir: 'test', logger: loggerTest, version: 'test' }, new EventEmitter());
+}
+
+const createSpotifySourceWithData = (data: Partial<SpotifySourceConfig['data']>, options: SpotifySourceConfig['options'] = {}): SpotifySource => {
+    const config = {
+        id: `test-${Date.now()}-${Math.random()}`,
+        data: {
+            clientId: 'test-client',
+            clientSecret: 'test-secret',
+            ...data,
         },
         options
     } as unknown as SpotifySourceConfig;
@@ -213,3 +227,116 @@ describe('Spotify - Configuration', function () {
     });
 });
 
+
+describe('Spotify - Playlist Blocking', function () {
+
+    const blockedId = 'abcdefghijklmnopqrstuv';
+    const playlistContext = (id: string) => ({
+        type: 'playlist',
+        uri: `spotify:playlist:${id}`,
+        href: `https://api.spotify.com/v1/playlists/${id}`,
+        external_urls: { spotify: `https://open.spotify.com/playlist/${id}` }
+    });
+
+    afterEach(function () {
+        sinon.restore();
+    });
+
+    it('Parses playlist IDs from IDs, URIs and share URLs', function () {
+        expect(parseSpotifyPlaylistId(blockedId)).to.equal(blockedId);
+        expect(parseSpotifyPlaylistId(` spotify:playlist:${blockedId} `)).to.equal(blockedId);
+        expect(parseSpotifyPlaylistId(`spotify:user:someone:playlist:${blockedId}`)).to.equal(blockedId);
+        expect(parseSpotifyPlaylistId(`https://open.spotify.com/playlist/${blockedId}?si=abc123`)).to.equal(blockedId);
+        expect(parseSpotifyPlaylistId(`https://open.spotify.com/intl-de/playlist/${blockedId}`)).to.equal(blockedId);
+        expect(parseSpotifyPlaylistId('spotify:album:4r9HEszOAbfhRfT1n1QPLF')).to.be.undefined;
+        expect(parseSpotifyPlaylistId('My Sleep Playlist')).to.be.undefined;
+        expect(parseSpotifyPlaylistId('sleep')).to.be.undefined;
+    });
+
+    it('Parses SPOTIFY_PLAYLISTS_BLOCK from ENV as a list', function () {
+        const parsed = envSchemas.env.parse({
+            SPOTIFY_CLIENT_ID: 'cid',
+            SPOTIFY_CLIENT_SECRET: 'csec',
+            SPOTIFY_PLAYLISTS_BLOCK: `${blockedId}, spotify:playlist:abc`,
+        });
+        const config = envSchemas.toConfig(parsed);
+
+        expect(config.data?.playlistsBlock).to.deep.equal([blockedId, 'spotify:playlist:abc']);
+    });
+
+    it('Only blocks playlist contexts that are in the block list', function () {
+        const source = createSpotifySourceWithData({ playlistsBlock: [`https://open.spotify.com/playlist/${blockedId}?si=xyz`, 'not a playlist'] });
+
+        expect(source.isFromBlockedPlaylist(playlistContext(blockedId) as SpotifyApi.ContextObject)).to.be.true;
+        expect(source.isFromBlockedPlaylist(playlistContext('somethingElse') as SpotifyApi.ContextObject)).to.be.false;
+        expect(source.isFromBlockedPlaylist(playbackState.context as SpotifyApi.ContextObject)).to.be.false;
+        expect(source.isFromBlockedPlaylist(null)).to.be.false;
+        expect(source.isFromBlockedPlaylist(undefined)).to.be.false;
+    });
+
+    it('Blocks nothing when playlistsBlock is not set', function () {
+        const source = createSpotifySource();
+        expect(source.isFromBlockedPlaylist(playlistContext(blockedId) as SpotifyApi.ContextObject)).to.be.false;
+    });
+
+    it('Does not track player state when playing from a blocked playlist', async function () {
+        const source = createSpotifySourceWithData({ playlistsBlock: blockedId }, { enrichIsrc: false });
+        source.canGetState = true;
+        const payload = clone(playbackState);
+        payload.context = playlistContext(blockedId);
+        (source as any).spotifyApi = {
+            getMyCurrentPlaybackState: sinon.stub().resolves({ body: payload }),
+        };
+        const processStub = sinon.stub(source as any, 'processRecentPlays').resolves([]);
+
+        await source.getRecentlyPlayed();
+
+        expect(processStub.calledOnce).to.be.true;
+        expect(processStub.firstCall.args[0]).to.have.lengthOf(0);
+    });
+
+    it('Tracks player state when playing from a playlist that is not blocked', async function () {
+        const source = createSpotifySourceWithData({ playlistsBlock: blockedId }, { enrichIsrc: false });
+        source.canGetState = true;
+        const payload = clone(playbackState);
+        payload.context = playlistContext('somethingElse');
+        (source as any).spotifyApi = {
+            getMyCurrentPlaybackState: sinon.stub().resolves({ body: payload }),
+        };
+        const processStub = sinon.stub(source as any, 'processRecentPlays').resolves([]);
+
+        await source.getRecentlyPlayed();
+
+        expect(processStub.firstCall.args[0]).to.have.lengthOf(1);
+    });
+
+    it('Does not return now playing when playing from a blocked playlist', async function () {
+        const source = createSpotifySourceWithData({ playlistsBlock: blockedId }, { enrichIsrc: false });
+        const payload = clone(currentlyPlayingNoIsrcPayload);
+        payload.context = playlistContext(blockedId);
+        (source as any).spotifyApi = {
+            getMyCurrentPlayingTrack: sinon.stub().resolves({ body: payload }),
+        };
+
+        expect(await source.getNowPlaying()).to.be.undefined;
+    });
+
+    it('Drops history plays from a blocked playlist without ending pagination early', async function () {
+        const source = createSpotifySourceWithData({ playlistsBlock: blockedId });
+        const track = clone(currentlyPlayingNoIsrcPayload.item);
+        const items = [
+            { track: clone(track), played_at: '2026-11-07T03:00:00.000Z', context: playlistContext(blockedId) },
+            { track: clone(track), played_at: '2026-11-07T03:05:00.000Z', context: playlistContext('somethingElse') },
+            { track: clone(track), played_at: '2026-11-07T03:10:00.000Z', context: null },
+        ];
+        (source as any).spotifyApi = {
+            getMyRecentlyPlayedTracks: sinon.stub().resolves({ body: { items, next: 'next-page', cursors: { after: '123', before: '100' }, total: 3, limit: 3 } }),
+        };
+
+        const result = await source.getPaginatedTimeRangeListens({ limit: 3, from: 0 } as any);
+
+        expect(result.data).to.have.lengthOf(2);
+        expect(result.data.map(x => x.data.playDate?.toISOString())).to.deep.equal(['2026-11-07T03:05:00.000Z', '2026-11-07T03:10:00.000Z']);
+        expect(result.meta.more).to.be.true;
+    });
+});

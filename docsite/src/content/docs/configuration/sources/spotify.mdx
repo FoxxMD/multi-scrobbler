@@ -118,6 +118,22 @@ To work around this, multi-scrobbler makes one extra call to the `tracks/{id}` e
 
 If you would rather not make this extra API call set `enrichIsrc` to `false` in your Spotify source config.
 
+#### Blocking Playlists
+
+To never scrobble tracks played from specific playlists (for example a sleep or white noise playlist) list them in `playlistsBlock` in your Spotify source `data` (or ENV `SPOTIFY_PLAYLISTS_BLOCK` as a comma-separated list). Each entry can be the playlist's ID, its URI, or the link from **Share -> Copy link to playlist**:
+
+```json
+"data": {
+  "playlistsBlock": [
+    "abcdefghijklmnopqrstuv",
+    "spotify:playlist:ABCDEFGHIJKLMNOPQRSTUV",
+    "https://open.spotify.com/playlist/0123456789abcdefghijkl?si=abc123"
+  ]
+}
+```
+
+Tracks are skipped based on the playlist Spotify reports they were played from, for both real-time tracking and [backlog/history reconciliation](#scrobbling-backlog-and-reconciling-history). Playing the same track from an album, another playlist, or your Liked Songs still scrobbles it.
+
 #### Scrobbling Backlog and Reconciling History
 
 When `scrobbleBacklog` is enabled (default `true`), multi-scrobbler will:
