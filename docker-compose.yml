@@ -10,12 +10,13 @@ services:
       #- JELLYFIN_USER=
       #- MALOJA_URL=http://maloja:42010
       #- MALOJA_API_KEY=
-      #- PUID=1000 # required if running docker on linux host, see main README Docker setup instructions
-      #- PGID=1000 # required if running docker on linux host, see main README Docker setup instructions
 
       # set if using a source/client with redirect URI that you have not explicitly set and MS is NOT running on the same machine that you will view the dashboard from
       # EX: You will view MS dashboard at 'http://192.168.0.101:9078' -> set BASE_URL=http://192.168.0.101:9078
       #- BASE_URL=http://MyHostIP:9078
+    # set to the UID:GID that owns ./config on a linux host (run `id -u` and `id -g`)
+    # see https://docs.multi-scrobbler.app/installation/?dockerSetting=linuxHost#recommended-settings
+    #user: 1000:1000
     volumes:
       - "./config:/config"
     #networks:

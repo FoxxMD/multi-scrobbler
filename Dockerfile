@@ -1,97 +1,27 @@
-FROM ghcr.io/linuxserver/baseimage-debian:bookworm AS base
-
-ENV TZ=Etc/GMT
-
-RUN \
-  echo "**** install base packages ****" && \
-    apt-get update && \
-    apt-get install --no-install-recommends -y \
-        curl && \
-    apt-get install --only-upgrade ca-certificates -y && \
-  echo "**** cleanup ****" && \
-    apt-get purge --auto-remove -y perl && \
-    apt-get autoclean && \
-    apt-get autoremove && \
-      rm -rf \
-        /config/.cache \
-        /root/cache \
-        /var/lib/apt/lists/* \
-        /var/tmp/* \
-        /tmp/*
-
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-# required s6 services to start multi-scrobbler in container
-COPY docker/root /
+# Production runtime is Google distroless (no shell, no package manager, non-root)
+# https://github.com/GoogleContainerTools/distroless
+#
+# Targets:
+#   app       (default) production image
+#   app-debug production image + busybox shell + static curl, for troubleshooting
+#
+# Base images are pinned by digest. Keep the builder's Node major and Debian release
+# in sync with the distroless runtime so native addons (sharp, classic-level) match.
 
 #
 #
-# 
-FROM ghcr.io/linuxserver/baseimage-debian:bookworm AS builder
+#
+FROM node:24-trixie-slim@sha256:0820eaa85e07d0490446dd01d14707e17e6108a36988cf374899cd057eb3812d AS builder
 #
 #
-# 
-
-ENV NODE_VERSION=24.22.1
-
-RUN \
-    ARCH= OPENSSL_ARCH= && dpkgArch="$(dpkg --print-architecture)" \
-        && case "${dpkgArch##*-}" in \
-          amd64) ARCH='x64' OPENSSL_ARCH='linux-x86_64';; \
-          ppc64el) ARCH='ppc64le' OPENSSL_ARCH='linux-ppc64le';; \
-          s390x) ARCH='s390x' OPENSSL_ARCH='linux*-s390x';; \
-          arm64) ARCH='arm64' OPENSSL_ARCH='linux-aarch64';; \
-          armhf) ARCH='armv7l' OPENSSL_ARCH='linux-armv4';; \
-          i386) ARCH='x86' OPENSSL_ARCH='linux-elf';; \
-          *) echo "unsupported architecture"; exit 1 ;; \
-        esac && \
-        set -ex && \
-  echo "**** install build packages ****" && \
-    apt-get update && \
-    apt-get install --no-install-recommends -y \
-        xz-utils && \
-  echo "**** Fetch and install node****" && \
-    # get node/npm directly from nodejs dist \
-    # https://github.com/nodejs/docker-node/blob/main/18/bookworm-slim/Dockerfile#L41
-    curl -fsSLO --compressed "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-$ARCH.tar.xz" && \
-    tar -xJf "node-v$NODE_VERSION-linux-$ARCH.tar.xz" -C /usr --strip-components=1 --no-same-owner && \
-    rm "node-v$NODE_VERSION-linux-$ARCH.tar.xz" && \
-    ln -s /usr/bin/node /usr/bin/nodejs && \
-  echo "**** Update npm****" && \
-    npm update -g npm
-    #
-    # can re-enable if we need more OS stuff from this stage later (but we don't for now)
-    #
-    #npm update -g npm && \
-  #echo "**** cleanup ****" && \
-    # https://github.com/nodejs/docker-node/blob/main/18/bookworm-slim/Dockerfile#L49
-    # Remove unused OpenSSL headers to save ~34MB
-    # (does not affect arm64 issue below)
-    #
-    #find /usr/include/node/openssl/archs -mindepth 1 -maxdepth 1 ! -name "$OPENSSL_ARCH" -exec rm -rf {} \; && \
-    #
-    # ^^ only needed if we need keep /usr/include/node in later stages
-    #
-    # apt-get purge --auto-remove -y xz-utils && \
-    # apt-get autoclean && \
-    # apt-get autoremove && \
-    #   rm -rf \
-    #     /config/.cache \
-    #     /root/cache \
-    #     /var/lib/apt/lists/* \
-    #     /var/tmp/* \
-    #     /tmp/*
-    #
-    # can re-enable if we need more OS stuff from this stage later (but we don't for now)
+#
 
 RUN echo "Node: $(node -v)\nNPM: $(npm -v)"
 
 RUN npm install -g concurrently
 
-# in the final layer we only need to copy over the node binary from /usr/bin/node to have a working container
-# 
-# /usr/include/node is only needed (in later layers) if we need to install any packages that build native addons
-# like using node-gyp
+# empty, so the runtime image can ship a /config owned by the default user
+RUN mkdir /config
 
 #
 #
@@ -105,28 +35,21 @@ FROM builder AS app-src
 
 WORKDIR /app
 
-COPY --chown=abc:abc package*.json tsconfig.json ./
-COPY --chown=abc:abc patches ./patches
-COPY --chown=abc:abc docsite/patches ./docsite/patches
-COPY --chown=abc:abc docsite/package*.json docsite/tsconfig* ./docsite/
+COPY package*.json tsconfig.json ./
+COPY patches ./patches
+COPY docsite/patches ./docsite/patches
+COPY docsite/package*.json docsite/tsconfig* ./docsite/
 
 # for debugging, so the build fails faster when timing out (arm64)
 #RUN npm config set fetch-retries 1 && \
 #    npm config set fetch-retry-mintimeout 5000 && \
 #    npm config set fetch-retry-maxtimeout 5000
 
-# https://www.npmjs.com/package/tls-test
-# used to test that the OS supports downloading packages over HTTPS with TLS 1.2 enforced
-# -- this always succeeds but a good sanity check
-#RUN npm install -g https://tls-test.npmjs.com/tls-test-1.0.0.tgz
-
 # This FAILED for node < 20 when building arm64 but not amd64 (and alpine-based Dockerfile has no issues building arm64)
 # see https://github.com/FoxxMD/multi-scrobbler/issues/126
-RUN npm run install:parallel \
-    && chown -R root:root node_modules \
-    && chown -R root:root docsite/node_modules
+RUN npm run install:parallel
 
-COPY --chown=abc:abc . /app
+COPY . /app
 
 #
 #
@@ -171,7 +94,7 @@ RUN if [ -n "$BASE_URL" ]; then \
 
 #
 #
-# 
+#
 FROM builder AS app-deps
 #
 #
@@ -181,12 +104,11 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-COPY --chown=abc:abc package*.json tsconfig.json ./
-COPY --chown=abc:abc patches ./patches
+COPY package*.json tsconfig.json ./
+COPY patches ./patches
 
 RUN npm ci --omit=dev --no-audit \
     && npm cache clean --force \
-    && chown -R abc:abc node_modules \
     ## peerDependency of validbot and can(?) be removed for production
     && rm -r node_modules/typescript \
     ## youtubei.js includes a large folder of maps and d.ts files that
@@ -197,51 +119,47 @@ RUN npm ci --omit=dev --no-audit \
 
 #
 #
-# 
-FROM base AS app
+#
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:b8cec4b2f2126ff7bd034ec9ac207ffb3272667dfdc48376e3b035d3270549ba AS app
 #
 #
 #
 
 WORKDIR /app
 
-# 
+#
 # from project, no build/stages necessary
+#
+# app files are owned by root and read-only for the running user
 #
 
 # project-top-level files
-COPY --chown=abc:abc *.json *.js *.ts index.html ./
+COPY *.json *.js *.ts index.html ./
 # backend source files
-COPY --chown=abc:abc src/backend /app/src/backend
-COPY --chown=abc:abc src/core /app/src/core
+COPY src/backend /app/src/backend
+COPY src/core /app/src/core
 
-# 
+#
 # from prod install stage
 #
 
 # prod dependencies
-COPY --from=app-deps --chown=abc:abc /app/node_modules /app/node_modules
+COPY --from=app-deps /app/node_modules /app/node_modules
 
-# 
+#
 # from app build stage
 #
 
 # frontend build from vite/esbuild
-COPY --from=app-build --chown=abc:abc /app/dist /app/dist
+COPY --from=app-build /app/dist /app/dist
 # docs build
-COPY --from=app-build --chown=abc:abc /app/docsite/build /app/docsite/build
-
-# 
-# from system-level dependency install/build
-#
-
-# node binary
-COPY --from=builder /usr/bin/node /usr/bin/node
+COPY --from=app-build /app/docsite/build /app/docsite/build
 
 #
 # ENV and ARGs for setting defaults in container
 #
 
+ENV TZ=Etc/GMT
 ENV NODE_ENV=production
 ENV IS_DOCKER=true
 ENV COLORED_STD=true
@@ -269,7 +187,71 @@ ENV PORT=$webPort
 EXPOSE $PORT
 
 ARG data_dir=/config
+# owned by the distroless nonroot user (65532) so a new named/anonymous volume is writable
+COPY --from=builder --chown=65532:65532 /config $data_dir
 VOLUME $data_dir
 ENV CONFIG_DIR=$data_dir
 ENV LOGS_DIR=$data_dir/logs
 ENV DATA_DIR=$data_dir
+
+# Runs as the distroless nonroot user (65532:65532) by default.
+# For a bind-mounted config directory set `user: UID:GID` (compose) or `--user UID:GID`
+# to the directory's owner, or chown the directory to 65532:65532.
+
+# ENTRYPOINT is /nodejs/bin/node from the distroless base
+# pass extra node flags with NODE_OPTIONS
+CMD ["/app/src/backend/index.ts"]
+
+#
+#
+#
+FROM debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2 AS curl-dl
+#
+#
+#
+
+# statically linked curl so it runs on distroless without extra shared libraries
+# https://github.com/stunnel/static-curl/releases
+# checksums are the GitHub release asset digests of the tar.xz files
+ARG TARGETARCH
+ARG CURL_VERSION=8.22.0
+ARG CURL_SHA256_X86_64=dfb02460ba2abe513087538f12a3cf79b74b64a5ea3787ce8ac0cdb11251f884
+ARG CURL_SHA256_AARCH64=cf94cbeaae1b3c1944a4a761ef04478f8f0b23e93a324b5ed009b2082eda11f3
+
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y curl ca-certificates xz-utils \
+    && case "$TARGETARCH" in \
+         amd64) ARCH=x86_64 SHA=$CURL_SHA256_X86_64;; \
+         arm64) ARCH=aarch64 SHA=$CURL_SHA256_AARCH64;; \
+         *) echo "unsupported architecture $TARGETARCH"; exit 1;; \
+       esac \
+    && curl -fsSL -o /tmp/curl.tar.xz "https://github.com/stunnel/static-curl/releases/download/${CURL_VERSION}/curl-linux-${ARCH}-musl-${CURL_VERSION}.tar.xz" \
+    && echo "$SHA  /tmp/curl.tar.xz" | sha256sum -c - \
+    && tar -xJf /tmp/curl.tar.xz -C /usr/local/bin curl \
+    && /usr/local/bin/curl --version
+
+#
+#
+#
+FROM gcr.io/distroless/nodejs24-debian13:debug-nonroot@sha256:3113adad6d98116a67d4a60b23d227fbafa704208b3b114c4a91470c244c3af1 AS busybox
+#
+#
+#
+
+#
+#
+#
+FROM app AS app-debug
+#
+#
+#
+
+# Only adds layers on top of the finished production image so every app layer is shared.
+# Open a shell with: docker exec -it <container> sh
+
+COPY --from=busybox /busybox /busybox
+COPY --from=curl-dl /usr/local/bin/curl /usr/local/bin/curl
+ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/busybox
+
+# default target when no --target is given
+FROM app
