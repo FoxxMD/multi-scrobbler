@@ -7,6 +7,17 @@ const osPaths = envPaths('multi-scrobbler', {suffix: ''});
 // for systemd see: https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#:~:text=Table%C2%A02%2E%C2%A0Automatic%20directory%20creation%20and%20environment%20variables
 // for os-specific like (linux) XDG, (mac) ~Library/..., (window) %APPDATA%\... or %LOCALAPPDATA%\...
 
+export type DirCandidates = [string,string][];
+
+export const getConfigDirCandidates = (): DirCandidates => {
+    const candidates: DirCandidates = [
+        [`CONFIG_DIR`, process.env.CONFIG_DIR ?? '(not set)'],
+        [`CONFIGURATION_DIRECTORY`, process.env.CONFIGURATION_DIRECTORY ?? '(not set)'],
+        ['OS-Specific', osPaths.config ?? '(not set)']
+    ];
+
+    return candidates;
+}
 export const getConfigDir = (): string => {
     let configDirVal: string = 
     process.env.CONFIG_DIR // user-defined OR used by Dockerfile
@@ -22,6 +33,15 @@ export const getConfigDir = (): string => {
     return path.resolve(configDirVal);
 }
 
+export const getDataDirCandidates = (): DirCandidates => {
+    const candidates: DirCandidates = [
+        [`DATA_DIR`, process.env.DATA_DIR ?? '(not set)'],
+        [`STATE_DIRECTORY`, process.env.STATE_DIRECTORY ?? '(not set)'],
+        ['OS-Specific', osPaths.data ?? '(not set)']
+    ];
+
+    return candidates;
+}
 export const getDataDir = (): string => {
     let dataDirVal: string = 
     process.env.DATA_DIR ?? // user-defined OR used by Dockerfile
@@ -37,6 +57,15 @@ export const getDataDir = (): string => {
     return path.resolve(dataDirVal);
 }
 
+export const getLogsDirCandidates = (): DirCandidates => {
+    const candidates: DirCandidates = [
+        [`LOGS_DIR`, process.env.LOGS_DIR ?? '(not set)'],
+        [`LOGS_DIRECTORY`, process.env.LOGS_DIRECTORY ?? '(not set)'],
+        ['OS-Specific', osPaths.log ?? '(not set)']
+    ];
+
+    return candidates;
+}
 export const getLogsDir = (): string => {
     let dataDirVal: string = process.env.LOGS_DIR ?? // user-defined OR used by Dockerfile. For Dockerfile this is DATA_DIR/logs
     process.env.LOGS_DIRECTORY ?? // set by systemd
