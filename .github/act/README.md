@@ -14,11 +14,20 @@ docker run -d --name artifact-server -p 8082:8080 --add-host host.docker.interna
 
 Run the following **from this directory** to make use of `.actrc` and proper working directory.
 
-### Test Branch Test Suite
+### Test CI (tests, image build and smoke test)
+
+Runs the real [`ci.yml`](../workflows/ci.yml) workflow as a pull request. `publish` is skipped because it only runs when registry variables (`DOCKERHUB_SLUG`/`GHCR_SLUG`) are set.
 
 ```shell
-act -W '.github/act/testSuite.yml' -e '.github/act/actBranchEvent.json'
+# tests only
+act pull_request -W '.github/workflows/ci.yml' -e '.github/act/actPREvent.json' -j test
+
+# image build and smoke test, amd64 only (there is no arm64 runner image mapped)
+# the smoke test publishes port 9078 on the host so nothing else can be using it
+act pull_request -W '.github/workflows/ci.yml' -e '.github/act/actPREvent.json' -j build --matrix arch:amd64
 ```
+
+Use `push` and `.github/act/actBranchEvent.json` instead to run it as a push to a branch.
 
 ### Test Branch Push
 
