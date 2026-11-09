@@ -36,6 +36,7 @@ jobs:
   build:
     name: Test, Build and Smoke Test (${{ matrix.arch }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       matrix:
         include:
@@ -46,9 +47,12 @@ jobs:
             arch: arm64
             platform: linux/arm64
     steps:
+      # build the PR's head commit, not the merge commit pull_request checks out by default,
+      # so a published pr-N image is exactly the commit it is labelled with
       - name: Check out the repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Get App Version
@@ -111,7 +115,7 @@ jobs:
               echo "::error::Container exited before becoming healthy"
               break
             fi
-            if curl -fsS -o /dev/null http://localhost:9078/api/health; then
+            if curl -fs -o /dev/null http://localhost:9078/api/health; then
               healthy=true
               echo "Healthy after ${i}s"
               break

@@ -59,6 +59,7 @@ jobs:
         && github.event.comment.author_association == 'OWNER'
         && startsWith(github.event.comment.body, '/publish'))
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       actions: read
       # reaction on the PR conversation
@@ -237,6 +238,7 @@ jobs:
       - publish
     if: failure()
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       pull-requests: write
     steps:
