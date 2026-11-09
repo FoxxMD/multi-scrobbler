@@ -202,7 +202,7 @@ jobs:
             echo "list<<EOF"
             for slug in "$VARS_DOCKERHUB_SLUG" "$VARS_GHCR_SLUG"; do
               if [[ -n "$slug" ]]; then
-                echo "* \`$slug:pr-$PR_NUMBER\` (debug variant with shell and curl: \`$slug:pr-$PR_NUMBER-debug\`)"
+                echo "* \`$slug:pr-$PR_NUMBER\`"
               fi
             done
             echo "EOF"
@@ -220,6 +220,8 @@ jobs:
 
             To play around with this PR, pull an image:
             ${{ steps.pr-images.outputs.list }}
+
+            Debug variants with a shell and curl are available by adding the `-debug` suffix, EX `pr-${{ inputs.pr-number }}-debug`
 
             Images are available for x86_64 and ARM64.
 
