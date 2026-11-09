@@ -9,6 +9,12 @@ on:
   workflow_dispatch:
 jobs:
   delete-untagged:
+    # only after CI runs that could have published: skip failed runs and fork PR runs, which never publish.
+    if: >-
+      github.event_name != 'workflow_run'
+      || (github.event.workflow_run.conclusion == 'success'
+        && (github.event.workflow_run.event != 'pull_request'
+          || github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -16,6 +22,10 @@ jobs:
       - uses: dataaxiom/ghcr-cleanup-action@cd0cdb900b5dbf3a6f2cc869f0dbb0b8211f50c4 #1.0.16
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          delete-untagged: true
+          # publishing pushes each platform image untagged and tags the multi-arch list a few steps later.
+          # Leave recent images alone so a cleanup running at the same time as a publish can't delete them
+          older-than: 1 hour
 
 # maybe set up for PR close later
 # https://github.com/dataaxiom/ghcr-cleanup-action?tab=readme-ov-file#delete-image-when-pull-request-is-closed

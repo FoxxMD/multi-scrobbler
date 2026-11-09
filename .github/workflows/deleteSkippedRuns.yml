@@ -1,0 +1,55 @@
+name: Delete Skipped Runs
+
+# "Publish PR Images" is triggered by every issue and PR comment because GitHub can't filter issue_comment by its
+# text. Comments that aren't /publish leave a skipped run behind, which this removes so the Actions tab stays
+# readable. Fork PR CI runs do the same to "Delete Untagged Packages". Also removes this workflow's own earlier
+# successful runs.
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  delete:
+    name: Delete Skipped Runs
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Delete runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CURRENT_RUN: ${{ github.run_id }}
+        run: |
+          # ids are collected before deleting anything so paging isn't shifted by the deletions
+          delete_runs() {
+            local ids count=0
+            ids=$(cat)
+            for id in $ids; do
+              if [[ "$id" == "$CURRENT_RUN" ]]; then
+                continue
+              fi
+              gh api --method DELETE "repos/$REPO/actions/runs/$id" --silent
+              count=$((count + 1))
+            done
+            echo "$count"
+          }
+
+          # every comment skips "Publish PR Images", and every fork PR CI run skips "Delete Untagged Packages"
+          for workflow in publish-pr.yml packagesDeleteUntagged.yml; do
+            deleted=$(gh api --paginate "repos/$REPO/actions/workflows/$workflow/runs?status=skipped&per_page=100" \
+              --jq '.workflow_runs[].id' | delete_runs)
+            echo "Deleted $deleted skipped $workflow runs"
+          done
+
+          own=$(gh api --paginate "repos/$REPO/actions/workflows/deleteSkippedRuns.yml/runs?status=completed&per_page=100" \
+            --jq '.workflow_runs[] | select(.conclusion == "success") | .id' | delete_runs)
+          echo "Deleted $own earlier runs of this workflow"
