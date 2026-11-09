@@ -194,6 +194,24 @@ jobs:
           VARS_GHCR_SLUG: ${{ vars.GHCR_SLUG }}
           STEPS_META_OUTPUTS_VERSION: ${{ steps.meta.outputs.version }}
 
+      - name: List PR images
+        id: pr-images
+        if: ${{ inputs.pr-number != '' }}
+        env:
+          VARS_DOCKERHUB_SLUG: ${{ vars.DOCKERHUB_SLUG }}
+          VARS_GHCR_SLUG: ${{ vars.GHCR_SLUG }}
+          PR_NUMBER: ${{ inputs.pr-number }}
+        run: |
+          {
+            echo "list<<EOF"
+            for slug in "$VARS_DOCKERHUB_SLUG" "$VARS_GHCR_SLUG"; do
+              if [[ -n "$slug" ]]; then
+                echo "* \`$slug:pr-$PR_NUMBER\`"
+              fi
+            done
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Comment on PR
         if: ${{ inputs.pr-number != '' }}
         uses: marocchino/sticky-pull-request-comment@d4d6b0936434b21bc8345ad45a440c5f7d2c40ff #3.0.3
@@ -205,8 +223,7 @@ jobs:
             #### :package: A new release has been made for this pull request.
 
             To play around with this PR, pull an image:
-            ${{ vars.DOCKERHUB_SLUG != '' && format('* `{0}:pr-{1}`', vars.DOCKERHUB_SLUG, inputs.pr-number) || '' }}
-            ${{ vars.GHCR_SLUG != '' && format('* `{0}:pr-{1}`', vars.GHCR_SLUG, inputs.pr-number) || '' }}
+            ${{ steps.pr-images.outputs.list }}
 
             Images are available for x86_64 and ARM64.
 

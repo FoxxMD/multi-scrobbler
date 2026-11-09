@@ -1,14 +1,23 @@
 name: Publish PR Images
 
-# Publishes the images built by CI for a PR (usually from a fork) when the repository owner comments on the PR:
+# Publishes the images built by CI for a PR (usually from a fork).
 #
-#   /publish                 publish the CI images for the PR's current head commit
-#   /publish <sha>           same, but fail if the PR's head commit does not start with <sha>
-#   /publish force           allow publishing when the PR changes files in .github/
-#   /publish <sha> force
+# Trigger it by commenting on the PR as the repository owner:
 #
-# issue_comment runs this file from the default branch with secrets, so nothing from the PR is checked out, built
-# or run here. PR details come from the GitHub API and the images are pushed as-is from the CI run artifacts.
+#   /publish <sha>           publish the CI images for the PR's head commit, which must start with <sha>
+#   /publish <sha> force     same, but allow publishing when the PR changes files in .github/
+#
+# or by running the workflow manually from the Actions tab with the same values.
+#
+# <sha> is at least 12 hex characters of the commit you reviewed. It is required for PRs from forks so that commits
+# pushed after your review are never published. For PRs from branches in this repository it is optional.
+#
+# REQUIRED repository setting: Settings -> Actions -> General -> "Approval for running fork pull request workflows
+# from contributors" must be "Require approval for all external contributors". Otherwise CI runs (and produces
+# images) for fork commits nobody has reviewed.
+#
+# This workflow runs from the default branch with secrets, so nothing from the PR is checked out, built or run here.
+# PR details come from the GitHub API and the images are pushed as-is from the CI run artifacts.
 #
 # A fork PR can change the workflow that builds its own images, so PRs that touch .github/ are refused unless
 # `force` is used after reviewing those changes.
@@ -17,9 +26,25 @@ on:
   issue_comment:
     types:
       - created
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: "PR number"
+        required: true
+        type: string
+      sha:
+        description: "Reviewed head commit (at least 12 characters, required for fork PRs)"
+        required: false
+        type: string
+        default: ''
+      force:
+        description: "Publish even if the PR changes files in .github/"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  group: ${{ github.workflow }}-${{ github.event.issue.number || inputs.pr }}
   cancel-in-progress: false
 
 permissions: {}
@@ -27,22 +52,78 @@ permissions: {}
 jobs:
   resolve:
     name: Find CI Run
+    # only the owner can trigger by comment. workflow_dispatch already requires write access to the repository
     if: >-
-      github.event.issue.pull_request
-      && github.event.comment.user.login == github.repository_owner
-      && (github.event.comment.body == '/publish' || startsWith(github.event.comment.body, '/publish '))
+      github.event_name == 'workflow_dispatch'
+      || (github.event.issue.pull_request
+        && github.event.comment.author_association == 'OWNER'
+        && startsWith(github.event.comment.body, '/publish'))
     runs-on: ubuntu-latest
     permissions:
       actions: read
-      # reaction and failure comment on the PR conversation
+      # reaction on the PR conversation
       issues: write
-      pull-requests: write
+      pull-requests: read
     outputs:
       pr-number: ${{ steps.find.outputs.pr-number }}
       sha: ${{ steps.find.outputs.sha }}
       run-id: ${{ steps.find.outputs.run-id }}
     steps:
+      - name: Parse command
+        id: parse
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_PR: ${{ github.event.issue.number }}
+          INPUT_PR: ${{ inputs.pr }}
+          INPUT_SHA: ${{ inputs.sha }}
+          INPUT_FORCE: ${{ inputs.force }}
+        run: |
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            pr="$INPUT_PR"
+            args=("$INPUT_SHA")
+            force="$INPUT_FORCE"
+          else
+            pr="$COMMENT_PR"
+            force=false
+            # only the first line is the command
+            read -r -a words <<< "$(head -n 1 <<< "$COMMENT_BODY" | tr -d '\r')"
+            if [[ "${words[0]}" != "/publish" ]]; then
+              echo "Not a /publish command, ignoring"
+              echo "command=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            args=("${words[@]:1}")
+          fi
+
+          if [[ ! "$pr" =~ ^[0-9]+$ ]]; then
+            echo "::error::Invalid PR number '$pr'"
+            exit 1
+          fi
+
+          expected_sha=""
+          for arg in "${args[@]}"; do
+            if [[ -z "$arg" ]]; then
+              continue
+            elif [[ "$arg" == "force" ]]; then
+              force=true
+            elif [[ "$arg" =~ ^[0-9a-fA-F]{12,40}$ ]]; then
+              expected_sha="${arg,,}"
+            else
+              echo "::error::Invalid argument '$arg'. Usage: /publish <sha (12-40 hex characters)> [force]"
+              exit 1
+            fi
+          done
+
+          {
+            echo "command=true"
+            echo "pr=$pr"
+            echo "expected-sha=$expected_sha"
+            echo "force=$force"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Acknowledge command
+        if: steps.parse.outputs.command == 'true' && github.event_name == 'issue_comment'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -51,54 +132,76 @@ jobs:
 
       - name: Find CI run for PR head
         id: find
+        if: steps.parse.outputs.command == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.issue.number }}
-          COMMENT_BODY: ${{ github.event.comment.body }}
+          PR_NUMBER: ${{ steps.parse.outputs.pr }}
+          EXPECTED_SHA: ${{ steps.parse.outputs.expected-sha }}
+          FORCE: ${{ steps.parse.outputs.force }}
         run: |
-          # only the first line is the command
-          read -r _cmd arg1 arg2 _ <<< "$(head -n 1 <<< "$COMMENT_BODY" | tr -d '\r')"
-          expected_sha=""
-          force=false
-          for arg in "$arg1" "$arg2"; do
-            if [[ -z "$arg" ]]; then
-              continue
-            elif [[ "$arg" == "force" ]]; then
-              force=true
-            elif [[ "$arg" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
-              expected_sha="${arg,,}"
-            else
-              echo "::error::Unknown argument '$arg'. Usage: /publish [sha] [force]"
-              exit 1
-            fi
-          done
-
           pr=$(gh api "repos/$REPO/pulls/$PR_NUMBER")
           state=$(jq -r '.state' <<< "$pr")
           head_sha=$(jq -r '.head.sha' <<< "$pr")
+          head_repo=$(jq -r '.head.repo.full_name // empty' <<< "$pr")
+          head_ref=$(jq -r '.head.ref' <<< "$pr")
+          changed_files=$(jq -r '.changed_files' <<< "$pr")
+
           if [[ "$state" != "open" ]]; then
             echo "::error::PR #$PR_NUMBER is $state"
             exit 1
           fi
-          if [[ -n "$expected_sha" && "$head_sha" != "$expected_sha"* ]]; then
-            echo "::error::PR head is $head_sha which does not match $expected_sha. Review the new commits and comment again."
+          if [[ -z "$head_repo" ]]; then
+            echo "::error::The head repository of PR #$PR_NUMBER no longer exists"
+            exit 1
+          fi
+
+          # a sha is required for forks so a commit pushed after review can't be published
+          if [[ "$head_repo" != "$REPO" && -z "$EXPECTED_SHA" ]]; then
+            echo "::error::PR #$PR_NUMBER is from a fork. Comment '/publish <sha>' with at least 12 characters of the head commit you reviewed."
+            exit 1
+          fi
+          if [[ -n "$EXPECTED_SHA" && "$head_sha" != "$EXPECTED_SHA"* ]]; then
+            echo "::error::PR head is $head_sha which does not match $EXPECTED_SHA. Review the new commits and comment again."
+            exit 1
+          fi
+
+          # the files API returns at most 3000 files. Fail closed if the list may be incomplete
+          # one line per changed file: "<filename><TAB><previous filename, for renames>"
+          files=$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files" \
+            --jq '.[] | "\(.filename)\t\(.previous_filename // "")"')
+          listed=$(grep -c . <<< "$files" || true)
+          if [[ "$changed_files" -ge 3000 || "$listed" -ne "$changed_files" ]]; then
+            echo "::error::Could not list every changed file in PR #$PR_NUMBER ($listed of $changed_files), refusing to publish"
             exit 1
           fi
 
           # includes the old path of renamed files so moving a workflow out of .github/ is also caught
-          workflow_changes=$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files" \
-            --jq '.[] | .filename, (.previous_filename // empty) | select(startswith(".github/"))')
-          if [[ -n "$workflow_changes" && "$force" != "true" ]]; then
-            echo "::error::PR changes files in .github/ which can change how its images are built. Review them and comment '/publish force' to publish anyway."
+          workflow_changes=$(tr '\t' '\n' <<< "$files" | grep '^\.github/' || true)
+          if [[ -n "$workflow_changes" && "$FORCE" != "true" ]]; then
+            echo "::error::PR changes files in .github/ which can change how its images are built. Review them and use '/publish <sha> force' to publish anyway."
             echo "$workflow_changes"
             exit 1
           fi
 
-          run_id=$(gh run list --repo "$REPO" --workflow ci.yml --event pull_request --commit "$head_sha" \
-            --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          # newest successful ci.yml run for this exact PR head (repository, branch and commit)
+          run_id=$(gh api "repos/$REPO/actions/runs?head_sha=$head_sha&event=pull_request&status=success&per_page=100" \
+            | jq -r --arg repo "$head_repo" --arg ref "$head_ref" '
+                [.workflow_runs[]
+                  | select(.path == ".github/workflows/ci.yml"
+                      and .head_repository.full_name == $repo
+                      and .head_branch == $ref)]
+                | sort_by(.created_at) | last | .id // empty')
           if [[ -z "$run_id" ]]; then
-            echo "::error::No successful CI run found for $head_sha. Approve/wait for the CI run on the PR and comment again."
+            echo "::error::No successful CI run found for $head_sha. Approve/wait for the CI run on the PR and try again. CI does not run while a PR has merge conflicts, so those must be rebased first."
+            exit 1
+          fi
+
+          # artifacts are kept for a limited time
+          available=$(gh api "repos/$REPO/actions/runs/$run_id/artifacts?per_page=100" \
+            --jq '[.artifacts[] | select(.expired == false) | .name] | map(select(. == "images-linux-amd64" or . == "images-linux-arm64")) | length')
+          if [[ "$available" != "2" ]]; then
+            echo "::error::The images from CI run $run_id have expired. Re-run CI on the PR and try again."
             exit 1
           fi
 
@@ -109,19 +212,10 @@ jobs:
             echo "run-id=$run_id"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Report failure
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.issue.number }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          gh pr comment "$PR_NUMBER" --repo "$REPO" --body ":x: Could not publish images for this PR, see $RUN_URL"
-
   publish:
     name: Publish
     needs: resolve
+    if: needs.resolve.outputs.run-id != ''
     permissions:
       contents: read
       packages: write
@@ -135,3 +229,22 @@ jobs:
     secrets:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+  report-failure:
+    name: Report Failure
+    needs:
+      - resolve
+      - publish
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Comment on PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number || inputs.pr }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh pr comment "$PR_NUMBER" --repo "$REPO" --body ":x: Could not publish images for this PR, see $RUN_URL"
