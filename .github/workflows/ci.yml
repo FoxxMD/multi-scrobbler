@@ -2,9 +2,10 @@ name: CI
 
 # Runs for every PR (including forks) and for pushes to master/tags.
 #
-# Nothing in this workflow uses secrets or a write token. Code from the PR is installed, built and run here,
-# so it must stay that way. Publishing is done separately by trusted workflows that only push the image
-# artifacts uploaded by this workflow, they never build or run them.
+# test and build install, build and run code from the PR so they must never use secrets or a write token.
+#
+# publish only runs for trusted code (pushes and PRs from branches in this repository). It does not build or run
+# anything, it only pushes the image artifacts uploaded by build.
 
 on:
   pull_request:
@@ -143,3 +144,28 @@ jobs:
           compression-level: 0
           if-no-files-found: error
           retention-days: 7
+
+  publish:
+    name: Publish
+    needs:
+      - test
+      - build
+    # fork PRs are published on request by a separate workflow
+    # dependabot PRs are treated like forks (no secrets) even though their branches are in this repository
+    if: >-
+      (vars.DOCKERHUB_SLUG != '' || vars.GHCR_SLUG != '')
+      && (github.event_name != 'pull_request'
+        || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'))
+    permissions:
+      contents: read
+      packages: write
+      actions: read
+      pull-requests: write
+    uses: ./.github/workflows/_publish.yml
+    with:
+      run-id: ${{ github.run_id }}
+      pr-number: ${{ github.event.pull_request.number && format('{0}', github.event.pull_request.number) || '' }}
+      sha: ${{ github.event.pull_request.head.sha || github.sha }}
+    secrets:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
