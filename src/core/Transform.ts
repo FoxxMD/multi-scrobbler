@@ -62,7 +62,13 @@ export const whenPartsSchema = z.object({
     albumArtists: z.string().optional().meta({description: 'String or regex matching any Play album artist'}),
     album: z.string().optional().meta({description: 'String or regex matching Play album'}),
     art: z.string().optional().meta({description: 'String or regex matching any Play art url. Empty string matches no art'}),
-}).meta({title: 'When Condition', description: 'All properties must match (AND)'});
+    artist: z.string().optional().meta({description: 'Alias of artists', deprecated: true}),
+    albumArtist: z.string().optional().meta({description: 'Alias of albumArtists', deprecated: true}),
+}).transform(({artist, albumArtist, ...rest}) => ({
+    ...rest,
+    ...(rest.artists === undefined && artist !== undefined ? {artists: artist} : {}),
+    ...(rest.albumArtists === undefined && albumArtist !== undefined ? {albumArtists: albumArtist} : {}),
+})).meta({title: 'When Condition', description: 'All properties must match (AND)'});
 
 export type WhenParts = z.output<typeof whenPartsSchema>;
 

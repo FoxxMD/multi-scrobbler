@@ -4,7 +4,7 @@ import asPromised from 'chai-as-promised';
 import { describe, it } from 'mocha';
 import AbstractComponent, { type AbstractComponentConfig } from "../../common/AbstractComponent.ts";
 
-import { DEFAULT_TRANSFORMER_NAME, type SearchReplaceTerm, type MetadataProviderStageType, TRANSFORM_HOOK, type TransformerCommon, type TransformerCommonConfig } from "../../../core/Transform.ts";
+import { DEFAULT_TRANSFORMER_NAME, type SearchReplaceTerm, type MetadataProviderStageType, TRANSFORM_HOOK, type TransformerCommon, type TransformerCommonConfig, whenSchema } from "../../../core/Transform.ts";
 
 import { generateArtistsStr, generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
 import type {WebhookPayload} from "../../common/infrastructure/config/health/webhooks.ts";
@@ -23,6 +23,7 @@ import MusicbrainzTransformer from "../../common/transforms/MusicbrainzTransform
 import SpotifyTransformer from "../../common/transforms/SpotifyTransformer.ts";
 import RockskyTransformer from "../../common/transforms/rocksky/RockskyTransformer.ts";
 import CoverArtArchiveTransformer from "../../common/transforms/coverartarchive/CoverArtArchiveTransformer.ts";
+import { testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import { SkipTransformStageError, TransformRulesError } from "../../common/errors/MSErrors.ts";
 import { COMPONENT_STATE, type ComponentState, type TrackSearchResult } from "../../../core/Api.ts";
 import type { PlayWith, PlaySelectWithQueueStates } from "../../common/database/drizzle/drizzleTypes.ts";
@@ -801,6 +802,25 @@ describe('Play Transforms', function () {
             expect(stage.searchWhenMissing).eql(['album']);
             expect(stage.allowedTypes).eql(['back']);
             expect(stage.forceSearch).is.true;
+        });
+    });
+
+    describe('When Conditions', function () {
+
+        it('Tests album artists', function () {
+            const play = generatePlay({albumArtists: [nameToCredit('Various Artists')]});
+            expect(testWhenConditions(whenSchema.parse({albumArtists: 'Various'}), play)).is.true;
+            expect(testWhenConditions(whenSchema.parse({albumArtists: 'Nope'}), play)).is.false;
+        });
+
+        it('Accepts artist and albumArtist as aliases', function () {
+            expect(whenSchema.parse({artist: 'foo', albumArtist: 'bar'})).eql([{artists: 'foo', albumArtists: 'bar'}]);
+            expect(whenSchema.parse({artist: 'foo', artists: 'bar'})).eql([{artists: 'bar'}]);
+        });
+
+        it('Applies artist alias', function () {
+            const play = generatePlay({artists: [nameToCredit('Elephant Gym')]});
+            expect(testWhenConditions(whenSchema.parse({artist: 'Nope'}), play)).is.false;
         });
     });
 

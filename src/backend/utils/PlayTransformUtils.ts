@@ -16,12 +16,13 @@ export const testWhen = (parts: WhenParts, play: PlayObject, options?: SuppliedR
             return false;
         }
     }
-    const artistsTest = parts.artists;
-    if(artistsTest !== undefined) {
-        // allows user to test if artists are empty
-        const artists = artistsTest.length === 0 ? [{name: ''}] : (play.data.artists ?? []);
-        if(artists.every(x => !testMaybeRegex(artistsTest, x.name)[0])) {
-            return false;
+    for(const [test, credits] of [[parts.artists, play.data.artists], [parts.albumArtists, play.data.albumArtists]] as const) {
+        if(test !== undefined) {
+            // allows user to test if artists are empty
+            const names = test.length === 0 ? [''] : (credits ?? []).map(x => x.name);
+            if(names.every(x => !testMaybeRegex(test, x)[0])) {
+                return false;
+            }
         }
     }
     if(parts.album !== undefined) {
