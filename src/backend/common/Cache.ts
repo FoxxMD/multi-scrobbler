@@ -10,7 +10,7 @@ import timezone from 'dayjs/plugin/timezone.js';
 import utc from 'dayjs/plugin/utc.js';
 import clone from 'clone';
 import { childLogger, type Logger } from '@foxxmd/logging';
-import { getConfigDir } from './index.ts';
+import { getDataDir } from './index.ts';
 import path from 'path';
 import { cacheFunctions } from "@foxxmd/regex-buddy-core";
 import { fileOrDirectoryIsWriteable } from '../utils/FSUtils.ts';
@@ -277,7 +277,7 @@ export class MSCache {
                 throw e;
             }
         }
-        const confDir = getConfigDir();
+        const confDir = getDataDir();
         if (config.provider === 'file') {
             logger.debug(`Building file cache from ${path.join(config.connection ?? confDir, `${namespace}.cache`)}`);
 
@@ -532,7 +532,7 @@ export const parseUserConfig = (config: CacheConfigUser = {}, parentLogger: Logg
         if(authProvider === 'valkey') {
             if(valkey === undefined) {
                 logger.warn(`Auth Provider set to 'valkey' but not valkey connection string was not provided, falling back to file.`);
-                authConn = getConfigDir();
+                authConn = getDataDir();
                 authProvider = 'file';
             } else {
                 authConn = valkey;
@@ -541,7 +541,7 @@ export const parseUserConfig = (config: CacheConfigUser = {}, parentLogger: Logg
             if(authProvider !== 'file') {
                 logger.warn(`Unsupported provider given for auth: ${authProvider}`);
             }
-            authConn = getConfigDir();
+            authConn = getDataDir();
             authProvider = 'file';
         }
 
