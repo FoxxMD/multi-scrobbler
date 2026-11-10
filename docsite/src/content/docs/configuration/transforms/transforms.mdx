@@ -66,7 +66,7 @@ In more concrete terms this is the structure of hooks within a configuration (ca
     "options": {
       "playTransform": {
         "preCompare": [/* ... */],
-        "compare": [/* ... */],
+        "compare": {"candidate": [/* ... */], "existing": [/* ... */]},
         "postCompare": [/* ... */]
       }
     }
@@ -116,13 +116,11 @@ The `compare` [hook](#hook) is slightly different than `preCompare` and `postCom
     // ...
     "options": {
       "playTransform": {
-        // [!code focus:6]
-        "compare": [
-          {
-            "candidate": {/* ... */}, // [!callout /candidate/] modify the "new" Play being compared
-            "existing": {/* ... */}, // [!callout /existing/] modify all "existing" Play/Scrobbles the new Play is being compared against
-          }
-        ],
+        // [!code focus:4]
+        "compare": {
+          "candidate": [/* ... */], // [!callout /candidate/] Stages that modify the "new" Play being compared
+          "existing": [/* ... */], // [!callout /existing/] Stages that modify all "existing" Play/Scrobbles the new Play is being compared against
+        },
       }
     }
   }
@@ -537,7 +535,7 @@ If the `when` test does not pass then the Stage is [**skipped (`onSkip`)**](#flo
 {
   "when":
     {
-      "artist": "Elephant Gym", // [!ref] Play must have an artist matching "Elephant Gym" (AND)
+      "artists": "Elephant Gym", // [!ref] Play must have an artist matching "Elephant Gym" (AND)
       "album": "Dreams" // [!ref] Play object must have an album  matching "Dreams" (AND)
     }
 }
@@ -546,7 +544,7 @@ If the `when` test does not pass then the Stage is [**skipped (`onSkip`)**](#flo
 {
   "when": [
     {
-      "artist": "Elephant Gym", // [!ref] Play must have an artist matching "Elephant Gym" (AND)
+      "artists": "Elephant Gym", // [!ref] Play must have an artist matching "Elephant Gym" (AND)
       "album": "Dreams" // [!ref] Play object must have an album  matching "Dreams" (AND)
     },
     // [!ref] OR...
@@ -591,7 +589,7 @@ EX: only run stage if art does *not* come from deezer, use deezer's cdn in a not
 
 More succinctly:
 
-* All parts (`artist` `album` `albumArtist` `duration` `meta` `title` `art`) of a `when` are `AND` conditions
+* All parts (`title` `artists` `album` `art`) of a `when` are `AND` conditions
 * All part-objects in the `when` array are `OR` conditions
 
 :::code-tabs
@@ -604,7 +602,7 @@ More succinctly:
         // [!ref] Only run `native` if these conditions are true...
         "when": [
           {
-            "artist": "/Elephant Gym/" // [!ref] if artist is `Elephant Gym` 
+            "artists": "/Elephant Gym/" // [!ref] if artist is `Elephant Gym` 
           }
         ]
       }
@@ -621,7 +619,7 @@ More succinctly:
         {
           "when": [  // [!ref] Only apply `artists` if Play artist was *originally* `Elephant Gym`
             {
-              "artist": "/Elephant Gym/"
+              "artists": "/Elephant Gym/"
             }
           ]
         },
