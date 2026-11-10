@@ -93,7 +93,7 @@ describe('Auth callback state', function () {
 
         it('Last.fm and Libre.fm put it in the callback url', function () {
             for (const [type, urlBase] of [['lastfm', undefined], ['librefm', 'https://libre.fm/2.0/']] as const) {
-                const api = new LastfmApiClient('test', {apiKey: 'key', secret: 'secret', urlBase}, {localUrl: new URL('http://ms.local:9078'), configDir: 'test', logger: loggerTest, version: 'test', type});
+                const api = new LastfmApiClient('test', {apiKey: 'key', secret: 'secret', urlBase}, {localUrl: new URL('http://ms.local:9078'), configDir: 'test', dataDir: 'test', logger: loggerTest, version: 'test', type});
                 const cb = new URL(new URL(api.getAuthUrl('theState')).searchParams.get('cb')!);
                 expect(cb.pathname).eq(`/${type}/callback`);
                 expect(cb.searchParams.get('state')).eq('theState');
@@ -101,14 +101,14 @@ describe('Auth callback state', function () {
         });
 
         it('Last.fm keeps a custom redirect uri and replaces any state in it', function () {
-            const api = new LastfmApiClient('test', {apiKey: 'key', secret: 'secret', redirectUri: 'https://ms.example.com/api/lastfm/callback?state=oldName'}, {localUrl: new URL('http://ms.local:9078'), configDir: 'test', logger: loggerTest, version: 'test', type: 'lastfm'});
+            const api = new LastfmApiClient('test', {apiKey: 'key', secret: 'secret', redirectUri: 'https://ms.example.com/api/lastfm/callback?state=oldName'}, {localUrl: new URL('http://ms.local:9078'), configDir: 'test', dataDir: 'test', logger: loggerTest, version: 'test', type: 'lastfm'});
             const cb = new URL(new URL(api.getAuthUrl('theState')).searchParams.get('cb')!);
             expect(cb.origin + cb.pathname).eq('https://ms.example.com/api/lastfm/callback');
             expect(cb.searchParams.getAll('state')).eql(['theState']);
         });
 
         it('Spotify uses it as the OAuth state', function () {
-            const source = new SpotifySource('test', {data: {clientId: 'id', clientSecret: 'secret'}} as any, {localUrl: new URL('http://test'), configDir: 'test', logger: loggerTest, version: 'test'}, new EventEmitter());
+            const source = new SpotifySource('test', {data: {clientId: 'id', clientSecret: 'secret'}} as any, {localUrl: new URL('http://test'), configDir: 'test', dataDir: 'test', logger: loggerTest, version: 'test'}, new EventEmitter());
             let given: unknown;
             (source as any).spotifyApi = {createAuthorizeURL: (_scopes: string[], state: string) => { given = state; return 'url'; }};
             source.createAuthUrl();
@@ -116,8 +116,8 @@ describe('Auth callback state', function () {
         });
 
         it('is random per component', function () {
-            const a = new SpotifySource('a', {data: {}} as any, {localUrl: new URL('http://test'), configDir: 'test', logger: loggerTest, version: 'test'}, new EventEmitter());
-            const b = new SpotifySource('b', {data: {}} as any, {localUrl: new URL('http://test'), configDir: 'test', logger: loggerTest, version: 'test'}, new EventEmitter());
+            const a = new SpotifySource('a', {data: {}} as any, {localUrl: new URL('http://test'), configDir: 'test', dataDir: 'test', logger: loggerTest, version: 'test'}, new EventEmitter());
+            const b = new SpotifySource('b', {data: {}} as any, {localUrl: new URL('http://test'), configDir: 'test', dataDir: 'test', logger: loggerTest, version: 'test'}, new EventEmitter());
             expect(a.oauthState).not.eq(b.oauthState);
             expect(a.oauthState.length).gte(20);
             const before = a.oauthState;

@@ -79,6 +79,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     localUrl: URL;
 
     configDir: string;
+    dataDir: string;
 
     canPoll: boolean = false;
     polling: boolean = false;
@@ -133,6 +134,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.lastActivityAt = this.instantiatedAt;
         this.localUrl = internal.localUrl;
         this.configDir = internal.configDir;
+        this.dataDir = internal.dataDir;
         this.emitter = emitter;
         
         const metrics = getRoot().items.sourceMetics;

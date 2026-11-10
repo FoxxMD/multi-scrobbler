@@ -1,7 +1,7 @@
 import { type Logger, loggerDebug, type LogOptions } from "@foxxmd/logging";
 import { EventEmitter } from "events";
 import { createContainer } from "iti";
-import { getConfigDir } from "./common/index.ts";
+import { getConfigDir, getDataDir } from "./common/index.ts";
 import { WildcardEmitter } from "./common/WildcardEmitter.ts";
 
 import { generateBaseURL } from "./utils/NetworkUtils.ts";
@@ -183,6 +183,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
     return createContainer().add({
         version: versionParts.join('-'),
         configDir: getConfigDir(),
+        dataDir: getDataDir(),
         isProd: process.env.NODE_ENV !== undefined && (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'prod'),
         // @ts-ignore
         port: (Number.isInteger(portVal) ? portVal : Number.parseInt(portVal)) as number,

@@ -103,6 +103,7 @@ describe('Sample Configs', function () {
                     const sources = new ScrobbleSources(emitter, {
                         localUrl: new URL('http://example.com'),
                         configDir: process.cwd(),
+                        dataDir: process.cwd(),
                         version: 'test'
                     }, loggerTest);
 
@@ -157,6 +158,7 @@ describe('Sample Configs', function () {
                     const sources = new ScrobbleSources(emitter, {
                         localUrl: new URL('http://example.com'),
                         configDir: process.cwd(),
+                        dataDir: process.cwd(),
                         version: 'test'
                     }, loggerTest);
                     await sources.buildSourcesFromConfig()
@@ -219,6 +221,7 @@ describe('Sample Configs', function () {
                     const clients = new ScrobbleClients(emitter, new WildcardEmitter<MSBackendEventMap>, {
                         localUrl: new URL('http://example.com'),
                         configDir: process.cwd(),
+                        dataDir: process.cwd(),
                         version: 'test'
                     },
                     loggerTest);
@@ -264,6 +267,7 @@ describe('Sample Configs', function () {
                     const clients = new ScrobbleClients(emitter, new WildcardEmitter<MSBackendEventMap>, {
                         localUrl: new URL('http://example.com'),
                         configDir: process.cwd(),
+                        dataDir: process.cwd(),                        
                         version: 'test'
                     },
                     loggerTest);
@@ -302,6 +306,7 @@ describe('Global ENVs with Config', function () {
         const sources = new ScrobbleSources(emitter, {
             localUrl: new URL('http://example.com'),
             configDir: process.cwd(),
+            dataDir: process.cwd(),
             version: 'test'
         }, loggerTest);
         await sources.buildSourcesFromConfig();
@@ -319,6 +324,7 @@ describe('Global ENVs with Config', function () {
         const sources = new ScrobbleSources(emitter, {
             localUrl: new URL('http://example.com'),
             configDir: process.cwd(),
+            dataDir: process.cwd(),
             version: 'test'
         }, loggerTest);
         await sources.buildSourcesFromConfig();

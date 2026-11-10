@@ -28,7 +28,7 @@ const createYtSource = async (opts?: {
         },
         emitter = new EventEmitter
     } = opts || {};
-    const source = new YTMusicSource('test', {id: `test-${Date.now()}`, ...config}, { localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test' }, emitter);
+    const source = new YTMusicSource('test', {id: `test-${Date.now()}`, ...config}, { localUrl: new URL('https://example.com'), configDir: 'fake', dataDir: 'fake', logger: loggerTest, version: 'test' }, emitter);
     // production defaults idle 1s before the discovery queue reports empty (queueEmptied) and poll stop() every 200ms
     source.queueIdleMs = 1;
     source.stopPollingWaitInterval = 10;

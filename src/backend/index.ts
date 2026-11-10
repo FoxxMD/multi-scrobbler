@@ -32,6 +32,7 @@ import { createDir, fileExists, fileOrDirectoryIsWriteable } from './utils/FSUti
 import { getMigratedDb } from "./common/database/appMigrator.ts";
 import type { Server } from 'node:http';
 import { stripIndents } from 'common-tags';
+import type { InternalConfigOptional } from './common/infrastructure/Atomic.ts';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -221,11 +222,12 @@ const dataDir = getDataDir();
             db
         });
 
-        const internalConfigOptional = {
-             localUrl: root.get('localUrl'),
+        const internalConfigOptional: InternalConfigOptional = {
+            localUrl: root.get('localUrl'),
             configDir: root.get('configDir'),
-             version: root.get('version')
-             };
+            dataDir: root.get('dataDir'),
+            version: root.get('version')
+        };
 
         scrobbleClients = new ScrobbleClients(root.get('clientEmitter'), root.get('sourceEmitter'), internalConfigOptional, root.get('logger'));
         scrobbleSources = new ScrobbleSources(root.get('sourceEmitter'), internalConfigOptional, root.get('logger'));

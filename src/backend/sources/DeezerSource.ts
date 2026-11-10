@@ -48,7 +48,7 @@ export default class DeezerSource extends AbstractSource {
 
         this.redirectUri = redirectUri || joinedUrl(this.localUrl, 'deezer/callback').toString();
 
-        this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
+        this.workingCredsPath = `${this.dataDir}/currentCreds-${name}.json`;
         this.canPoll = true;
         this.canBacklog = true;
         this.supportsUpstreamRecentlyPlayed = true;

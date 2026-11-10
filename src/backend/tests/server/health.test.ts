@@ -8,7 +8,7 @@ import { WildcardEmitter } from '../../common/WildcardEmitter.ts';
 import { initServer } from '../../server/index.ts';
 import type { ListenbrainzEndpointSourceConfig } from '../../common/infrastructure/config/source/endpointlz.ts';
 
-const internalConfig = { localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test' };
+const internalConfig = { localUrl: new URL('https://example.com'), configDir: 'fake', dataDir: 'fake', logger: loggerTest, version: 'test' };
 
 const defaultLzConfig: ListenbrainzEndpointSourceConfig & { source: string } = {
     id: 'test',

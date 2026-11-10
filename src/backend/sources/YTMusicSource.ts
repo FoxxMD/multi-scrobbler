@@ -146,7 +146,7 @@ export default class YTMusicSource extends AbstractSource {
         super('ytmusic', name, config, internal, emitter);
         this.canPoll = true;
         this.supportsUpstreamRecentlyPlayed = true;
-        this.workingCredsPath = resolve(this.configDir, `yti-${this.name}`);
+        this.workingCredsPath = resolve(this.dataDir, `yti-${this.name}`);
 
         const {
             logDiff,

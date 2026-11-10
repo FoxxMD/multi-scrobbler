@@ -1232,6 +1232,7 @@ describe('Scrobble Clients Behavior', function() {
             clients = new ScrobbleClients(cEmitter, sEmitter, {
                 localUrl: new URL('http://example.com'),
                 configDir: process.cwd(),
+                dataDir: process.cwd(),
                 version: 'test'
             },
             loggerNoop);

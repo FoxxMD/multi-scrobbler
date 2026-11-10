@@ -29,7 +29,7 @@ const createAppleMusicSource = async (opts?: {
         emitter = new EventEmitter
     } = opts || {};
     
-    const source = new AppleMusicSource('test', config as AppleMusicSourceConfig, { localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test' }, emitter);
+    const source = new AppleMusicSource('test', config as AppleMusicSourceConfig, { localUrl: new URL('https://example.com'), configDir: 'fake', dataDir: 'fake', logger: loggerTest, version: 'test' }, emitter);
     
     await source.buildDatabase();
     await source.buildTransformRules();

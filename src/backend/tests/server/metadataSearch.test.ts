@@ -9,7 +9,7 @@ import { initServer } from '../../server/index.ts';
 import { getRoot } from '../../ioc.ts';
 import { NDJSON_MEDIA_TYPE, type TrackSearchResult } from '../../../core/Api.ts';
 
-const internalConfig = { localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test' };
+const internalConfig = { localUrl: new URL('https://example.com'), configDir: 'fake', dataDir: 'fake', logger: loggerTest, version: 'test' };
 
 const buildApp = async () => {
     const sources = new ScrobbleSources(new WildcardEmitter(), internalConfig, loggerTest);

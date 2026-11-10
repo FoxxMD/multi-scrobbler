@@ -79,7 +79,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
     reqQueue?: RateLimiterQueue;
 
     constructor(name: any, config: Partial<LastfmData> & LastfmApiData, options: AbstractApiOptions & InternalConfigOptional & {type?: string}) {
-        const {type = 'lastfm', configDir, localUrl} = options ?? {};
+        const {type = 'lastfm', dataDir, localUrl} = options ?? {};
         super(type, name, config, options);
         const {
             redirectUri, 
@@ -120,7 +120,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
 
         this.logger.info(`Using ${this.url.normal} for API calls`);
         this.logger.info(`Redirect Uri: ${this.redirectUri}`);
-        this.workingCredsPath = `${configDir}/currentCreds-${this.url.url.host === LASTFM_HOST ? 'lastfm' : 'librefm'}-${name}.json`;
+        this.workingCredsPath = `${dataDir}/currentCreds-${this.url.url.host === LASTFM_HOST ? 'lastfm' : 'librefm'}-${name}.json`;
     }
 
     callApi = async <T>(func: any, retries = 0): Promise<T> => {

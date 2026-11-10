@@ -15,7 +15,7 @@ const createSource = async (data: SonosData): Promise<SonosSource> => {
         id: `test-${Date.now()}`,
         data,
         options: {}
-    }, { localUrl: new URL('http://test'), configDir: 'test', logger: loggerDebug, version: 'test' }, new EventEmitter());
+    }, { localUrl: new URL('http://test'), configDir: 'test', dataDir: 'test', logger: loggerDebug, version: 'test' }, new EventEmitter());
     await source.buildInitData();
     return source;
 }

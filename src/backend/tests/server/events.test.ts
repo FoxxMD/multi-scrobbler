@@ -9,7 +9,7 @@ import ScrobbleClients from '../../scrobblers/ScrobbleClients.ts';
 import { WildcardEmitter } from '../../common/WildcardEmitter.ts';
 import { initServer } from '../../server/index.ts';
 
-const internalConfig = { localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test' };
+const internalConfig = { localUrl: new URL('https://example.com'), configDir: 'fake', dataDir: 'fake', logger: loggerTest, version: 'test' };
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

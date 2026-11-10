@@ -8,11 +8,10 @@ import LastfmApiClient, { playToClientPayload, formatPlayObj } from '../../commo
 import { namesToCredits } from "../../../core/MusicMetadata.ts";
 import { withRequestInterception } from '../utils/networking.ts';
 import { http, HttpResponse } from "msw";
-import { loggerDebug, loggerTest } from '@foxxmd/logging';
+import { loggerTest } from '@foxxmd/logging';
 import { findCauseByReference } from '../../utils/ErrorUtils.ts';
 import { LastFMResponseError } from 'lastfm-ts-api';
 import { SimpleError } from '../../common/errors/MSErrors.ts';
-import {spy} from 'sinon';
 import { sleep } from '../../utils.ts';
 
 chai.use(asPromised);
@@ -93,6 +92,7 @@ describe('#LFM Error Response Handling', function () {
                 logger: loggerTest,
                 localUrl: new URL('http://localhost:9078'),
                 configDir: '.',
+                dataDir: '.',
                 version: 'test'
             });
 
@@ -124,6 +124,7 @@ describe('#LFM Error Response Handling', function () {
                 logger: loggerTest,
                 localUrl: new URL('http://localhost:9078'),
                 configDir: '.',
+                dataDir: '.',
                 version: 'test'
             });
 
@@ -177,6 +178,7 @@ describe('#LFM Rate Limiting', function () {
                 logger: loggerTest,
                 localUrl: new URL('http://localhost:9078'),
                 configDir: '.',
+                dataDir: '.',
                 version: 'test'
             });
 

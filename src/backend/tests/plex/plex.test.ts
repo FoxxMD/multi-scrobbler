@@ -18,7 +18,7 @@ const createSource = async (data: PlexApiData, authedUser: string | false = 'MyU
         id: `test-${Date.now()}`,
         data,
         options: {}
-    }, { localUrl: new URL('http://test'), configDir: 'test', logger: loggerTest, version: 'test' }, new EventEmitter());
+    }, { localUrl: new URL('http://test'), configDir: 'test', dataDir: 'test', logger: loggerTest, version: 'test' }, new EventEmitter());
     source.libraries = [{name: 'Music', collectionType: 'artist', uuid: 'dfsdf'}];
     source.plexUser = 'MyUser';
     await source.buildInitData();
