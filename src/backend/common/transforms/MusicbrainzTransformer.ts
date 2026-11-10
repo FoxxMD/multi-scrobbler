@@ -278,9 +278,10 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Apply
     }
 
     protected doParseConfig(data: MusicbrainzTransformerDataStage): MusicbrainzTransformerDataStage {
+        // Stage values override Transformer defaults, which override built-in defaults from parseStageConfig
         return {
             ...data,
-            ...parseStageConfig(data),
+            ...parseStageConfig({...(this.config.defaults ?? {}), ...data}),
         };
     }
 

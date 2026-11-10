@@ -72,9 +72,10 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<A
     }
 
     protected doParseConfig(data: CoverArtArchiveTransformerDataStage): CoverArtArchiveTransformerDataStage {
+        // Stage values override Transformer defaults, which override built-in defaults from parseStageConfig
         return {
             ...data,
-            ...parseStageConfig(data),
+            ...parseStageConfig({...(this.config.defaults ?? {}), ...data}),
         };
     }
 

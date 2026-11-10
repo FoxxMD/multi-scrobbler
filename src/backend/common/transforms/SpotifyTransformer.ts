@@ -245,9 +245,10 @@ export default class SpotifyTransformer extends AtomicPartsTransformer<ApplyTerm
     }
 
     protected doParseConfig(data: SpotifyTransformerDataStage): SpotifyTransformerDataStage {
+        // Stage values override Transformer defaults, which override built-in defaults from parseStageConfig
         return {
             ...data,
-            ...parseStageConfig(data),
+            ...parseStageConfig({...(this.config.defaults ?? {}), ...data}),
         };
     }
 

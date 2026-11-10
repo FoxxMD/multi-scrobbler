@@ -52,7 +52,7 @@ export const parseStageConfig = (data: RockskyTransformerData | undefined = {}, 
     };
 
     if(searchWhenMissing !== undefined) {
-        config.searchWhenMissing = DEFAULT_ROCKSKY_MISSING_TYPES;
+        config.searchWhenMissing = searchWhenMissing;
     }
 
     logger.debug(`Will search if missing: ${config.searchWhenMissing.join(', ')} | Match if (default) score is >= ${config.score}`);
@@ -127,9 +127,10 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ApplyTerm
     }
 
     protected doParseConfig(data: RockskyTransformerDataStage): RockskyTransformerDataStage {
+        // Stage values override Transformer defaults, which override built-in defaults from parseStageConfig
         return {
             ...data,
-            ...parseStageConfig(data),
+            ...parseStageConfig({...(this.config.defaults ?? {}), ...data}),
         };
     }
 

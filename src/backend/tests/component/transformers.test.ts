@@ -19,6 +19,10 @@ import dayjs from "dayjs";
 import clone from "clone";
 import { nameToCredit, creditsToNames, namesToCredits, mbMeta, creditMbid } from "../../../core/MusicMetadata.ts";
 import UserTransformer, { type UserStage } from "../../common/transforms/UserTransformer.ts";
+import MusicbrainzTransformer from "../../common/transforms/MusicbrainzTransformer.ts";
+import SpotifyTransformer from "../../common/transforms/SpotifyTransformer.ts";
+import RockskyTransformer from "../../common/transforms/rocksky/RockskyTransformer.ts";
+import CoverArtArchiveTransformer from "../../common/transforms/coverartarchive/CoverArtArchiveTransformer.ts";
 import { SkipTransformStageError, TransformRulesError } from "../../common/errors/MSErrors.ts";
 import { COMPONENT_STATE, type ComponentState, type TrackSearchResult } from "../../../core/Api.ts";
 import type { PlayWith, PlaySelectWithQueueStates } from "../../common/database/drizzle/drizzleTypes.ts";
@@ -757,6 +761,47 @@ describe('Play Transforms', function () {
             await expect(t.handle(stage, play)).to.be.rejectedWith(SkipTransformStageError);
         });
 
+    });
+
+    describe('Stage Defaults', function () {
+
+        const opts = () => ({logger: loggerTest, cache: memorycache()});
+
+        it('Musicbrainz uses transformer defaults over built-in defaults', function () {
+            const t = new MusicbrainzTransformer({name: 'test', type: 'musicbrainz', defaults: {score: 50, searchWhenMissing: ['title'], releaseGroupSecondaryTypeDeny: []}}, opts());
+            const stage = t.parseConfig({type: 'musicbrainz'});
+            expect(stage.score).eq(50);
+            expect(stage.searchWhenMissing).eql(['title']);
+            expect(stage.releaseGroupSecondaryTypeDeny).eql([]);
+        });
+
+        it('Stage options override transformer defaults', function () {
+            const t = new MusicbrainzTransformer({name: 'test', type: 'musicbrainz', defaults: {score: 50}}, opts());
+            expect(t.parseConfig({type: 'musicbrainz', score: 70}).score).eq(70);
+        });
+
+        it('Spotify uses transformer defaults over built-in defaults', function () {
+            const t = new SpotifyTransformer({name: 'test', type: 'spotify', defaults: {score: 0.9, searchWhenMissing: ['isrc']}}, opts());
+            const stage = t.parseConfig({type: 'spotify'});
+            expect(stage.score).eq(0.9);
+            expect(stage.searchWhenMissing).eql(['isrc']);
+        });
+
+        it('Rocksky uses transformer defaults and stage searchWhenMissing', function () {
+            const t = new RockskyTransformer({name: 'test', type: 'rocksky', defaults: {score: 50, searchWhenMissing: ['album']}}, opts());
+            const stage = t.parseConfig({type: 'rocksky'});
+            expect(stage.score).eq(50);
+            expect(stage.searchWhenMissing).eql(['album']);
+            expect(t.parseConfig({type: 'rocksky', searchWhenMissing: ['isrc']}).searchWhenMissing).eql(['isrc']);
+        });
+
+        it('Cover Art Archive uses transformer defaults over built-in defaults', function () {
+            const t = new CoverArtArchiveTransformer({name: 'test', type: 'coverartarchive', defaults: {searchWhenMissing: ['album'], allowedTypes: ['back'], forceSearch: true}}, opts());
+            const stage = t.parseConfig({type: 'coverartarchive'});
+            expect(stage.searchWhenMissing).eql(['album']);
+            expect(stage.allowedTypes).eql(['back']);
+            expect(stage.forceSearch).is.true;
+        });
     });
 
     describe('Credit Metadata', function () {

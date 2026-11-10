@@ -133,9 +133,10 @@ export default class NativeTransformer extends AtomicPartsTransformer<ApplyTerm,
     }
 
     protected doParseConfig(data: NativeTransformerDataStage): NativeTransformerDataStage {
+        // Stage values override Transformer defaults, which override built-in defaults from parseStageConfig
         return {
             ...data,
-            ...parseStageConfig(data),
+            ...parseStageConfig({...(this.config.defaults ?? {}), ...data}),
         };
     }
 
