@@ -17,11 +17,14 @@ export function rootSidebar(docsDir, extra = [], groupItems = {}) {
 		if (entry.isDirectory()) {
 			const metaFile = path.join(full, '_meta.yml');
 			const meta = fs.existsSync(metaFile) ? yaml.load(fs.readFileSync(metaFile, 'utf8')) : {};
-			if (meta.hidden) continue;
+			// strip starlight-auto-sidebar-only keys (still read by that plugin from _meta.yml); the rest
+			// (label, collapsed, badge) are valid Starlight group props. Starlight's group schema is strict.
+			const { order, hidden, sort, cascade, depth, ...group } = meta;
+			if (hidden) continue;
 			items.push({
-				order: meta.order ?? Number.MAX_VALUE,
+				order: order ?? Number.MAX_VALUE,
 				name: entry.name,
-				item: { label: meta.label ?? entry.name, collapsed: meta.collapsed ?? false, items: [{ autogenerate: { directory: entry.name } }, ...(groupItems[entry.name] ?? [])] },
+				item: { label: entry.name, ...group, items: [{ autogenerate: { directory: entry.name } }, ...(groupItems[entry.name] ?? [])] },
 			});
 		} else if (/\.mdx?$/.test(entry.name)) {
 			const { data } = matter(fs.readFileSync(full, 'utf8'));
