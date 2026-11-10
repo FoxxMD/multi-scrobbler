@@ -336,6 +336,129 @@ export const playTransformOptionsToRulesSchema = playTransformOptionsSchema.tran
     throw new Error('Not implemented: use AbstractComponent.transformPartToStrong for PlayTransformOptions -> PlayTransformRules normalization');
 }).meta({title: 'Transform Options to Rules'});
 
+/* 
+ * Generic Stage building blocks
+ *
+ * Normalization of lenient user config (single object or array, string shorthand, etc...) happens in zod transforms
+ * so the parsed (output) shape is always the strict runtime shape. Stage-specific schemas are built from these by each Stage, next to its Transformer.
+ *
+ * */
+
+/** Accept a single item or an array of items, always output an array */
+export const maybeArraySchema = <T extends z.ZodType>(item: T) =>
+    z.union([z.array(item), item]).transform((x): z.output<T>[] => Array.isArray(x) ? x : [x]);
+
+export const whenPartsSchema = z.object({
+    title: z.string().optional().meta({description: 'String or regex matching Play title'}),
+    artists: z.string().optional().meta({description: 'String or regex matching any Play artist'}),
+    albumArtists: z.string().optional().meta({description: 'String or regex matching any Play album artist'}),
+    album: z.string().optional().meta({description: 'String or regex matching Play album'}),
+    art: z.string().optional().meta({description: 'String or regex matching any Play art url. Empty string matches no art'}),
+}).meta({title: 'When Condition', description: 'All properties must match (AND)'});
+
+export type WhenPartsStrict = z.output<typeof whenPartsSchema>;
+
+export const whenSchema = maybeArraySchema(whenPartsSchema).meta({title: 'When', description: 'Only run if any condition matches (OR)'});
+
+export type WhenStrict = z.output<typeof whenSchema>;
+
+export const searchReplaceTermSchema = z.union([
+    z.string().meta({title: 'Search Term', description: 'String or regex to remove'}),
+    z.object({
+        search: z.string().meta({description: 'String or regex to match'}),
+        replace: z.string().meta({description: 'Replacement string. May be empty'}),
+        when: whenSchema.optional(),
+    }).meta({title: 'Search and Replace Term'}),
+]).transform((x) => typeof x === 'string' ? {search: x, replace: ''} : x).meta({title: 'Search and Replace'});
+
+export type SearchReplaceTermStrict = z.output<typeof searchReplaceTermSchema>;
+
+/** Rule term for Stages that produce their own data: apply (true), ignore (false), or apply conditionally */
+export const applyTermSchema = z.union([
+    z.boolean().meta({title: 'Apply', description: 'Use transformed data for this part?'}),
+    z.object({
+        when: whenSchema.optional(),
+    }).meta({title: 'Apply When', description: 'Use transformed data for this part if when matches'}),
+]).meta({title: 'Apply Rule'});
+
+export type ApplyTerm = z.output<typeof applyTermSchema>;
+
+export const RULE_PARTS = ['title', 'artists', 'albumArtists', 'album', 'duration', 'meta', 'art'] as const;
+export type RulePart = typeof RULE_PARTS[number];
+
+/**
+ * Build the Rules (per Play part) for a Stage from the term schema each part accepts
+ *
+ * @param defaults Value for a part when it is not specified by the user. Parts without a default are optional (undefined)
+ * */
+export const buildRulesSchema = <T extends z.ZodType>(term: T, defaults: Partial<Record<RulePart, z.output<T>>> = {}) => {
+    const rule = (part: RulePart, description: string) => {
+        const val = defaults[part];
+        // ponytail: cast so defaulted and optional parts share one type, both output z.output<T> | undefined
+        return (val !== undefined ? term.default(val as never) : term.optional()).meta({description}) as unknown as z.ZodOptional<T>;
+    }
+    return z.object({
+        title: rule('title', 'Rule for Play title'),
+        artists: rule('artists', 'Rule for Play artists'),
+        albumArtists: rule('albumArtists', 'Rule for Play album artists'),
+        album: rule('album', 'Rule for Play album'),
+        duration: rule('duration', 'Rule for Play duration'),
+        meta: rule('meta', 'Rule for Play meta (MBIDs, ISRC...)'),
+        art: rule('art', 'Rule for Play art'),
+    });
+}
+
+/** Properties shared by every Stage, used in a Hook */
+export const stageCommonSchema = z.object({
+    name: z.string().optional().meta({description: 'Name of configured Stage to use'}),
+    when: whenSchema.optional(),
+    onSuccess: flowControlTermSchema.optional().meta({description: 'Default: continue'}),
+    onFailure: flowControlTermSchema.optional().meta({description: 'Default: stop'}),
+    onSkip: flowControlTermSchema.optional().meta({description: 'Default: continue'}),
+    failureReturnPartial: z.boolean().optional().meta({description: 'On failure, keep changes from earlier Stages in Hook'}),
+});
+
+export type StageCommon = z.output<typeof stageCommonSchema> & {
+    type: string
+    /** Set at runtime from the hash of the Stage's Transformer config */
+    stageHash?: string
+};
+
+/**
+ * Build a Stage schema (used in a Hook) from its type, rules, and Stage-specific options. All properties are flat.
+ *
+ * Add `.meta({title})` to the result so it is identifiable in a union.
+ * */
+export const buildStageSchema = <Type extends string, R extends z.ZodRawShape, O extends z.ZodRawShape>(type: Type, rules: z.ZodObject<R>, options: z.ZodObject<O>) =>
+    z.object({
+        type: z.literal(type),
+        ...stageCommonSchema.shape,
+        ...rules.shape,
+        ...options.shape,
+    });
+
+/** Normalize `type` of raw Stage config so it can be matched case-insensitively */
+export const normalizeStageType = (val: unknown): unknown => {
+    if (val !== null && typeof val === 'object' && 'type' in val && typeof val.type === 'string') {
+        return {...val, type: val.type.trim().toLocaleLowerCase()};
+    }
+    return val;
+}
+
+/** Build the Hooks config (`playTransform`) from a Stage schema (usually a union of all Stages) */
+export const buildPlayTransformSchema = <S extends z.ZodType>(stage: S) => {
+    const hook = maybeArraySchema(z.preprocess(normalizeStageType, stage));
+    return z.object({
+        preCompare: hook.optional().meta({description: 'Stages applied when Play is first seen'}),
+        compare: z.object({
+            candidate: hook.optional().meta({description: 'Stages applied to the Play being compared'}),
+            existing: hook.optional().meta({description: 'Stages applied to existing Plays it is compared to'}),
+        }).optional().meta({description: 'Stages applied only during comparison. Not persisted'}),
+        postCompare: hook.optional().meta({description: 'Stages applied before Play is sent downstream'}),
+        log: z.union([z.boolean(), z.literal('all')]).optional().meta({description: "Log transform diffs. 'all' logs each Stage"}),
+    }).meta({title: 'Transform Options', description: 'Enhance/correct Play data by applying a transform pipeline'});
+}
+
 export const DEFAULT_TRANSFORMER_NAME = 'MSDefault';
 export const DEFAULT_TRANSFORMER_ENV_NAME = 'MSEnv';
 
