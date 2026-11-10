@@ -1,6 +1,6 @@
-import type {Credit, PlayObject, TransformerCommon} from "../../../core/Atomic.ts";
+import type {Credit, PlayObject} from "../../../core/Atomic.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
-import {applyTermSchema, type ApplyTerm, buildRulesSchema, buildStageSchema} from "../../../core/Transform.ts";
+import {applyTermSchema, type ApplyTerm, buildRulesSchema, buildStageSchema, type TransformerCommon} from "../../../core/Transform.ts";
 import * as z from "zod";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
 import { parseArtistCredits, parseTrackCredits, uniqueNormalizedStrArr } from "../../utils/StringUtils.ts";
@@ -59,7 +59,7 @@ export interface NativeTransformerDataStrong extends Omit<NativeTransformerData,
 
 export type NativeTransformerDataStage = Omit<NativeStage, keyof NativeTransformerDataStrong> & NativeTransformerDataStrong;
 
-export type NativeTransformerConfig = TransformerCommon<NativeTransformerData>;
+export type NativeTransformerConfig = TransformerCommon & { defaults?: NativeTransformerData };
 
 export const parseStageConfig = (data: NativeTransformerData | undefined, logger: MaybeLogger = new MaybeLogger()): NativeTransformerDataStrong => {
 

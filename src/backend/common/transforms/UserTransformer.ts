@@ -2,7 +2,7 @@ import { type SearchAndReplaceRegExp, searchAndReplace } from "@foxxmd/regex-bud
 import type {Credit, PlayObject} from "../../../core/Atomic.ts";
 import { testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
-import {buildRulesSchema, buildStageSchema, type SearchReplaceTermStrict, searchReplaceTermSchema} from "../../../core/Transform.ts";
+import {buildRulesSchema, buildStageSchema, type SearchReplaceTerm, searchReplaceTermSchema} from "../../../core/Transform.ts";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
 import * as z from "zod";
 
@@ -13,9 +13,9 @@ export const userStageSchema = buildStageSchema('user', userRulesSchema, z.objec
 export type UserStage = z.output<typeof userStageSchema>;
 
 /** Search and replace term with its `when` turned into a test function for the play being transformed */
-type SearchReplaceTermRuntime = SearchReplaceTermStrict & { test?: (obj: SearchAndReplaceRegExp) => boolean };
+type SearchReplaceTermRuntime = SearchReplaceTerm & { test?: (obj: SearchAndReplaceRegExp) => boolean };
 
-export default class UserTransformer extends AtomicPartsTransformer<SearchReplaceTermStrict[], undefined, UserStage> {
+export default class UserTransformer extends AtomicPartsTransformer<SearchReplaceTerm[], undefined, UserStage> {
 
     protected readonly stageSchema = userStageSchema;
 
@@ -38,13 +38,13 @@ export default class UserTransformer extends AtomicPartsTransformer<SearchReplac
     }
 
     protected generateMapper(play: PlayObject) {
-        return (x: SearchReplaceTermStrict): SearchReplaceTermRuntime => {
+        return (x: SearchReplaceTerm): SearchReplaceTermRuntime => {
             const {when} = x;
             return { ...x, test: (when !== undefined ? () => testWhenConditions(when, play, { testMaybeRegex: this.regex.testMaybeRegex }) : undefined) };
         };
     }
 
-    protected async handleTitle(play: PlayObject, parts: SearchReplaceTermStrict[], _transformData: undefined): Promise<Credit | undefined> {
+    protected async handleTitle(play: PlayObject, parts: SearchReplaceTerm[], _transformData: undefined): Promise<Credit | undefined> {
         if (play.data.track === undefined) {
             return undefined;
         }
@@ -55,7 +55,7 @@ export default class UserTransformer extends AtomicPartsTransformer<SearchReplac
         }
         return {...play.data.track, name: result.trim()};
     }
-    protected async handleArtists(play: PlayObject, parts: SearchReplaceTermStrict[], _transformData: undefined): Promise<Credit[] | undefined> {
+    protected async handleArtists(play: PlayObject, parts: SearchReplaceTerm[], _transformData: undefined): Promise<Credit[] | undefined> {
         if(play.data.artists === undefined || play.data.artists.length === 0) {
             return play.data.artists;
         }
@@ -69,7 +69,7 @@ export default class UserTransformer extends AtomicPartsTransformer<SearchReplac
         }
         return transformedArtists;
     }
-    protected async handleAlbumArtists(play: PlayObject, parts: SearchReplaceTermStrict[], _transformData: undefined): Promise<Credit[] | undefined> {
+    protected async handleAlbumArtists(play: PlayObject, parts: SearchReplaceTerm[], _transformData: undefined): Promise<Credit[] | undefined> {
         if(play.data.albumArtists === undefined || play.data.albumArtists.length === 0) {
             return play.data.albumArtists;
         }
@@ -83,7 +83,7 @@ export default class UserTransformer extends AtomicPartsTransformer<SearchReplac
         }
         return transformedArtists;
     }
-    protected async handleAlbum(play: PlayObject, parts: SearchReplaceTermStrict[], _transformData: undefined): Promise<Credit | undefined> {
+    protected async handleAlbum(play: PlayObject, parts: SearchReplaceTerm[], _transformData: undefined): Promise<Credit | undefined> {
         if (play.data.album === undefined) {
             return undefined;
         }

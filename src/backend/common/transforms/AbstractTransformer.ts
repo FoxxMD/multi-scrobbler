@@ -1,8 +1,8 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
-import type { OptionalCacheUsage, PlayObject, TransformerCommon, TransformerCommonConfig } from "../../../core/Atomic.ts";
+import type { OptionalCacheUsage, PlayObject } from "../../../core/Atomic.ts";
 import { testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import AbstractInitializable from "../AbstractInitializable.ts";
-import { normalizeStageType, type StageCommon } from "../../../core/Transform.ts";
+import { normalizeStageType, type StageCommon, type TransformerCommon, type TransformerCommonConfig } from "../../../core/Transform.ts";
 import type * as z from "zod";
 import type { cacheFunctions} from "@foxxmd/regex-buddy-core";
 import {  parseToRegexOrLiteralSearch, testMaybeRegex, searchAndReplace} from "@foxxmd/regex-buddy-core";

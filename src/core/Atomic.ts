@@ -650,23 +650,6 @@ export const JOINERS_FINAL: FinalJoiners[] = ['&'];
 export type Feat = 'ft' | 'feat' | 'vs' | 'ft.' | 'feat.' | 'vs.' | 'featuring'
 export const FEAT: Feat[] = ['ft','feat','vs','ft.','feat.','vs.','featuring'];
 
-export interface TransformOptions {
-        failOnFetch?: boolean;
-        throwOnFailure?: boolean | ('artists' | 'title' | 'albumArtists' | 'album' | 'duration' | 'meta' | 'art')[];
-        ttl?: string
-}
-export interface TransformerCommonConfig<T = Record<string, any>, Y = Record<string, any>> {
-    defaults?: T;
-    data?: Y
-    type: string;
-    name?: string;
-    options?: TransformOptions
-}
-
-export interface TransformerCommon<T = Record<string, any>, Y = Record<string, any>> extends TransformerCommonConfig<T,Y> {
-    name: string
-}
-
 export const rockskyRequiredFields = z.enum(['track','artists','album']);
 export type RockskyRequiredFields = z.infer<typeof rockskyRequiredFields>;
 export const rockskyConfidenceFields = z.enum(['isrc','mbid','spotify']);

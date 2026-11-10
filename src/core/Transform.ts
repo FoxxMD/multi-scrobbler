@@ -1,83 +1,9 @@
 import * as z from "zod";
-import type {SearchAndReplaceRegExp} from "@foxxmd/regex-buddy-core";
-import type { MarkRequired } from "ts-essentials";
-import { stripIndents } from "common-tags";
 
-export type PlayTransformParts<T, Y = StageTyped> = Extract<PlayTransformStage<T>, Y> & Whennable;
-export type PlayTransformPartsArray<T, Y = StageTyped> = PlayTransformParts<T, Y>[];
-
-/** Represents the weakly-defined user config. May be an array of parts or one parts object
- */
-export type PlayTransformPartsConfig<T, Y = StageTyped> = PlayTransformPartsArray<T, Y> | PlayTransformParts<T, Y>;
-
-export interface PlayTransformPartsAtomic<T> {
-    title?: T
-    artists?: T
-    albumArtists?: T
-    album?: T
-    duration?: T
-    meta?: T
-    art?: T
-}
-
-export const STAGE_TYPES_USER: StageTypeUser[] = ['user'];
-export const STAGE_TYPES_METADATA: StageTypeMetadata[] = ['musicbrainz','native','rocksky','coverartarchive','spotify'];
-export const STAGE_TYPES: StageType[] = [...STAGE_TYPES_METADATA, ...STAGE_TYPES_USER];
 export const META_PROVIDER_STAGE_TYPES = z.enum(['musicbrainz','rocksky','spotify']);
 export type MetadataProviderStageType = z.infer<typeof META_PROVIDER_STAGE_TYPES>;
 export const metadataPreferredProviderSchema = z.partialRecord(META_PROVIDER_STAGE_TYPES, z.union([z.string(), z.literal(true)])).meta({title: 'Metadata Preferred Providers'});
 export type MetadataPreferredProviders = z.infer<typeof metadataPreferredProviderSchema>;
-
-export interface StageTyped {
-    type: StageType
-}
-
-// export interface NotStageTyped {
-//     //type?: never
-// }
-// export type MaybeStageTyped = StageTyped | NotStageTyped;
-
-export interface AtomicStageConfig<T> extends StageConfig, PlayTransformPartsAtomic<T> {}
-
-export interface PlayTransformStageTyped<T> extends PlayTransformPartsAtomic<T> {
-    type: StageType
-}
-
-export interface PlayTransformUserStage<T> extends StageConfig, PlayTransformPartsAtomic<T> {
-    type: StageTypeUser
-}
-
-// export interface PlayTransformGenericStage<T> extends StageConfig, PlayTransformPartsAtomic<T> {
-//     type: string
-// }
-
-// export interface UntypedPlayTransformUserStage<T> extends UntypedStageConfig, PlayTransformPartsAtomic<T> {
-
-// }
-
-export type PlayTransformStage<T> = PlayTransformMetadataStage | PlayTransformUserStage<T> | PlayTransformNativeStage;// | UntypedPlayTransformUserStage<T> | PlayTransformGenericStage<any>;
-
-/** Represents the plain json user-configured structure (input)
- */
-export interface PlayTransformHooksConfig<T> {
-    preCompare?: PlayTransformPartsConfig<T>
-    compare?: {
-        candidate?: PlayTransformPartsConfig<T>
-        existing?: PlayTransformPartsConfig<T>
-    }
-    postCompare?: PlayTransformPartsConfig<T>
-}
-
-/** Represents the final, strongly-typed transform configuration used during runtime
- */
-export interface PlayTransformHooks<T> extends PlayTransformHooksConfig<T> {
-    preCompare?: PlayTransformPartsArray<T, StageTyped>
-    compare?: {
-        candidate?: PlayTransformPartsArray<T, StageTyped>
-        existing?: PlayTransformPartsArray<T, StageTyped>
-    }
-    postCompare?: PlayTransformPartsArray<T, StageTyped>
-}
 
 export type TransformHook = 'preCompare' | 'compare' | 'candidate' | 'existing' | 'postCompare';
 export const TRANSFORM_HOOK = {
@@ -87,79 +13,6 @@ export const TRANSFORM_HOOK = {
     postCompare: 'postCompare' as TransformHook,
 }
 
-export type WhenParts<T> = PlayTransformPartsAtomic<T>;
-export type WhenConditions<T> = WhenParts<T>[];
-
-
-// Helper used to construct a concrete `PlayTransformPartsAtomic<T>` schema for a given term schema, since
-// `PlayTransformPartsAtomic<T>` itself can't be represented generically in zod.
-const buildPartsAtomicSchema = <T extends z.ZodTypeAny>(term: T) => z.object({
-        title: term.optional(),
-        artists: term.optional(),
-        albumArtists: term.optional(),
-        album: term.optional(),
-        duration: term.optional(),
-        meta: term.optional(),
-        art: term.optional()
-    });
-
-const buildWhennablePartschema = <T extends z.ZodTypeAny>(term: T) => z.object({
-        /** A string or regex pattern matching the title of a Play */
-        title: term.optional().meta({description: 'A string or regex pattern matching the title of a Play'}),
-        /** A string or regex pattern matching any artist of a Play */
-        artists: term.optional().meta({description: 'A string or regex pattern matching any artist of a Play'}),
-        /** A string or regex pattern matching any album artist of a Play */
-        albumArtists: term.optional().meta({description: 'A string or regex pattern matching any artist of a Play'}),
-        /** A string or regex pattern matching the album of a Play */
-        album: term.optional().meta({description: 'A string or regex pattern matching the album of a Play'}),
-        /** A string or regex pattern matching any of the art links for a Play */
-        art: term.optional().meta({description: 'A string or regex pattern matching any of the art links for a Play'}),
-    });
-
-const whenPartsStringSchema = buildWhennablePartschema(z.string());
-
-export const whenConditionsConfigSchema = z.array(whenPartsStringSchema);
-
-export type WhenConditionsConfig = z.infer<typeof whenConditionsConfigSchema>;
-
-export const whennableSchema = z.object({
-    /** Only use this Stage (or Rules) if the properties in this object match the corresponding property in a Play. The value of each property is a string or regex pattern to match. */
-    when: whenConditionsConfigSchema.optional().meta({description: 'Only use this Stage (or Rules) if the properties in this object match the corresponding property in a Play. The value of each property is a string or regex pattern to match.'})
-});
-
-export type Whennable = z.infer<typeof whennableSchema>;
-
-export const conditionalSearchAndReplaceRegExpSchema = z.object({
-    /** The plain string or regex pattern to match */
-    search: z.string().meta({description: 'The plain string or regex pattern to match'}),
-    /** The replacement string. Can be empty string or use js replacement string pattern */
-    replace: z.string().meta({description: 'The replacement string. Can be empty string or use js replacement string pattern'}),
-    ...whennableSchema.shape,
-    test: z.custom<(obj: SearchAndReplaceRegExp) => boolean>((val) => typeof val === 'function').optional(),
-});
-
-// need to set tsconfig compiler option "strictNullChecks": true to make the inferred type not have search as optional
-// but it causes too many errors at the moment
-// so workaround by explicitly marking it as required for this type
-// https://stackoverflow.com/a/77256318
-export type ConditionalSearchAndReplaceRegExp = MarkRequired<z.infer<typeof conditionalSearchAndReplaceRegExpSchema>, 'search'>;
-
-const {
-    test,
-    ...restConditionalRegSchema
-} = conditionalSearchAndReplaceRegExpSchema.shape;
-export const conditionalSearchAndReplaceTermSchema = z.object(restConditionalRegSchema).meta({title: 'Conditional Search and Replace Term'});
-
-export type ConditionalSearchAndReplaceTerm = z.infer<typeof conditionalSearchAndReplaceTermSchema>;
-
-export const searchAndReplaceTermSchema = z.union([z.string(), conditionalSearchAndReplaceTermSchema]).meta({title: 'Search and Replace Term'});
-
-export type SearchAndReplaceTerm = z.infer<typeof searchAndReplaceTermSchema>;
-
-export const externalMetadataTermSchema = z.union([z.boolean(), whennableSchema]).optional().meta({title: 'Ext Metadata Term'});
-
-export type ExternalMetadataTerm = z.infer<typeof externalMetadataTermSchema>;
-
 export const flowControlTermSchema = z.enum(['continue', 'stop']).meta({title: 'Flow Control Term'});
 
 export type FlowControlTerm = z.infer<typeof flowControlTermSchema>;
@@ -168,155 +21,28 @@ export const FLOW_CONTROL_TERM = {
     stop: 'stop'
 } as const satisfies Record<string, FlowControlTerm>;
 
-export const flowControlSchema = z.object({
-    onSuccess: flowControlTermSchema,
-    onFailure: flowControlTermSchema,
-    onSkip: flowControlTermSchema,
-    failureReturnPartial: z.boolean(),
-}).meta({title: 'Flow Control'});
+/** Options for a configured Transformer, not used in a Stage */
+export const transformOptionsSchema = z.object({
+    failOnFetch: z.boolean().optional(),
+    throwOnFailure: z.union([z.boolean(), z.array(z.enum(['artists', 'title', 'albumArtists', 'album', 'duration', 'meta', 'art']))]).optional().meta({description: 'Throw (fail Stage) if transforming any/these parts fails'}),
+    ttl: z.string().optional().meta({description: 'How long to cache transform results. Default 15s'}),
+}).meta({title: 'Transformer Options'});
 
-export type FlowControl = z.infer<typeof flowControlSchema>;
+export type TransformOptions = z.infer<typeof transformOptionsSchema>;
 
-export const stageTypeMetadataSchema = z.enum(['musicbrainz', 'native', 'rocksky', 'coverartarchive', 'spotify']).meta({title: 'Stage Type Metadata'});
+/** A configured Transformer (`transformers` in AIO config) that Stages of the same type use */
+export const transformerConfigSchema = z.object({
+    type: z.string().meta({description: 'Stage type this Transformer is for'}),
+    name: z.string().optional().meta({description: 'Unique name, used as Stage name in a Hook'}),
+    defaults: z.record(z.string(), z.any()).optional().meta({description: 'Default Stage options when used in a Hook'}),
+    data: z.record(z.string(), z.any()).optional().meta({description: 'Data needed to setup the Transformer (API url, credentials...)'}),
+    options: transformOptionsSchema.optional(),
+}).meta({title: 'Transformer'});
 
-export const typedStageSchema = z.enum(['musicbrainz', 'native','user', 'rocksky', 'coverartarchive', 'spotify']).meta({title: 'Stage Type'});
+export type TransformerCommonConfig = z.infer<typeof transformerConfigSchema>;
 
-export type StageTypeMetadata = z.infer<typeof stageTypeMetadataSchema>;
-
-export const stageTypeUserSchema = z.literal('user').meta({title: 'Stage Type User'});
-
-export type StageTypeUser = z.infer<typeof stageTypeUserSchema>;
-
-export const stageTypeSchema = z.string().meta({title: 'Stage Type'});
-
-export type StageType = z.infer<typeof stageTypeSchema>;
-
-export const stageTypedConfigSchema = z.object({
-    type: typedStageSchema,
-}).meta({title: 'Stage Type Config'});
-
-export type StageTypedConfig = z.infer<typeof stageTypedConfigSchema>;
-
-export const stageConfigSchema = z.object({
-    ...stageTypedConfigSchema.shape,
-    ...whennableSchema.shape,
-    ...flowControlSchema.partial().shape,
-    name: z.string().optional(),
-    stageHash: z.string().optional(),
-}).meta({title: 'Stage Config'});
-
-export type StageConfig = z.infer<typeof stageConfigSchema>;
-
-export const untypedStageConfigSchema = z.object({
-    ...whennableSchema.shape,
-    ...flowControlSchema.partial().shape,
-    name: z.string().optional(),
-});
-
-export type UntypedStageConfig = z.infer<typeof untypedStageConfigSchema>;
-
-const metadataAtomicSchema = buildPartsAtomicSchema(externalMetadataTermSchema);
-
-export const playTransformMetadataStageSchema = z.object({
-    ...stageConfigSchema.shape,
-    ...metadataAtomicSchema.shape,
-    score: z.number().optional(),
-    type: stageTypeMetadataSchema,
-}).meta({title: 'Transform Metadata Stage'});
-
-export type PlayTransformMetadataStage = z.infer<typeof playTransformMetadataStageSchema>;
-
-export const playTransformNativeStageSchema = z.object({
-    ...stageConfigSchema.shape,
-    ...metadataAtomicSchema.shape,
-    type: z.literal('native'),
-}).meta({title: 'Transform Native Stage'});
-
-export type PlayTransformNativeStage = z.infer<typeof playTransformNativeStageSchema>;
-
-//const anyAtomicSchema = buildPartsAtomicSchema(z.any());
-// const playTransformGenericStageSchema = z.object({
-//     ...stageConfigSchema.shape,
-//     ...anyAtomicSchema.shape,
-//     type: stageTypeSchema,
-// }).meta({title: 'Transform Generic Stage'});
-
-const optionsAtomicSchema = buildPartsAtomicSchema(z.array(searchAndReplaceTermSchema));
-
-const playTransformUserStageOptionsSchema = z.object({
-    ...stageConfigSchema.shape,
-    ...optionsAtomicSchema.shape,
-    type: z.literal('user'),
-}).meta({title: 'Tranform User Stage'});
-
-// const untypedPlayTransformUserStageOptionsSchema = z.object({
-//     ...untypedStageConfigSchema.shape,
-//     ...optionsAtomicSchema.shape,
-// }).meta({title: 'Transform User Stage'});
-
-const rulesAtomicSchema = buildPartsAtomicSchema(z.array(searchAndReplaceTermSchema)).meta({title: 'Rules Atomic'});
-
-const playTransformUserStageRulesSchema = z.object({
-    ...stageConfigSchema.shape,
-    ...rulesAtomicSchema.shape,
-    type: z.literal('user'),
-}).meta({title: 'User Stage Rules'});
-
-const metadataStageForUnionSchema = playTransformMetadataStageSchema.extend({
-    type: z.enum(['musicbrainz','rocksky','coverartarchive', 'spotify']),
-}).meta({title: 'Transform External Stage'});
-
-const playTransformTypedStageOptionsSchema = z.discriminatedUnion('type', [
-    metadataStageForUnionSchema,
-    playTransformNativeStageSchema,
-    playTransformUserStageOptionsSchema,
-]).meta({title: 'Stage'});
-// const playTransformStageOptionsSchema = z.union([
-//     playTransformTypedStageOptionsSchema,
-//     playTransformGenericStageSchema,
-//     untypedPlayTransformUserStageOptionsSchema,
-// ]).meta({title: 'Stage'});
-
-const playTransformTypedStageRulesSchema = z.discriminatedUnion('type', [
-    metadataStageForUnionSchema,
-    playTransformNativeStageSchema,
-    playTransformUserStageRulesSchema,
-]);
-
-const playTransformPartsConfigOptionsSchema = z.union([
-    z.array(playTransformTypedStageOptionsSchema),
-    playTransformTypedStageOptionsSchema,
-]);
-
-export const playTransformConfigSchema = z.object({
-    /** Stages to be applied when a Play is first seen by this component */
-    preCompare: playTransformPartsConfigOptionsSchema.optional().meta({description: 'Stages to be applied when a Play is first seen by this component'}),
-    /** Stages to be applied when comparing a candidate Play to any existing Plays such as when checking for duplicates or discovered Plays
-     * 
-     * **Note:** Transforms applies are not persistent. They are used only during comparison operations.
-     */
-    compare: z.object({
-        /** Stages to apply to the Play being considered for discovery or scrobbling */
-        candidate: playTransformPartsConfigOptionsSchema.optional().meta({description: `Stages to apply to the Play being considered for discovery or scrobbling`}),
-        /** Stages to apply to the existing Plays (already discovered, existing scrobbles) */
-        existing: playTransformPartsConfigOptionsSchema.optional().meta({description: `Stages to apply to the existing Plays (already discovered, existing scrobbles)`}),
-    }).optional().meta({description: stripIndents`Stages to be applied when comparing a candidate Play to any existing Plays such as when checking for duplicates or discovered Plays
-        
-        **Note:** Transforms applies are not persistent. They are used only during comparison operations.`}),
-    postCompare: playTransformPartsConfigOptionsSchema.optional().meta({
-        description: 'Stages applied before Play is sent downstream (to MS Client or just before being scrobbling)'
-    }),
-}).meta({title: 'Transform Config'});
-
-export type PlayTransformConfig = z.infer<typeof playTransformConfigSchema>;
-
-/** Represents the plain json user-configured structure (input). Used to validate user input (json). */
-export const playTransformOptionsSchema = z.object({
-    ...playTransformConfigSchema.shape,
-    log: z.union([z.boolean(), z.literal('all')]).optional(),
-}).meta({title: 'Transform Options', description: 'Enhance/correct Play data by applying a transform pipeline'});
-
-export type PlayTransformOptions = z.infer<typeof playTransformOptionsSchema>;
+/** Transformer config after it has been named. Each Stage narrows `defaults`/`data` with its own types */
+export type TransformerCommon = TransformerCommonConfig & { name: string };
 
 /* ------------------------------------------------------------------
  * Generic Stage building blocks
@@ -338,11 +64,11 @@ export const whenPartsSchema = z.object({
     art: z.string().optional().meta({description: 'String or regex matching any Play art url. Empty string matches no art'}),
 }).meta({title: 'When Condition', description: 'All properties must match (AND)'});
 
-export type WhenPartsStrict = z.output<typeof whenPartsSchema>;
+export type WhenParts = z.output<typeof whenPartsSchema>;
 
 export const whenSchema = maybeArraySchema(whenPartsSchema).meta({title: 'When', description: 'Only run if any condition matches (OR)'});
 
-export type WhenStrict = z.output<typeof whenSchema>;
+export type WhenConditions = z.output<typeof whenSchema>;
 
 export const searchReplaceTermSchema = z.union([
     z.string().meta({title: 'Search Term', description: 'String or regex to remove'}),
@@ -353,7 +79,7 @@ export const searchReplaceTermSchema = z.union([
     }).meta({title: 'Search and Replace Term'}),
 ]).transform((x) => typeof x === 'string' ? {search: x, replace: ''} : x).meta({title: 'Search and Replace'});
 
-export type SearchReplaceTermStrict = z.output<typeof searchReplaceTermSchema>;
+export type SearchReplaceTerm = z.output<typeof searchReplaceTermSchema>;
 
 /** Rule term for Stages that produce their own data: apply (true), ignore (false), or apply conditionally */
 export const applyTermSchema = z.union([

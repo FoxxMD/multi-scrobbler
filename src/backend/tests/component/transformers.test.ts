@@ -4,14 +4,14 @@ import asPromised from 'chai-as-promised';
 import { describe, it } from 'mocha';
 import AbstractComponent, { type AbstractComponentConfig } from "../../common/AbstractComponent.ts";
 
-import { DEFAULT_TRANSFORMER_NAME, type SearchReplaceTermStrict, type MetadataProviderStageType, type StageTypeMetadata, TRANSFORM_HOOK } from "../../../core/Transform.ts";
+import { DEFAULT_TRANSFORMER_NAME, type SearchReplaceTerm, type MetadataProviderStageType, TRANSFORM_HOOK, type TransformerCommon, type TransformerCommonConfig } from "../../../core/Transform.ts";
 
 import { generateArtistsStr, generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
 import type {WebhookPayload} from "../../common/infrastructure/config/health/webhooks.ts";
 import NativeTransformer from "../../common/transforms/NativeTransformer.ts";
 import { initMemoryCache } from "../../common/Cache.ts";
 import { Cacheable } from "cacheable";
-import type {PlayMatchResult, PlayObject, QueueContext, TransformerCommon, TransformerCommonConfig} from "../../../core/Atomic.ts";
+import type {PlayMatchResult, PlayObject, QueueContext} from "../../../core/Atomic.ts";
 import TransformerManager from "../../common/transforms/TransformerManager.ts";
 import type AbstractTransformer from "../../common/transforms/AbstractTransformer.ts";
 import { transientCache } from "../utils/TransientTestUtils.ts";
@@ -233,7 +233,7 @@ describe('Play Transforms', function () {
                 expect((component.transformRules.preCompare![0] as UserStage).title).to.exist;
                 expect(Array.isArray((component.transformRules.preCompare![0] as UserStage).title)).is.true;
                 expect(((component.transformRules.preCompare![0] as UserStage).title as any[])[0]).to.include.keys('search', 'replace')
-                const title = ((component.transformRules.preCompare![0] as UserStage).title as any[])[0] as SearchReplaceTermStrict;
+                const title = ((component.transformRules.preCompare![0] as UserStage).title as any[])[0] as SearchReplaceTerm;
                 expect(title.search).is.eq('something');
                 expect(title.replace).is.eq('');
             });
@@ -263,7 +263,7 @@ describe('Play Transforms', function () {
                 expect((component.transformRules.preCompare![0] as UserStage).title).to.exist;
                 expect(Array.isArray((component.transformRules.preCompare![0] as UserStage).title)).is.true;
                 expect(((component.transformRules.preCompare![0] as UserStage).title as any[])[0]).to.include.keys('search', 'replace')
-                const title = ((component.transformRules.preCompare![0] as UserStage).title as any[])[0] as SearchReplaceTermStrict;
+                const title = ((component.transformRules.preCompare![0] as UserStage).title as any[])[0] as SearchReplaceTerm;
                 expect(title.search).is.eq('nothing');
                 expect(title.replace).is.eq('anything');
             });
@@ -273,7 +273,7 @@ describe('Play Transforms', function () {
 
             describe('Non-User Stage Types', function () {
 
-                for(const t of ['native']) {
+                for(const t of ['native'] as const) {
 
                     it(`Allows non-user Stage Type ${t}`, async function () {
                         component.config = {
@@ -281,7 +281,7 @@ describe('Play Transforms', function () {
                             options: {
                                 playTransform: {
                                     preCompare: {
-                                        type: t as StageTypeMetadata,
+                                        type: t,
                                         title: true
                                     }
                                 }

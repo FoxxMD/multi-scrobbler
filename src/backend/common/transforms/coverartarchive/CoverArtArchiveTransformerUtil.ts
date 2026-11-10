@@ -1,8 +1,8 @@
 import * as z from "zod";
 import { MaybeLogger } from "../../MaybeLogger.ts";
-import type { PlayObject, TransformerCommon, TransformOptions } from "../../../../core/Atomic.ts";
+import type { PlayObject } from "../../../../core/Atomic.ts";
 import { caaArtType, thumbSizes, type CovertArtApiClientConfig } from "../../vendor/musicbrainz/CoverArtApiTypes.ts";
-import { applyTermSchema, buildRulesSchema, buildStageSchema, DEFAULT_TRANSFORMER_ENV_NAME } from "../../../../core/Transform.ts";
+import { applyTermSchema, buildRulesSchema, buildStageSchema, DEFAULT_TRANSFORMER_ENV_NAME, type TransformerCommon } from "../../../../core/Transform.ts";
 
 export const caaMissingTypes = z.enum(['album']);
 export type CAAMissingType = z.infer<typeof caaMissingTypes>;
@@ -29,7 +29,7 @@ export const coverArtArchiveStageSchema = buildStageSchema(
 
 export type CoverArtArchiveStage = z.output<typeof coverArtArchiveStageSchema>;
 
-export type CovertArtArchiveTransformerConfig = TransformerCommon<CoverArtArchiveTransformData, CovertArtApiClientConfig> & { options?: TransformOptions };
+export type CovertArtArchiveTransformerConfig = TransformerCommon & { defaults?: CoverArtArchiveTransformData, data?: CovertArtApiClientConfig };
 
 export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
     const transformEnv = process.env.CAA_PRESETS;

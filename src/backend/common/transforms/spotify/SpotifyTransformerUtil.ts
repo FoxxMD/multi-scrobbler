@@ -1,12 +1,8 @@
-import type {
-    TransformerCommon,
-    TransformOptions,
-} from "../../../../core/Atomic.ts";
 import type { SpotifyTransformerApiConfigData } from "../../vendor/spotify/SpotifyTypes.ts";
 import { MaybeLogger } from "../../MaybeLogger.ts";
 import * as z from 'zod';
 import { removeUndefinedKeys } from "../../../../core/DataUtils.ts";
-import { applyTermSchema, buildRulesSchema, buildStageSchema, DEFAULT_TRANSFORMER_ENV_NAME } from "../../../../core/Transform.ts";
+import { applyTermSchema, buildRulesSchema, buildStageSchema, DEFAULT_TRANSFORMER_ENV_NAME, type TransformerCommon } from "../../../../core/Transform.ts";
 
 export const spotifyMissingTypes = z.enum(['album','title','artists','duration','isrc','ids','art']);
 export type SpotifyMissingType = z.infer<typeof spotifyMissingTypes>;
@@ -44,7 +40,7 @@ export type SpotifyStage = z.output<typeof spotifyStageSchema>;
 export interface SpotifyTransformerDataConfig extends SpotifyTransformerApiConfigData {
 }
 
-export type SpotifyTransformerConfig = TransformerCommon<SpotifyTransformerData, SpotifyTransformerDataConfig> & { options?: TransformOptions };
+export type SpotifyTransformerConfig = TransformerCommon & { defaults?: SpotifyTransformerData, data?: SpotifyTransformerDataConfig };
 
 const DEFAULTS_PRESET: SpotifyTransformerData = {
 }

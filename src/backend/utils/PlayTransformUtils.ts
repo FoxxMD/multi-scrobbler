@@ -1,13 +1,12 @@
-import type {Logger} from "@foxxmd/logging";
 import type { searchAndReplace as searchAndReplaceFunc} from "@foxxmd/regex-buddy-core";
 import { testMaybeRegex as testMaybeRegexFunc } from "@foxxmd/regex-buddy-core";
 import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
 
-import { type WhenPartsStrict, type WhenStrict } from "../../core/Transform.ts";
+import { type WhenParts, type WhenConditions } from "../../core/Transform.ts";
 import dayjs from "dayjs";
 import { playImages } from "../../core/MusicMetadata.ts";
 
-export const testWhen = (parts: WhenPartsStrict, play: PlayObject, options?: SuppliedRegex): boolean => {
+export const testWhen = (parts: WhenParts, play: PlayObject, options?: SuppliedRegex): boolean => {
     const {
         testMaybeRegex = testMaybeRegexFunc,
     } = options || {}
@@ -43,16 +42,11 @@ export const testWhen = (parts: WhenPartsStrict, play: PlayObject, options?: Sup
     return true;
 }
 
-export const testWhenConditions = (when: WhenStrict, play: PlayObject, options?: SuppliedRegex) => when.some(x => testWhen(x, play, options));
+export const testWhenConditions = (when: WhenConditions, play: PlayObject, options?: SuppliedRegex) => when.some(x => testWhen(x, play, options));
 
 export interface SuppliedRegex {
     searchAndReplace?: typeof searchAndReplaceFunc,
     testMaybeRegex?: typeof testMaybeRegexFunc,
-}
-
-export interface TransformPlayPartsOptions {
-    logger?: () => Logger,
-    regex?: SuppliedRegex
 }
 
 export const baseFormatPlayObj = (data: any, play: PlayObjectMinimal): PlayObject => {

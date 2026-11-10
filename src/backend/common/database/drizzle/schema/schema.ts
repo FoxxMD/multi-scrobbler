@@ -3,7 +3,7 @@ import { defineRelations } from 'drizzle-orm';
 import dayjs, { type Dayjs } from "dayjs";
 import { COMPONENT_TYPE_CLIENT, COMPONENT_TYPE_SOURCE, type ErrorLike, type PlayObject, type QueueContext } from "../../../../../core/Atomic.ts";
 import { asPlayCheap } from "../../../../../core/PlayMarshalUtils.ts";
-import type {ExternalMetadataTerm, PlayTransformPartsConfig, SearchAndReplaceTerm} from "../../../../../core/Transform.ts";
+import type {PlayTransformConfig} from "../../../transforms/stageSchemas.ts";
 import type {JobRangeCount, JobRangeTime} from "../../../infrastructure/Job.ts";
 import { serializeError, deserializeError } from "serialize-error";
 import { generatePlayUid } from "../../../../../core/StringUtils.ts";
@@ -209,7 +209,7 @@ export const jobs = sqliteTable("jobs", {
   status: text({enum: ['idle','completed','failed','processing']}).notNull().default('idle'),
   retries: integer().notNull().default(0),
   error: ErrorLikeJson('error'),
-  transformOptions: text({ mode: 'json' }).$type<PlayTransformPartsConfig<SearchAndReplaceTerm[] | ExternalMetadataTerm>>(),
+  transformOptions: text({ mode: 'json' }).$type<PlayTransformConfig["preCompare"]>(),
   initialParameters: text({ mode: 'json' }).$type<JobRangeCount | JobRangeTime>(),
   cursor: text({ mode: 'json' }),
   total: integer(),

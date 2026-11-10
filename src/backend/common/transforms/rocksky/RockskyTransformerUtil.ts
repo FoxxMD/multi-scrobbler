@@ -1,7 +1,7 @@
 import { MaybeLogger } from "../../MaybeLogger.ts";
 import { type RockskyApiClientConfig, type SearchType, searchType } from "../../vendor/rocksky/interfaces.ts";
-import { applyTermSchema, buildRulesSchema, buildStageSchema, DEFAULT_TRANSFORMER_ENV_NAME } from "../../../../core/Transform.ts";
-import { rockskyMissingFields, type TransformerCommon, type TransformOptions } from "../../../../core/Atomic.ts";
+import { applyTermSchema, buildRulesSchema, buildStageSchema, DEFAULT_TRANSFORMER_ENV_NAME, type TransformerCommon, type TransformOptions } from "../../../../core/Transform.ts";
+import { rockskyMissingFields } from "../../../../core/Atomic.ts";
 import * as z from 'zod';
 
 /** Rocksky Stage options. Used for transformer `defaults` and for overrides in a Stage. Values are normalized by `parseStageConfig` */
@@ -16,7 +16,7 @@ export const rockskyStageOptionsSchema = z.object({
 
 export type RockskyTransformerData = z.input<typeof rockskyStageOptionsSchema>;
 
-export type RockskyTransformerConfig = TransformerCommon<RockskyTransformerData, RockskyApiClientConfig> & { options?: TransformOptions & { logUrl?: boolean; }; };
+export type RockskyTransformerConfig = TransformerCommon & { defaults?: RockskyTransformerData, data?: RockskyApiClientConfig, options?: TransformOptions & { logUrl?: boolean } };
 
 export const rockskyStageSchema = buildStageSchema(
     'rocksky',

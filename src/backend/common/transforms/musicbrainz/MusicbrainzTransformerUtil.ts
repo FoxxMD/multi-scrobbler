@@ -1,7 +1,6 @@
-import type { MissingMbidType, TransformerCommon, TransformOptions } from "../../../../core/Atomic.ts";
 import type { MusicbrainzApiConfigData } from "../../infrastructure/Atomic.ts";
 import { MaybeLogger } from "../../MaybeLogger.ts";
-import { applyTermSchema, buildRulesSchema, buildStageSchema, DEFAULT_TRANSFORMER_ENV_NAME } from "../../../../core/Transform.ts";
+import { applyTermSchema, buildRulesSchema, buildStageSchema, DEFAULT_TRANSFORMER_ENV_NAME, type TransformerCommon, type TransformOptions } from "../../../../core/Transform.ts";
 import { mBReleasePrimaryGroupTypesSchema, mBReleaseSecondaryGroupTypesSchema, mBReleaseStatusesSchema } from "../../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { maybeStringLowerArrayFromString } from "../../../utils/ZodUtils.ts";
 import * as z from 'zod';
@@ -10,7 +9,7 @@ export interface MusicbrainzTransformerDataConfig {
     apis: MusicbrainzApiConfigData[];
 }
 
-export type MusicbrainzTransformerConfig = TransformerCommon<MusicbrainzTransformerData, MusicbrainzTransformerDataConfig> & {options?: TransformOptions & {logUrl?: boolean}}
+export type MusicbrainzTransformerConfig = TransformerCommon & { defaults?: MusicbrainzTransformerData, data?: MusicbrainzTransformerDataConfig, options?: TransformOptions & {logUrl?: boolean} }
 
 export type SearchType = 'freetext' | 'album' | 'artist' | 'basic' | 'basicorids' | 'isrc' | 'mbidrecording';
 
