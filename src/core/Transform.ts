@@ -318,25 +318,7 @@ export const playTransformOptionsSchema = z.object({
 
 export type PlayTransformOptions = z.infer<typeof playTransformOptionsSchema>;
 
-const playTransformPartsArrayRulesSchema = z.array(playTransformTypedStageRulesSchema).meta({title: 'Transform Parts'});
-
-/** Represents the final, strongly-typed transform configuration used during runtime. */
-export const playTransformRulesSchema = z.object({
-    preCompare: playTransformPartsArrayRulesSchema.optional().meta({description: 'Stages to be applied when a Play is first seen by this component'}),
-    compare: z.object({
-        candidate: playTransformPartsArrayRulesSchema.optional(),
-        existing: playTransformPartsArrayRulesSchema.optional(),
-    }).optional(),
-    postCompare: playTransformPartsArrayRulesSchema.optional(),
-}).meta({title: 'Transform Rules'});
-
-export type PlayTransformRules = z.infer<typeof playTransformRulesSchema>;
-
-export const playTransformOptionsToRulesSchema = playTransformOptionsSchema.transform((val): PlayTransformRules => {
-    throw new Error('Not implemented: use AbstractComponent.transformPartToStrong for PlayTransformOptions -> PlayTransformRules normalization');
-}).meta({title: 'Transform Options to Rules'});
-
-/* 
+/* ------------------------------------------------------------------
  * Generic Stage building blocks
  *
  * Normalization of lenient user config (single object or array, string shorthand, etc...) happens in zod transforms
@@ -457,6 +439,16 @@ export const buildPlayTransformSchema = <S extends z.ZodType>(stage: S) => {
         postCompare: hook.optional().meta({description: 'Stages applied before Play is sent downstream'}),
         log: z.union([z.boolean(), z.literal('all')]).optional().meta({description: "Log transform diffs. 'all' logs each Stage"}),
     }).meta({title: 'Transform Options', description: 'Enhance/correct Play data by applying a transform pipeline'});
+}
+
+/** Hooks with each Stage parsed and merged with the config of the Transformer that runs it. Used at runtime */
+export interface PlayTransformRules {
+    preCompare?: StageCommon[]
+    compare?: {
+        candidate?: StageCommon[]
+        existing?: StageCommon[]
+    }
+    postCompare?: StageCommon[]
 }
 
 export const DEFAULT_TRANSFORMER_NAME = 'MSDefault';

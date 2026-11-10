@@ -1,81 +1,50 @@
-import { searchAndReplace } from "@foxxmd/regex-buddy-core";
+import { type SearchAndReplaceRegExp, searchAndReplace } from "@foxxmd/regex-buddy-core";
 import type {Credit, PlayObject} from "../../../core/Atomic.ts";
-import { configValToSearchReplace, isSearchAndReplaceTerm, isUserStage, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
+import { testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
-import {buildRulesSchema, buildStageSchema, type ConditionalSearchAndReplaceRegExp, type PlayTransformUserStage, searchReplaceTermSchema} from "../../../core/Transform.ts";
-import * as z from "zod";
+import {buildRulesSchema, buildStageSchema, type SearchReplaceTermStrict, searchReplaceTermSchema} from "../../../core/Transform.ts";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
+import * as z from "zod";
 
-export const userStageSchema = buildStageSchema(
-    'user',
-    buildRulesSchema(z.array(searchReplaceTermSchema)),
-    z.object({})
-).meta({title: 'User Stage'});
+const userRulesSchema = buildRulesSchema(z.array(searchReplaceTermSchema));
+
+export const userStageSchema = buildStageSchema('user', userRulesSchema, z.object({})).meta({title: 'User Stage'});
 
 export type UserStage = z.output<typeof userStageSchema>;
 
-export default class UserTransformer extends AtomicPartsTransformer<ConditionalSearchAndReplaceRegExp[], undefined> {
+/** Search and replace term with its `when` turned into a test function for the play being transformed */
+type SearchReplaceTermRuntime = SearchReplaceTermStrict & { test?: (obj: SearchAndReplaceRegExp) => boolean };
 
-    // protected constructor(config: TransformerCommon) {
-    //     super(name, config);
-    // }
+export default class UserTransformer extends AtomicPartsTransformer<SearchReplaceTermStrict[], undefined, UserStage> {
 
-    protected doParseConfig(data: PlayTransformUserStage<ConditionalSearchAndReplaceRegExp[]>) {
-        if (!isUserStage(data)) {
-            throw new Error(`UserTransformer is only usable with 'user' type stages`);
-        }
+    protected readonly stageSchema = userStageSchema;
 
+    /** Stage terms are applied first, then terms from transformer `defaults` */
+    protected doParseConfig(data: UserStage): UserStage {
+        const defaults = userRulesSchema.parse(this.config.defaults ?? {});
         const {
             title = [],
             artists = [],
             album = [],
             albumArtists = [],
-            ...rest
         } = data;
-
-        const {
-            defaults: {
-                title: defTitle = [],
-                artists: defArtist = [],
-                album: defAlbum = [],
-                albumArtists: defAA = [],
-            } = {},
-        } = this.config;
-
-        const stage: PlayTransformUserStage<ConditionalSearchAndReplaceRegExp[]> = {
-            ...rest,
-            title: [...title, ...defTitle],
-            artists: [...artists, ...defArtist],
-            album: [...album, ...defAlbum],
-            albumArtists: [...albumArtists, ...defAA],
-            type: 'user'
-        }
-
-        for (const k of ['artists', 'title', 'album', 'albumArtists'] as const) {
-            if (!(k in stage)) {
-                continue;
-            }
-            if (!Array.isArray(stage[k])) {
-                throw new Error(`${k} must be an array`);
-            }
-            try {
-                isSearchAndReplaceTerm(stage[k]);
-                stage[k] = stage[k].map(configValToSearchReplace) as ConditionalSearchAndReplaceRegExp[];
-            } catch (e) {
-                throw new Error(`Property '${k}' was not a valid type`, { cause: e });
-            }
-        }
-        return stage;
+        return {
+            ...data,
+            title: [...title, ...(defaults.title ?? [])],
+            artists: [...artists, ...(defaults.artists ?? [])],
+            album: [...album, ...(defaults.album ?? [])],
+            albumArtists: [...albumArtists, ...(defaults.albumArtists ?? [])],
+        };
     }
 
     protected generateMapper(play: PlayObject) {
-        return (x: ConditionalSearchAndReplaceRegExp): ConditionalSearchAndReplaceRegExp => {
+        return (x: SearchReplaceTermStrict): SearchReplaceTermRuntime => {
             const {when} = x;
             return { ...x, test: (when !== undefined ? () => testWhenConditions(when, play, { testMaybeRegex: this.regex.testMaybeRegex }) : undefined) };
         };
     }
 
-    protected async handleTitle(play: PlayObject, parts: ConditionalSearchAndReplaceRegExp[], _transformData: undefined): Promise<Credit | undefined> {
+    protected async handleTitle(play: PlayObject, parts: SearchReplaceTermStrict[], _transformData: undefined): Promise<Credit | undefined> {
         if (play.data.track === undefined) {
             return undefined;
         }
@@ -86,7 +55,7 @@ export default class UserTransformer extends AtomicPartsTransformer<ConditionalS
         }
         return {...play.data.track, name: result.trim()};
     }
-    protected async handleArtists(play: PlayObject, parts: ConditionalSearchAndReplaceRegExp[], _transformData: undefined): Promise<Credit[] | undefined> {
+    protected async handleArtists(play: PlayObject, parts: SearchReplaceTermStrict[], _transformData: undefined): Promise<Credit[] | undefined> {
         if(play.data.artists === undefined || play.data.artists.length === 0) {
             return play.data.artists;
         }
@@ -100,7 +69,7 @@ export default class UserTransformer extends AtomicPartsTransformer<ConditionalS
         }
         return transformedArtists;
     }
-    protected async handleAlbumArtists(play: PlayObject, parts: ConditionalSearchAndReplaceRegExp[], _transformData: undefined): Promise<Credit[] | undefined> {
+    protected async handleAlbumArtists(play: PlayObject, parts: SearchReplaceTermStrict[], _transformData: undefined): Promise<Credit[] | undefined> {
         if(play.data.albumArtists === undefined || play.data.albumArtists.length === 0) {
             return play.data.albumArtists;
         }
@@ -114,7 +83,7 @@ export default class UserTransformer extends AtomicPartsTransformer<ConditionalS
         }
         return transformedArtists;
     }
-    protected async handleAlbum(play: PlayObject, parts: ConditionalSearchAndReplaceRegExp[], _transformData: undefined): Promise<Credit | undefined> {
+    protected async handleAlbum(play: PlayObject, parts: SearchReplaceTermStrict[], _transformData: undefined): Promise<Credit | undefined> {
         if (play.data.album === undefined) {
             return undefined;
         }

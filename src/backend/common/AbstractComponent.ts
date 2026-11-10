@@ -13,7 +13,7 @@ import { generateLoggableAbortReason, mergeSimpleError, SimpleError, SkipTransfo
 import {
     FLOW_CONTROL_TERM,
     type PlayTransformRules,
-    type StageConfig,
+    type StageCommon,
     TRANSFORM_HOOK,
     type TransformHook
 } from "../../core/Transform.ts";
@@ -49,6 +49,8 @@ import { DrizzleQueueRepository } from "./database/drizzle/repositories/QueueRep
 import { DrizzlePlayEventsRepository } from "./database/drizzle/repositories/PlayEventsRepository.ts";
 import { entityIsPlayEntity, playUpdateToEvent, queueCompletionStateToPlayEvent, queueStateToPlayEvent, stateChangeToPlayEvent } from "./database/drizzle/entityUtils.ts";
 import pMap from "p-map";
+import { prettifyError } from "zod";
+import { playTransformSchema } from "./transforms/stageSchemas.ts";
 import type { Gauge } from 'prom-client';
 import type { PlayProcessingResult } from "./infrastructure/PlayProcessing.ts";
 import { isAbortError } from "abort-controller-x";
@@ -285,75 +287,51 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             return;
         }
 
+        const res = playTransformSchema.safeParse(playTransform);
+        if(!res.success) {
+            throw new SimpleError(`playTransform is not valid:\n${prettifyError(res.error)}`, {cause: res.error});
+        }
         const {
-            preCompare: preConfig,
+            preCompare,
             compare: {
-                candidate: candidateConfig,
-                existing: existingConfig,
+                candidate,
+                existing,
             } = {},
-            postCompare: postConfig
-        } = playTransform;
-
-        let preCompare: StageConfig[] | undefined,
-            candidate: StageConfig[] | undefined,
-            existing: StageConfig[] | undefined,
-            postCompare: StageConfig[] | undefined;
+            postCompare,
+        } = res.data;
 
         const builtHooks: string[] = [];
         const emptyHooks: string[] = [];
-        try {
-            preCompare = await this.transformPartToStrong(preConfig);
-            if(preCompare === undefined) {
-                emptyHooks.push('preCompare')
-            } else {
-                builtHooks.push(`preCompare => ${preCompare.map(x => `${x.type}${x.name !== undefined ? `-${x.name}` : ''}`)}`);
-            }
-        } catch (e) {
-            throw new Error('preCompare was not valid', {cause: e});
-        }
+        const built: Record<'preCompare' | 'candidate' | 'existing' | 'postCompare', StageCommon[] | undefined> = {
+            preCompare: undefined,
+            candidate: undefined,
+            existing: undefined,
+            postCompare: undefined,
+        };
 
-        try {
-            candidate = await this.transformPartToStrong(candidateConfig);
-            if(candidate === undefined) {
-                emptyHooks.push('candidate')
-            } else {
-                builtHooks.push(`canidate => ${candidate.map(x => `${x.type}${x.name !== undefined ? `-${x.name}` : ''}`)}`);
+        for(const [hook, stages] of Object.entries({preCompare, candidate, existing, postCompare}) as [keyof typeof built, unknown[] | undefined][]) {
+            if(stages === undefined) {
+                emptyHooks.push(hook);
+                continue;
             }
-        } catch (e) {
-            throw new Error('candidate was not valid', {cause: e});
-        }
-
-        try {
-            existing = await this.transformPartToStrong(existingConfig);
-             if(existing === undefined) {
-                emptyHooks.push('existing')
-            } else {
-                builtHooks.push(`existing => ${existing.map(x => `${x.type}${x.name !== undefined ? `-${x.name}` : ''}`)}`);
+            try {
+                const parsed = await pMap(stages, async (x) => this.transformManager.parseTransformerConfig(x));
+                built[hook] = parsed;
+                builtHooks.push(`${hook} => ${parsed.map(x => `${x.type}${x.name !== undefined ? `-${x.name}` : ''}`)}`);
+            } catch (e) {
+                throw new Error(`${hook} was not valid`, {cause: e});
             }
-        } catch (e) {
-            throw new Error('existing was not valid', {cause: e});
-        }
-
-        try {
-            postCompare = await this.transformPartToStrong(postConfig);
-             if(postCompare === undefined) {
-                emptyHooks.push('postCompare')
-            } else {
-                builtHooks.push(`postCompare => ${postCompare.map(x => `${x.type}${x.name !== undefined ? `-${x.name}` : ''}`)}`);
-            }
-        } catch (e) {
-            throw new Error('postCompare was not valid', {cause: e});
         }
 
         this.logger.debug(`Hooks built! Empty: ${emptyHooks.join(', ')} | Configured: ${builtHooks.length === 0 ? 'None' : `\n${builtHooks.join('\n')}`}`);
 
         this.transformRules = {
-            preCompare,
+            preCompare: built.preCompare,
             compare: {
-                candidate,
-                existing,
+                candidate: built.candidate,
+                existing: built.existing,
             },
-            postCompare,
+            postCompare: built.postCompare,
         }
     }
 
@@ -402,15 +380,6 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
     }
 
-    protected async transformPartToStrong(data: any) {
-        if(data === undefined) {
-            return undefined;
-        }
-        const partArr = (Array.isArray(data) ? data : [data]);
-
-        return await pMap(partArr, async (x) => this.transformManager.parseTransformerConfig(x));
-    }
-
     public transformPlay = async (play: PlayObject, hookType: TransformHook, transformOpts: {log?: boolean | 'all'} & OptionalCacheUsage = {}) => {
 
         const {
@@ -421,7 +390,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         let logger!: Logger;
 
         try {
-            let hook: StageConfig[] | undefined;
+            let hook: StageCommon[] | undefined;
 
             switch (hookType) {
                 case TRANSFORM_HOOK.preCompare:
@@ -621,7 +590,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
     }
 
-    protected generateStepFromStage = async (playTruth: PlayObject, hookItem: StageConfig, hookType: TransformHook, opts: { logger?: Logger, asyncId?: string } & OptionalCacheUsage = {}): Promise<[LifecycleStep, PlayObject]> => {
+    protected generateStepFromStage = async (playTruth: PlayObject, hookItem: StageCommon, hookType: TransformHook, opts: { logger?: Logger, asyncId?: string } & OptionalCacheUsage = {}): Promise<[LifecycleStep, PlayObject]> => {
         const {
             onSuccess = 'continue',
             onFailure = 'stop',

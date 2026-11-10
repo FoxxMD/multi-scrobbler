@@ -4,12 +4,10 @@ import asPromised from 'chai-as-promised';
 import { describe, it } from 'mocha';
 import AbstractComponent, { type AbstractComponentConfig } from "../../common/AbstractComponent.ts";
 
-import { type ConditionalSearchAndReplaceRegExp, DEFAULT_TRANSFORMER_NAME, type MetadataProviderStageType, type StageTypeMetadata, TRANSFORM_HOOK } from "../../../core/Transform.ts";
+import { DEFAULT_TRANSFORMER_NAME, type SearchReplaceTermStrict, type MetadataProviderStageType, type StageTypeMetadata, TRANSFORM_HOOK } from "../../../core/Transform.ts";
 
-import { isConditionalSearchAndReplace } from "../../utils/PlayTransformUtils.ts";
 import { generateArtistsStr, generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
 import type {WebhookPayload} from "../../common/infrastructure/config/health/webhooks.ts";
-import { findCauseByMessage } from "../../utils/ErrorUtils.ts";
 import NativeTransformer from "../../common/transforms/NativeTransformer.ts";
 import { initMemoryCache } from "../../common/Cache.ts";
 import { Cacheable } from "cacheable";
@@ -20,8 +18,8 @@ import { transientCache } from "../utils/TransientTestUtils.ts";
 import dayjs from "dayjs";
 import clone from "clone";
 import { nameToCredit, creditsToNames, namesToCredits, mbMeta, creditMbid } from "../../../core/MusicMetadata.ts";
-import UserTransformer from "../../common/transforms/UserTransformer.ts";
-import { SkipTransformStageError } from "../../common/errors/MSErrors.ts";
+import UserTransformer, { type UserStage } from "../../common/transforms/UserTransformer.ts";
+import { SkipTransformStageError, TransformRulesError } from "../../common/errors/MSErrors.ts";
 import { COMPONENT_STATE, type ComponentState, type TrackSearchResult } from "../../../core/Api.ts";
 import type { PlayWith, PlaySelectWithQueueStates } from "../../common/database/drizzle/drizzleTypes.ts";
 import type { PlayProcessingResult } from "../../common/infrastructure/PlayProcessing.ts";
@@ -127,7 +125,7 @@ describe('Play Transforms', function () {
 
         describe('Stage Parsing', function () {
 
-            it(`Throws an error if stage is an unexpected value`, function () {
+            it(`Throws an error if stage is an unexpected value`, async function () {
                 component.config = {
                     options: {
                         playTransform: {
@@ -140,10 +138,7 @@ describe('Play Transforms', function () {
                     }
                 }
 
-                // https://github.com/chaijs/chai/issues/655#issuecomment-204386414
-                expect(component.buildTransformRules()).to.eventually.throw(Error).that.satisfies((e: any) => {
-                    return findCauseByMessage(e, `No transformer of type 'test'`);
-                });
+                await expect(component.buildTransformRules()).to.be.rejectedWith(TransformRulesError);
             });
 
         });
@@ -214,9 +209,9 @@ describe('Play Transforms', function () {
                 await component.buildTransformRules();
 
                 expect(component.transformRules.preCompare![0]).to.exist;
-                expect(component.transformRules.preCompare![0].title).to.exist;
-                expect(Array.isArray(component.transformRules.preCompare![0].title)).is.true;
-                expect(isConditionalSearchAndReplace((component.transformRules.preCompare![0].title as any[])[0])).is.true
+                expect((component.transformRules.preCompare![0] as UserStage).title).to.exist;
+                expect(Array.isArray((component.transformRules.preCompare![0] as UserStage).title)).is.true;
+                expect(((component.transformRules.preCompare![0] as UserStage).title as any[])[0]).to.include.keys('search', 'replace')
             });
 
             it('Converts transform config into real S&P data with default being empty string', async function () {
@@ -235,10 +230,10 @@ describe('Play Transforms', function () {
                 await component.buildTransformRules();
 
                 expect(component.transformRules.preCompare![0]).to.exist;
-                expect(component.transformRules.preCompare![0].title).to.exist;
-                expect(Array.isArray(component.transformRules.preCompare![0].title)).is.true;
-                expect(isConditionalSearchAndReplace((component.transformRules.preCompare![0].title as any[])[0])).is.true
-                const title = (component.transformRules.preCompare![0].title as any[])[0] as ConditionalSearchAndReplaceRegExp;
+                expect((component.transformRules.preCompare![0] as UserStage).title).to.exist;
+                expect(Array.isArray((component.transformRules.preCompare![0] as UserStage).title)).is.true;
+                expect(((component.transformRules.preCompare![0] as UserStage).title as any[])[0]).to.include.keys('search', 'replace')
+                const title = ((component.transformRules.preCompare![0] as UserStage).title as any[])[0] as SearchReplaceTermStrict;
                 expect(title.search).is.eq('something');
                 expect(title.replace).is.eq('');
             });
@@ -265,10 +260,10 @@ describe('Play Transforms', function () {
                 await component.buildTransformRules();
 
                 expect(component.transformRules.preCompare![0]).to.exist;
-                expect(component.transformRules.preCompare![0].title).to.exist;
-                expect(Array.isArray(component.transformRules.preCompare![0].title)).is.true;
-                expect(isConditionalSearchAndReplace((component.transformRules.preCompare![0].title as any[])[0])).is.true
-                const title = (component.transformRules.preCompare![0].title as any[])[0] as ConditionalSearchAndReplaceRegExp;
+                expect((component.transformRules.preCompare![0] as UserStage).title).to.exist;
+                expect(Array.isArray((component.transformRules.preCompare![0] as UserStage).title)).is.true;
+                expect(((component.transformRules.preCompare![0] as UserStage).title as any[])[0]).to.include.keys('search', 'replace')
+                const title = ((component.transformRules.preCompare![0] as UserStage).title as any[])[0] as SearchReplaceTermStrict;
                 expect(title.search).is.eq('nothing');
                 expect(title.replace).is.eq('anything');
             });

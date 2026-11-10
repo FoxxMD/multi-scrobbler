@@ -1,7 +1,6 @@
 import { type Credit, DEFAULT_ROCKSKY_MISSING_TYPES, type LifecycleInput, type MusicServicesBase, musicServicesBaseSchema, type OptionalCacheUsage, type PlayObject, type RockskyMissingField, type TrackMetaIsrc } from "../../../../core/Atomic.ts";
-import { isWhenCondition } from "../../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../../infrastructure/config/health/webhooks.ts";
-import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../../core/Transform.ts";
+import type {ApplyTerm} from "../../../../core/Transform.ts";
 import AtomicPartsTransformer from "../AtomicPartsTransformer.ts";
 import { creditId, creditMbid, type CreditRules, creditsToNames, nameToCredit, resolveCredit, resolveCredits, serviceMeta, withImage } from "../../../../core/MusicMetadata.ts";
 import type {TransformerOptions} from "../AbstractTransformer.ts";
@@ -17,7 +16,7 @@ import { creditToName } from "../../../../core/MusicMetadata.ts";
 import { nativeParse } from "../NativeTransformer.ts";
 import { hasRequiredScrobbleFields, hasScrobbleConfidenceFields, type SongViewDetailedMS, songViewToPlay } from "../../vendor/RockSkyApiClient.ts";
 import { type AlbumViewBasic, type ArtistViewBasic, RockskyError, type SongMatchView } from "@rocksky/sdk";
-import type { RockskyTransformerConfig, RockskyTransformerData } from "./RockskyTransformerUtil.ts";
+import { type RockskyStage, rockskyStageSchema, type RockskyTransformerConfig, type RockskyTransformerData } from "./RockskyTransformerUtil.ts";
 import { DEFAULT_ROCKSKY_SEARCH_ORDER } from "./RockskyTransformerUtil.ts";
 import { creditToResult, trackDataToResult, type MetadataProvider } from "../../metadataProviders/MetadataProviderUtils.ts";
 import { type AlbumSearchResult, type ArtistSearchResult, type TrackDataCreditBase, trackDataCreditBaseSchema, type TrackSearchResult } from "../../../../core/Api.ts";
@@ -31,8 +30,7 @@ export interface RockskyTransformerDataStrong extends RockskyTransformerData {
     searchWhenMissing: RockskyMissingField[]
 }
 
-export interface RockskyTransformerDataStage extends RockskyTransformerDataStrong,PlayTransformMetadataStage {
-}
+export type RockskyTransformerDataStage = Omit<RockskyStage, keyof RockskyTransformerDataStrong> & RockskyTransformerDataStrong;
 
 export const parseStageConfig = (data: RockskyTransformerData | undefined = {}, logger: MaybeLogger = new MaybeLogger()): RockskyTransformerDataStrong => {
 
@@ -95,9 +93,11 @@ export const parseStageConfig = (data: RockskyTransformerData | undefined = {}, 
     return config;
 }
 
-export default class RockskyTransformer extends AtomicPartsTransformer<ExternalMetadataTerm, PlayObject, RockskyTransformerDataStage> implements MetadataProvider {
+export default class RockskyTransformer extends AtomicPartsTransformer<ApplyTerm, PlayObject, RockskyTransformerDataStage> implements MetadataProvider {
 
     declare config: RockskyTransformerConfig;
+
+    protected readonly stageSchema = rockskyStageSchema;
 
     protected defaults!: RockskyTransformerDataStrong;
 
@@ -126,33 +126,11 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         return true;
     }
 
-    protected doParseConfig(data: RockskyTransformerDataStage) {
-        if (data.type.toLocaleLowerCase().trim() !== 'rocksky') {
-            throw new Error(`Rocksky Transformer is only usable with 'rocksky' type stages`);
-        }
-
-        const stage: RockskyTransformerDataStage = {
+    protected doParseConfig(data: RockskyTransformerDataStage): RockskyTransformerDataStage {
+        return {
             ...data,
             ...parseStageConfig(data),
-            type: 'rocksky'
-        }
-
-        for (const k of ['artists', 'albumArtists', 'title', 'album', 'meta', 'duration', 'art'] as const) {
-            if (!(k in stage)) {
-                stage[k] = true;
-                continue;
-            }
-            if (Array.isArray(stage[k])) {
-                throw new Error(`${k} must be a boolean or when object`);
-            }
-            if (typeof stage[k] === 'boolean') {
-                continue;
-            }
-            if (typeof stage[k] === 'object' && !isWhenCondition(stage[k])) {
-                throw new Error(`${k} is not a valid when object`);
-            }
-        }
-        return stage;
+        };
     }
 
     public async handlePreFetch(play: PlayObject, stageConfig: RockskyTransformerDataStage): Promise<void> {
@@ -608,13 +586,13 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
         return {name: rules.name && name, meta: rules.meta && this.metaTrusted(play), art: rules.art};
     }
 
-    protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit | undefined> {
+    protected async handleTitle(play: PlayObject, parts: ApplyTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit | undefined> {
         // metadata needs more development on the rocksky side
         // only use it if we have no track information here
         const useName = play.data.track === undefined || play.data.track.name.trim() === '';
         return resolveCredit(play.data.track, transformData.data.track, this.rockskyCreditRules(play, rules, useName));
     }
-    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit[] | undefined> {
+    protected async handleArtists(play: PlayObject, parts: ApplyTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit[] | undefined> {
         const existingCount = (play.data.artists ?? []).length;
         // artist data needs development on the rocksky side
         // only use it if we have no artist information here
@@ -652,22 +630,22 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ExternalM
 
         // return transformData.data.artists;
     }
-    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit[] | undefined> {
+    protected async handleAlbumArtists(play: PlayObject, parts: ApplyTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit[] | undefined> {
         // metadata needs more development on the rocksky side
         // it does not separate albumArtists into individual entities at all, at the moment
         // so don't use albumArtists names at all, for now
         return resolveCredits(play.data.albumArtists, transformData.data.albumArtists, this.rockskyCreditRules(play, rules, false));
     }
-    protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit | undefined> {
+    protected async handleAlbum(play: PlayObject, parts: ApplyTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit | undefined> {
         // metadata needs more development on the rocksky side
         // only use it if we have no album information here
         const useName = play.data.album === undefined || play.data.album.name.trim() === '';
         return resolveCredit(play.data.album, transformData.data.album, this.rockskyCreditRules(play, rules, useName));
     }
-    protected async handleDuration(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<number | undefined> {
+    protected async handleDuration(play: PlayObject, parts: ApplyTerm, transformData: PlayObject): Promise<number | undefined> {
         return transformData.data.duration ?? play.data.duration;
     }
-    protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<TrackMetaIsrc | undefined> {
+    protected async handleMeta(play: PlayObject, parts: ApplyTerm, transformData: PlayObject): Promise<TrackMetaIsrc | undefined> {
         return this.metaTrusted(play) ? transformData.data.meta : undefined;
     }
 

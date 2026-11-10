@@ -5,9 +5,8 @@ import { type MBReleaseGroupPrimaryType } from "../vendor/musicbrainz/Musicbrain
 import { mBReleasePrimaryGroupTypesSchema } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { type MBReleaseStatus } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { mBReleaseStatusesSchema } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
-import { isWhenCondition } from "../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
-import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../core/Transform.ts";
+import type {ApplyTerm} from "../../../core/Transform.ts";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
 import { creditId, creditIds, creditIsrc, creditMbid, type CreditRules, mbMeta, nameToCredit, resolveCredit, resolveCredits, withImage } from "../../../core/MusicMetadata.ts";
 import type {TransformerOptions} from "./AbstractTransformer.ts";
@@ -27,7 +26,7 @@ import type { Cacheable } from "cacheable";
 import { splitByFirstRegexFound } from "../../../core/StringUtils.ts";
 import { nativeParse } from "./NativeTransformer.ts";
 import { comparePlayArtistsNormalized, scoreTrackWeightedAndNormalized } from "../../utils/PlayComparisonUtils.ts";
-import type { MusicbrainzTransformerConfig, MusicbrainzTransformerData, SearchType } from "./musicbrainz/MusicbrainzTransformerUtil.ts";
+import { type MusicbrainzStage, musicbrainzStageSchema, type MusicbrainzTransformerConfig, type MusicbrainzTransformerData, type SearchType } from "./musicbrainz/MusicbrainzTransformerUtil.ts";
 import { maybeStringLowerArrayFromString } from "../../utils/ZodUtils.ts";
 import { creditToResult, trackDataToResult, type MetadataProvider } from "../metadataProviders/MetadataProviderUtils.ts";
 import { type TrackSearchResult, type ArtistSearchResult, type AlbumSearchResult, type TrackDataCreditBase, trackDataCreditBaseSchema } from "../../../core/Api.ts";
@@ -93,8 +92,7 @@ export interface MusicbrainzTransformerDataStrong extends MusicbrainzTransformer
     albumWeight?: number
 }
 
-export interface MusicbrainzTransformerDataStage extends MusicbrainzTransformerDataStrong,PlayTransformMetadataStage {
-}
+export type MusicbrainzTransformerDataStage = Omit<MusicbrainzStage, keyof MusicbrainzTransformerDataStrong> & MusicbrainzTransformerDataStrong;
 
 export type MusicbrainzBestMatch = {play: PlayObject, score: number};
 
@@ -247,9 +245,11 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
     return config;
 }
 
-export default class MusicbrainzTransformer extends AtomicPartsTransformer<ExternalMetadataTerm, PlayObject, MusicbrainzTransformerDataStage> implements MetadataProvider {
+export default class MusicbrainzTransformer extends AtomicPartsTransformer<ApplyTerm, PlayObject, MusicbrainzTransformerDataStage> implements MetadataProvider {
 
     declare config: MusicbrainzTransformerConfig;
+
+    protected readonly stageSchema = musicbrainzStageSchema;
 
     protected defaults!: MusicbrainzTransformerDataStrong;
 
@@ -277,33 +277,11 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         return true;
     }
 
-    protected doParseConfig(data: MusicbrainzTransformerDataStage) {
-        if (data.type.toLocaleLowerCase().trim() !== 'musicbrainz') {
-            throw new Error(`Musicbrainz Transformer is only usable with 'musicbrinz' type stages`);
-        }
-
-        const stage: MusicbrainzTransformerDataStage = {
+    protected doParseConfig(data: MusicbrainzTransformerDataStage): MusicbrainzTransformerDataStage {
+        return {
             ...data,
             ...parseStageConfig(data),
-            type: 'musicbrainz'
-        }
-
-        for (const k of ['artists', 'albumArtists', 'title', 'album', 'meta', 'duration'] as const) {
-            if (!(k in stage)) {
-                stage[k] = true;
-                continue;
-            }
-            if (Array.isArray(stage[k])) {
-                throw new Error(`${k} must be a boolean or when object`);
-            }
-            if (typeof stage[k] === 'boolean') {
-                continue;
-            }
-            if (typeof stage[k] === 'object' && !isWhenCondition(stage[k])) {
-                throw new Error(`${k} is not a valid when object`);
-            }
-        }
-        return stage;
+        };
     }
 
     public async handlePreFetch(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<void> {
@@ -575,22 +553,22 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
     protected override readonly hydratesCredits = true;
 
-    protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit | undefined> {
+    protected async handleTitle(play: PlayObject, parts: ApplyTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit | undefined> {
         return resolveCredit(play.data.track, transformData.data.track, rules);
     }
-    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit[] | undefined> {
+    protected async handleArtists(play: PlayObject, parts: ApplyTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit[] | undefined> {
         return resolveCredits(play.data.artists, transformData.data.artists, rules);
     }
-    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit[] | undefined> {
+    protected async handleAlbumArtists(play: PlayObject, parts: ApplyTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit[] | undefined> {
         return resolveCredits(play.data.albumArtists, transformData.data.albumArtists, rules);
     }
-    protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit | undefined> {
+    protected async handleAlbum(play: PlayObject, parts: ApplyTerm, transformData: PlayObject, rules: CreditRules): Promise<Credit | undefined> {
         return resolveCredit(play.data.album, transformData.data.album, rules);
     }
-    protected async handleDuration(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<number | undefined> {
+    protected async handleDuration(play: PlayObject, parts: ApplyTerm, transformData: PlayObject): Promise<number | undefined> {
         return transformData.data.duration ?? play.data.duration;
     }
-    protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<TrackMetaIsrc | undefined> {
+    protected async handleMeta(play: PlayObject, parts: ApplyTerm, transformData: PlayObject): Promise<TrackMetaIsrc | undefined> {
         const { meta } = transformData.data;
         return removeUndefinedKeys<TrackMetaIsrc>({...meta});
     }

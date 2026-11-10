@@ -1,8 +1,9 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import type { OptionalCacheUsage, PlayObject, TransformerCommon, TransformerCommonConfig } from "../../../core/Atomic.ts";
-import { isStageTyped, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
+import { testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import AbstractInitializable from "../AbstractInitializable.ts";
-import type { StageConfig } from "../../../core/Transform.ts";
+import { normalizeStageType, type StageCommon } from "../../../core/Transform.ts";
+import type * as z from "zod";
 import type { cacheFunctions} from "@foxxmd/regex-buddy-core";
 import {  parseToRegexOrLiteralSearch, testMaybeRegex, searchAndReplace} from "@foxxmd/regex-buddy-core";
 import type { Cacheable } from "cacheable";
@@ -32,7 +33,7 @@ interface CachedStageOutcome {
 
 const isCachedStageOutcome = (val: unknown): val is CachedStageOutcome => val !== null && typeof val === 'object' && 'stageOutcome' in val;
 
-export default abstract class AbstractTransformer<T = any, Y extends StageConfig = StageConfig> extends AbstractInitializable {
+export default abstract class AbstractTransformer<T = any, Y extends StageCommon = StageCommon> extends AbstractInitializable {
 
     declare config: TransformerCommonConfig;
     configHash: string;
@@ -45,6 +46,9 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
     name: string;
 
     public staggerOpts: Partial<StaggerOptions> = { initialInterval: 0, maxRandomStagger: 0};
+
+    /** Schema for this Transformer's Stage, as used in a Hook. Validates and normalizes raw Stage config */
+    protected abstract readonly stageSchema: z.ZodType;
 
     public constructor(config: TransformerCommon, options: TransformerOptions) {
         super(config);
@@ -60,14 +64,15 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
         return `${capitalize(this.transformType)} - ${this.name}`
     }
 
-    public parseConfig(data: any): Y {
-        if (!isStageTyped(data)) {
-            throw new Error(`Must be an object with a 'type' property.`);
-        }
-        return this.doParseConfig(data);
+    /** Validate and normalize raw Stage config (from a Hook) then merge it with this Transformer's config */
+    public parseConfig(data: unknown): Y {
+        return this.doParseConfig(this.stageSchema.parse(normalizeStageType(data)) as Y);
     }
 
-    protected abstract doParseConfig(data: StageConfig): Y;
+    /** Combine the parsed Stage with this Transformer's config (`defaults`) */
+    protected doParseConfig(data: Y): Y {
+        return data;
+    }
 
     public async handle(data: Y, play: PlayObject, opts?: OptionalCacheUsage): Promise<PlayObject> {
         const {
@@ -140,7 +145,7 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
         await this.cache.set(cacheKey, outcome, this.config.options?.ttl ?? '15s');
     }
 
-    protected abstract doHandle(data: StageConfig, play: PlayObject, transformData: T, opts?: OptionalCacheUsage): Promise<PlayObject>;
+    protected abstract doHandle(data: Y, play: PlayObject, transformData: T, opts?: OptionalCacheUsage): Promise<PlayObject>;
 
     public async getTransformerData(play: PlayObject, stageConfig: Y, opts?: OptionalCacheUsage): Promise<any> {
         return undefined;

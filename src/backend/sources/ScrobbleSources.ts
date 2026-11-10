@@ -17,7 +17,7 @@ import { getSourceEnvSchema, validateSourceAIOJson, validateSourceJson } from '.
 import type { SourceTypeConfigMap } from "../common/infrastructure/config/source/sourcesMap.ts";
 import { stripIndents } from 'common-tags';
 import type { MSBackendEventMap } from '../common/infrastructure/MSBackendEventMap.ts';
-import { transformPresetEnv } from "../utils/PlayTransformUtils.ts";
+import { transformPresetEnv } from "../common/transforms/stageSchemas.ts";
 
 type UnparsedSourceConfig = UnparsedConfig<SourceType>;
 

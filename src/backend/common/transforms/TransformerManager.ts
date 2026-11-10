@@ -1,9 +1,9 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import type AbstractTransformer from "./AbstractTransformer.ts";
 import type {MusicServicesBase, OptionalCacheUsage, TransformerCommon, TransformerCommonConfig} from "../../../core/Atomic.ts";
-import {DEFAULT_TRANSFORMER_ENV_NAME, DEFAULT_TRANSFORMER_NAME, META_PROVIDER_STAGE_TYPES, metadataPreferredProviderSchema, type MetadataPreferredProviders, type MetadataProviderStageType, type StageConfig} from "../../../core/Transform.ts";
+import {DEFAULT_TRANSFORMER_ENV_NAME, DEFAULT_TRANSFORMER_NAME, META_PROVIDER_STAGE_TYPES, metadataPreferredProviderSchema, type MetadataPreferredProviders, type MetadataProviderStageType, normalizeStageType, type StageCommon} from "../../../core/Transform.ts";
 import type {PlayObject} from "../../../core/Atomic.ts";
-import { isStageTyped } from "../../utils/PlayTransformUtils.ts";
+import * as z from "zod";
 import type { MSCache } from "../Cache.ts";
 import { configFromEnv, type MusicbrainzTransformerConfig } from "./musicbrainz/MusicbrainzTransformerUtil.ts";
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -36,6 +36,9 @@ export const metadataPreferredProviderFromStringSchema = maybeStringArrayFromStr
 
 /** A stream line that carries a single provider's outcome */
 export type MetadataProviderLine<T> = Exclude<MetadataSearchStreamLine<T>, {type: 'done'}>;
+
+/** Enough of a raw Stage to find the Transformer that parses it */
+const stageIdentifierSchema = z.looseObject({type: z.string(), name: z.string().optional()});
 
 type TransformNamedMap = Map<string, AbstractTransformer>;
 type TransformTypedMap = Map<string,TransformNamedMap>;
@@ -318,7 +321,7 @@ export default class TransformerManager {
         return this.transformers.get(type);
     }
 
-    public async getTransformerByStage(data: StageConfig): Promise<AbstractTransformer> {
+    public async getTransformerByStage(data: Pick<StageCommon, 'type' | 'name'>): Promise<AbstractTransformer> {
         const transformType: string = data.type.toLocaleLowerCase().trim();
 
         if(!this.hasTransformerConfigByType(transformType)) {
@@ -352,17 +355,15 @@ export default class TransformerManager {
         return await this.ensure(config);
     }
 
-    public async parseTransformerConfig(data: any) {
-        if (!isStageTyped(data)) {
-            throw new Error(`Must be an object with a 'type' property.`);
-        }
-        const t = await this.getTransformerByStage(data);
+    /** Parse raw Stage config with the Transformer it identifies (by type/name) */
+    public async parseTransformerConfig(data: unknown): Promise<StageCommon> {
+        const t = await this.getTransformerByStage(stageIdentifierSchema.parse(normalizeStageType(data)));
         const config = t.parseConfig(data);
         config.stageHash = t.configHash;
         return config;
     }
 
-    public async handleStage(data: StageConfig, play: PlayObject, opts: {asyncId?: string} & OptionalCacheUsage): Promise<[PlayObject, string]> {
+    public async handleStage(data: StageCommon, play: PlayObject, opts: {asyncId?: string} & OptionalCacheUsage): Promise<[PlayObject, string]> {
         const t: AbstractTransformer = await this.getTransformerByStage(data);
         try {
             const transformedPlay = await this.asyncStore.run(opts.asyncId ?? nanoid(6), async () => {

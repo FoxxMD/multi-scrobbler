@@ -1,7 +1,6 @@
 import type {Credit, PlayObject, TransformerCommon} from "../../../core/Atomic.ts";
-import { isWhenCondition } from "../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
-import {applyTermSchema, buildRulesSchema, buildStageSchema, type ExternalMetadataTerm, type PlayTransformNativeStage} from "../../../core/Transform.ts";
+import {applyTermSchema, type ApplyTerm, buildRulesSchema, buildStageSchema} from "../../../core/Transform.ts";
 import * as z from "zod";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
 import { parseArtistCredits, parseTrackCredits, uniqueNormalizedStrArr } from "../../utils/StringUtils.ts";
@@ -58,8 +57,7 @@ export interface NativeTransformerDataStrong extends Omit<NativeTransformerData,
     delimiters?: string[]
 }
 
-export interface NativeTransformerDataStage extends NativeTransformerDataStrong,PlayTransformNativeStage {
-}
+export type NativeTransformerDataStage = Omit<NativeStage, keyof NativeTransformerDataStrong> & NativeTransformerDataStrong;
 
 export type NativeTransformerConfig = TransformerCommon<NativeTransformerData>;
 
@@ -113,9 +111,11 @@ export const parseStageConfig = (data: NativeTransformerData | undefined, logger
     return config;
 }
 
-export default class NativeTransformer extends AtomicPartsTransformer<ExternalMetadataTerm, PlayObject | undefined, NativeTransformerDataStage> {
+export default class NativeTransformer extends AtomicPartsTransformer<ApplyTerm, PlayObject | undefined, NativeTransformerDataStage> {
 
     declare config: NativeTransformerConfig;
+
+    protected readonly stageSchema = nativeStageSchema;
 
     protected defaults: NativeTransformerDataStrong = {};
 
@@ -132,33 +132,11 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
         return true;
     }
 
-    protected doParseConfig(data: NativeTransformerDataStage) {
-        if (data.type.toLocaleLowerCase().trim() !== 'native') {
-            throw new Error(`NativeTransformer is only usable with 'native' type stages`);
-        }
-
-        const stage: NativeTransformerDataStage = {
+    protected doParseConfig(data: NativeTransformerDataStage): NativeTransformerDataStage {
+        return {
             ...data,
             ...parseStageConfig(data),
-            type: 'native'
-        }
-
-        for (const k of ['artists', 'albumArtists', 'title', 'album'] as const) {
-            if (!(k in stage)) {
-                stage[k] = true;
-                continue;
-            }
-            if (Array.isArray(stage[k])) {
-                throw new Error(`${k} must be a boolean or when object`);
-            }
-            if (typeof stage[k] === 'boolean') {
-                continue;
-            }
-            if (typeof stage[k] === 'object' && !isWhenCondition(stage[k])) {
-                throw new Error(`${k} is not a valid when object`);
-            }
-        }
-        return stage;
+        };
     }
 
     public async getTransformerData(play: PlayObject, stageConfig: NativeTransformerDataStage): Promise<PlayObject> {
@@ -180,17 +158,17 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
         return transformedPlay;
     }
 
-    protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, _transformData: undefined): Promise<Credit | undefined> {
+    protected async handleTitle(play: PlayObject, parts: ApplyTerm, _transformData: undefined): Promise<Credit | undefined> {
         return play.data.track;
     }
-    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<Credit[] | undefined> {
+    protected async handleArtists(play: PlayObject, parts: ApplyTerm, transformData: PlayObject): Promise<Credit[] | undefined> {
         // parsing creates new credits, keep the existing credit (and its metadata) for any artist whose name did not change
         return transformData.data.artists?.map(x => play.data.artists?.find(y => y.name === x.name) ?? x);
     }
-    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, _transformData: undefined): Promise<Credit[] | undefined> {
+    protected async handleAlbumArtists(play: PlayObject, parts: ApplyTerm, _transformData: undefined): Promise<Credit[] | undefined> {
         return play.data.albumArtists;
     }
-    protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, _transformData: undefined): Promise<Credit | undefined> {
+    protected async handleAlbum(play: PlayObject, parts: ApplyTerm, _transformData: undefined): Promise<Credit | undefined> {
         return play.data.album;
     }
 
