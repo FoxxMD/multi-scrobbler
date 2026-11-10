@@ -9,7 +9,7 @@ import timezone from 'dayjs/plugin/timezone.js';
 import week from 'dayjs/plugin/weekOfYear.js';
 import utc from 'dayjs/plugin/utc.js';
 import { SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
-import { getConfigDir, getConfigDirCandidates, getDataDir, getDataDirCandidates } from "./common/index.ts";
+import { getConfigDir, getConfigDirCandidates, getDataDir, getDataDirCandidates, printDirCandidates } from "./common/index.ts";
 import type {AIOConfig} from "./common/infrastructure/config/aioConfig.ts";
 import { appLogger, initLogger as getInitLogger } from "./common/logging.ts";
 import { getRoot } from "./ioc.ts";
@@ -134,7 +134,7 @@ const dataDirs = getDataDirCandidates();
 const dataDir = getDataDir();
 
     try {
-        initLogger.debug(stripIndents`Config Dir Canidates:\n${configDirs.map((x) => `${x[0]} : ${x[1]}`).join('\n')}`);
+        initLogger.debug(stripIndents`Config Dir Canidates:\n${printDirCandidates(configDirs)}`);
         initLogger.info(`Config Dir Resolved: ${configDir}`);
         try {
             const exists = fileExists(configDir);
@@ -145,7 +145,7 @@ const dataDir = getDataDir();
         } catch (e) {
             initLogger.warn(new Error('Could not access config dir. It is likely your config files will not be able to be read.', {cause: e}));
         }
-        initLogger.debug(stripIndents`Data Dir Canidates:\n${dataDirs.map((x) => `${x[0]} : ${x[1]}`).join('\n')}`);
+        initLogger.debug(stripIndents`Data Dir Canidates:\n${printDirCandidates(dataDirs)}`);
         initLogger.info(`Data Dir Resolved: ${getDataDir()}`);
         try {
             const exists = fileExists(dataDir);
