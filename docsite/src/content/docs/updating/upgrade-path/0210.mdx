@@ -7,6 +7,8 @@ sidebar:
 
 import RequiredUpgrade from "@site/src/components/snippets/_upgrade-required.mdx";
 import NamedVolume from "_named_volume_upgrade.mdx";
+import {LocalStorageText} from '@site/src/components/Storage/Text';
+import { Badge } from '@astrojs/starlight/components'
 
 <RequiredUpgrade before='< 0.21.0' current='0.21.0' old='0.20.3' />
 
@@ -283,5 +285,134 @@ Double check that the correct `UID:GID` are set and that that user, on the host,
 <Aside type="tip">
 
 If you are planning to (or already have) [publicly exposed Multi-Scrobbler](/security/overview) then consider using the [**Unprivileged**](/installation#user-and-permissions) container user to harden your instance.
+
+</Aside>
+
+## Authentication Setup
+
+<Aside type="tip">
+
+The guidance covered here is also covered in the new [**Security** docs section](/security/overview). You will be able to find more detail on these topics covered there.
+
+</Aside>
+
+The upgrade to add Auth for existing users has been designed to be almost **painless**.
+
+**When you upgrade, your MS instance will continue to work exactly as it does today for backend, Sources, Clients, polling, etc...the only thing that changes is how the web dashboard is initially accessed.**
+
+Additionally, **nothing** changes for your [Ingress Sources](/security/authentication/#what-is-protected) like Listenbrainz Endpoint even after setting up auth. Any external clients that use these Sources will continue to work as-is.
+
+### How To Setup Auth
+
+#### 1. Upgrade to 0.21.0
+
+If you haven't already done so, upgrade to 0.21.0 and re-deploy your instance.
+
+When you instance is re-deployed it will be in [**insecure** mode.](/security/authentication/#securing-your-instance) In this mode the dashboard and web API endpoints (but not Ingress Source-related endpoints) will either be:
+
+* full read/write - you can use the dashboard/apis in the same way you did before upgrading
+* read-only mode - you can access the dashboard/apis to view data but you cannot write to MS (cannot requeue, edit plays, restart sources, etc...)
+
+This is based on [*how* you access the dashboard](/security/authentication/#unsecured-instance-protections).
+
+#### 2. Navigate to the Dashboard
+
+Navigate to the dashboard with the same URL you normally use IE <code>http://<LocalStorageText client:load initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078</code>
+
+On the landing page you will see a warning banner asking you to set a password.
+
+<img src={withBase("img/insecure_banner.jpg")} style={{maxWidth: '800px'}}/>
+
+ Click the password setup link here to navigate to `/setup`.
+
+#### 3. Secure Your Instance
+
+On the `/setup` page you will be asked to set (and confirm) a password. You may also be asked to provide a [Setup Token.](/security/authentication/#setup-token)
+
+<Tabs groupId="setupType">
+<TabItem value="notoken" label="Only Password">
+
+*Your setup page does not ask for a Setup Token*
+
+Set (and confirm) your password and click **Set Password**.
+
+You are now done and your instance is secured 🎉
+
+</TabItem>
+<TabItem value="token" label="Password and Setup Token">
+
+*Your setup page asks for a Setup Token*
+
+This occurs if:
+
+* you have explicitly set ENV `AUTH_SETUP_TOKEN` or
+* you are [accessing the dashboard from a potentially untrusted network](/security/authentication/#unsecured-instance-protections)
+
+In either case, you can find the Setup Token by looking in your console or docker logs. The setup token will not be displayed in the logs streamed to the dashboard.
+
+**Look for `Setup token` in your logs, the token will be printed on the same line.**
+
+It is printed at startup and *also* the first time an incorrect token is used for setup. So, if you can't find the token from startup just use anything for Setup Token, try to **Set Password**, and watch for the token to be printed in logs.
+
+Once you have the token, set (and confirm) your password, add the token, and click **Set Password**.
+
+You are now done and your instance is secured 🎉
+
+</TabItem>
+
+</Tabs>
+
+
+
+##### 4. Secure Mode Usage
+
+After your instance is secured:
+
+* your dashboard and web APIs (except for Ingress as mentioned earlier) will no longer be accessible by unauthenticated users.
+* the dashboard and APIs will be in full read-write mode for any authenticated users
+
+If you have external tools that use web APIs you can create [API Keys](/security/authentication/#api-keys) that they can use to access authenticated routes.
+
+##### 5. Next Steps
+
+* Reference the [Authentication docs](/security/authentication/#hosts-cookies-and-reverse-proxies) for more configuration concerning trusted hosts, reverse proxy setup, restricting cookies, and more...
+* Setup a **Public Dashboard** for unauthenticated users to view by navigating to Settings -> Public Dashboard
+
+### Unattended Auth Setup
+
+You can use [Auth ENVs](/security/authentication/#configuration) to set auth username and password on startup, bypassing the need to visit the dashboard and complete the [setup process above](#how-to-setup-auth).
+
+Re-deploy your MS instance with these ENVs:
+
+* `AUTH_SETUP_PW` - Admin password to use.
+* `AUTH_SETUP_USER` <Badge text="Optional" size="small" variant="note" /> - Admin username to use. Defaults to `admin`.
+  * This can be changed from the Dashboard after securing your instance
+
+Your instance is now secured 🎉 and you can go to [Step 4](#4-secure-mode-usage) above.
+
+The `SETUP` envs will be ignored on subsequent deploys/restarts but you should still remove them once they have been used.
+
+### Disabling Auth
+
+If you already have your own auth solution, such as a reverse proxy + authelia/authentik/keycloak, in front of Multi-Scrobbler you can continue to use this by putting MS in [Bring Your Own Auth (BYOA)](/security/overview/#byoa) mode with the ENV `AUTH_MODE=disabled`.
+
+This disables:
+
+* authentication on all routes
+* user sign-in, sessions, passwords, etc...
+* API Keys
+* Insecure banner warnings and auth setup
+
+Essentially, this is as *close* to Multi-Scrobbler *before* 0.21.0 as possible.
+
+<Aside type="important">
+
+BYOA is an escape hatch for users who already have a real, comprehensive security solution.
+
+Please do not use BYOA mode as a way to avoid setting up authentication if you don't have a good alternative in place!
+
+* You should still secure MS even if it is inside a private network like a LAN, tailscale net, or VPN
+* BYAO mode disables new features like the Public Dashboard and future features like multi-user setup
+* In the future, MS will support OIDC/oauth to integrate with things like authelia/authentik/keycloak
 
 </Aside>
