@@ -28,11 +28,11 @@ import {
     getMediaStatus,
 } from "../common/vendor/chromecast/ChromecastClientUtils.ts";
 import type {PlatformApplication, PlatformApplicationWithContext, PlatformType} from "../common/vendor/chromecast/interfaces.ts";
-import { isDebugMode, parseBool } from "../utils.ts";
+import { isDebugMode } from "../utils.ts";
 import { difference } from '../../core/DataUtils.ts';
 import { genGroupIdStr } from '../../core/PlayUtils.ts';
 import { findCauseByReference } from "../utils/ErrorUtils.ts";
-import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.ts";
+import { discoveryNative } from "../utils/MDNSUtils.ts";
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
@@ -79,9 +79,13 @@ export class ChromecastSource extends MemoryPositionalSource {
                 allowUnknownMedia = false,
                 useAutoDiscovery,
                 devices = [],
-                useAvahi= parseBool(process.env.IS_DOCKER)
+                useAvahi
             } = {},
         } = config;
+
+        if (useAvahi !== undefined) {
+            this.logger.warn('`useAvahi` is DEPRECATED and no longer does anything. Avahi-based mDNS discovery has been removed and native mDNS discovery is always used. To discover devices while running in Docker see the Google Cast docs (mDNS Discovery), or configure devices by IP using `devices`.');
+        }
 
         for (const propName of ['whitelistDevices', 'blacklistDevices', 'whitelistApps', 'blacklistApps', 'forceMediaRecognitionOn', 'allowUnknownMedia']) {
             const configData = (data as Record<string, any>)[propName] ?? [];
@@ -107,7 +111,6 @@ export class ChromecastSource extends MemoryPositionalSource {
         this.config.data = {
             ...data,
             useAutoDiscovery: ad,
-            useAvahi
         }
         
     }
@@ -136,7 +139,6 @@ export class ChromecastSource extends MemoryPositionalSource {
     discoverDevices = (initial: boolean = false) => {
         const {
             data: {
-                useAvahi,
                 useAutoDiscovery,
                 devices = [],
             } = {}
@@ -149,29 +151,9 @@ export class ChromecastSource extends MemoryPositionalSource {
         }
 
         if (useAutoDiscovery) {
-            if (useAvahi) {
-                this.discoverAvahi(initial).catch((err) => {
-                    this.logger.error(new Error('Uncaught error occurred during mDNS discovery via Avahi', {cause: err}));
-                });
-            } else {
-                this.discoverNative(initial).catch((err) => {
-                    this.logger.error(new Error('Uncaught error occurred during mDNS discovery', {cause: err}));
-                });
-            }
-        }
-    }
-
-    protected discoverAvahi = async (initial: boolean = false) => {
-        try {
-            await discoveryAvahi('_googlecast._tcp', {
-                logger: this.logger,
-                sanity: initial,
-                onDiscover: (service) => {
-                    this.initializeDevice(service);
-                },
+            this.discoverNative(initial).catch((err) => {
+                this.logger.error(new Error('Uncaught error occurred during mDNS discovery', {cause: err}));
             });
-        } catch (e) {
-            this.logger.error(new Error('Uncaught error occurred during mDNS discovery via Avahi', {cause: e}));
         }
     }
 

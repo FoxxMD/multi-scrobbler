@@ -1,0 +1,50 @@
+*You use [named volumes](https://docs.docker.com/reference/compose-file/volumes/#example) for multi-scrobbler directories*
+
+<details>
+
+<summary>Example</summary>
+
+```yaml title="docker-compose.yml" placeholder="ms-config"
+services:
+  multi-scrobbler:
+    # ...
+    volumes:
+      - ms-config:/config
+    # ...
+
+volumes:
+  ms-config:
+```
+</details>
+
+<DetailsAdmo type="tip" summary="With PUID/PGID">
+
+If you are using Named Volumes and *also* had `PUID`/`PGID` set you only need to set `user` in the compose file to use these same values as `PUID:PGID`.
+
+See the *Linux Host -> Bind Mount with PUID/PGID* instructions for how to do this.
+
+</DetailsAdmo>
+
+<h5> 1. Stop Multi-Scrobbler </h5>
+
+Stop the multi-scrobbler container
+
+<h5> 2. Find Named Volume Name </h5>
+
+The actual volume's name is usually a combination of the project's name and the volume name like `multi-scrobbler_ms-config`. Use `docker volume ls` to find it from the list:
+
+```shell placeholder="multi-scrobbler_ms-config"
+$ docker volume ls
+DRIVER    VOLUME NAME
+local     somethingFoo
+...       ...
+local     multi-scrobbler_ms-config
+```
+
+<h5> 3. Change Volume Permissions </h5>
+
+For each named volume used by multi-scrobbler, run the `busybox` image with your named volume mounted and `chown` the entire folder to the default user of the new image:
+
+```shell placeholder="multi-scrobbler_ms-config"
+docker run --rm -v multi-scrobbler_ms-config:/config busybox chown -R 65532:65532 /config #[!ref] You **do not need** to use `user: UID:GID` on the container if using the default values shown here. If you do decide to use `user` make sure to replace `65532:65532` in this command with the `UID:GID` set for `user` on the container.
+```

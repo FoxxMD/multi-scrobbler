@@ -12,6 +12,7 @@ import starlightThemeGalaxy from 'starlight-theme-galaxy';
 import starlightOpenAPI, { openAPISidebarGroups } from 'starlight-openapi';
 import AutoImport from 'astro-auto-import';
 import starlightChangelogs, { makeChangelogsSidebarLinks } from 'starlight-changelogs';
+import starlightHeadingBadges from 'starlight-heading-badges'
 import { changelogsBase, changelogsEnabled } from './plugins/changelogs.mjs';
 import { satteriBaseLinks } from './plugins/satteriBaseLinks.mjs';
 import { satteriGithubAlerts } from './plugins/satteriGithubAlerts.mjs';
@@ -134,6 +135,7 @@ export default defineConfig({
           },
         ]),
         starlightChangelogs(),
+        starlightHeadingBadges()
       ],
       sidebar: [
         ...rootSidebar(fileURLToPath(new URL('./src/content/docs', import.meta.url)), [

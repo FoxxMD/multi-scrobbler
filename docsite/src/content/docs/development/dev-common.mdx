@@ -209,7 +209,7 @@ From the opened DevTools window use Performance or Memory to profile the running
 
 :::tip
 
-To profile/inspect the production docker image use `NODE_ARGS` env:
+To profile/inspect the production docker image pass node flags with the `NODE_OPTIONS` env:
 
 ```yaml title="docker-compose.yml"
 services:
@@ -217,7 +217,7 @@ services:
     # ...
     environment:
       # ...
-      - NODE_ARGS=--inspect=0.0.0.0:9229 --heap-prof # [!code highlight]
+      - NODE_OPTIONS=--inspect=0.0.0.0:9229 --heap-prof # [!code highlight]
 ```
 :::
 

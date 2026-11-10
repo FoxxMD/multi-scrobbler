@@ -66,30 +66,32 @@ jobs:
         run: |
           for arch in amd64 arm64; do
             dir="/tmp/images/$arch"
-            files=$(find "$dir" -type f -printf '%P\n')
-            if [[ "$files" != "app.tar" ]]; then
-              echo "::error::Artifact images-linux-$arch must contain only app.tar, found: $files"
+            files=$(find "$dir" -type f -printf '%P\n' | sort | tr '\n' ' ')
+            if [[ "$files" != "app-debug.tar app.tar " ]]; then
+              echo "::error::Artifact images-linux-$arch must contain only app.tar and app-debug.tar, found: $files"
               exit 1
             fi
-            archive="$dir/app.tar"
-            index=$(tar -xOf "$archive" index.json)
-            if [[ "$(jq '.manifests | length' <<< "$index")" != "1" ]]; then
-              echo "::error::$arch archive must contain exactly one manifest"
-              exit 1
-            fi
-            media_type=$(jq -r '.manifests[0].mediaType' <<< "$index")
-            case "$media_type" in
-              application/vnd.docker.distribution.manifest.v2+json|application/vnd.oci.image.manifest.v1+json) ;;
-              *) echo "::error::$arch archive has unexpected manifest type $media_type"; exit 1;;
-            esac
-            digest=$(jq -er '.manifests[0].digest' <<< "$index")
-            config_digest=$(tar -xOf "$archive" "blobs/sha256/${digest#sha256:}" | jq -er '.config.digest')
-            platform=$(tar -xOf "$archive" "blobs/sha256/${config_digest#sha256:}" | jq -r '.os + "/" + .architecture')
-            if [[ "$platform" != "linux/$arch" ]]; then
-              echo "::error::images-linux-$arch contains a $platform image"
-              exit 1
-            fi
-            echo "$arch: $digest ($media_type)"
+            for variant in app app-debug; do
+              archive="$dir/$variant.tar"
+              index=$(tar -xOf "$archive" index.json)
+              if [[ "$(jq '.manifests | length' <<< "$index")" != "1" ]]; then
+                echo "::error::$arch $variant archive must contain exactly one manifest"
+                exit 1
+              fi
+              media_type=$(jq -r '.manifests[0].mediaType' <<< "$index")
+              case "$media_type" in
+                application/vnd.docker.distribution.manifest.v2+json|application/vnd.oci.image.manifest.v1+json) ;;
+                *) echo "::error::$arch $variant archive has unexpected manifest type $media_type"; exit 1;;
+              esac
+              digest=$(jq -er '.manifests[0].digest' <<< "$index")
+              config_digest=$(tar -xOf "$archive" "blobs/sha256/${digest#sha256:}" | jq -er '.config.digest')
+              platform=$(tar -xOf "$archive" "blobs/sha256/${config_digest#sha256:}" | jq -r '.os + "/" + .architecture')
+              if [[ "$platform" != "linux/$arch" ]]; then
+                echo "::error::images-linux-$arch $variant.tar contains a $platform image"
+                exit 1
+              fi
+              echo "$arch $variant: $digest ($media_type)"
+            done
           done
 
       - name: Login to Docker Hub
@@ -117,16 +119,18 @@ jobs:
           slugs=()
           [[ -n "$VARS_DOCKERHUB_SLUG" ]] && slugs+=("$VARS_DOCKERHUB_SLUG")
           [[ -n "$VARS_GHCR_SLUG" ]] && slugs+=("$VARS_GHCR_SLUG")
-          mkdir -p /tmp/digests
-          for arch in amd64 arm64; do
-            archive="/tmp/images/$arch/app.tar"
-            digest=$(tar -xOf "$archive" index.json | jq -er '.manifests[0].digest')
-            for slug in "${slugs[@]}"; do
-              echo "Pushing $archive to $slug@$digest"
-              skopeo copy --retry-times 3 --preserve-digests --dest-authfile "$HOME/.docker/config.json" \
-                "oci-archive:$archive" "docker://$slug@$digest"
+          for variant in app app-debug; do
+            mkdir -p "/tmp/digests/$variant"
+            for arch in amd64 arm64; do
+              archive="/tmp/images/$arch/$variant.tar"
+              digest=$(tar -xOf "$archive" index.json | jq -er '.manifests[0].digest')
+              for slug in "${slugs[@]}"; do
+                echo "Pushing $archive to $slug@$digest"
+                skopeo copy --retry-times 3 --preserve-digests --dest-authfile "$HOME/.docker/config.json" \
+                  "oci-archive:$archive" "docker://$slug@$digest"
+              done
+              touch "/tmp/digests/$variant/${digest#sha256:}"
             done
-            touch "/tmp/digests/${digest#sha256:}"
           done
 
       - name: Set up Docker Buildx
@@ -162,39 +166,29 @@ jobs:
             org.opencontainers.image.description=Scrobble from many sources to many clients
             org.opencontainers.image.vendor=FoxxMD
 
-      - name: Create manifest list and push dockerhub
-        if: ${{ vars.DOCKERHUB_SLUG != '' }}
-        working-directory: /tmp/digests
-        run: |
-          docker buildx imagetools create $(jq -cr '.tags | map(select(startswith(env.VARS_DOCKERHUB_SLUG + ":"))) | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf "${VARS_DOCKERHUB_SLUG}@sha256:%s " *)
+      # the debug variant gets the same tags with a -debug suffix, EX edge-debug, 1.2.3-debug, latest-debug, pr-12-debug
+      - name: Create manifest lists and push
         env:
           VARS_DOCKERHUB_SLUG: ${{ vars.DOCKERHUB_SLUG }}
-
-      - name: Create manifest list and push ghcr
-        if: ${{ vars.GHCR_SLUG != '' }}
-        working-directory: /tmp/digests
-        run: |
-          docker buildx imagetools create $(jq -cr '.tags | map(select(startswith(env.VARS_GHCR_SLUG + ":"))) | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf "${VARS_GHCR_SLUG}@sha256:%s " *)
-        env:
           VARS_GHCR_SLUG: ${{ vars.GHCR_SLUG }}
-
-      - name: Inspect image dockerhub
-        if: ${{ vars.DOCKERHUB_SLUG != '' }}
+          VERSION: ${{ steps.meta.outputs.version }}
         run: |
-          docker buildx imagetools inspect "${VARS_DOCKERHUB_SLUG}:${STEPS_META_OUTPUTS_VERSION}"
-        env:
-          VARS_DOCKERHUB_SLUG: ${{ vars.DOCKERHUB_SLUG }}
-          STEPS_META_OUTPUTS_VERSION: ${{ steps.meta.outputs.version }}
-
-      - name: Inspect image ghcr
-        if: ${{ vars.GHCR_SLUG != '' }}
-        run: |
-          docker buildx imagetools inspect "${VARS_GHCR_SLUG}:${STEPS_META_OUTPUTS_VERSION}"
-        env:
-          VARS_GHCR_SLUG: ${{ vars.GHCR_SLUG }}
-          STEPS_META_OUTPUTS_VERSION: ${{ steps.meta.outputs.version }}
+          for slug in "$VARS_DOCKERHUB_SLUG" "$VARS_GHCR_SLUG"; do
+            if [[ -z "$slug" ]]; then
+              continue
+            fi
+            for variant in app app-debug; do
+              suffix=""
+              if [[ "$variant" == "app-debug" ]]; then
+                suffix="-debug"
+              fi
+              mapfile -t tag_args < <(jq -r --arg slug "$slug" --arg suffix "$suffix" \
+                '.tags[] | select(startswith($slug + ":")) | "-t", (. + $suffix)' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+              mapfile -t sources < <(find "/tmp/digests/$variant" -type f -printf "$slug@sha256:%f\n")
+              docker buildx imagetools create "${tag_args[@]}" "${sources[@]}"
+              docker buildx imagetools inspect "$slug:$VERSION$suffix"
+            done
+          done
 
       - name: List PR images
         id: pr-images
@@ -226,6 +220,8 @@ jobs:
 
             To play around with this PR, pull an image:
             ${{ steps.pr-images.outputs.list }}
+
+            Debug variants with a shell and curl are available by adding the `-debug` suffix, EX `pr-${{ inputs.pr-number }}-debug`
 
             Images are available for x86_64 and ARM64.
 

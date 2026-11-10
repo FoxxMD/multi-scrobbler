@@ -102,8 +102,22 @@ jobs:
           platforms: ${{ matrix.platform }}
           outputs: type=docker,dest=/tmp/images/app.tar,name=multi-scrobbler-ci:app
 
-      - name: Load image
-        run: docker load -i /tmp/images/app.tar
+      # debug variant only adds layers on top of the app target so everything else comes from the build cache above
+      - name: Build debug image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
+        with:
+          context: .
+          target: app-debug
+          build-args: |
+            APP_BUILD_VERSION=${{ steps.appversion.outputs.appversion }}
+            BUILD_DATE=${{ steps.appversion.outputs.builddate }}
+          platforms: ${{ matrix.platform }}
+          outputs: type=docker,dest=/tmp/images/app-debug.tar,name=multi-scrobbler-ci:app-debug
+
+      - name: Load images
+        run: |
+          docker load -i /tmp/images/app.tar
+          docker load -i /tmp/images/app-debug.tar
 
       # start the image like a user would and wait for it to report healthy
       - name: Smoke test
@@ -131,7 +145,10 @@ jobs:
             exit 1
           fi
 
-      - name: Upload image
+      - name: Smoke test debug image tools
+        run: docker run --rm --entrypoint sh multi-scrobbler-ci:app-debug -c 'curl --version'
+
+      - name: Upload images
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #7.0.0
         with:
           name: images-linux-${{ matrix.arch }}

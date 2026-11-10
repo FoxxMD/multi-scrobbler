@@ -19,10 +19,7 @@ For the difference between **ENV** and **File** examples in this document see [C
 
 ## Docker
 
-Cross-platform images are built for x86 (Intel/AMD) and ARM64 (IE Raspberry Pi)
-
-<Aside type="info" title="Available Images">
-
+Cross-platform images are built for x86 (Intel/AMD) and ARM64 (IE Raspberry Pi). Available images:
 
 <Tabs>
     <TabItem value="docker" label="Dockerhub">
@@ -39,14 +36,17 @@ Cross-platform images are built for x86 (Intel/AMD) and ARM64 (IE Raspberry Pi)
     </TabItem>
 </Tabs>
 
-
-</Aside>
-
 ### Recommended Settings
 
 <Tabs groupId="dockerSetting" queryString>
 <TabItem value="storage" label="Storage">
 You **should** bind a host directory into the container for storing configurations, credentials, database, and other files. Otherwise, these will be lost when the container is updated.
+
+<Aside type="important">
+
+You should create these folders on the host **before** starting Multi-Scrobbler for the first time.
+
+</Aside>
 
 ```yaml title="docker-compose.yml"
 services:
@@ -54,8 +54,10 @@ services:
   # ...
   # [!code highlight:2]
   volumes:
-    - "./config:/config"
+    - "./config:/config" #[!ref] Mounts the host directory `./config` into the container at `/config`
 ```
+
+<DetailsAdmo type="note" summary="Optional Data Directory">
 
 Optionally, use a separate directory for data (database, cache, etc...) by mounting an additional directory and setting the `DATA_DIR` ENV to the directory that should be used inside the container:
 
@@ -63,19 +65,24 @@ Optionally, use a separate directory for data (database, cache, etc...) by mount
 services:
   multi-scrobbler:
   # ...
+  # [!code focus:7]
   environment:
     # ...
     # [!code highlight]
-    - DATA_DIR=/msData
+    - DATA_DIR=/msData #[!ref] Tells MS where to look for the data directory, inside the container
   volumes:
-    - "./config:/config" # used for config files
+    - "./config:/config"
   # [!code highlight]
-    - "./my/host/folder:/msData" # used for data files
+    - "./data:/msData" # [!ref] Mounts the host directory `./data` into the container at `/msData`
 ```
+
+</DetailsAdmo>
 
 </TabItem>
 <TabItem value="networking" label="Networking">
-If you are using a [bridge network](https://www.appsdeveloperblog.com/docker-networking-bridging-host-and-overlay/) (default docker setup) you must map a port to the container in order to access the dashboard and use MS with some sources (Webscrobbler, LFM/LZ Endpoints). The default container port is `9078`.
+If you are using a [bridge network](https://www.appsdeveloperblog.com/docker-networking-bridging-host-and-overlay/) (default docker setup) you must map a port to the container in order to access the dashboard and use MS with [Ingress Sources](/configuration/sources/#by-communication-method) like the Listenbrainz Endpoint.
+
+The default container port is `9078`.
 
 ```yaml title="docker-compose.yml"
 services:
@@ -107,14 +114,17 @@ services:
 set the [Base URL](/configuration/#base-url) as the IP/domain of the host machine. (This is the IP you would use to view the dashboard in a browser)
 
 
-```yaml title="docker-compose.yml"
+```yaml title="docker-compose.yml" placeholder="YOUR_MS_DOMAIN"
 services:
   multi-scrobbler:
   # ...
   environment:
     # [!code highlight]
-    - BASE_URL=http://hostMachineIP
+    - BASE_URL=http://YOUR_MS_DOMAIN
 ```
+
+`BASE_URL` is also used when [Securing Your Instance](/security/authentication/#unsecured-instance-protections).
+
 </TabItem>
 <TabItem value="subpath" label="Deploying MS with a Subpath">
 When deploying MS to a domain where it will be served under a **subpath**, like `http://mydomain.com/multiscrobbler`, you **must** define `BASE_URL`:
@@ -173,36 +183,12 @@ services:
   multi-scrobbler:
   # ...
   environment:
-    # Specify timezone from TZ Database name found here https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
     # [!code highlight]
     - TZ=America/New_York
 ```
 
 </TabItem>
-<TabItem value="linuxHost" label="Linux Host">
-If you are running this container with **Docker** on a **Linux Host** you **should** specify `user:group` permissions of the user who owns the **configuration and data directories** on the host to avoid [docker file permission problems.](https://ikriv.com/blog/?p=4698) These can be specified using the [environmental variables **PUID** and **PGID**.](https://docs.linuxserver.io/general/understanding-puid-and-pgid)
 
-To get the UID and GID for the current user run these commands from a terminal:
-
-* `id -u` -- prints UID
-* `id -g` -- prints GID
-</TabItem>
-<TabItem value="ro" label="Read Only">
-MS can be hardended by setting the file system as read only with [`read_only`](https://docs.docker.com/reference/compose-file/services/#read_only), with a few exceptions:
-
-```yaml title="docker-compose.yml"
-services:
-  multi-scrobbler:
-    image: foxxmd/multi-scrobbler
-    # ...
-    # [!code highlight:4]
-    read_only: true
-    tmpfs:
-      - /run:exec
-      - /tmp:noexec    
-```
-
-</TabItem>
 <TabItem value="caching" label="Caching">
 **Optionally**, add a [Valkey](https://valkey.io/) service to your stack for [secondary caching](/configuration#secondary-caching) to take advantage of faster performance, reduced memory usage, and cached api calls to external services.
 
@@ -229,7 +215,96 @@ volumes:
 ```
 
 </TabItem>
+
+<TabItem value="debug" label="Debug Image">
+The default image has no shell or system tools. When troubleshooting, especially networking issues, switch to the same version with a `-debug` suffix, like `latest-debug` or `1.2.3-debug`. It is identical to the normal image but adds a [busybox](https://busybox.net/) shell and `curl`.
+
+```yaml title="docker-compose.yml"
+services:
+  multi-scrobbler:
+    # [!code highlight]
+    image: foxxmd/multi-scrobbler:latest-debug
+```
+
+Then open a shell in the running container:
+
+```shell
+docker exec -it multi-scrobbler sh
+curl -v https://example.com
+```
+
+Switch back to the normal image when you are done.
+
+</TabItem>
 </Tabs>
+
+### User and Permissions :badge[Important]{variant="tip"}
+
+The container runs as a non-root user, UID/GID `65532:65532`, by default.
+
+This user must be able to read and write the **configuration and data directories** you mount into it.
+
+If you bind mount host directories (like `./config:/config` from the **Storage** tab above) choose **one** of these:
+
+<Tabs groupId="userPerms">
+
+<TabItem value="sameUser" label="Same User (Simplest)">
+
+**Run the container as the user who owns the directory** (simplest).
+
+In this scenario you will be able to edit and read config/db/log files used by MS normally from your host.
+
+Get your UID and GID with `id -u` and `id -g`:
+
+```shell placeholder="1000,1001"
+$ id -u
+1000
+$ id -g
+1001
+```
+
+Then, set [`user`](https://docs.docker.com/reference/compose-file/services/#user):
+
+  ```yaml title="docker-compose.yml" placeholder="1000,1001"
+  services:
+    multi-scrobbler:
+    # ...
+    # [!code highlight]
+    # [!code focus:1]
+    user: 1000:1001
+    # ...
+    volumes:
+      - "./config:/config"
+  ```
+
+</TabItem>
+<TabItem value="unprivileged" label="Unprivileged">
+
+**Run the container as the default user** (most isolated).
+
+This is the most secure option as the user unlikely has any privileges on the host machine but it does mean you will need to use `sudo` to edit config files created by it.
+
+Make sure the host folders already exist and then give the default user ownership, or permission, to create/edit these.
+
+The easiest way to do this is give full ownership:
+
+```shell
+# [!callout /config/] existing host directory
+sudo chown -R 65532:65532 ./config
+```
+
+If you have `user` set in `docker-compose.yml` then you should remove it now.
+
+</TabItem>
+</Tabs>
+
+**Note:** The above advice also applies to Docker Desktop on Windows when the directory is inside WSL (like `~/multi-scrobbler/config`). Run the commands in your WSL terminal.
+
+<Aside type="tip">
+
+If you are using [named volumes](https://docs.docker.com/reference/compose-file/volumes/#example) for MS, instead of bind mounted volumes, no extra setup is needed.
+
+</Aside>
 
 ### Docker Usage Example
 
@@ -264,10 +339,9 @@ services:
       - BASE_URL=http://YOUR_MS_DOMAIN
       - MALOJA_URL=http://domain.tld:42010
       - MALOJA_API_KEY=1234
-      - PUID=1000
-      - PGID=1000
       # uncomment along with valkey service/volume below for better caching
       #- CACHE_VALKEY=redis://valkey:6379
+    user: 1000:1000
     volumes:
       - ./config:/config
     ports:
