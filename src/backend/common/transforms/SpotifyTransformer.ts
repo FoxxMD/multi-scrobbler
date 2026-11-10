@@ -40,6 +40,7 @@ export const COMPILATION_PENALTY = 0.15;
 
 export interface SpotifyTransformerDataStrong extends SpotifyTransformerData {
     searchWhenMissing: SpotifyMissingType[]
+    searchOrder?: SpotifySearchType[]
 
     titleWeight?: number
     artistWeight?: number

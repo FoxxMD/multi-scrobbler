@@ -2,8 +2,17 @@ import { searchAndReplace } from "@foxxmd/regex-buddy-core";
 import type {Credit, PlayObject} from "../../../core/Atomic.ts";
 import { configValToSearchReplace, isSearchAndReplaceTerm, isUserStage, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
-import type {ConditionalSearchAndReplaceRegExp, PlayTransformUserStage} from "../../../core/Transform.ts";
+import {buildRulesSchema, buildStageSchema, type ConditionalSearchAndReplaceRegExp, type PlayTransformUserStage, searchReplaceTermSchema} from "../../../core/Transform.ts";
+import * as z from "zod";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
+
+export const userStageSchema = buildStageSchema(
+    'user',
+    buildRulesSchema(z.array(searchReplaceTermSchema)),
+    z.object({})
+).meta({title: 'User Stage'});
+
+export type UserStage = z.output<typeof userStageSchema>;
 
 export default class UserTransformer extends AtomicPartsTransformer<ConditionalSearchAndReplaceRegExp[], undefined> {
 

@@ -1,5 +1,5 @@
 import * as z from "zod";
-import {playTransformOptionsSchema} from "../../../../../core/Transform.ts";
+import {type PlayTransformConfig, playTransformSchema} from "../../../transforms/stageSchemas.ts";
 import {commonConfigSchema, requestRetryOptionsSchema, monitorOptionsSchema, type CommonComponentEnvShape, deadLetterOptionsSchema} from "../common.ts";
 import {retentionConfigDurationValueSchema} from "../database.ts";
 import type { PipeUnwrapDirection } from "../../../../utils/ZodUtils.ts";
@@ -146,7 +146,8 @@ export const commonClientOptionsSchema = z.object({
     }),
 
     /** Enhance/correct Play data by applying a transform pipeline */
-    playTransform: playTransformOptionsSchema.optional().meta({description: 'Enhance/correct Play data by applying a transform pipeline'}),
+    // component configs are not parsed by this schema, playTransform is parsed by the component, so type it as raw user input
+    playTransform: (playTransformSchema as z.ZodType<PlayTransformConfig>).optional().meta({description: 'Enhance/correct Play data by applying a transform pipeline'}),
 
     /** Retention policy for Plays stored in the database */
     retention: retentionConfigDurationValueSchema.optional().meta({description: 'Retention policy for Plays stored in the database'}),

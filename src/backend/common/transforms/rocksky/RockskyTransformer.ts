@@ -17,7 +17,7 @@ import { creditToName } from "../../../../core/MusicMetadata.ts";
 import { nativeParse } from "../NativeTransformer.ts";
 import { hasRequiredScrobbleFields, hasScrobbleConfidenceFields, type SongViewDetailedMS, songViewToPlay } from "../../vendor/RockSkyApiClient.ts";
 import { type AlbumViewBasic, type ArtistViewBasic, RockskyError, type SongMatchView } from "@rocksky/sdk";
-import type { RockskyTransformerConfig, RockskyTransformerData } from "../../vendor/rocksky/interfaces.ts";
+import type { RockskyTransformerConfig, RockskyTransformerData } from "./RockskyTransformerUtil.ts";
 import { DEFAULT_ROCKSKY_SEARCH_ORDER } from "./RockskyTransformerUtil.ts";
 import { creditToResult, trackDataToResult, type MetadataProvider } from "../../metadataProviders/MetadataProviderUtils.ts";
 import { type AlbumSearchResult, type ArtistSearchResult, type TrackDataCreditBase, trackDataCreditBaseSchema, type TrackSearchResult } from "../../../../core/Api.ts";

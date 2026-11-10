@@ -11,7 +11,7 @@ import { nanoid } from "nanoid";
 import { SimpleError, StageTransformError } from "../errors/MSErrors.ts";
 import { configFromEnv as rsConfigFromEnv } from "./rocksky/RockskyTransformerUtil.ts";
 import { configFromEnv as caaConfigFromEnv } from "./coverartarchive/CoverArtArchiveTransformerUtil.ts";
-import { type RockskyTransformerConfig } from "../vendor/rocksky/interfaces.ts";
+import { type RockskyTransformerConfig } from "./rocksky/RockskyTransformerUtil.ts";
 import { configFromEnv as spotifyConfigFromEnv, type SpotifyTransformerConfig } from "./spotify/SpotifyTransformerUtil.ts";
 import type { CovertArtArchiveTransformerConfig } from "./coverartarchive/CoverArtArchiveTransformerUtil.ts";
 import { asMetadataProvider, type AggregateMetadataResponse, type MetadataProvider } from "../metadataProviders/MetadataProviderUtils.ts";

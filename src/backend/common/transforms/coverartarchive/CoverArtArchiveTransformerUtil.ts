@@ -2,7 +2,7 @@ import * as z from "zod";
 import { MaybeLogger } from "../../MaybeLogger.ts";
 import type { PlayObject, TransformerCommon, TransformOptions } from "../../../../core/Atomic.ts";
 import { caaArtType, thumbSizes, type CovertArtApiClientConfig } from "../../vendor/musicbrainz/CoverArtApiTypes.ts";
-import { DEFAULT_TRANSFORMER_ENV_NAME } from "../../../../core/Transform.ts";
+import { applyTermSchema, buildRulesSchema, buildStageSchema, DEFAULT_TRANSFORMER_ENV_NAME } from "../../../../core/Transform.ts";
 
 export const caaMissingTypes = z.enum(['album']);
 export type CAAMissingType = z.infer<typeof caaMissingTypes>;
@@ -11,14 +11,23 @@ export type CAASizesConfig = z.infer<typeof caaSizesConfig>;
 export const caaAllowedTypesConfig = z.enum([...caaArtType.options, 'any']);
 export type CAAAllowedTypesConfig = z.infer<typeof caaAllowedTypesConfig>;
 
+/** Cover Art Archive Stage options. Used for transformer `defaults` and for overrides in a Stage */
 export const coverArtArchiveTransformDataSchema = z.object({
-    searchWhenMissing: z.union([z.literal(true),caaMissingTypes.array()]).optional(),
-    allowedTypes: caaAllowedTypesConfig.array().optional(),
-    allowedSizes: caaSizesConfig.array().optional(),
-    preferredSizes: thumbSizes.array().optional(),
-    forceSearch: z.boolean().optional(),
+    searchWhenMissing: z.union([z.literal(true), caaMissingTypes.array()]).optional().meta({description: 'Search if Play has no art (true) or is missing art for these parts. Default true'}),
+    allowedTypes: caaAllowedTypesConfig.array().optional().meta({description: 'Allowed CAA image types. Default front'}),
+    allowedSizes: caaSizesConfig.array().optional().meta({description: 'Allowed image sizes. Default any'}),
+    preferredSizes: thumbSizes.array().optional().meta({description: 'Preferred image sizes, in order'}),
+    forceSearch: z.boolean().optional().meta({description: 'Always search, even if art exists'}),
 });
 export type CoverArtArchiveTransformData = z.infer<typeof coverArtArchiveTransformDataSchema>;
+
+export const coverArtArchiveStageSchema = buildStageSchema(
+    'coverartarchive',
+    buildRulesSchema(applyTermSchema, {art: true}),
+    coverArtArchiveTransformDataSchema
+).meta({title: 'Cover Art Archive Stage'});
+
+export type CoverArtArchiveStage = z.output<typeof coverArtArchiveStageSchema>;
 
 export type CovertArtArchiveTransformerConfig = TransformerCommon<CoverArtArchiveTransformData, CovertArtApiClientConfig> & { options?: TransformOptions };
 

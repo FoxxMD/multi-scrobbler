@@ -447,7 +447,7 @@ export const normalizeStageType = (val: unknown): unknown => {
 
 /** Build the Hooks config (`playTransform`) from a Stage schema (usually a union of all Stages) */
 export const buildPlayTransformSchema = <S extends z.ZodType>(stage: S) => {
-    const hook = maybeArraySchema(z.preprocess(normalizeStageType, stage));
+    const hook = maybeArraySchema(z.preprocess((val: z.input<S>) => normalizeStageType(val), stage));
     return z.object({
         preCompare: hook.optional().meta({description: 'Stages applied when Play is first seen'}),
         compare: z.object({

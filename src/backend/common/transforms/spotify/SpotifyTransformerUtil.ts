@@ -6,7 +6,7 @@ import type { SpotifyTransformerApiConfigData } from "../../vendor/spotify/Spoti
 import { MaybeLogger } from "../../MaybeLogger.ts";
 import * as z from 'zod';
 import { removeUndefinedKeys } from "../../../../core/DataUtils.ts";
-import { DEFAULT_TRANSFORMER_ENV_NAME } from "../../../../core/Transform.ts";
+import { applyTermSchema, buildRulesSchema, buildStageSchema, DEFAULT_TRANSFORMER_ENV_NAME } from "../../../../core/Transform.ts";
 
 export const spotifyMissingTypes = z.enum(['album','title','artists','duration','isrc','ids','art']);
 export type SpotifyMissingType = z.infer<typeof spotifyMissingTypes>;
@@ -17,34 +17,29 @@ export type SpotifySearchType = z.infer<typeof spotifySearchTypes>;
 
 export const DEFAULT_SPOTIFY_SEARCH_ORDER: SpotifySearchType[] = ['isrc', 'basic'];
 
-export interface SpotifyTransformerData {
-    searchWhenMissing?: SpotifyMissingType[]
-    forceSearch?: boolean
-    /** Minimum (0-1) fuzzy match score a candidate must have to be used
-     *
-     * @default 0.6
-     */
-    score?: number
-    searchOrder?: SpotifySearchType[]
-    /** An ISO 3166-1 alpha-2 country code used to bias/limit search results to what is available in this market */
-    market?: string
-    /**
-     * A locale in ISO-639-1_ISO-3166-1 format (EX en_US, ja_JP) used to bias which translation of a localized
-     * catalog name (artist/album/track) the Spotify API returns. Support for this is not officially documented
-     * by Spotify and results may be inconsistent, but it can be used alongside (or instead of) `market` to try
-     * to force names into a specific language.
-     */
-    locale?: string
-    /** Deprioritize (but do not exclude) matches whose album is a compilation when ranking candidates
-     *
-     * @default false
-     */
-    deprioritizeCompilations?: boolean
+/** Spotify Stage options. Used for transformer `defaults` and for overrides in a Stage. Values are normalized by `parseStageConfig` */
+export const spotifyStageOptionsSchema = z.object({
+    searchWhenMissing: z.array(z.string()).optional().meta({description: `Search if Play is missing any of: ${spotifyMissingTypes.options.join(', ')}`}),
+    forceSearch: z.boolean().optional().meta({description: 'Always search, even if nothing is missing'}),
+    score: z.number().optional().meta({description: 'Minimum match score (0-1). Default 0.6'}),
+    searchOrder: z.union([z.string(), z.array(z.string())]).optional().meta({description: `Search methods, in order. Any of: ${spotifySearchTypes.options.join(', ')}`}),
+    market: z.string().optional().meta({description: 'ISO 3166-1 alpha-2 country code to limit results to'}),
+    locale: z.string().optional().meta({description: 'Locale (EX en_US) to bias localized names. Unofficial'}),
+    deprioritizeCompilations: z.boolean().optional().meta({description: 'Rank compilation album matches lower. Default false'}),
+    titleWeight: z.union([z.number(), z.literal(true)]).optional().meta({description: 'Weight of title when ranking matches'}),
+    artistWeight: z.union([z.number(), z.literal(true)]).optional().meta({description: 'Weight of artist when ranking matches'}),
+    albumWeight: z.union([z.number(), z.literal(true)]).optional().meta({description: 'Weight of album when ranking matches'}),
+});
 
-    titleWeight?: number | true
-    artistWeight?: number | true
-    albumWeight?: number | true
-}
+export type SpotifyTransformerData = z.input<typeof spotifyStageOptionsSchema>;
+
+export const spotifyStageSchema = buildStageSchema(
+    'spotify',
+    buildRulesSchema(applyTermSchema, {title: true, artists: true, albumArtists: true, album: true, duration: true, meta: true, art: true}),
+    spotifyStageOptionsSchema
+).meta({title: 'Spotify Stage'});
+
+export type SpotifyStage = z.output<typeof spotifyStageSchema>;
 
 export interface SpotifyTransformerDataConfig extends SpotifyTransformerApiConfigData {
 }
@@ -113,8 +108,8 @@ export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()): SpotifyT
     }
 
     const presets = sEnv.split(',').map(x => x.trim().toLocaleLowerCase());
-    const soSet = new Set<SpotifySearchType>();
-    const searchMissingSet = new Set<SpotifyMissingType>();
+    const soSet = new Set<string>();
+    const searchMissingSet = new Set<string>();
     for (const pName of presets) {
         const p = PRESETS[pName];
         if (p === undefined) {

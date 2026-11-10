@@ -1,7 +1,8 @@
 import type {Credit, PlayObject, TransformerCommon} from "../../../core/Atomic.ts";
 import { isWhenCondition } from "../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
-import type {ExternalMetadataTerm, PlayTransformNativeStage} from "../../../core/Transform.ts";
+import {applyTermSchema, buildRulesSchema, buildStageSchema, type ExternalMetadataTerm, type PlayTransformNativeStage} from "../../../core/Transform.ts";
+import * as z from "zod";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
 import { parseArtistCredits, parseTrackCredits, uniqueNormalizedStrArr } from "../../utils/StringUtils.ts";
 import { parseRegexSingle, parseToRegexOrLiteralSearch } from "@foxxmd/regex-buddy-core";
@@ -28,14 +29,27 @@ export const asArtistParseSource = (str: string): ArtistParseSource => {
     throw new Error(`ArtistParseSource must be one of 'artist' or 'title', given: ${clean}`);
 }
 
-export interface NativeTransformerData {
-    delimiters?: string[]
-    delimitersExtra?: string[]
-    artistsIgnore?: string[]
-    artistsParseFrom?: ArtistParseSource[]
-    artistsParseMonolithicOnly?: boolean
-    titleClean?: boolean
-}
+const stringOrArraySchema = z.union([z.string(), z.array(z.string())]);
+
+/** Native Stage options. Used for transformer `defaults` and for overrides in a Stage. Values are normalized by `parseStageConfig` */
+export const nativeStageOptionsSchema = z.object({
+    delimiters: stringOrArraySchema.optional().meta({description: 'Delimiters used to split artists. Replaces built-ins'}),
+    delimitersExtra: stringOrArraySchema.optional().meta({description: 'Delimiters used to split artists, in addition to built-ins'}),
+    artistsIgnore: stringOrArraySchema.optional().meta({description: 'Strings or regex for artists that should not be split'}),
+    artistsParseFrom: stringOrArraySchema.optional().meta({description: 'Parse artists from: artists, title. Default both'}),
+    artistsParseMonolithicOnly: z.boolean().optional().meta({description: 'Only parse artists if Play has one artist. Default true'}),
+    titleClean: z.boolean().optional().meta({description: 'Remove artists parsed from title'}),
+});
+
+export type NativeTransformerData = z.input<typeof nativeStageOptionsSchema>;
+
+export const nativeStageSchema = buildStageSchema(
+    'native',
+    buildRulesSchema(applyTermSchema, {title: true, artists: true, albumArtists: true, album: true}),
+    nativeStageOptionsSchema
+).meta({title: 'Native Stage'});
+
+export type NativeStage = z.output<typeof nativeStageSchema>;
 
 export interface NativeTransformerDataStrong extends Omit<NativeTransformerData, 'delimitersExtra'> {
     artistsParseFrom?: ArtistParseSource[]
