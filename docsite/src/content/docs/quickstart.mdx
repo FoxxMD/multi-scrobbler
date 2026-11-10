@@ -7,6 +7,7 @@ sidebar:
 
 
 import {LocalStorageText} from '@site/src/components/Storage/Text';
+import { Badge } from '@astrojs/starlight/components';
 
 This guide will get you up and running with multi-scrobbler using [Docker](https://www.docker.com/) and [`docker compose`](https://docs.docker.com/compose/). At the end of the guide you will have:
 
@@ -164,7 +165,7 @@ services:
     </TabItem>
 </Tabs>
 
-## (Optional) Correct Scrobbles with Musicbrainz
+## Correct Scrobbles with Musicbrainz :badge[Optional]{variant="note"}
 
 Multi-scrobbler can use [Musicbrainz](https://musicbrainz.org/) to match activity from your Sources in order to [fill in missing data](/configuration/transforms/musicbrainz), or correct/normalize existing data, before it is scrobbled to the [Clients](#setup-clients) below. This step is optional.
 
@@ -356,7 +357,7 @@ Visit <code>http://<LocalStorageText client:load initialValue="YOUR_MS_DOMAIN" s
 
 ## Next Steps
 
-* **[Secure your Multi-Scrobbler instance](/security/overview)**
+* **[Secure your Multi-Scrobbler instance](/security/overview)** <Badge text="Imporant" size="small" variant="tip" />
 * See more advanced docker options as well as other install methods in the [**Installation**](/installation#docker) docs
   * Setup [secondary caching](/configuration#secondary-caching) with [valkey](/installation?dockerSetting=caching#recommended-settings) for increased performance and reduced memory usage
 * Review the [**Configuration**](/configuration) docs
