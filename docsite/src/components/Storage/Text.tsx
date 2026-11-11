@@ -9,6 +9,10 @@ export interface LocalStorateTextProps {
     placeholder?: string
     stylePreset?: 'inline' | 'bold' | 'placeholder'
     sensitive?: boolean
+    /** rendered before the value, not stored */
+    prefix?: string
+    /** rendered after the value, not stored */
+    suffix?: string
 }
 
 // dashed box like starlight-codeblocks fill-in placeholders, so readers can tell it is the same value
@@ -24,6 +28,17 @@ const placeholderStyle: React.CSSProperties = {
     letterSpacing: 'inherit',
 };
 
+// editable input that blends into a surrounding <code> element; dashed underline marks it as editable
+const inlineInputStyle: React.CSSProperties = {
+    border: 0,
+    borderBottom: '1px dashed color-mix(in srgb, currentColor 60%, transparent)',
+    padding: 0,
+    background: 'transparent',
+    color: 'inherit',
+    font: 'inherit',
+    letterSpacing: 'inherit',
+};
+
 export type FixedStorageProps = Omit<LocalStorateTextProps, 'storageKey'>;
 
 const InternalLocalStorageText: FC<LocalStorateTextProps> = (props) => {
@@ -34,7 +49,9 @@ const InternalLocalStorageText: FC<LocalStorateTextProps> = (props) => {
         placeholder,
         storageKey,
         initialValue = "",
-        sensitive = false
+        sensitive = false,
+        prefix = '',
+        suffix = ''
     } = props
 
         const [storageVal, setStorageVal] = useTypedCodeblocksStorage(storageKey, initialValue);
@@ -71,34 +88,37 @@ const InternalLocalStorageText: FC<LocalStorateTextProps> = (props) => {
                 roVal = placeholder;
             }
 
+            let styled: React.ReactNode;
             switch(stylePreset) {
                 case 'inline':
-                    return <code className={sensitiveClass}>{roVal}</code>;
+                    styled = <code className={sensitiveClass}>{roVal}</code>;
+                    break;
                 case 'bold':
-                    return <strong className={sensitiveClass}>{roVal}</strong>;
+                    styled = <strong className={sensitiveClass}>{roVal}</strong>;
+                    break;
                 case 'placeholder':
-                    return <span className={sensitiveClass} style={placeholderStyle}>{roVal}</span>;
+                    styled = <span className={sensitiveClass} style={placeholderStyle}>{roVal}</span>;
+                    break;
                 default:
-                    return <span className={sensitiveClass}>{roVal}</span>;
+                    styled = <span className={sensitiveClass}>{roVal}</span>;
             }
+            return <>{prefix}{styled}{suffix}</>;
         }
 
         // as wide as the value (or placeholder text). `ch` alone is not reliable: the rendered glyphs can be wider than the
         // `0` that `ch` measures (font fallback, sub-pixel rounding, caret), so measure the real text with a hidden mirror.
         const mirrorText = inputValue || placeholder || ' ';
-        const inputPlaceholderStyle: React.CSSProperties = {
-            ...placeholderStyle,
-            boxSizing: 'content-box',
-            width: textWidth === undefined ? `${Math.max(1, mirrorText.length)}ch` : `${Math.ceil(textWidth) + 2}px`,
-        };
+        const width = textWidth === undefined ? `${Math.max(1, mirrorText.length)}ch` : `${Math.ceil(textWidth) + 2}px`;
 
-        if (stylePreset !== 'placeholder') {
-            return <input type="text" className={sensitiveClass} placeholder={placeholder} onChange={handleInputChange} value={inputValue}/>
+        if (stylePreset !== 'placeholder' && stylePreset !== 'inline') {
+            return <>{prefix}<input type="text" className={sensitiveClass} placeholder={placeholder} onChange={handleInputChange} value={inputValue}/>{suffix}</>
         }
-        return <>
-            <span ref={mirrorRef} aria-hidden="true" style={{...placeholderStyle, position: 'absolute', visibility: 'hidden', whiteSpace: 'pre', padding: 0, border: 0}}>{mirrorText}</span>
-            <input type="text" className={sensitiveClass} placeholder={placeholder} onChange={handleInputChange} value={inputValue} style={inputPlaceholderStyle}/>
-        </>
+        const baseStyle = stylePreset === 'inline' ? inlineInputStyle : placeholderStyle;
+        const field = <>
+            <span ref={mirrorRef} aria-hidden="true" style={{...baseStyle, position: 'absolute', visibility: 'hidden', whiteSpace: 'pre', padding: 0, border: 0}}>{mirrorText}</span>
+            <input type="text" className={sensitiveClass} placeholder={placeholder} onChange={handleInputChange} value={inputValue} style={{...baseStyle, boxSizing: 'content-box', width}}/>
+        </>;
+        return <>{prefix}{stylePreset === 'inline' ? <code>{field}</code> : field}{suffix}</>
 }
 
 export const LocalStorageText:  FC<LocalStorateTextProps> = (props) => {
