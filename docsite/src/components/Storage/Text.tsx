@@ -151,7 +151,7 @@ const InternalLocalStorageText: FC<LocalStorateTextProps> = (props) => {
             <span ref={mirrorRef} aria-hidden="true" style={{...baseStyle, position: 'absolute', visibility: 'hidden', whiteSpace: 'pre', padding: 0, border: 0}}>{mirrorText}</span>
             <input type="text" className={sensitiveClass} placeholder={placeholder} onChange={handleInputChange} value={inputValue} style={{...baseStyle, boxSizing: 'content-box', width}}/>
         </>;
-        return <>{prefix}{stylePreset === 'inline' ? <code>{field}</code> : field}{suffix}{withCopy(inputValue || placeholder || '')}</>
+        return <>{prefix}{stylePreset === 'inline' ? <code>{field}{suffix}</code> : <>{field}{suffix}</>}{withCopy(inputValue || placeholder || '')}</>
 }
 
 export const LocalStorageText:  FC<LocalStorateTextProps> = (props) => {
