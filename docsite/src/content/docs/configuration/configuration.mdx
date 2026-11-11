@@ -10,6 +10,7 @@ slug: configuration
 ---
 
 import ScrobbleThreshold from "@site/src/components/snippets/_scrobble-threshold.mdx";
+import {LocalStorageText} from '@site/src/components/Storage/Text';
 
 import AIOConfig from '@site/../config/config.json.example?raw';
 import SingleConfig from '@site/../config/jellyfin.json.example?raw';
@@ -238,7 +239,7 @@ Multi-scrobbler will look for patterns in text fields within _all_ of your json 
 
 Given this [Last.fm](/configuration/clients/lastfm#configuration) [File](./?configType=file#configuration-types) config:
 
-```json title="lastfm.json" placeholder="YOUR_MS_DOMAIN"
+```json title="lastfm.json" placeholder="http://YOUR_MS_DOMAIN:9078"
 [
   {
     "name": "myLastFmClient",
@@ -246,7 +247,7 @@ Given this [Last.fm](/configuration/clients/lastfm#configuration) [File](./?conf
     "data": {
       "apiKey": "[[MY_APIKEY]]",
       "secret": "[[MY_SECRET]]",
-      "redirectUri": "http://YOUR_MS_DOMAIN/lastfm/callback"
+      "redirectUri": "http://YOUR_MS_DOMAIN:9078/lastfm/callback"
     }
   }
 ]
@@ -261,7 +262,7 @@ MY_SECRET=ec42e09d5ae0ee0f0816ca151008412a
 
 The resulting json multi-scrobbler would use:
 
-```json title="lastfm.json" placeholder="YOUR_MS_DOMAIN"
+```json title="lastfm.json" placeholder="http://YOUR_MS_DOMAIN:9078"
 [
   {
     "name": "myLastFmClient",
@@ -269,7 +270,7 @@ The resulting json multi-scrobbler would use:
     "data": {
       "apiKey": "a89cba1569901a0671d5a9875fed4be1",
       "secret": "ec42e09d5ae0ee0f0816ca151008412a",
-      "redirectUri": "http://YOUR_MS_DOMAIN/lastfm/callback"
+      "redirectUri": "http://YOUR_MS_DOMAIN:9078/lastfm/callback"
     }
   }
 ]
@@ -304,41 +305,115 @@ WARN : [App] [Sources] [spotify Secrets] Matched: None | Unmatched: SPOTIFY_SECR
 
 ## Base URL
 
-Defines the URL that is used to generate default redirect URLs for authentication for services like [spotify](/configuration/sources/spotify) and [lastfm](/configuration/clients/lastfm) -- as well as some logging hints.
+The Base URL is an **optional** value you can provide to Multi-Scrobbler to let it know what URL it will be accessible from.
 
-* Default => `http://localhost:9078`
-* Set with [ENV](./?configType=env#configuration-types) `BASE_URL` or `baseUrl` [all-in-one configuration](./?configType=aio#configuration-types)
-* If protocol is `http` or no protocol is specified MS will try to use port `9078` -- to override this explicitly set the port or use `https`
+<DetailsAdmo type="tip" summary="Benefits of a Base URL">
 
-Useful when running with [docker](/installation/#docker) so that you do not need to specify redirect URLs for each configuration.
+<Tabs group="baseUrlBenefits">
+<TabItem value="auth" label="Authentication">
 
-<details>
+* The URL is automatically used as a [known domain during authentication setup](/security/authentication/#unsecured-instance-protections), potentially bypassing the need for a [setup token](/security/authentication/#setup-token).
+* MS can automatically set [secure cookies](/security/authentication/#hosts-cookies-and-reverse-proxies) if it detects Base URL with `https://...`
+* Logging hints using this URL help you set [`ALLOWED_HOSTS`](/security/authentication/#hosts-cookies-and-reverse-proxies)
 
-    <summary>Example</summary>
+</TabItem>
+<TabItem value="redirect" label="Service Redirects">
 
-    EX Lastfm Redirect Url is `BASE_URL:PORT/lastfm/callback` (when no other redirectUri is specified for [lastfm configuration](/configuration/clients/lastfm))
+Some Sources/Clients, like Spotify and Last.fm, have authentication steps that require a redirect URL to navigate your browser back to MS.
+
+If Base URL is set then MS can automatically generate and use the correct redirect URL without needing any configuration from you.
+
+</TabItem>
+<TabItem value="redirect" label="Subpath Deployments">
+
+The Base URL is a required value when deploying Multi-Scrobbler under a [domain with a subpath](/installation#recommended-settings), like `https://mydomain.com/multi-scrobbler`
+
+</TabItem>
+</Tabs>
+
+</DetailsAdmo>
+
+**The value you use for Base URL should be the full URL you would use to access Multi-Scrobbler from a browser, including:**
+
+* protocol (`http/https`)
+* domain
+* optionally, port and subpath
+
+Set the Base URL with the [ENV](./?configType=env#configuration-types) `BASE_URL` or `baseUrl` [all-in-one configuration](./?configType=aio#configuration-types) property.
+
+Examples:
+
+<Tabs group="baseUrlExamples">
+<TabItem value="localhost" label="Localhost">
+
+*You run Multi-Scrobbler on the same machine you are on now and only access it from here*
+
+```ini placeholder="9078"
+BASE_URL=http://localhost:9078 ; [!ref] `http://localhost:9078` is the **default** used when Base URL is not set [!ref] `9078` is the default port, use whatever port you set during [installation](/installation#recommended-settings) [!ref] Use **Direct IP** tab instead if you will also access MS from other machines.
+```
+
+</TabItem>
+<TabItem value="direct" label="Direct IP">
+
+*You run Multi-Scrobbler on a different machine ( <LocalStorageText client:load initialValue="192.168.0.120" stylePreset="placeholder" storageKey="192.168.0.120"/> ) than the machine you are now. You access it directly by port*
+
+```ini placeholder="192.168.0.120,9078"
+BASE_URL=http://192.168.0.120:9078 ; [!ref] Should be the IP of the machine running MS [!ref] `9078` is the default port, use whatever port you set during [installation](/installation#recommended-settings)
+``` 
+
+</TabItem>
+<TabItem value="direct" label="Domain">
+
+*You access Multi-Scrobbler dashboard/API via a reverse proxy like nginx, traefik, etc..., or otherwise, and use a domain in your browser*
+
+```ini placeholder="http://YOUR_MS_DOMAIN:9078"
+BASE_URL=http://YOUR_MS_DOMAIN:9078 ; [!ref] Set protocol (`http`/`https`) correctly [!ref] Remove the port if accessing like a normal site (`http` is port 80, `https` is port 443)
+``` 
+
+</TabItem>
+</Tabs>
+
+<DetailsAdmo type="tip" summary="Set a Base URL for this Documentation">
+
+On this documenation site, the **Base URL** value is a **placeholder** you can interactively fill in to dynamically update it across the entire documentation site.
+
+Update this to the actual domain/IP/URL you will use for Multi-Scrobbler to help make code examples and URL usage clearer!
+
+Give it a try: <LocalStorageText client:load initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="placeholder" storageKey="http://YOUR_MS_DOMAIN:9078"/>
+
+```yaml title="docker-compose.yaml" placeholder="http://YOUR_MS_DOMAIN:9078"
+services:
+  multi-scrobbler:
+    environment:
+      - BASE_URL=http://YOUR_MS_DOMAIN:9078
+``` 
+
+</DetailsAdmo>
+
+<DetailsAdmo type="note" summary="Redirect URL Examples when using Base URL">
+
+    Below are examples of the Redirect URL that Multi-Scrobbler would generate for [Last.fm](/configuration/clients/lastfm) with a given `BASE_URL`:
 
     | `BASE_URL`                          | Redirect URL                                             |
-    |-------------------------------------|----------------------------------------------------------|
+    | :---------------------------------- | -------------------------------------------------------- |
     | `192.168.0.101`                     | `http://192.168.0.101:9078/lastfm/callback`              |
     | `http://my.domain.local`            | `http://my.domain.local:9078/lastfm/callback`            |
     | `http://192.168.0.101/my/subfolder` | `http://192.168.0.101:9078/my/subfolder/lastfm/callback` |
+    | `my.domain.local:80`                | `http://192.168.0.101:80/lastfm/callback`                |
+    | `my.domain.local:9000`              | `http://my.domain.local:9000/lastfm/callback`            |
+    | `192.168.0.101:4000/my/subfolder`   | `http://192.168.0.101:4000/my/subfolder/lastfm/callback` |
+    | `https://192.168.0.101`             | `https://192.168.0.101:443/lastfm/callback`              |
 
-    | `BASE_URL`                        | Redirect URL                                             |
-    |-----------------------------------|----------------------------------------------------------|
-    | `my.domain.local:80`              | `http://192.168.0.101:80/lastfm/callback`                |
-    | `my.domain.local:9000`            | `http://my.domain.local:9000/lastfm/callback`            |
-    | `192.168.0.101:4000/my/subfolder` | `http://192.168.0.101:4000/my/subfolder/lastfm/callback` |
-    | `https://192.168.0.101`           | `https://192.168.0.101:443/lastfm/callback`              |
-
-</details>
+</DetailsAdmo>
 
 
-### Subpath Deployments
+<DetailsAdmo type="tip" summary="Deploying Multi-Scrobbler to a Domain Subpath">
 
 If you want to run Multi-Scrobbler on a domain's subpath instead of the root, IE `https://mydomain.com/multi-scrobbler`, you **must** set Base URL **as an ENV**.
 
 See the **Base URL** tab in [docker installation Recommended Settings](../installation/?dockerSetting=baseUrl#recommended-settings) for more details.
+
+</DetailsAdmo>
 
 ## Caching
 
@@ -984,7 +1059,7 @@ Additionally, general process metrics like cpu and memory usage can be enabled w
 
 Update your [Prometheus Configuration file](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#configuration-file) (usually at `/etc/prometheus.yml`) to add a job to the `scrape_configs`[section](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config) like this:
 
-```yaml placeholder="YOUR_MS_DOMAIN"
+```yaml placeholder="YOUR_MS_DOMAIN:9078"
 scrape_configs:
   #
   # ...your other jobs are here
@@ -993,7 +1068,7 @@ scrape_configs:
     scrape_interval: 30s
     metrics_path: '/api/metrics'
     static_configs:
-      - targets: ['YOUR_MS_DOMAIN']
+      - targets: ['YOUR_MS_DOMAIN:9078']
 ```
 
 

@@ -90,8 +90,8 @@ Use **one** of the scenarios below based on how on your service(s) (things "scro
 
 In most scenarios you should use one of the following as the **base URL** when configuring your service to scrobble to multi-scrobbler:
 
-* <code>http://<LocalStorageText client:load initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078</code>
-* <code>http://<LocalStorageText client:load initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078/1/</code>
+* <code><LocalStorageText client:load initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="placeholder" storageKey="http://YOUR_MS_DOMAIN:9078"/></code>
+* <code><LocalStorageText client:load initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="placeholder" storageKey="http://YOUR_MS_DOMAIN:9078"/>/1/</code>
 
 <DetailsAdmo type="tip" summary="Standard Endpoints">
 
@@ -99,8 +99,8 @@ Multi-scrobbler emulates some [Listenbrainz API](https://listenbrainz.readthedoc
 
 Most importantly, the scrobble endpoint is:
 
-```text placeholder="YOUR_MS_DOMAIN"
-http://YOUR_MS_DOMAIN/1/submit-listens
+```text placeholder="http://YOUR_MS_DOMAIN:9078"
+http://YOUR_MS_DOMAIN:9078/1/submit-listens
 ```
 
 All available endpoints are found in the API documentation section [**Listenbrainz Ingress**](/api/accept-a-listenbrainz-scrobble-standard/).
@@ -129,9 +129,9 @@ LZE_SLUG=foobar
 
 MS will accept requests for `submit-listens` (scrobble submissions and now playing) at 
 
-```text placeholder="YOUR_MS_DOMAIN"
-http://YOUR_MS_DOMAIN/api/listenbrainz/foobar
-http://YOUR_MS_DOMAIN/api/listenbrainz/foobar/submit-listens
+```text placeholder="http://YOUR_MS_DOMAIN:9078"
+http://YOUR_MS_DOMAIN:9078/api/listenbrainz/foobar
+http://YOUR_MS_DOMAIN:9078/api/listenbrainz/foobar/submit-listens
 ```
 
 [**See API documentation for the slug endpoint for more information.**](/api/accept-a-listenbrainz-scrobble-slug/)
@@ -144,7 +144,7 @@ http://YOUR_MS_DOMAIN/api/listenbrainz/foobar/submit-listens
 
 <details>
 
-Set the [**ListenBrainz.BaseURL**](https://www.navidrome.org/docs/usage/configuration-options/#advanced-configuration) (env `ND_LISTENBRAINZ_BASEURL`) to <code>http://<LocalStorageText client:load readOnly initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078/1/</code>
+Set the [**ListenBrainz.BaseURL**](https://www.navidrome.org/docs/usage/configuration-options/#advanced-configuration) (env `ND_LISTENBRAINZ_BASEURL`) to <code><LocalStorageText client:load readOnly initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="placeholder" storageKey="http://YOUR_MS_DOMAIN:9078"/>/1/</code>
 
 </details>
 
@@ -162,7 +162,7 @@ Set the [**ListenBrainz.BaseURL**](https://www.navidrome.org/docs/usage/configur
 * In the ListenBrainz Scrobbler configuration screen:
   * User Token is the [Token](#token) you configured
   * Toggle **Show advanced settings**
-    * Base URL is the [URL](#standard-base-url) you can configured, or the equivalent of <code>http://<LocalStorageText client:load readOnly initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078</code> for your MS instance
+    * Base URL is the [URL](#standard-base-url) you can configured, or the equivalent of <code><LocalStorageText client:load readOnly initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="placeholder" storageKey="http://YOUR_MS_DOMAIN:9078"/></code> for your MS instance
 * Save the configuration and you are ready to scrobble
 
 To troubleshoot any errors, and assuming you are using Home Assistant, view the Logs in the Music Assistant Add-ons. Please include these logs in any reported issue.
@@ -239,7 +239,7 @@ If you think your service should be able to use the [standard base URL](#standar
 
 #### Verify URL Format
 
-Some service may require `http/https` in the URL format (<code>http://<LocalStorageText client:load readOnly initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078</code>) while others may not (<code><LocalStorageText client:load readOnly initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078</code>). Check the docs for your service to see if they specify this or have an example. Try both versions, if possible, to see if one works.
+Some service may require `http/https` in the URL format (<LocalStorageText client:load readOnly initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="placeholder" storageKey="http://YOUR_MS_DOMAIN:9078"/>) while others may not. Check the docs for your service to see if they specify this or have an example. Try both versions, if possible, to see if one works.
 
 <DetailsAdmo type="note" summary="Some Services Require HTTPS">
 

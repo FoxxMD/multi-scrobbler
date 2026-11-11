@@ -63,7 +63,7 @@ On first startup Multi-scrobbler creates a single **admin** account automaticall
 
 <Tabs groupId="adminPassword">
 <TabItem value="dashboard" label="Dashboard">
-Visit the dashboard at <LocalStorageText client:load initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/> and click **Set an admin password** in the displayed warning banner (or open `/setup`). You are logged in once it is set.
+Visit the dashboard at <LocalStorageText client:load initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="placeholder" storageKey="http://YOUR_MS_DOMAIN:9078"/> and click **Set an admin password** in the displayed warning banner (or open `/setup`). You are logged in once it is set.
 </TabItem>
 <TabItem value="env" label="ENV">
 Set `ADMIN_SETUP_PW` before starting multi-scrobbler. It is only used while the admin has no password, and is ignored afterwards. Leaving it set is harmless.

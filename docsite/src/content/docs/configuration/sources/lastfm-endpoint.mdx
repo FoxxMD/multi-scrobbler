@@ -95,9 +95,9 @@ Use **one** of the scenarios below based on how on your service(s) (things "scro
 
 When setting up your Last.fm client to communicate with Multi-Scrobbler replace the Last.fm domain with your Multi-Scrobbler domain:
 
-https://**last.fm** => https://<LocalStorageText client:load initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>
+https://**last.fm** => <LocalStorageText client:load initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="placeholder" storageKey="http://YOUR_MS_DOMAIN:9078"/>
 
-MS accepts Last.fm API calls with the same **url base** and structure as the [last.fm api](https://www.last.fm/api/intro), IE <code>http://<LocalStorageText client:load initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>/2.0/</code>
+MS accepts Last.fm API calls with the same **url base** and structure as the [last.fm api](https://www.last.fm/api/intro), IE <code><LocalStorageText client:load initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="placeholder" storageKey="http://YOUR_MS_DOMAIN:9078"/>/2.0/</code>
 
 See: API Documentation for [**Lastfm Ingress (Standard)**](/api/accept-a-last-fm-scrobble-standard/)
 
@@ -109,7 +109,7 @@ If you are only setting up **one** Lastfm Endpoint Source then you do not need t
 
 Currently, Multi-Scrobbler only supports the [**Mobile Application**](https://www.last.fm/api/mobileauth) auth flow. If your client requires one of the other authentication flows please [open an issue](https://github.com/FoxxMD/multi-scrobbler/issues/new?template=02-feature-request.yml).
 
-**Note:** Your client does not **need** to implement any auth in order to use a Lastfm Endpoint Source. You can directly make [`track.scrobble`](https://www.last.fm/api/show/track.scrobble) or [`track.updateNowPlaying`](https://www.last.fm/api/show/track.updateNowPlaying) api calls to <code>http://<LocalStorageText client:load readOnly initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>/2.0/</code> with any fake auth data you want.
+**Note:** Your client does not **need** to implement any auth in order to use a Lastfm Endpoint Source. You can directly make [`track.scrobble`](https://www.last.fm/api/show/track.scrobble) or [`track.updateNowPlaying`](https://www.last.fm/api/show/track.updateNowPlaying) api calls to <code><LocalStorageText client:load readOnly initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="placeholder" storageKey="http://YOUR_MS_DOMAIN:9078"/>/2.0/</code> with any fake auth data you want.
 
 </DetailsAdmo>
 
@@ -130,11 +130,11 @@ Setting a **slug** in config will change the **url base** for MS like this:
 ```
 slug: "mySlug"
 ```
-```text placeholder="YOUR_MS_DOMAIN"
-http://YOUR_MS_DOMAIN/api/lastfm/mySlug
+```text placeholder="http://YOUR_MS_DOMAIN:9078"
+http://YOUR_MS_DOMAIN:9078/api/lastfm/mySlug
 ```
 
-The above url base is equivalent to making calls to <code>http://<LocalStorageText client:load readOnly initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>/2.0/</code>
+The above url base is equivalent to making calls to <code><LocalStorageText client:load readOnly initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="placeholder" storageKey="http://YOUR_MS_DOMAIN:9078"/>/2.0/</code>
 
 See: API Documentation for [**Lastfm Ingress (Slug)**](/api/accept-a-last-fm-scrobble-slug/)
 
@@ -146,7 +146,7 @@ If you think your service should be able to use the [standard base URL](#standar
 
 #### Verify URL Format
 
-Some service may require `http/https` in the URL format (<code>http://<LocalStorageText client:load readOnly initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078</code>) while others may not (<code><LocalStorageText client:load readOnly initialValue="YOUR_MS_DOMAIN" stylePreset="placeholder" storageKey="YOUR_MS_DOMAIN"/>:9078</code>). Check the docs for your service to see if they specify this or have an example. Try both versions, if possible, to see if one works.
+Some service may require `http/https` in the URL format (<LocalStorageText client:load readOnly initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="placeholder" storageKey="http://YOUR_MS_DOMAIN:9078"/>) while others may not. Check the docs for your service to see if they specify this or have an example. Try both versions, if possible, to see if one works.
 
 <DetailsAdmo type="note" summary="Some Services Require HTTPS">
 

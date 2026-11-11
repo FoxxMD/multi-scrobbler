@@ -6,10 +6,9 @@ sidebar:
 slug: installation
 ---
 
-
-
-
 import ComposeStack from '@site/../docker-compose.yml?raw';
+import {LocalStorageText} from '@site/src/components/Storage/Text';
+import { Badge } from '@astrojs/starlight/components'
 
 :::tip
 
@@ -102,41 +101,44 @@ services:
 </TabItem>
 <TabItem value="baseUrl" label="Base URL">
 
+The [**Base URL**](/configuration/#base-url) is an **optional** value you can provide to Multi-Scrobbler to let it know what URL it will be accessible from.
+
+Providing this value has [many benefits](/configuration#base-url), it is highly recommended that you set it.
+
+<Badge text="Tip" size="small" variant="success" /> The **Base URL** value is an interactive placeholder. Fill it in to update its usage everywhere on this site.
+
 <Tabs groupId="baseUrlUsage">
 <TabItem value="redirect" label="Redirects">
-**Optionally**, when
+When using a [Source or Client](/configuration/) that has a "Redirect URI" that you have not explicitly defined, setting the Base URL allows correct redirect URLs to be generated automatically.
 
-* using a [Source or Client](/configuration/) that has a "Redirect URI" that you have not explicitly defined
-* and
-  * using a bridge network or
-  * installing MS on a different machine than the one used to view the dashboard
-
-set the [Base URL](/configuration/#base-url) as the IP/domain of the host machine. (This is the IP you would use to view the dashboard in a browser)
-
-
-```yaml title="docker-compose.yml" placeholder="YOUR_MS_DOMAIN"
+```yaml title="docker-compose.yml" placeholder="http://YOUR_MS_DOMAIN:9078"
 services:
   multi-scrobbler:
   # ...
   environment:
     # [!code highlight]
-    - BASE_URL=http://YOUR_MS_DOMAIN
+    - BASE_URL=http://YOUR_MS_DOMAIN:9078 # [!ref] Should be the same URL you would use to view the MS dashboard in a browser
 ```
 
 `BASE_URL` is also used when [Securing Your Instance](/security/authentication/#unsecured-instance-protections).
 
 </TabItem>
 <TabItem value="subpath" label="Deploying MS with a Subpath">
-When deploying MS to a domain where it will be served under a **subpath**, like `http://mydomain.com/multiscrobbler`, you **must** define `BASE_URL`:
+When deploying MS to a domain where it will be served under a **subpath** like
 
-```yaml title="docker-compose.yml" placeholder="YOUR_MS_DOMAIN"
+```text placeholder="YOUR_MS_DOMAIN.com/multiscrobbler"
+https://YOUR_MS_DOMAIN.com/multiscrobbler
+```
+
+you **must** define `BASE_URL` in order for MS to properly serve the dashboard:
+
+```yaml title="docker-compose.yml" placeholder="YOUR_MS_DOMAIN.com/multiscrobbler"
 services:
   multi-scrobbler:
     # ...
     environment:
-      # [!code highlight:2]
-      # multi-scrobbler served under this subpath
-      - BASE_URL=https://YOUR_MS_DOMAIN/multiscrobbler
+      # [!code highlight:1]
+      - BASE_URL=https://YOUR_MS_DOMAIN.com/multiscrobbler # [!ref] multi-scrobbler served under this subpath
 ```
 
 This is **not required** when the root path is `/`, like `https://my-scrobbler.com` or `scrobbler.mydomain.com`.
@@ -151,23 +153,20 @@ This build step is *optional* and not required for MS to run with a subpath, you
 
 To build MS with self-hosted docs, provide the same `BASE_URL` used above as a build arg:
 
-```yaml title="docker-compose.yml" placeholder="YOUR_MS_DOMAIN"
+```yaml title="docker-compose.yml" placeholder="YOUR_MS_DOMAIN.com/multiscrobbler"
 services:
   multi-scrobbler:
-  # [!code highlight:7]
-  ## remove/comment out official image
-  # image: docker.io/foxxmd/multi-scrobbler:latest
-  ## add build spec
+    #image: docker.io/foxxmd/multi-scrobbler:latest [!ref] remove or comment out the official image, use `build` spec instead to point to the repository
+    # [!code highlight:4]
     build:
       context: https://github.com/FoxxMD/multi-scrobbler.git
       args:
-        - BASE_URL=https://YOUR_MS_DOMAIN/multiscrobbler
-  # ...
+        - BASE_URL=https://YOUR_MS_DOMAIN.com/multiscrobbler # [!ref] **Must** include `BASE_URL` build arg here
+    # ...
     environment:
         # ...
-        # [!code highlight:2]
-        # multi-scrobbler served under this subpath
-        - BASE_URL=https://YOUR_MS_DOMAIN/multiscrobbler
+        # [!code highlight:1]
+        - BASE_URL=https://YOUR_MS_DOMAIN.com/multiscrobbler # [!ref] multi-scrobbler served under this subpath
 ```
 
 </DetailsAdmo>
@@ -326,7 +325,7 @@ The example scenario:
 
 See [`docker-compose.yml`](#docker) sample above for more options and annotations.
 
-```yaml title="docker-compose.yml" placeholder="YOUR_MS_DOMAIN"
+```yaml title="docker-compose.yml" placeholder="http://YOUR_MS_DOMAIN:9078"
 services:
   multi-scrobbler:
     image: foxxmd/multi-scrobbler
@@ -336,7 +335,7 @@ services:
       - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56bd6540c
       - JELLYFIN_URL=192.168.0.101:8096
       - JELLYFIN_USER=MyUser
-      - BASE_URL=http://YOUR_MS_DOMAIN
+      - BASE_URL=http://YOUR_MS_DOMAIN:9078
       - MALOJA_URL=http://domain.tld:42010
       - MALOJA_API_KEY=1234
       # uncomment along with valkey service/volume below for better caching
