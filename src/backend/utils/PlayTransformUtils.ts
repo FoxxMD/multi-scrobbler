@@ -40,6 +40,33 @@ export const testWhen = (parts: WhenParts, play: PlayObject, options?: SuppliedR
         // passes if any art url matches the search
         return images.some(x => testMaybeRegex(parts.art!, x)[0]);
     }
+    if(parts.deviceId !== undefined) {
+        if(play.meta.deviceId === undefined || !testMaybeRegex(parts.deviceId, play.meta.deviceId ?? '')[0]) {
+            return false;
+        }
+    }
+    if(parts.user !== undefined) {
+        if(play.meta.user === undefined || !testMaybeRegex(parts.user, play.meta.user ?? '')[0]) {
+            return false;
+        }
+    }
+    if(parts.library !== undefined) {
+        if(play.meta.library === undefined || !testMaybeRegex(parts.library, play.meta.library ?? '')[0]) {
+            return false;
+        }
+    }
+    if(parts.musicService !== undefined) {
+        if(play.meta.musicService === undefined || !testMaybeRegex(parts.musicService, play.meta.musicService ?? '')[0]) {
+            return false;
+        }
+    }
+    if(parts.playlist !== undefined) {
+        if((play.meta.playlistId === undefined && play.meta.playlistName === undefined) || 
+        (!testMaybeRegex(parts.playlist, play.meta.playlistId ?? '')[0] &&
+        !testMaybeRegex(parts.playlist, play.meta.playlistName ?? '')[0])) {
+            return false;
+        }
+    }
     return true;
 }
 

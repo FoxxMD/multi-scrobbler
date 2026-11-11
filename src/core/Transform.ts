@@ -64,6 +64,11 @@ export const whenPartsSchema = z.object({
     art: z.string().optional().meta({description: 'String or regex matching any Play art url. Empty string matches no art'}),
     artist: z.string().optional().meta({description: 'Alias of artists', deprecated: true}),
     albumArtist: z.string().optional().meta({description: 'Alias of albumArtists', deprecated: true}),
+    deviceId: z.string().optional().meta({description: 'String or regex matching device id'}),
+    user: z.string().optional().meta({description: 'String or regex matching user id/name'}),
+    library: z.string().optional().meta({description: 'String or regex matching library id/name'}),
+    musicService: z.string().optional().meta({description: 'String or regex matching original music service'}),
+    playlist: z.string().optional().meta({description: 'String or regex matching playlist id/name'}),
 }).transform(({artist, albumArtist, ...rest}) => ({
     ...rest,
     ...(rest.artists === undefined && artist !== undefined ? {artists: artist} : {}),
@@ -75,6 +80,16 @@ export type WhenParts = z.output<typeof whenPartsSchema>;
 export const whenSchema = maybeArraySchema(whenPartsSchema).meta({title: 'When', description: 'Only run if any condition matches (OR)'});
 
 export type WhenConditions = z.output<typeof whenSchema>;
+
+export const searchTermSchema = z.union([
+    z.string().meta({title: 'Search Term', description: 'String or regex to match'}),
+    z.object({
+        search: z.string().meta({description: 'String or regex to match'}),
+        when: whenSchema.optional(),
+    }).meta({title: 'Apply When', description: 'Use transformed data for this part if when matches'}),
+]).meta({title: 'Search'});
+
+export type SearchTerm = z.output<typeof searchTermSchema>;
 
 export const searchReplaceTermSchema = z.union([
     z.string().meta({title: 'Search Term', description: 'String or regex to remove'}),

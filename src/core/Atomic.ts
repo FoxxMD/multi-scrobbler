@@ -387,6 +387,9 @@ export interface PlayMetaBase<D extends DateLike = Dayjs> {
     //lifecycle: PlayLifecycle<D>
     lifecycleInputs?: LifecycleInput[]
 
+    playlistId?: string
+    playlistName?: string
+
     //[key: string]: any
 }
 
