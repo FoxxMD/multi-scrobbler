@@ -9,7 +9,7 @@ import { setUserPassword } from '../../common/auth/ownerPassword.ts';
 import type { PasswordHasher } from '../../common/auth/auth.ts';
 import { createHash, timingSafeEqual } from 'node:crypto';
 
-const internalConfig = { localUrl: new URL('http://localhost:9078'), configDir: 'fake', logger: loggerTest, version: 'test' };
+const internalConfig = { localUrl: new URL('http://localhost:9078'), configDir: 'fake', dataDir: 'fake', logger: loggerTest, version: 'test' };
 
 /**
  * Fast stand-in for better-auth's scrypt hashing (~50ms per hash and per verify, and most auth tests do both).

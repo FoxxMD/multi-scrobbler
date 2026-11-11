@@ -40,7 +40,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
 
     declare config: TealClientConfig;
 
-    protected configDir: string;
+    protected dataDir: string;
 
     client: TealApiAuthenticatedClient;
 
@@ -52,7 +52,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         this.client = new TealApiAuthenticatedClient(name, config.data, {...options, logger});
         this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
         this.nowPlayingMinThreshold = (_) => 20;
-        this.configDir = options.configDir;
+        this.dataDir = options.dataDir;
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => recordToPlay(obj);
@@ -200,7 +200,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
     async fetchCarToFile() {
         // TODO use `since` to get CAR diff instead of entire repo
         // can use last import date from migrations table
-        const filename = path.resolve(this.configDir, `${this.getSafeExternalId()}-${dayjs().unix()}.car`);
+        const filename = path.resolve(this.dataDir, `${this.getSafeExternalId()}-${dayjs().unix()}.car`);
         await fsPromise.writeFile(filename, Buffer.from(((await this.client.client.getCAR(this.client.client.userData.did)))));
         return filename;
     }

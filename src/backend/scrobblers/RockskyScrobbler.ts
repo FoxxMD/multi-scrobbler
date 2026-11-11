@@ -35,7 +35,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
 
     declare config: RockSkyClientConfig;
 
-    protected configDir: string;
+    protected dataDir: string;
     // because rocksky scrobble peristence is async, does not return a TID, and may be modified server-side
     // we don't want to add our scrobble payload as a source-of-truth historical play because it may end up
     // looking different when we sync historical from car/api call
@@ -46,14 +46,14 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
 
     constructor(name: any, config: RockSkyClientConfig, options: InternalConfigOptional & { [key: string]: any }, emitter: EventEmitter, logger: Logger) {
         super('rocksky', name, config, emitter, logger);
-        this.api = new RockSkyApiClient(name, { ...config.data, ...config.options }, { logger: this.logger, configDir: options.configDir });
+        this.api = new RockSkyApiClient(name, { ...config.data, ...config.options }, { logger: this.logger, configDir: options.dataDir });
         // https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(user_name)-listens
         // 1000 is way too high. maxing at 100
         this.MAX_INITIAL_SCROBBLES_FETCH = 100;
         this.supportsNowPlaying = true;
         // PDS rate limit for operations is ~2/sec
         this.scrobbleDelay = 2000;
-        this.configDir = options.configDir;
+        this.dataDir = options.dataDir;
         this.existingPlayOpts = {
             logger: this.dupeLogger,
             transformRules: this.transformRules,
@@ -209,7 +209,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         if(userData === undefined) {
             throw new Error('Cannot fetch CAR because atproto identifier has not been resolved');
         }
-        const filename = path.resolve(this.configDir, `${this.getSafeExternalId()}-${dayjs().unix()}.car`);
+        const filename = path.resolve(this.dataDir, `${this.getSafeExternalId()}-${dayjs().unix()}.car`);
         const atClient = new ATProtoUnauthenticatedApiClient('rocksky', { handleData: userData, identifier: this.config.data.handle }, { logger: this.logger });
         await atClient.initClient();
         await fsPromise.writeFile(filename, Buffer.from(await atClient.getCAR(userData.did)));

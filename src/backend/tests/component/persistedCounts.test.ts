@@ -50,7 +50,7 @@ const startScrobbler = async (id: string) => {
 
 const emitter = new WildcardEmitter<MSBackendEventMap>();
 const startSource = async (id: string) => {
-    const source = new SharedDbSource('spotify', 'test-counts', { id }, { localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test' }, emitter);
+    const source = new SharedDbSource('spotify', 'test-counts', { id }, { localUrl: new URL('https://example.com'), configDir: 'fake', dataDir: 'fake', logger: loggerTest, version: 'test' }, emitter);
     await source.initialize();
     await source.initTasks();
     return source;

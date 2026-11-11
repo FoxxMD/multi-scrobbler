@@ -27,7 +27,7 @@ const createSource = (data: MixcloudData = { username: 'TestUser' }, name: strin
     id: `test-${Date.now()}`,
     data,
     options: {}
-}, { localUrl: new URL('http://test'), configDir: 'test', logger: loggerTest, version: 'test' }, new EventEmitter());
+}, { localUrl: new URL('http://test'), configDir: 'test', dataDir: 'test', logger: loggerTest, version: 'test' }, new EventEmitter());
 
 /** A source with app credentials whose credentials file lives in a temp dir */
 const createAuthSource = (): { source: MixcloudSource, cleanup: () => void } => {
@@ -36,7 +36,7 @@ const createAuthSource = (): { source: MixcloudSource, cleanup: () => void } => 
         id: `test-${Date.now()}`,
         data: appData,
         options: {}
-    }, { localUrl: new URL('http://test'), configDir, logger: loggerTest, version: 'test' }, new EventEmitter());
+    }, { localUrl: new URL('http://test'), configDir, dataDir: configDir, logger: loggerTest, version: 'test' }, new EventEmitter());
     return { source, cleanup: () => rmSync(configDir, { recursive: true, force: true }) };
 };
 

@@ -416,3 +416,56 @@ Please do not use BYOA mode as a way to avoid setting up authentication if you d
 * In the future, MS will support OIDC/oauth to integrate with things like authelia/authentik/keycloak
 
 </Aside>
+
+## Data Directory Usage
+
+[Standardized application directories](/installation/#persistent-directories) for storing config, data, and log files separately were introduced in [0.15.0](https://github.com/FoxxMD/multi-scrobbler/releases/tag/0.15.0). However, many of the cache/auth flow files used by MS are *still* stored in the **config** directory.
+
+In 0.21.0, MS now looks for these files in the **data** directory.
+
+<Aside type="tip">
+
+If you:
+
+* are a **docker** user and
+* have **not set** the `DATA_DIR` environmental variable
+
+**there is no breaking change for you** and you can safely skip this section.
+
+</Aside>
+
+For non-docker users, and users who have explicitly set a [Data](/installation/#persistent-directories) directory, use one of the solutions below:
+
+<Tabs groupId="dataFix">
+<TabItem value="nothing" label="Do Nothing">
+
+The non-config files are mainly cache and auth-flow related and do not prevent normal usage of MS.
+
+**If you decide not to do anything Multi-Scrobbler will still operate normally,** however...
+
+If you have any Sources/Clients that rely on auth flows, like Spotify Last.fm..., you will likely need to re-authenticate these once you deploy 0.21.0 because the Source/Client won't be able to find the auth-flow credentials in their old location.
+
+</TabItem>
+<TabItem value="move" label="Move Non-Config Files">
+
+All **non-config files** need to be moved to the **Data** directory you have configured. This includes:
+
+* all non `.json` files, like those ending in `.cache`, `.car`, etc...
+  * except `.json.example` files
+* all `.json` files that are **not** a config file
+  * See the example [`config` folder in the repository](https://github.com/FoxxMD/multi-scrobbler/tree/d7b9730588f5bb941603b1cf23f82cbe2ce82de5/config) for all config file names
+
+</TabItem>
+<TabItem value="dupe" label="Set Data Dir to Config Dir">
+
+Your **Data** directory likely already includes an `ms.db` database file and database backups like `.bak`. You can decide to **combine** Config/Data dirs by moving all files in **Data** into the **Config** directory and then explicitly setting both environmental variables to the same directory.
+
+(This is essentially what the default values for the docker image already do.)
+
+```
+CONFIG_DIR=./config
+DATA_DIR=./config
+```
+
+</TabItem>
+</Tabs>

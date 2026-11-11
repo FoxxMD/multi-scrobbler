@@ -61,7 +61,7 @@ export default class MixcloudSource extends AbstractSource {
             this.authType = COMPONENT_AUTH_TYPE.interactive;
             this.requiresAuth = true;
             this.requiresAuthInteraction = true;
-            this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
+            this.workingCredsPath = `${this.dataDir}/currentCreds-${name}.json`;
             const u = joinedUrl(this.localUrl, 'api/mixcloud/callback');
             u.searchParams.append('name', this.name);
             this.redirectUri = u.toString();

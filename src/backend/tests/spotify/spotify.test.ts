@@ -21,7 +21,7 @@ const createSpotifySource = (options: SpotifySourceConfig['options'] = {}): Spot
         options
     } as unknown as SpotifySourceConfig;
 
-    return new SpotifySource('test', config, { localUrl: new URL('http://test'), configDir: 'test', logger: loggerTest, version: 'test' }, new EventEmitter());
+    return new SpotifySource('test', config, { localUrl: new URL('http://test'), configDir: 'test', dataDir: 'test', logger: loggerTest, version: 'test' }, new EventEmitter());
 }
 
 describe('Spotify - ISRC Enrichment', function () {

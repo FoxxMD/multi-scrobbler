@@ -9,7 +9,7 @@ import type { MSBackendEventMap } from '../../common/infrastructure/MSBackendEve
 import { TestSource } from '../source/TestSource.ts';
 import { TestScrobbler } from '../scrobbler/TestScrobbler.ts';
 
-const internalConfig = { localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test' };
+const internalConfig = { localUrl: new URL('https://example.com'), configDir: 'fake', dataDir: 'fake', logger: loggerTest, version: 'test' };
 
 describe('Component Collections', function () {
 

@@ -33,7 +33,7 @@ const createJfApi = (data: JellyApiData): JellyfinApiSource => {
         id: `test-${Date.now()}`,
         data,
         options: {}
-    }, { localUrl: new URL('http://test'), configDir: 'test', logger: loggerTest, version: 'test' }, new EventEmitter());
+    }, { localUrl: new URL('http://test'), configDir: 'test', dataDir: 'test', logger: loggerTest, version: 'test' }, new EventEmitter());
     jf.libraries = [{name: 'music', paths: ['/data/allmusic'], collectionType: 'music'}];
     return jf;
 }

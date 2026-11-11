@@ -32,13 +32,13 @@ chai.use(asPromised);
 
 const emitter = new WildcardEmitter<MSBackendEventMap>();
 const generateSource = async () => {
-    const source = new TestSource('spotify', 'test-basic', {id: `test-${Date.now()}`}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
+    const source = new TestSource('spotify', 'test-basic', {id: `test-${Date.now()}`}, {localUrl: new URL('https://example.com'), configDir: 'fake', dataDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
     await source.initialize();
     await source.initTasks();
     return source;
 }
 const generateMemorySource = async (config: MarkOptional<SourceConfig, 'id'> = {}) => {
-    const s = new TestMemorySource('spotify', 'test-memory', {id: `test-${Date.now()}`, ...config}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
+    const s = new TestMemorySource('spotify', 'test-memory', {id: `test-${Date.now()}`, ...config}, {localUrl: new URL('https://example.com'), configDir: 'fake', dataDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
     await s.initialize();
    // s.buildTransformRules();
     s.scheduler.stop();
@@ -46,7 +46,7 @@ const generateMemorySource = async (config: MarkOptional<SourceConfig, 'id'> = {
 }
 
 const generateMemoryPositionalSource = async (config: MarkOptional<SourceConfig, 'id'> = {}) => {
-    const s = new TestMemoryPositionalSource('spotify', 'test-positional', {id: `test-${Date.now()}`, ...config}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
+    const s = new TestMemoryPositionalSource('spotify', 'test-positional', {id: `test-${Date.now()}`, ...config}, {localUrl: new URL('https://example.com'), configDir: 'fake', dataDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
     await s.initialize();
     //s.buildTransformRules();
     s.scheduler.stop();
@@ -58,7 +58,7 @@ describe('Source Scheduled Tasks', function () {
     // generateSource() already calls initTasks() with the default (long) dead delay
     // own emitter: the Dead task emits queue events that would resolve other tests' pEvent() on the shared emitter
     const uninitializedTasksSource = async () => {
-        const source = new TestSource('spotify', 'test-tasks', {id: `test-${Date.now()}`}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  new WildcardEmitter<MSBackendEventMap>());
+        const source = new TestSource('spotify', 'test-tasks', {id: `test-${Date.now()}`}, {localUrl: new URL('https://example.com'), configDir: 'fake', dataDir: 'fake', logger: loggerTest, version: 'test'},  new WildcardEmitter<MSBackendEventMap>());
         await source.initialize();
         return source;
     }
@@ -89,7 +89,7 @@ describe('Source Scheduled Tasks', function () {
     });
 
     it('Memory Source adds Player Cleanup task on initTasks and re-adds it after a restart', async function () {
-        await using source = new TestMemorySource('spotify', 'test-memory-tasks', {id: `test-${Date.now()}`}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  new WildcardEmitter<MSBackendEventMap>());
+        await using source = new TestMemorySource('spotify', 'test-memory-tasks', {id: `test-${Date.now()}`}, {localUrl: new URL('https://example.com'), configDir: 'fake', dataDir: 'fake', logger: loggerTest, version: 'test'},  new WildcardEmitter<MSBackendEventMap>());
         expect(source.scheduler.getAllJobs()).length(0);
         await source.initialize();
         source.initTasks({deadDelay: 30});
@@ -104,7 +104,7 @@ describe('Source Scheduled Tasks', function () {
 describe('Source stop', function () {
 
     it('Stops running dead queue processing', async function () {
-        await using source = new TestSource('spotify', 'test-stop-dead', {id: `test-${Date.now()}`}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  new WildcardEmitter<MSBackendEventMap>());
+        await using source = new TestSource('spotify', 'test-stop-dead', {id: `test-${Date.now()}`}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, dataDir: 'fake', version: 'test'},  new WildcardEmitter<MSBackendEventMap>());
         source.stopPollingWaitInterval = 10;
         await source.initialize();
         const failed = await source.playRepo.createPlays(generateArray<RepositoryCreatePlayOpts>(2, () => ({ ...fixtureCreatePlay(), state: 'failed', input: {} }) as RepositoryCreatePlayOpts));
@@ -533,7 +533,7 @@ class DeezerTestSource extends DeezerInternalSource {
 }
 
 const generateDeezerSource = async (options: DeezerInternalSourceOptions = {}) => {
-    const source = new DeezerTestSource('test', {id: `test-${Date.now()}`,data: {arl: 'test'}, options}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
+    const source = new DeezerTestSource('test', {id: `test-${Date.now()}`,data: {arl: 'test'}, options}, {localUrl: new URL('https://example.com'), configDir: 'fake', dataDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
     source.queueIdleMs = 2;
     source.queueConcurrency = 1;
     source.stopPollingWaitInterval = 10;

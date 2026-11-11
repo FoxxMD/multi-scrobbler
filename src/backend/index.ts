@@ -9,7 +9,7 @@ import timezone from 'dayjs/plugin/timezone.js';
 import week from 'dayjs/plugin/weekOfYear.js';
 import utc from 'dayjs/plugin/utc.js';
 import { SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
-import { getConfigDir, getDataDir } from "./common/index.ts";
+import { getConfigDir, getConfigDirCandidates, getDataDir, getDataDirCandidates, printDirCandidates } from "./common/index.ts";
 import type {AIOConfig} from "./common/infrastructure/config/aioConfig.ts";
 import { appLogger, initLogger as getInitLogger } from "./common/logging.ts";
 import { getRoot } from "./ioc.ts";
@@ -31,6 +31,8 @@ import { nonEmptyStringOrDefault } from '../core/StringUtils.ts';
 import { createDir, fileExists, fileOrDirectoryIsWriteable } from './utils/FSUtils.ts';
 import { getMigratedDb } from "./common/database/appMigrator.ts";
 import type { Server } from 'node:http';
+import { stripIndents } from 'common-tags';
+import type { InternalConfigOptional } from './common/infrastructure/Atomic.ts';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -127,11 +129,14 @@ process.on('SIGINT', (signal) => shutdown(`Received ${signal}`));
 process.on('SIGTERM', (signal) => shutdown(`Received ${signal}`));
 
 
+const configDirs = getConfigDirCandidates();
 const configDir = getConfigDir();
+const dataDirs = getDataDirCandidates();
 const dataDir = getDataDir();
 
     try {
-        initLogger.info(`Config Dir ENV : ${process.env.CONFIG_DIR} -> Resolved: ${configDir}`);
+        initLogger.debug(stripIndents`Config Dir Canidates:\n${printDirCandidates(configDirs)}`);
+        initLogger.info(`Config Dir Resolved: ${configDir}`);
         try {
             const exists = fileExists(configDir);
             if(!exists) {
@@ -141,7 +146,8 @@ const dataDir = getDataDir();
         } catch (e) {
             initLogger.warn(new Error('Could not access config dir. It is likely your config files will not be able to be read.', {cause: e}));
         }
-        initLogger.info(`Data Dir ENV   : ${process.env.DATA_DIR} -> Resolved: ${getDataDir()}`);
+        initLogger.debug(stripIndents`Data Dir Canidates:\n${printDirCandidates(dataDirs)}`);
+        initLogger.info(`Data Dir Resolved: ${getDataDir()}`);
         try {
             const exists = fileExists(dataDir);
             if(!exists) {
@@ -216,11 +222,12 @@ const dataDir = getDataDir();
             db
         });
 
-        const internalConfigOptional = {
-             localUrl: root.get('localUrl'),
+        const internalConfigOptional: InternalConfigOptional = {
+            localUrl: root.get('localUrl'),
             configDir: root.get('configDir'),
-             version: root.get('version')
-             };
+            dataDir: root.get('dataDir'),
+            version: root.get('version')
+        };
 
         scrobbleClients = new ScrobbleClients(root.get('clientEmitter'), root.get('sourceEmitter'), internalConfigOptional, root.get('logger'));
         scrobbleSources = new ScrobbleSources(root.get('sourceEmitter'), internalConfigOptional, root.get('logger'));

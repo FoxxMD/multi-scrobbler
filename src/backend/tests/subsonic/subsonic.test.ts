@@ -61,6 +61,7 @@ const createSource = (detectStaleNowPlayingFromMinutesAgo?: boolean) => {
     const source = new TestSubsonicSource('test', config, {
         localUrl: new URL('https://example.com'),
         configDir: 'test',
+        dataDir: 'test',
         logger: loggerTest,
         version: 'test'
     }, new EventEmitter());

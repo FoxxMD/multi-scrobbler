@@ -75,7 +75,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             this.logger.warn('Interval should probably be 5 seconds or above! Spotify may return 429 response (too many requests)');
         }
 
-        this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
+        this.workingCredsPath = `${this.dataDir}/currentCreds-${name}.json`;
         this.canPoll = true;
         this.canBacklog = true;
         this.supportsUpstreamRecentlyPlayed = true;
