@@ -13,7 +13,7 @@ import { childLogger, type Logger } from '@foxxmd/logging';
 import { getDataDir } from './index.ts';
 import path from 'path';
 import { cacheFunctions } from "@foxxmd/regex-buddy-core";
-import { fileOrDirectoryIsWriteable } from '../utils/FSUtils.ts';
+import { fileOrDirectoryIsAccessible } from '../utils/FSUtils.ts';
 import { asCacheConfig, type CacheAuthProvider, type CacheConfig, type CacheConfigOptions, type CacheConfigUser } from './infrastructure/Atomic.ts';
 import { Typeson } from 'typeson';
 import { builtin } from 'typeson-registry';
@@ -387,7 +387,7 @@ export const flatCacheLoad = async (flatCache: FlatCache, logger: Logger = logge
 
     const cachePath = path.join(flatCache.cacheDir, flatCache.cacheId);
     try {
-        fileOrDirectoryIsWriteable(cachePath);
+        fileOrDirectoryIsAccessible(cachePath);
     } catch (e) {
         throw new Error(`Unable to use path for file cache at ${cachePath}`, { cause: e })
     }

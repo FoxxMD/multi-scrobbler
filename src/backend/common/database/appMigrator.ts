@@ -5,7 +5,7 @@ import { Migrator } from 'sqlite-up';
 import { projectRootDir, type MigrationStatus } from "../infrastructure/Atomic.ts";
 import * as fs from "fs/promises";
 import { backupDb, getDbBackupPath, MEMORY_DB_NAME } from "./Database.ts";
-import { fileExists, fileOrDirectoryIsWriteable } from "../../utils/FSUtils.ts";
+import { fileExists, fileOrDirectoryIsAccessible } from "../../utils/FSUtils.ts";
 import { getDbMigrationStatus, getDb, type DbConcrete, migrateDb } from "./drizzle/drizzleUtils.ts";
 
 export interface MigrateBaseContext {
@@ -90,7 +90,7 @@ export const getMigratedDb = async (dbPath: string, opts: {
   backedUp = false;
   if (!isMemory) {
     try {
-      fileOrDirectoryIsWriteable(dbPath);
+      fileOrDirectoryIsAccessible(dbPath);
     } catch (e) {
       throw new Error('Database directory is not accessible', { cause: e });
     }

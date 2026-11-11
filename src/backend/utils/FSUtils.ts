@@ -36,31 +36,42 @@ export async function readText(path: any) {
 
 export const createDir = (location: string) => promises.mkdir(location, {recursive: true});
 
-export const fileOrDirectoryIsWriteable = (location: string) => {
+export const fileOrDirectoryIsAccessible = (location: string, mode: number = constants.R_OK | constants.W_OK) => {
+    let permHint: string;
+    switch(mode) {
+        case (constants.R_OK | constants.W_OK):
+            permHint = 'permission to write';
+            break;
+        case (constants.R_OK):
+            permHint = 'permission to read';
+            break;
+        default:
+            permHint = `${mode} permissions`;
+    }
     const pathInfo = pathUtil.parse(location);
     const isDir = pathInfo.ext === '';
     try {
-        accessSync(location, constants.R_OK | constants.W_OK);
+        accessSync(location, mode);
         return true;
     } catch (err: any) {
         const { code } = err;
         if (code === 'ENOENT') {
             // file doesn't exist, see if we can write to directory in which case we are good
             try {
-                accessSync(pathInfo.dir, constants.R_OK | constants.W_OK);
+                accessSync(pathInfo.dir, mode);
                 // we can write to dir
                 return true;
             } catch (accessError: any) {
                 if (accessError.code === 'EACCES') {
                     // also can't access directory :(
-                    throw new Error(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application does not have permission to write to the parent directory`,{cause: accessError});
+                    throw new Error(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application does not have ${permHint} to the parent directory`,{cause: accessError});
                 }
                     
                 throw new Error(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application is unable to access the parent directory due to a system error`, { cause: accessError });
             }
         }
         if (code === 'EACCES') {
-            throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application does not have permission to write to it.`,{cause: err});
+            throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application does not have ${permHint}to it.`,{cause: err});
         }
         throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application is unable to access it due to a system error`, { cause: err });
     }

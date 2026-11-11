@@ -28,7 +28,7 @@ import { getDbPath } from './common/database/Database.ts';
 import { createRetentionCleanupTask } from './tasks/retentionCleanup.ts';
 import { type MSCache, parseUserConfig } from './common/Cache.ts';
 import { nonEmptyStringOrDefault } from '../core/StringUtils.ts';
-import { createDir, fileExists, fileOrDirectoryIsWriteable } from './utils/FSUtils.ts';
+import { createDir, fileExists, fileOrDirectoryIsAccessible } from './utils/FSUtils.ts';
 import { getMigratedDb } from "./common/database/appMigrator.ts";
 import type { Server } from 'node:http';
 import { stripIndents } from 'common-tags';
@@ -158,16 +158,14 @@ const dataDir = getDataDir();
             initLogger.warn(new Error('Could not access data dir. It is likely your data files will not be able to be read.', {cause: e}));
         }
         // fail early with an actionable message instead of a cascade of errors from logging/database setup
-        for (const dir of new Set([configDir, dataDir])) {
-            try {
-                fileOrDirectoryIsWriteable(dir);
-            } catch (e) {
-                const ids = `${process.getuid?.()}:${process.getgid?.()}`;
-                const hint = parseBool(process.env.IS_DOCKER)
-                    ? `multi-scrobbler is running as user ${ids}. If ${dir} is a bind mount, either set the container's user to the owner of the host directory (compose: user: UID:GID, docker run: --user UID:GID) or make the host directory owned by this user: sudo chown -R ${ids} /path/on/host. See https://docs.multi-scrobbler.app/installation/?dockerSetting=linuxHost#recommended-settings`
-                    : `multi-scrobbler is running as user ${ids}. Make sure this user can read and write ${dir}.`;
-                throw new Error(`${dir} is not writable. ${hint}`, {cause: e});
-            }
+        try {
+            fileOrDirectoryIsAccessible(dataDir);
+        } catch (e) {
+            const ids = `${process.getuid?.()}:${process.getgid?.()}`;
+            const hint = parseBool(process.env.IS_DOCKER)
+                ? `multi-scrobbler is running as user ${ids}. If '${dataDir}' is a bind mount, either set the container's user to the owner of the host directory (compose: user: UID:GID, docker run: --user UID:GID) or make the host directory owned by this user: sudo chown -R ${ids} /path/on/host. See https://docs.multi-scrobbler.app/installation/#user-and-permissions`
+                : `multi-scrobbler is running as user ${ids}. Make sure this user can read and write '${dataDir}'.`;
+            throw new Error(`'${dataDir}' is not writeable. ${hint}`, {cause: e});
         }
         // try to read a configuration file
         let appConfigFail: Error | undefined = undefined;
