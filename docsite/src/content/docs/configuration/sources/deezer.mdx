@@ -11,6 +11,7 @@ tableOfContents:
 import DeezerConfig from '@site/../config/deezer.json.example?raw';
 import DeezerDeprecatedConfig from '@site/../config/deezer-deprecated.json.example?raw';
 import ENVConfig from "@site/src/content/docs/configuration/sources/_env_configs/_deezer.md";
+import {LocalStorageText} from '@site/src/components/Storage/Text';
 
 <Tabs groupId="deezerSource" queryString>
     <TabItem value="arl" label="Unofficial ARL">
@@ -165,9 +166,9 @@ import ENVConfig from "@site/src/content/docs/configuration/sources/_env_configs
 
         Create a new application at [Deezer Developers](https://developers.deezer.com/myapps)
 
-        * Application Domain must be the same as your multi-scrobbler domain. Default is `localhost:9078`
+        * Application Domain must be the same as your multi-scrobbler domain. Default is <LocalStorageText client:load initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="placeholder" storageKey="http://YOUR_MS_DOMAIN:9078"/>
         * Redirect URL must end in `deezer/callback`
-        * Default would be `http://localhost:9078/deezer/callback`
+        * Default would be <code><LocalStorageText client:load initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="placeholder" storageKey="http://YOUR_MS_DOMAIN:9078"/>/deezer/callback</code>
 
         After application creation you should have credentials displayed in the "My Apps" dashboard. You will need:
 

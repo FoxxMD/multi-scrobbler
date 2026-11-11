@@ -10,6 +10,7 @@ tableOfContents:
 
 import JsonConfig from '@site/../config/ytmusic.json.example?raw';
 import ENVConfig from "@site/src/content/docs/configuration/sources/_env_configs/_ytmusic.md";
+import {LocalStorageText} from '@site/src/components/Storage/Text';
 
 <Aside type="warning">
 
@@ -119,7 +120,7 @@ Only one of these methods needs to be used.
         Redirect URI: http://YOUR_MS_DOMAIN:9078/api/ytmusic/callback?name=MyYTM
         ```
 
-        If the beginning of the Redirect URI (before `api`) is EXACTLY how you would reach the MS dashboard from your browser (EX `http://localhost:9078`) then edit your google oauth client section for `Authorized redirect URIs` and add the URL MS has displayed.
+        If the beginning of the Redirect URI (before `api`) is EXACTLY how you would reach the MS dashboard from your browser (EX <LocalStorageText client:load initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="inline" storageKey="http://YOUR_MS_DOMAIN:9078"/>) then edit your google oauth client section for `Authorized redirect URIs` and add the URL MS has displayed.
 
         If it is NOT EXACTLY the same you either need to set MS's [base url](/configuration#base-url) or you can provide your own (Custom) Redirect URI for MS to use by setting it in `ytmusic.json` or ENV.
 

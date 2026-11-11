@@ -90,8 +90,8 @@ Use **one** of the scenarios below based on how on your service(s) (things "scro
 
 In most scenarios you should use one of the following as the **base URL** when configuring your service to scrobble to multi-scrobbler:
 
-* <code><LocalStorageText client:load initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="placeholder" storageKey="http://YOUR_MS_DOMAIN:9078"/></code>
-* <code><LocalStorageText client:load initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="placeholder" storageKey="http://YOUR_MS_DOMAIN:9078"/>/1/</code>
+* <LocalStorageText client:load initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="inline" storageKey="http://YOUR_MS_DOMAIN:9078"/>
+* <LocalStorageText client:load initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="inline" storageKey="http://YOUR_MS_DOMAIN:9078" suffix="/1/"/>
 
 <DetailsAdmo type="tip" summary="Standard Endpoints">
 
@@ -228,7 +228,7 @@ Then, follow the steps to enable and configure Listenbrainz in TIDAL Hi-Fi Setti
 
 In those settings, ensure that:
 
-* the ending of the **API URL** you set matches the `slug` you configured above EX `slug=tidal` => `http://localhost:9078/api/listenbrainz/tidal`
+* the ending of the **API URL** you set matches the `slug` you configured above EX `slug=tidal` => <LocalStorageText client:load initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="inline" storageKey="http://YOUR_MS_DOMAIN:9078" suffix="/api/listenbrainz/tidal"/>
 * the token you configured above matches the **User Token** you set in Hi-Fi
 
 </details>

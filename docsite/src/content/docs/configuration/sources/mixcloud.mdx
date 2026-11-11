@@ -11,6 +11,7 @@ tableOfContents:
 
 import JsonConfig from '@site/../config/mixcloud.json.example?raw';
 import ENVConfig from "@site/src/content/docs/configuration/sources/_env_configs/_mixcloud.md";
+import {LocalStorageText} from '@site/src/components/Storage/Text';
 
 [**Mixcloud**](https://www.mixcloud.com/) is a platform for DJ mixes, radio shows, and podcasts.
 
@@ -57,7 +58,7 @@ If your listening history is private, or you have a pro account, authenticate wi
 
 The user who completes the sign-in will be the monitored user for this Source.
 
-The authorize flow redirects to `/api/mixcloud/callback` on the address the multi-scrobbler web UI is served from (default `http://localhost:9078`). If multi-scrobbler is behind a reverse proxy, complete sign-in from that address.
+The authorize flow redirects to `/api/mixcloud/callback` on the address the multi-scrobbler web UI is served from ( <LocalStorageText client:load initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="inline" storageKey="http://YOUR_MS_DOMAIN:9078"/> ). If multi-scrobbler is behind a reverse proxy, complete sign-in from that address.
 
 </TabItem>
 </Tabs>

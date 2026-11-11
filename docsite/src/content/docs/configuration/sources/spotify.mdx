@@ -10,6 +10,7 @@ tableOfContents:
 
 import SpotifyConfig from '@site/../config/spotify.json.example?raw';
 import ENVConfig from "@site/src/content/docs/configuration/sources/_env_configs/_spotify.md";
+import {LocalStorageText} from '@site/src/components/Storage/Text';
 
 
 <DetailsAdmo type="note" summary="Spotify and Automix">
@@ -87,7 +88,7 @@ Use **one** of the following methods to specify a valid Redirect URI and complet
 
         ![echo](../echo.png)
 
-        4. In the URL, replace `127.0.0.1:5079` with the address/IP for your multi-scrobbler instance so the URL is similar to `http://192.168.0.101:9078/callback?code=xxxxxx...`. Then navigate to this URL to complete authentication.
+        4. In the URL, replace `127.0.0.1:5079` with the address/IP for your multi-scrobbler instance so the URL is similar to <LocalStorageText client:load initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="inline" storageKey="http://YOUR_MS_DOMAIN:9078" suffix="/api/webscrobbler" suffix="/callback?code=xxxx..."/> . Then navigate to this URL to complete authentication.
 
     </TabItem>
 

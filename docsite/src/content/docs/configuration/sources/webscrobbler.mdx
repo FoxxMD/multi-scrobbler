@@ -10,6 +10,7 @@ tableOfContents:
 
 import JsonConfig from '@site/../config/webscrobbler.json.example?raw';
 import ENVConfig from "@site/src/content/docs/configuration/sources/_env_configs/_webscrobbler.md";
+import {LocalStorageText} from '@site/src/components/Storage/Text';
 
 :::tip
 
@@ -21,7 +22,7 @@ After installing the [Webscrobbler extension](https://web-scrobbler.com/) open t
 
 * Under **Accounts**
   * **Add Webhook**
-    * API URL: `[YourMultiScrobblerInstance]/api/webscrobbler` EX `http://localhost:9078/api/webscrobbler`
+    * API URL: `[YourMultiScrobblerInstance]/api/webscrobbler` EX <LocalStorageText client:load initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="inline" storageKey="http://YOUR_MS_DOMAIN:9078" suffix="/api/webscrobbler"/>
     * Application name: `(whatever you want)`
 
 Reload the extension after adding the webhook.
@@ -71,12 +72,12 @@ If you would like use multiple WebScrobbler sources they can be matched using a 
     ]
     ```
 
-    * To use `aUserWS` source set **API URL** to `http://localhost:9078/api/webscrobbler/usera`
-    * To use `bUserWS` source set **API URL** to `http://localhost:9078/api/webscrobbler/userb`
+    * To use `aUserWS` source set **API URL** to <LocalStorageText client:load initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="inline" storageKey="http://YOUR_MS_DOMAIN:9078" suffix="/api/webscrobbler/usera"/>
+    * To use `bUserWS` source set **API URL** to <LocalStorageText client:load initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="inline" storageKey="http://YOUR_MS_DOMAIN:9078" suffix="/api/webscrobbler/userb"/>
 
     :::tip
 
-    `http://localhost:9078/api/webscrobbler` is matched with the first source that _that does not have a slug defined._
+    <LocalStorageText client:load initialValue="http://YOUR_MS_DOMAIN:9078" stylePreset="inline" storageKey="http://YOUR_MS_DOMAIN:9078" suffix="/api/webscrobbler"/> is matched with the first source that _that does not have a slug defined._
 
     :::
 
