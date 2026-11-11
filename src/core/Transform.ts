@@ -101,16 +101,23 @@ export const RULE_PARTS = ['title', 'artists', 'albumArtists', 'album', 'duratio
 export type RulePart = typeof RULE_PARTS[number];
 
 /**
+ * Build a single Rule from the term schema it accepts
+ *
+ * Use to add Stage-specific Rules to the result of `buildRulesSchema` with `.extend()`
+ *
+ * @param defaultVal Value when not specified by the user. Without a default the Rule is optional (undefined)
+ * */
+export const buildRuleSchema = <T extends z.ZodType>(term: T, defaultVal: z.output<T> | undefined, description: string) =>
+    // ponytail: cast so defaulted and optional rules share one type, both output z.output<T> | undefined
+    (defaultVal !== undefined ? term.default(defaultVal as never) : term.optional()).meta({description}) as unknown as z.ZodOptional<T>;
+
+/**
  * Build the Rules (per Play part) for a Stage from the term schema each part accepts
  *
  * @param defaults Value for a part when it is not specified by the user. Parts without a default are optional (undefined)
  * */
 export const buildRulesSchema = <T extends z.ZodType>(term: T, defaults: Partial<Record<RulePart, z.output<T>>> = {}) => {
-    const rule = (part: RulePart, description: string) => {
-        const val = defaults[part];
-        // ponytail: cast so defaulted and optional parts share one type, both output z.output<T> | undefined
-        return (val !== undefined ? term.default(val as never) : term.optional()).meta({description}) as unknown as z.ZodOptional<T>;
-    }
+    const rule = (part: RulePart, description: string) => buildRuleSchema(term, defaults[part], description);
     return z.object({
         title: rule('title', 'Rule for Play title'),
         artists: rule('artists', 'Rule for Play artists'),

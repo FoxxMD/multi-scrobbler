@@ -23,7 +23,7 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Stage
         protected readonly hydratesCredits: boolean = false;
 
         /** A rule is enabled if it is defined, not false, and any `when` condition it has is met */
-        protected ruleEnabled(play: PlayObject, name: PartName, part: unknown): boolean {
+        protected ruleEnabled(play: PlayObject, name: string, part: unknown): boolean {
             if (part === undefined || part === null || part === false) {
                 return false;
             }

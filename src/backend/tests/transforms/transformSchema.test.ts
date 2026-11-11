@@ -4,6 +4,7 @@ import * as z from 'zod';
 import {
     applyTermSchema,
     buildPlayTransformSchema,
+    buildRuleSchema,
     buildRulesSchema,
     buildStageSchema,
     searchReplaceTermSchema,
@@ -55,6 +56,17 @@ describe('Transform Schemas', function () {
             expect(rules.title).to.eql(true);
             expect(rules.album).to.eql(false);
             expect(rules.artists).to.be.undefined;
+        });
+        it('extends with a stage-specific rule', function () {
+            const schema = buildRulesSchema(applyTermSchema, {title: true}).extend({
+                lyrics: buildRuleSchema(applyTermSchema, true, 'Rule for lyrics'),
+                extra: buildRuleSchema(applyTermSchema, undefined, 'Rule for extra'),
+            });
+            const rules = schema.parse({});
+            expect(rules.title).to.eql(true);
+            expect(rules.lyrics).to.eql(true);
+            expect(rules.extra).to.be.undefined;
+            expect(schema.parse({lyrics: {when: {title: 'foo'}}}).lyrics).to.eql({when: [{title: 'foo'}]});
         });
     });
 
