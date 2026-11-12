@@ -3,23 +3,23 @@ import type { SearchTerm } from "../../../../core/Transform.ts"
 import { getPlayPartTester, type SuppliedPlayPartTesters, testWhenConditions } from "../../../utils/PlayTransformUtils.ts";
 import type { WebhookPayload } from "../../infrastructure/config/health/webhooks.ts";
 import AbstractTransformer from "../AbstractTransformer.ts"
-import { actionRulesSchema, actionRulesUnitSchema, actionStageSchema, type ActionStage, type ActionStageRulesUnit, type ActionType } from "./ActionTransformerUtil.ts"
+import { matchRulesSchema, matchRulesUnitSchema, actionStageSchema, type ActionStage, type ActionStageRulesUnit, type ActionType } from "./MatchTransformerUtil.ts"
 
-const ACTION_RULE_PARTS = actionRulesUnitSchema.keyof().options;
-type ActionRulePart = typeof ACTION_RULE_PARTS[number];
+const MATCH_RULE_PARTS = matchRulesUnitSchema.keyof().options;
+type MatchRulePart = typeof MATCH_RULE_PARTS[number];
 
 /** Parsed test value (`search` of each term) for each Action rule part */
-type ActionPartTests = { [K in ActionRulePart]: NonNullable<ActionStageRulesUnit[K]> extends SearchTerm<infer T>[] ? T : never };
+type MatchPartTests = { [K in MatchRulePart]: NonNullable<ActionStageRulesUnit[K]> extends SearchTerm<infer T>[] ? T : never };
 
-export default class ActionTransformer extends AbstractTransformer<string, ActionStage> {
+export default class MatchTransformer extends AbstractTransformer<string, ActionStage> {
 
     protected readonly stageSchema = actionStageSchema;
 
     /** Testers for Action rule parts without a built-in tester, or to override them */
-    protected readonly partTesters: SuppliedPlayPartTesters<ActionPartTests> = {};
+    protected readonly partTesters: SuppliedPlayPartTesters<MatchPartTests> = {};
 
     /** Any term matches (OR). A term with a `when` is only tested if its `when` matches */
-    protected testTerms(play: PlayObject, part: ActionRulePart, terms: SearchTerm<unknown>[]): boolean {
+    protected testTerms(play: PlayObject, part: MatchRulePart, terms: SearchTerm<unknown>[]): boolean {
         const tester = getPlayPartTester<unknown>(part, this.partTesters);
         const regex = { testMaybeRegex: this.regex.testMaybeRegex };
         return terms.some((term) => {
@@ -32,10 +32,10 @@ export default class ActionTransformer extends AbstractTransformer<string, Actio
     }
 
     /** Parts with terms in this rule set */
-    protected rulesUnitParts(unit: ActionStageRulesUnit): [ActionRulePart, SearchTerm<unknown>[]][] {
-        return ACTION_RULE_PARTS
-            .map((part) => [part, unit[part]] as [ActionRulePart, SearchTerm<unknown>[] | undefined])
-            .filter((x): x is [ActionRulePart, SearchTerm<unknown>[]] => x[1] !== undefined && x[1].length > 0);
+    protected rulesUnitParts(unit: ActionStageRulesUnit): [MatchRulePart, SearchTerm<unknown>[]][] {
+        return MATCH_RULE_PARTS
+            .map((part) => [part, unit[part]] as [MatchRulePart, SearchTerm<unknown>[] | undefined])
+            .filter((x): x is [MatchRulePart, SearchTerm<unknown>[]] => x[1] !== undefined && x[1].length > 0);
     }
 
     /** Every part with terms matches (AND). A rule set without terms does not match */
@@ -46,9 +46,9 @@ export default class ActionTransformer extends AbstractTransformer<string, Actio
 
     /** Stage terms are applied first, then terms from transformer `defaults` */
     protected doParseConfig(data: ActionStage): ActionStage {
-        const defaults = actionRulesSchema.parse(this.config.defaults ?? {});
+        const defaults = matchRulesSchema.parse(this.config.defaults ?? {});
         const merged: ActionStage = {...data, matches: [...(data.matches ?? []), ...(defaults.matches ?? [])]};
-        for (const part of ACTION_RULE_PARTS) {
+        for (const part of MATCH_RULE_PARTS) {
             // ponytail: cast, every part is an array of terms but TS can't correlate the key with its term type
             (merged as unknown as Record<string, unknown[]>)[part] = [...(data[part] ?? []), ...(defaults[part] ?? [])];
         }

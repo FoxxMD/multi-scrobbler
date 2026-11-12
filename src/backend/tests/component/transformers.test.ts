@@ -24,7 +24,7 @@ import SpotifyTransformer from "../../common/transforms/SpotifyTransformer.ts";
 import RockskyTransformer from "../../common/transforms/rocksky/RockskyTransformer.ts";
 import CoverArtArchiveTransformer from "../../common/transforms/coverartarchive/CoverArtArchiveTransformer.ts";
 import { parseDurationComparison } from "../../../core/TimeUtils.ts";
-import ActionTransformer from "../../common/transforms/action/ActionTransformer.ts";
+import MatchTransformer from "../../common/transforms/match/MatchTransformer.ts";
 import { testPlayParts, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import { SkipTransformStageError, TransformRulesError } from "../../common/errors/MSErrors.ts";
 import { COMPONENT_STATE, type ComponentState, type TrackSearchResult } from "../../../core/Api.ts";
@@ -860,7 +860,7 @@ describe('Play Transforms', function () {
 
     describe('Action Stage', function () {
 
-        class TestAction extends ActionTransformer {
+        class TestAction extends MatchTransformer {
             public test(play: PlayObject, stage: unknown) {
                 const {matches = [], ...topLevel} = this.parseConfig(stage);
                 return [topLevel, ...matches].some(unit => this.testRulesUnit(play, unit));

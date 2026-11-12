@@ -3,7 +3,7 @@ import { buildRuleSchema, buildRulesSchema, buildSearchTermSchema, buildStageSch
 import { durationComparisonSchema } from "../../../../core/TimeUtils.ts";
 
 // meta is not testable by Action Stages (no tester)
-export const actionRulesUnitSchema = buildRulesSchema(maybeArraySchema(searchTermSchema)).omit({meta: true}).extend({
+export const matchRulesUnitSchema = buildRulesSchema(maybeArraySchema(searchTermSchema)).omit({meta: true}).extend({
     duration: buildRuleSchema(maybeArraySchema(buildSearchTermSchema(durationComparisonSchema, 'Duration Term')), undefined, 'Match Play duration EX > 7 s'),
     listenedFor: buildRuleSchema(maybeArraySchema(buildSearchTermSchema(durationComparisonSchema, 'Listened For Term')), undefined, 'Match listened for duration EX > 7 s'),
     musicService: buildRuleSchema(maybeArraySchema(searchTermSchema), undefined, 'Match music service'),
@@ -13,19 +13,19 @@ export const actionRulesUnitSchema = buildRulesSchema(maybeArraySchema(searchTer
     playlist: buildRuleSchema(maybeArraySchema(searchTermSchema), undefined, 'Match playlist name/id'),
 });
 
-export type ActionStageRulesUnit = z.output<typeof actionRulesUnitSchema>
+export type ActionStageRulesUnit = z.output<typeof matchRulesUnitSchema>
 
-export const actionRulesSchema = actionRulesUnitSchema.extend({
-    matches: z.array(actionRulesUnitSchema).optional().meta({description: 'A set of OR conditions to match'})
+export const matchRulesSchema = matchRulesUnitSchema.extend({
+    matches: z.array(matchRulesUnitSchema).optional().meta({description: 'A set of OR conditions to match'})
 })
 
-export type ActionStageRules = z.output<typeof actionRulesSchema>
+export type MatchStageRules = z.output<typeof matchRulesSchema>
 
 export const actionType = z.enum(['approve','ignore','review']);
 
 export type ActionType = z.infer<typeof actionType>;
 
-export const actionStageSchema = buildStageSchema('action', actionRulesSchema, z.object({})).meta({title: 'Action Stage'}).extend({
+export const actionStageSchema = buildStageSchema('action', matchRulesSchema, z.object({})).meta({title: 'Action Stage'}).extend({
     actionOnSuccess: actionType,
     actionOnFailure: actionType
 });
