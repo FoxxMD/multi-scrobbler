@@ -1,76 +1,70 @@
 import type { PlayObject, OptionalCacheUsage } from "../../../../core/Atomic.ts";
 import type { SearchTerm } from "../../../../core/Transform.ts"
-import { testWhenConditions } from "../../../utils/PlayTransformUtils.ts";
+import { getPlayPartTester, type SuppliedPlayPartTesters, testWhenConditions } from "../../../utils/PlayTransformUtils.ts";
 import type { WebhookPayload } from "../../infrastructure/config/health/webhooks.ts";
 import AbstractTransformer from "../AbstractTransformer.ts"
-import { actionRulesUnitSchema, actionStageSchema, type ActionStage, type ActionType } from "./ActionTransformerUtil.ts"
+import { actionRulesSchema, actionRulesUnitSchema, actionStageSchema, type ActionStage, type ActionStageRulesUnit, type ActionType } from "./ActionTransformerUtil.ts"
 
-const actionRuleKeys = actionRulesUnitSchema.keyof();
+const ACTION_RULE_PARTS = actionRulesUnitSchema.keyof().options;
+type ActionRulePart = typeof ACTION_RULE_PARTS[number];
 
-export default class ActionTransformer extends AbstractTransformer<SearchTerm, ActionStage> {
+/** Parsed test value (`search` of each term) for each Action rule part */
+type ActionPartTests = { [K in ActionRulePart]: NonNullable<ActionStageRulesUnit[K]> extends SearchTerm<infer T>[] ? T : never };
+
+export default class ActionTransformer extends AbstractTransformer<string, ActionStage> {
 
     protected readonly stageSchema = actionStageSchema;
 
-    /** A rule is enabled if it is defined, not false, and any `when` condition it has is met */
-    protected ruleEnabled(play: PlayObject, name: string, part: unknown): boolean {
-        if (part === undefined || part === null || part === false) {
-            return false;
-        }
-        if (typeof part === 'object' && !Array.isArray(part) && 'when' in part && part.when !== undefined) {
-            if (!testWhenConditions(part.when as Parameters<typeof testWhenConditions>[0], play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                this.logger.debug(`When condition for ${name} not met, will not use it`);
+    /** Testers for Action rule parts without a built-in tester, or to override them */
+    protected readonly partTesters: SuppliedPlayPartTesters<ActionPartTests> = {};
+
+    /** Any term matches (OR). A term with a `when` is only tested if its `when` matches */
+    protected testTerms(play: PlayObject, part: ActionRulePart, terms: SearchTerm<unknown>[]): boolean {
+        const tester = getPlayPartTester<unknown>(part, this.partTesters);
+        const regex = { testMaybeRegex: this.regex.testMaybeRegex };
+        return terms.some((term) => {
+            if (term.when !== undefined && !testWhenConditions(term.when, play, regex)) {
+                this.logger.debug(`When condition for ${part} term not met, will not use it`);
                 return false;
             }
-        }
-        return true;
+            return tester(term.search, play, regex);
+        });
+    }
+
+    /** Parts with terms in this rule set */
+    protected rulesUnitParts(unit: ActionStageRulesUnit): [ActionRulePart, SearchTerm<unknown>[]][] {
+        return ACTION_RULE_PARTS
+            .map((part) => [part, unit[part]] as [ActionRulePart, SearchTerm<unknown>[] | undefined])
+            .filter((x): x is [ActionRulePart, SearchTerm<unknown>[]] => x[1] !== undefined && x[1].length > 0);
+    }
+
+    /** Every part with terms matches (AND). A rule set without terms does not match */
+    protected testRulesUnit(play: PlayObject, unit: ActionStageRulesUnit): boolean {
+        const parts = this.rulesUnitParts(unit);
+        return parts.length > 0 && parts.every(([part, terms]) => this.testTerms(play, part, terms));
     }
 
     /** Stage terms are applied first, then terms from transformer `defaults` */
     protected doParseConfig(data: ActionStage): ActionStage {
-        const defaults = actionStageSchema.parse(this.config.defaults ?? {});
-        const {
-            title = [],
-            artists = [],
-            album = [],
-            albumArtists = [],
-            deviceId = [],
-            library = [],
-            user = [],
-            musicService = [],
-            playlist = [],
-            matches = [],
-        } = data;
-        return {
-            ...data,
-            title: [...title, ...(defaults.title ?? [])],
-            artists: [...artists, ...(defaults.artists ?? [])],
-            album: [...album, ...(defaults.album ?? [])],
-            albumArtists: [...albumArtists, ...(defaults.albumArtists ?? [])],
-            deviceId : [...deviceId, ...(defaults.deviceId ?? [])],
-            library: [...library, ...(defaults.library ?? [])],
-            user: [...user, ...(defaults.user ?? [])],
-            musicService: [...musicService, ...(defaults.musicService ?? [])],
-            playlist: [...playlist, ...(defaults.playlist ?? [])],
-            matches: [...matches, ...(defaults.matches ?? [])]
-        };
+        const defaults = actionRulesSchema.parse(this.config.defaults ?? {});
+        const merged: ActionStage = {...data, matches: [...(data.matches ?? []), ...(defaults.matches ?? [])]};
+        for (const part of ACTION_RULE_PARTS) {
+            // ponytail: cast, every part is an array of terms but TS can't correlate the key with its term type
+            (merged as unknown as Record<string, unknown[]>)[part] = [...(data[part] ?? []), ...(defaults[part] ?? [])];
+        }
+        return merged;
     }
 
     protected async doHandle(parts: ActionStage, play: PlayObject, transformData: string, opts?: OptionalCacheUsage): Promise<PlayObject> {
-        const {
-            throwOnFailure = false,
-        } = this.config.options || {};
+        const { matches = [], ...topLevel } = parts;
 
-        let state: ActionType;
-        prop:
-        for(const [key, val] of Object.entries(parts)) {
-            if(actionRuleKeys.validate(key) && this.ruleEnabled(play, key, val)) {
-                switch(key) {
-                    case 'deviceId':
-                        state = 'approve';
-                        break prop;
-                }
-            }
-        }
+        // top-level rules and each `matches` rule set are OR'd together
+        const matched = [topLevel, ...matches].some(unit => this.testRulesUnit(play, unit));
+        const action: ActionType = matched ? parts.actionOnSuccess : parts.actionOnFailure;
+        this.logger.debug(`Rules ${matched ? 'matched' : 'did not match'}, action: ${action}`);
+
+        // TODO apply action to Play
+        return play;
     }
 
     public async notify(payload: WebhookPayload): Promise<void> {

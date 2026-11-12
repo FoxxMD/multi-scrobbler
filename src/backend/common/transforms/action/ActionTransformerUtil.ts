@@ -1,7 +1,11 @@
 import * as z from 'zod';
-import { buildRuleSchema, buildRulesSchema, buildStageSchema, maybeArraySchema, searchTermSchema } from "../../../../core/Transform.ts";
+import { buildRuleSchema, buildRulesSchema, buildSearchTermSchema, buildStageSchema, maybeArraySchema, searchTermSchema } from "../../../../core/Transform.ts";
+import { durationComparisonSchema } from "../../../../core/TimeUtils.ts";
 
-export const actionRulesUnitSchema = buildRulesSchema(maybeArraySchema(searchTermSchema)).extend({
+// meta is not testable by Action Stages (no tester)
+export const actionRulesUnitSchema = buildRulesSchema(maybeArraySchema(searchTermSchema)).omit({meta: true}).extend({
+    duration: buildRuleSchema(maybeArraySchema(buildSearchTermSchema(durationComparisonSchema, 'Duration Term')), undefined, 'Match Play duration EX > 7 s'),
+    listenedFor: buildRuleSchema(maybeArraySchema(buildSearchTermSchema(durationComparisonSchema, 'Listened For Term')), undefined, 'Match listened for duration EX > 7 s'),
     musicService: buildRuleSchema(maybeArraySchema(searchTermSchema), undefined, 'Match music service'),
     user: buildRuleSchema(maybeArraySchema(searchTermSchema), undefined, 'Match user'),
     library: buildRuleSchema(maybeArraySchema(searchTermSchema), undefined, 'Match library'),
