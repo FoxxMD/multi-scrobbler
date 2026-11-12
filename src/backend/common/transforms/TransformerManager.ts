@@ -153,6 +153,10 @@ export default class TransformerManager {
                 const CovertArtArchiveTransformer = (await import("./coverartarchive/CoverArtArchiveTransformer.ts")).default;
                 t = new CovertArtArchiveTransformer({ ...config as CovertArtArchiveTransformerConfig }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
             }   break;
+            case 'match': {
+                const MatchTransformer = (await import("./match/MatchTransformer.ts")).default;
+                t = new MatchTransformer({ ...config }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
+            }   break;
             default:
                 throw new Error(`No transformer of type '${config.type}' exists.`);
         }

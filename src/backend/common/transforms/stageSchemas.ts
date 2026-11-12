@@ -10,6 +10,7 @@ import { musicbrainzStageSchema } from "./musicbrainz/MusicbrainzTransformerUtil
 import { rockskyStageSchema } from "./rocksky/RockskyTransformerUtil.ts";
 import { spotifyStageSchema } from "./spotify/SpotifyTransformerUtil.ts";
 import { coverArtArchiveStageSchema } from "./coverartarchive/CoverArtArchiveTransformerUtil.ts";
+import { matchStageSchema } from "./match/MatchTransformerUtil.ts";
 
 /** Every Stage usable in a Hook. Each Stage's schema lives next to its Transformer -- add new Stages here. */
 export const stageSchema = z.discriminatedUnion('type', [
@@ -19,6 +20,7 @@ export const stageSchema = z.discriminatedUnion('type', [
     rockskyStageSchema,
     spotifyStageSchema,
     coverArtArchiveStageSchema,
+    matchStageSchema
 ]).meta({title: 'Stage'});
 
 export type Stage = z.output<typeof stageSchema>;

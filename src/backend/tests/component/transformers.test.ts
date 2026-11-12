@@ -890,16 +890,16 @@ describe('Play Transforms', function () {
         });
     });
 
-    describe('Action Stage', function () {
+    describe('Match Stage', function () {
 
-        class TestAction extends MatchTransformer {
+        class TestMatch extends MatchTransformer {
             public test(play: PlayObject, stage: unknown) {
                 const {matches = [], ...topLevel} = this.parseConfig(stage);
                 return [topLevel, ...matches].some(unit => this.testRulesUnit(play, unit));
             }
         }
-        const t = new TestAction({name: 'test', type: 'action'}, {logger: loggerTest, cache: memorycache()});
-        const base = {type: 'action', actionOnSuccess: 'approve', actionOnFailure: 'ignore'};
+        const t = new TestMatch({name: 'test', type: 'match'}, {logger: loggerTest, cache: memorycache()});
+        const base = {type: 'match'};
         const play = generatePlay({artists: [nameToCredit('Elephant Gym')]});
         play.meta.deviceId = 'abc';
 
@@ -931,6 +931,37 @@ describe('Play Transforms', function () {
         it('Rejects invalid duration comparison and untestable parts', function () {
             expect(() => t.test(play, {...base, duration: '120'})).to.throw();
             expect(() => t.test(play, {...base, meta: '120'})).to.not.throw();
+        });
+    });
+
+    describe('Match Stage Transforming', function () {
+
+        it('Runs a match stage through transformPlay', async function () {
+            const tmanager = new TestTransformerManager(loggerTest, transientCache());
+            tmanager.addTransformerConfig({type: 'match', name: 'test'});
+            const matchComponent = createTestComponent({
+                transformManager: tmanager,
+                options: {
+                    playTransform: {
+                        preCompare: [
+                            {type: 'match', artists: 'Elephant', onSuccessAction: 'review', onFailure: 'continue'},
+                            {type: 'match', artists: 'Nope', onFailureAction: 'discard', onFailure: 'continue'},
+                        ]
+                    }
+                }
+            });
+            await matchComponent.buildTransformRules();
+
+            const play = generatePlay({artists: [nameToCredit('Elephant Gym')]});
+            const {play: transformed, steps} = await matchComponent.transformPlay(play, TRANSFORM_HOOK.preCompare, {useCachedResult: false});
+
+            expect(steps.map(x => x.stageType)).eql(['match', 'match']);
+            expect(steps[0].error).is.undefined;
+            expect(steps[0].actionResult).eq('review');
+            expect(steps[1].flowKnownState).eq('prereq');
+            expect(steps[1].actionResult).eq('discard');
+            // match never changes the Play
+            expect(transformed.data).eql(play.data);
         });
     });
 

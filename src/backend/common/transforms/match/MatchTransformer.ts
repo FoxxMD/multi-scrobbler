@@ -1,19 +1,20 @@
 import type { PlayObject, OptionalCacheUsage } from "../../../../core/Atomic.ts";
 import type { SearchTerm } from "../../../../core/Transform.ts"
 import { getPlayPartTester, type SuppliedPlayPartTesters, testWhenConditions } from "../../../utils/PlayTransformUtils.ts";
+import { StagePrerequisiteError } from "../../errors/MSErrors.ts";
 import type { WebhookPayload } from "../../infrastructure/config/health/webhooks.ts";
 import AbstractTransformer from "../AbstractTransformer.ts"
-import { matchRulesSchema, matchRulesUnitSchema, actionStageSchema, type ActionStage, type ActionStageRulesUnit, type ActionType } from "./MatchTransformerUtil.ts"
+import { matchRulesSchema, matchRulesUnitSchema, matchStageSchema, type MatchStage, type MatchStageRulesUnit } from "./MatchTransformerUtil.ts"
 
 const MATCH_RULE_PARTS = matchRulesUnitSchema.keyof().options;
 type MatchRulePart = typeof MATCH_RULE_PARTS[number];
 
 /** Parsed test value (`search` of each term) for each Action rule part */
-type MatchPartTests = { [K in MatchRulePart]: NonNullable<ActionStageRulesUnit[K]> extends SearchTerm<infer T>[] ? T : never };
+type MatchPartTests = { [K in MatchRulePart]: NonNullable<MatchStageRulesUnit[K]> extends SearchTerm<infer T>[] ? T : never };
 
-export default class MatchTransformer extends AbstractTransformer<string, ActionStage> {
+export default class MatchTransformer extends AbstractTransformer<string, MatchStage> {
 
-    protected readonly stageSchema = actionStageSchema;
+    protected readonly stageSchema = matchStageSchema;
 
     /** Testers for Action rule parts without a built-in tester, or to override them */
     protected readonly partTesters: SuppliedPlayPartTesters<MatchPartTests> = {};
@@ -32,22 +33,22 @@ export default class MatchTransformer extends AbstractTransformer<string, Action
     }
 
     /** Parts with terms in this rule set */
-    protected rulesUnitParts(unit: ActionStageRulesUnit): [MatchRulePart, SearchTerm<unknown>[]][] {
+    protected rulesUnitParts(unit: MatchStageRulesUnit): [MatchRulePart, SearchTerm<unknown>[]][] {
         return MATCH_RULE_PARTS
             .map((part) => [part, unit[part]] as [MatchRulePart, SearchTerm<unknown>[] | undefined])
             .filter((x): x is [MatchRulePart, SearchTerm<unknown>[]] => x[1] !== undefined && x[1].length > 0);
     }
 
     /** Every part with terms matches (AND). A rule set without terms does not match */
-    protected testRulesUnit(play: PlayObject, unit: ActionStageRulesUnit): boolean {
+    protected testRulesUnit(play: PlayObject, unit: MatchStageRulesUnit): boolean {
         const parts = this.rulesUnitParts(unit);
         return parts.length > 0 && parts.every(([part, terms]) => this.testTerms(play, part, terms));
     }
 
     /** Stage terms are applied first, then terms from transformer `defaults` */
-    protected doParseConfig(data: ActionStage): ActionStage {
+    protected doParseConfig(data: MatchStage): MatchStage {
         const defaults = matchRulesSchema.parse(this.config.defaults ?? {});
-        const merged: ActionStage = {...data, matches: [...(data.matches ?? []), ...(defaults.matches ?? [])]};
+        const merged: MatchStage = {...data, matches: [...(data.matches ?? []), ...(defaults.matches ?? [])]};
         for (const part of MATCH_RULE_PARTS) {
             // ponytail: cast, every part is an array of terms but TS can't correlate the key with its term type
             (merged as unknown as Record<string, unknown[]>)[part] = [...(data[part] ?? []), ...(defaults[part] ?? [])];
@@ -55,15 +56,14 @@ export default class MatchTransformer extends AbstractTransformer<string, Action
         return merged;
     }
 
-    protected async doHandle(parts: ActionStage, play: PlayObject, transformData: string, opts?: OptionalCacheUsage): Promise<PlayObject> {
+    protected async doHandle(parts: MatchStage, play: PlayObject, transformData: string, opts?: OptionalCacheUsage): Promise<PlayObject> {
         const { matches = [], ...topLevel } = parts;
 
         // top-level rules and each `matches` rule set are OR'd together
         const matched = [topLevel, ...matches].some(unit => this.testRulesUnit(play, unit));
-        const action: ActionType = matched ? parts.actionOnSuccess : parts.actionOnFailure;
-        this.logger.debug(`Rules ${matched ? 'matched' : 'did not match'}, action: ${action}`);
-
-        // TODO apply action to Play
+        if(matched === false) {
+            throw new StagePrerequisiteError('No rules matched this Play');
+        }
         return play;
     }
 
