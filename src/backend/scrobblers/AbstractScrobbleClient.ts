@@ -751,7 +751,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     findExistingSubmittedPlayObj = async (playObjPre: PlayObject): Promise<([undefined, undefined] | [undefined, ScrobbledPlayObject[]] | [ScrobbledPlayObject, ScrobbledPlayObject[]])> => {
 
-        const playObj = await this.transformPlay(playObjPre, TRANSFORM_HOOK.candidate);
+        const {play: playObj} = await this.transformPlay(playObjPre, TRANSFORM_HOOK.candidate);
 
         if(this.transformRules.compare?.existing === undefined) {
             // if no existing transform then we can run cheap db match
@@ -764,7 +764,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         const closeTemporalPlays = await this.playRepo.getTemporallyClosePlays(playObj, {states: ['scrobbled'], notId: playObjPre.id});
 
-        const dtInvariantMatches = (await pMap(closeTemporalPlays.map(x => x.play), this.staggerMappers.existing(async x => (await this.transformPlay(x, TRANSFORM_HOOK.existing))), {concurrency: 3}))
+        const dtInvariantMatches = (await pMap(closeTemporalPlays.map(x => x.play), this.staggerMappers.existing(async x => (await this.transformPlay(x, TRANSFORM_HOOK.existing)).play), {concurrency: 3}))
             .filter(x => playObjDataMatch(playObj, x));
 
         if (dtInvariantMatches.length === 0) {
@@ -1134,11 +1134,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
 
             if(transform) {
-                const {lifecycle = [], ...rest} = await this.transformPlay(playEntity.play, TRANSFORM_HOOK.preCompare, {useCachedResult: useCache});
-                if(lifecycle.length > 0) {
-                    events.push({...transformToPlayEvent(lifecycle), createdAt: dayjs()});
+                const {play, steps} = await this.transformPlay(playEntity.play, TRANSFORM_HOOK.preCompare, {useCachedResult: useCache});
+                if(steps.length > 0) {
+                    events.push({...transformToPlayEvent(steps), createdAt: dayjs()});
                 }
-                playEntity.play = rest;
+                playEntity.play = play;
             }
 
             let historicalPlays: PlayObject[] = [];
@@ -1179,12 +1179,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
             signal?.throwIfAborted();
             if (!isDupe) {
-                const transformedScrobble = transform ? await this.transformPlay(playEntity.play, TRANSFORM_HOOK.postCompare, {useCachedResult: useCache}) : playEntity.play;
-                const { lifecycle = [], ...restPlay } = transformedScrobble;
-                playEntity.play = restPlay;
-                const psLifecycle = lifecycle.filter(x => x.hook === TRANSFORM_HOOK.postCompare);
-                if (psLifecycle.length > 0) {
-                    events.push({ ...transformToPlayEvent(psLifecycle), createdAt: dayjs() });
+                const { play: transformedScrobble, steps } = transform ? await this.transformPlay(playEntity.play, TRANSFORM_HOOK.postCompare, {useCachedResult: useCache}) : {play: playEntity.play, steps: []};
+                playEntity.play = transformedScrobble;
+                if (steps.length > 0) {
+                    events.push({ ...transformToPlayEvent(steps), createdAt: dayjs() });
                 }
                 signal?.throwIfAborted();
                 try {
@@ -1333,8 +1331,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
         const sourceId = `${source.name}-${source.type}`;
         if(data.play !== undefined) {
-            const transformed = await this.transformPlay(data.play, TRANSFORM_HOOK.preCompare);
-            data.play = transformed;
+            data.play = (await this.transformPlay(data.play, TRANSFORM_HOOK.preCompare)).play;
         }
         if(isDebugMode()) {
             let playHint = '';

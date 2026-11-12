@@ -443,6 +443,13 @@ export interface LifecycleStep {
     createdAt: string
 }
 
+/** Result of running a Hook's Stages on a Play */
+export interface TransformPlayResult {
+    play: PlayObject
+    /** Only the steps generated (or reused from cache) by this run */
+    steps: LifecycleStep[]
+}
+
 export type ScrobblePayload = object | string;
 export type ScrobbleResponse = object | string;
 

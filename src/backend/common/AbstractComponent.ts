@@ -4,7 +4,7 @@ import {
     cacheFunctions,
 } from "@foxxmd/regex-buddy-core";
 import type EventEmitter from "events";
-import {COMPONENT_TYPE_CLIENT, DEAD_LETTER_RETRIES_DEFAULT, DEAD_QUEUE, INGRESS_QUEUE, isPlayObject, MONITORING_ORIGIN_SYSTEM, MONITORING_ORIGIN_USER, QUEUE_STATUS_COMPLETED, type ComponentType, type LifecycleInput, type LifecycleStep, type PlayData, type PlayObject} from "../../core/Atomic.ts";
+import {COMPONENT_TYPE_CLIENT, DEAD_LETTER_RETRIES_DEFAULT, DEAD_QUEUE, INGRESS_QUEUE, isPlayObject, MONITORING_ORIGIN_SYSTEM, MONITORING_ORIGIN_USER, QUEUE_STATUS_COMPLETED, type ComponentType, type LifecycleInput, type LifecycleStep, type PlayData, type TransformPlayResult, type PlayObject} from "../../core/Atomic.ts";
 import { capitalize } from "../../core/StringUtils.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
 import type {CommonClientConfig} from "./infrastructure/config/client/index.ts";
@@ -380,7 +380,10 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
     }
 
-    public transformPlay = async (play: PlayObject, hookType: TransformHook, transformOpts: {log?: boolean | 'all'} & OptionalCacheUsage = {}) => {
+    public transformPlay = async (playInput: PlayObject, hookType: TransformHook, transformOpts: {log?: boolean | 'all'} & OptionalCacheUsage = {}): Promise<TransformPlayResult> => {
+
+        // legacy plays (old db rows) may carry steps on the play itself, always start fresh without them
+        const {lifecycle: _legacyLifecycle, ...play} = playInput;
 
         const {
             log,
@@ -408,7 +411,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             }
 
             if (hook === undefined) {
-                return play;
+                return {play, steps: []};
             }
 
             const asyncId = nanoid(6);
@@ -467,7 +470,6 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                         if(step.error !== undefined && step.flowKnownState !== 'skip' && !step.returnPartial) {
                             // revert to original play but keep steps for paper trail
                             transformedPlay = play;
-                            transformedPlay.lifecycle = steps;
                         } else {
                             transformedPlay = stepPlay;
                         }
@@ -481,29 +483,13 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             const historyToDiff: {name: string, data?: PlayData}[] = [
                 {name: 'Pre Transform', data: play.data}
             ];
-            let isNew = false,
-            diffFailure = false;
-            if(steps.length > 0 && transformedPlay.lifecycle === undefined) {
-                transformedPlay.lifecycle = steps;
-                isNew = true;
-            }
-            const lifecycle = transformedPlay.lifecycle ?? [];
-            transformedPlay.lifecycle = lifecycle;
+            let diffFailure = false;
             steps.forEach((s, index) => {
                 if(diffFailure) {
                     return;
                 }
                 const stepIdHint = `${s.source}-${s.hook}-${s.stageType}-${s.stageName}`;
                 try {
-                if(!isNew) {
-                    const existingStepIndex = lifecycle.findIndex(x => x.stageName === s.stageName && x.stageType === s.stageType && x.hook === s.hook && x.source === this.getIdentifier());
-                    if(existingStepIndex !== -1) {
-                        lifecycle[existingStepIndex] = s;
-                    } else {
-                        lifecycle.push(s);
-                    }
-                }
-
                 if(shouldLog === 'all') {
                     if(s.patch === undefined) {
                         historyToDiff.push({name: `${stepIdHint}`});
@@ -578,7 +564,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 await this.cache.cacheTransform.set<LifecycleStep[]>(transformHash, steps, '2m');
             }
 
-            return transformedPlay;
+            return {play: transformedPlay, steps};
         } catch (e) {
             const err = new Error(`Unexpected error occurred, returning original play.`, {cause: e});
             if(logger === undefined) {
@@ -586,7 +572,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             } else {
                 logger.warn(err);
             }
-            return play;
+            return {play, steps: []};
         }
     }
 
@@ -607,13 +593,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             useCachedResult
         } = opts;
 
-        const {
-            lifecycle = []
-        } = playTruth;
-
-        //const stepName = `${hookType} - ${hookItem.type} - ${hookItem.name}`
-        const existingStepIndex = lifecycle.findIndex(x => x.hook === hookType && hookItem.name === x.stageName && x.stageType === hookItem.type && x.source === this.getIdentifier());
-        const step: LifecycleStep = existingStepIndex !== -1 && lifecycle[existingStepIndex] !== undefined ? lifecycle[existingStepIndex] : {
+        const step: LifecycleStep = {
             // overwritten below with resolved stage name
             stageName: hookItem.name ?? 'Unnamed',
             hook: hookType,

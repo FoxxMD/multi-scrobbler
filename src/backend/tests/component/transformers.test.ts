@@ -315,7 +315,7 @@ describe('Play Transforms', function () {
                 await component.buildTransformRules();
 
                 const play = generatePlay();
-                const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                 expect(JSON.stringify(play)).equal(JSON.stringify(transformed));
             });
 
@@ -335,7 +335,7 @@ describe('Play Transforms', function () {
                     await component.buildTransformRules();
 
                     const play = generatePlay({ track: nameToCredit('My coolsomething track') });
-                    const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                     expect(transformed.data.track?.name).equal('My cool track');
                 });
 
@@ -354,7 +354,7 @@ describe('Play Transforms', function () {
                     await component.buildTransformRules();
 
                     const play = generatePlay({ track: nameToCredit('My coolsomething track') });
-                    const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                     expect(transformed.data.track?.name).equal('My  track');
                 });
 
@@ -378,7 +378,7 @@ describe('Play Transforms', function () {
                     await component.buildTransformRules();
 
                     const play = generatePlay({ track: nameToCredit('My cool something track') });
-                    const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                     expect(transformed.data.track?.name).equal('My cool thing track');
                 });
 
@@ -403,7 +403,7 @@ describe('Play Transforms', function () {
                     await component.buildTransformRules();
 
                     const play = generatePlay({ artists: namesToCredits(['My Artist One / My Artist Two / Another Guy']) });
-                    const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                     expect(transformed.data.artists).length(1)
                     expect(transformed.data.artists![0].name).equal('My Artist One');
                 });
@@ -423,7 +423,7 @@ describe('Play Transforms', function () {
                     await component.buildTransformRules();
 
                     const play = generatePlay({ track: nameToCredit('something') });
-                    const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                     expect(transformed.data.track).is.undefined;
                 });
 
@@ -442,7 +442,7 @@ describe('Play Transforms', function () {
                     await component.buildTransformRules();
 
                     const play = generatePlay({ album: nameToCredit('something') });
-                    const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                     expect(transformed.data.album).is.undefined;
                 });
 
@@ -461,7 +461,7 @@ describe('Play Transforms', function () {
                     await component.buildTransformRules();
 
                     const play = generatePlay({ artists: namesToCredits(['something', 'big']) });
-                    const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                     expect(transformed.data.artists!.length).is.eq(1)
                     expect(transformed.data.artists![0].name).is.eq('big')
                 });
@@ -545,7 +545,7 @@ describe('Play Transforms', function () {
                 await component.buildTransformRules();
 
                 const play = generatePlay({ artists: namesToCredits(['something', 'big']), album: nameToCredit('It Has No Match') });
-                const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                 expect(transformed.data.artists!.length).is.eq(2)
                 expect(transformed.data.artists![0].name).is.eq('something')
             });
@@ -570,7 +570,7 @@ describe('Play Transforms', function () {
                 await component.buildTransformRules();
 
                 const play = generatePlay({ artists: namesToCredits(['something', 'big']), album: nameToCredit('It Has This Match') });
-                const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                 expect(transformed.data.artists!.length).is.eq(1)
                 expect(transformed.data.artists![0].name).is.eq('big')
             });
@@ -602,7 +602,7 @@ describe('Play Transforms', function () {
                 await component.buildTransformRules();
 
                 const play = generatePlay({ artists: namesToCredits(['something', 'big']), album: nameToCredit('It Has No Match') });
-                const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                 expect(transformed.data.artists!.length).is.eq(2)
                 expect(transformed.data.artists![0].name).is.eq('something')
             });
@@ -632,7 +632,7 @@ describe('Play Transforms', function () {
                 await component.buildTransformRules();
 
                 const play = generatePlay({ artists: namesToCredits(['something', 'big']), album: nameToCredit('It Has This Match') });
-                const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                 expect(transformed.data.artists!.length).is.eq(1)
                 expect(transformed.data.artists![0].name).is.eq('big')
             });
@@ -673,7 +673,7 @@ describe('Play Transforms', function () {
 
             await component.buildTransformRules();
             const play = generatePlay({ track: nameToCredit('My cool something track') });
-            const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+            const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
             expect(transformed.data.track?.name).equal('My cool final thing track');
         });
 
@@ -704,7 +704,7 @@ describe('Play Transforms', function () {
 
             await component.buildTransformRules();
             const play = generatePlay({ track: nameToCredit('My cool something track'), artists: namesToCredits([str]) });
-            const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+            const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
             expect(transformed.data.track?.name).equal('My cool bar track');
             expect(creditsToNames(transformed.data.artists!)).eql(primaries.concat(secondaries));
         });
@@ -741,14 +741,14 @@ describe('Play Transforms', function () {
 
             await component.buildTransformRules();
             const play = generatePlay({ track: nameToCredit('My cool something track'), artists: namesToCredits([str]), playDate: dayjs().subtract(10, 'm') });
-            const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare, {log: 'all'});
+            const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare, {log: 'all'});
             expect(transformed.data.track?.name).equal('My cool bar track');
             expect(creditsToNames(transformed.data.artists!)).eql(primaries.concat(secondaries));
 
             const cachablePlay = clone(play);
             const laterDate = dayjs().subtract(5, 'm');
             cachablePlay.data.playDate = laterDate;
-            const cacheTransformed = await component.transformPlay(cachablePlay, TRANSFORM_HOOK.preCompare, {log: 'all'});
+            const {play: cacheTransformed} = await component.transformPlay(cachablePlay, TRANSFORM_HOOK.preCompare, {log: 'all'});
             expect(cacheTransformed.data.track?.name).equal('My cool bar track');
             expect(creditsToNames(cacheTransformed.data.artists!)).eql(primaries.concat(secondaries));
             expect(cacheTransformed.data.playDate!.isSame(cachablePlay.data.playDate));
@@ -990,7 +990,7 @@ describe('Play Transforms', function () {
                 }
             };
             await multiTransformComponent.buildTransformRules();
-            const transformed = await multiTransformComponent.transformPlay(play, TRANSFORM_HOOK.preCompare);
+            const {play: transformed} = await multiTransformComponent.transformPlay(play, TRANSFORM_HOOK.preCompare);
             expect(transformed.data.track?.name).eq('My Bar Title');
         });
 

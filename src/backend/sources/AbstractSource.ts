@@ -512,15 +512,14 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
         if(newDiscoveredPlays.length > 0) {
             newDiscoveredPlays.sort(sortByOldestPlayDate);
-            const postCompareMapped = await pMap(newDiscoveredPlays, async (x) =>  await this.transformPlay(x, TRANSFORM_HOOK.postCompare), {concurrency: 3});
+            const transformed = await pMap(newDiscoveredPlays, async (x) =>  await this.transformPlay(x, TRANSFORM_HOOK.postCompare), {concurrency: 3});
             const events: PlayEvent[] = [];
-            for(const p of postCompareMapped) {
-                const {lifecycle = []} = p;
-                const psLifecycle = lifecycle.filter(x => x.hook === TRANSFORM_HOOK.postCompare);
-                if(psLifecycle.length > 0 && p.id !== undefined) {
-                    events.push({...transformToPlayEvent(psLifecycle), playId: p.id, createdAt: dayjs()});
+            for(const {play: p, steps} of transformed) {
+                if(steps.length > 0 && p.id !== undefined) {
+                    events.push({...transformToPlayEvent(steps), playId: p.id, createdAt: dayjs()});
                 }
             }
+            const postCompareMapped = transformed.map(x => x.play);
             this.emitEvent('discoveredToScrobble', {
                 data: postCompareMapped,
                 options: {
@@ -1039,10 +1038,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
             } 
             let preCompared = playEntity.play;
             if(transform) {
-                const {lifecycle = [], ...rest} = await this.transformPlay(playEntity.play, TRANSFORM_HOOK.preCompare, {useCachedResult: useCache});
-                preCompared = rest;
-                if(lifecycle.length > 0) {
-                    events.push({...transformToPlayEvent(lifecycle), createdAt: dayjs()});
+                const {play, steps} = await this.transformPlay(playEntity.play, TRANSFORM_HOOK.preCompare, {useCachedResult: useCache});
+                preCompared = play;
+                if(steps.length > 0) {
+                    events.push({...transformToPlayEvent(steps), createdAt: dayjs()});
                 }
             }
             let existing: PlayObject | undefined;
