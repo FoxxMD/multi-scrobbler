@@ -740,7 +740,8 @@ Note: this is only supported by some components.`
                 uid: playUid
             },
             body: {
-                state
+                state,
+                reason
             }
         } = req;
 
@@ -751,10 +752,11 @@ Note: this is only supported by some components.`
 
         switch(state) {
             case 'discarded':
-                await component.markPlayDiscarded(play);
+            case 'review':
+                await component.dequeuePlayWithState(play, state, reason);
                 break;
             default:
-                return res.status(400).json({error: {message: `Play state '${state}' is not supported.`}});
+                return res.status(501).json({error: {message: `Setting Play state to '${state}' is not implemented.`}});
         }
 
         return res.sendStatus(200);

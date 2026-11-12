@@ -14,7 +14,7 @@ import { EphemeralElement, PlayStateBadge } from "./Badges";
 import { ShortDateDisplay } from "./DateDisplay";
 import { ErrorAlert } from "./ErrorAlert";
 import { ExpandCollapse } from "./ExpandCollapse";
-import { DebugIcon, EllipsisButton, ExclamationCircleIcon, ExclamationTriangleIcon, FinishIconRaw, InsertedIcon, type PowerOffButton, RetryButton, RetryForceIcon, RetryIcon, StopButton, StopIconRaw, TrashIconRaw, UpdatedIcon } from "./icons/ChakraIcons";
+import { DebugIcon, EllipsisButton, ExclamationCircleIcon, ExclamationTriangleIcon, FinishIconRaw, InsertedIcon, type PowerOffButton, RetryButton, RetryForceIcon, RetryIcon, ReviewIconRaw, StopButton, StopIconRaw, TrashIconRaw, UpdatedIcon } from "./icons/ChakraIcons";
 import { PlayData } from "./play/PlayData";
 import { TextMuted } from "./TextMuted";
 import { capitalize } from '../../core/StringUtils';
@@ -390,6 +390,7 @@ const MenuItemCancel = playStateMenuItem(StopIconRaw, 'cancel');
 const MenuItemTrash = playStateMenuItem(TrashIconRaw, 'delete');
 const MenuItemDebug = playStateMenuItem(DebugIcon, 'debug');
 const MenuItemFinish = playStateMenuItem(FinishIconRaw, 'finish', 'Mark Completed');
+const MenuItemReview = playStateMenuItem(ReviewIconRaw, 'review', 'Mark For Review');
 
 const primaryActionProps: ComponentProps<typeof PowerOffButton> = {
     margin: "1px",
@@ -426,6 +427,11 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
             if(data.action === 'finish') {
                 return ky.post(`api/components/${props.activity.componentId}/plays/${props.activity.uid}/state`, {
                     json: {state: data.state}
+                });
+            }
+            if(data.action === 'review') {
+                return ky.post(`api/components/${props.activity.componentId}/plays/${props.activity.uid}/state`, {
+                    json: {state: 'review'}
                 });
             }
             throw new Error(`Unknown play action '${data.action}'`);
@@ -478,6 +484,7 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
             menuItems = [
                 <MenuItemDebug/>,
                 <MenuItemRetryWith disabled={isPending} />,
+                <MenuItemReview disabled={isPending} />,
                 <MenuItemFinish disabled={isPending}/>,
                 <MenuItemTrash disabled={isPending}  color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }}/>
             ];
@@ -488,11 +495,23 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
             break
         case 'review':
             primaryAction = <RetryButton size={{base: '2xs', smTo2xl: 'xs'}} margin="1px" variant="subtle" onClick={() => mutate({action: 'queue'})}/>;
-            menuItems = [<MenuItemRetryIgnoreActions disabled={isPending} />,<MenuItemRetryWith disabled={isPending} />,<MenuItemDebug/>,<MenuItemTrash disabled={isPending}  color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }}/>];
+            menuItems = [<MenuItemRetryIgnoreActions disabled={isPending} />,<MenuItemRetryWith disabled={isPending} />,<MenuItemFinish disabled={isPending}/>,<MenuItemDebug/>,<MenuItemTrash disabled={isPending}  color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }}/>];
+            break
+        case 'duped':
+        case 'discarded':
+            primaryAction = <RetryButton size={{base: '2xs', smTo2xl: 'xs'}} margin="1px" variant="subtle" onClick={() => mutate({action: 'queue'})}/>;
+            menuItems = [
+            <MenuItemRetryWith disabled={isPending} />,
+            <MenuItemReview disabled={isPending} />,
+            <MenuItemTrash disabled={isPending}  color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }}/>
+        ];
             break
         default:
             primaryAction = <RetryButton size={{base: '2xs', smTo2xl: 'xs'}} margin="1px" variant="subtle" onClick={() => mutate({action: 'queue'})}/>;
-            menuItems = [<MenuItemRetryWith disabled={isPending} />,<MenuItemDebug/>,<MenuItemTrash disabled={isPending}  color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }}/>];
+            menuItems = [
+            <MenuItemRetryWith disabled={isPending} />,
+            <MenuItemTrash disabled={isPending}  color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }}/>
+        ];
             break
 
     }

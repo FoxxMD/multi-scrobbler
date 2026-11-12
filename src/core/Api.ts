@@ -1,5 +1,5 @@
 import type { CompareOpKey, ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
-import { creditSchema, playTrackDataSchema, type ClientType, type ComponentAuthType, type MonitoringStatus, type QueueContext, type MusicServices, type Replace, creditBaseSchema, trackSearchHash, albumSearchHash, artistSearchHash } from "./Atomic.ts"
+import { creditSchema, playTrackDataSchema, type ClientType, type ComponentAuthType, type MonitoringStatus, type QueueContext, type MusicServices, type Replace, creditBaseSchema, PLAY_STATES, trackSearchHash, albumSearchHash, artistSearchHash } from "./Atomic.ts"
 import type { LogEvent, SourceType, TrackData } from "./Atomic.ts"
 import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, QueueName, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.ts"
 import type { Dayjs } from "dayjs"
@@ -266,8 +266,13 @@ export const componentStateBodySchema = z.object({
 
 export type ComponentStateBody = z.infer<typeof componentStateBodySchema>;
 
+/** States a user can move a Play to, removing it from any queue */
+export const dequeuedPlayStateSchema = z.enum(["discarded", "review"]);
+export type DequeuedPlayState = z.infer<typeof dequeuedPlayStateSchema>;
+
 export const playStateBodySchema = z.object({
-    state: z.enum(["discarded"]),
+    // any Play state, unsupported states are rejected by the route
+    state: z.enum(PLAY_STATES as [PlayState, ...PlayState[]]),
     reason: z.string().optional()
 });
 

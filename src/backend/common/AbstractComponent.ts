@@ -41,7 +41,7 @@ import type {ClientType, JsonPlayObject, MonitoringStatus, OptionalCacheUsage, P
 import type {SourceType} from "../../core/Atomic.ts";
 import { DrizzleComponentRepository } from "./database/drizzle/repositories/ComponentRepository.ts";
 import dayjs, { type Dayjs } from "dayjs";
-import { COMPONENT_STATE, type ComponentCommonApi, type ComponentCommonApiJson, type ComponentState, type PlayApiCommonDetailed, type QueueStateApi } from "../../core/Api.ts";
+import { COMPONENT_STATE, type ComponentCommonApi, type ComponentCommonApiJson, type ComponentState, type DequeuedPlayState, type PlayApiCommonDetailed, type QueueStateApi } from "../../core/Api.ts";
 import type {WebhookPayload} from "./infrastructure/config/health/webhooks.ts";
 import type { ElementOf, MarkRequired } from "ts-essentials";
 import { serializeError } from "serialize-error";
@@ -1018,31 +1018,34 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
     }
 
-    markPlayDiscarded = async (dead: PlayWith<'events' | 'queueStates'>) => {
+    /**
+     * Remove a Play from the ingress queue (if queued) and set it to a user-chosen state (discarded, review...)
+     *
+     * Updates queue/dead letter stats based on the state the Play was in before
+     * */
+    dequeuePlayWithState = async (dead: PlayWith<'events' | 'queueStates'>, state: DequeuedPlayState, reason: string = `Play marked as ${state} by user`) => {
 
         const queueState = dead.queueStates.find(x => x.queueName === INGRESS_QUEUE);
         const last = dead.events.findLast(x => x.eventName === 'playStateChange' && (x as PlayEventPlayStateChange).data.state !== 'queued');
         const lastWasNonFailureState = last === undefined || (last as PlayEventPlayStateChange).data.state !== 'failed';
 
-        this.setStatus(`Marking Play ${dead.uid} as discarded`);
+        this.setStatus(`Marking Play ${dead.uid} as ${state}`);
 
         const lastState = dead.state;
         const events: PlayEventNew[] = [];
 
-        if(dead.state !== 'discarded') {
-            dead.state = 'discarded';
-            this.playRepo.updateById(dead.id, {state: 'discarded'});
+        if(dead.state !== state) {
+            dead.state = state;
+            await this.playRepo.updateById(dead.id, {state});
             events.push(
-                { playId: dead.id, ...stateChangeToPlayEvent({ state: 'discarded', reason: 'Play marked as discarded by user' }) }
+                { playId: dead.id, ...stateChangeToPlayEvent({ state, reason }) }
             )
         }
         
         if(queueState !== undefined) {
             events.push(
-                { playId: dead.id, ...queueCompletionStateToPlayEvent({...queueState, error: undefined, queueStatus: QUEUE_STATUS_COMPLETED, context: {reason: 'Play marked as discarded by user'}}) }
+                { playId: dead.id, ...queueCompletionStateToPlayEvent({...queueState, error: undefined, queueStatus: QUEUE_STATUS_COMPLETED, context: {reason}}) }
             );
-        }
-        if(queueState !== undefined) {
             await this.queueRepo.deleteByIds([queueState.id]);
         }
         
@@ -1088,7 +1091,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         await pMap(ids, async (id) => {
             const entity = await this.playRepo.findByIdWith<'queueStates' | 'events'>(id, ['queues','events']);
             if(entity !== undefined) {
-                await this.markPlayDiscarded(entity);
+                await this.dequeuePlayWithState(entity, 'discarded');
             }
         }, {concurrency: 10});
         this.deadLogger.info('Finished processing failed scrobbles.');
