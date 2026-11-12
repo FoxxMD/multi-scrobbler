@@ -134,6 +134,7 @@ The `compare` [hook](#hook) is slightly different than `preCompare` and `postCom
 Each [**hook**](#hook) is made up of one or more **Stages**. A Stage is a self-contained, unique way of enhancing or modifying the Play data. Some examples of a Stage:
 
 * The [User](/configuration/transforms/user) Stage allows a user to define search-and-replace terms for Artist/Title/Album
+* The [Match](/configuration/transforms/match) Stage uses search expressions to match data from your Play, useful for combining with other Stages or flagging a Play for review
 * The [Native](/configuration/transforms/native) Stage uses MS's built-in heuristics to extract Artists from a single Artist string
 * The [Musicbrainz](/configuration/transforms/musicbrainz) Stage tries to match Play data with the Musicbrainz database and to standardize the Artist/Title/Album data
 * The [Rocksky](/configuration/transforms/rocksky) Stage tries to match Play data with the Rocksky metadata API to enrich meta IDs (like MBID, ISRC), duration, and artwork
@@ -553,7 +554,14 @@ Check out [Examples](#examples) below for more examples of how to use **Flow Con
 
 [Stages](#stage) within a [Hook](#hook), and [Rules](#stage-rules) within each Stage, support a `when` object for testing **if they should be run.**
 
-The `when` object may have propertes for rule. Each property may be a string or regular expression.  The value of the property is used to match the **pre-transformation** values from Play data.
+The `when` object may have any of these properties. The value of each property is used to match the **pre-transformation** values from Play data (the data before the Stage runs).
+
+* `title` `artists` `albumArtists` `album` - a string or regular expression. `artists`/`albumArtists` match if **any** artist matches.
+* `art` - a string or regular expression matching any album, track, or artist art URL
+* `user` `deviceId` `library` `playlist` `musicService` - a string or regular expression. Only available for Sources that report this info. `playlist` matches the playlist name or id.
+* `duration` `listenedFor` - a comparison: `=` `>` or `<` followed by a duration. EX `> 7 s` `< 2 minutes` `= 30s`. A Play without this data never matches.
+
+For string/regex properties, an **empty string** (`""`) matches when the Play does **not** have that data, IE `"album": ""` matches a Play with no album.
 
 All parts of an individual `when` clause must test true to "pass" but if **any** `when` clauses pass the Stage/Rule is processed.
 
@@ -582,6 +590,15 @@ If the `when` test does not pass then the Stage is [**skipped (`onSkip`)**](#flo
       "album": "Various Artists" // [!ref] Play album must match "Various Artists" (AND)
     }
   ]
+}
+```
+```json5 label="Duration and Source details"
+{
+  "when":
+    {
+      "deviceId": "kitchen-speaker", // [!ref] Play must be from the device "kitchen-speaker" (AND)
+      "duration": "> 10 minutes" // [!ref] Play track must be longer than 10 minutes (AND)
+    }
 }
 ```
 :::
@@ -618,7 +635,7 @@ EX: only run stage if art does *not* come from deezer, use deezer's cdn in a not
 
 More succinctly:
 
-* All parts (`title` `artists` `albumArtists` `album` `art`) of a `when` are `AND` conditions
+* All parts (`title` `artists` `duration` `deviceId` etc...) of a `when` are `AND` conditions
 * All part-objects in the `when` array are `OR` conditions
 
 :::code-tabs
