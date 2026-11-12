@@ -5,7 +5,7 @@ import type { Logger } from "@foxxmd/logging";
 import { authModeSchema, type AuthConfig, type AuthMode } from "../infrastructure/config/aioConfig.ts";
 import { parseBool, parseBoolStrict } from "../../utils.ts";
 import { fileExists } from "../../utils/FSUtils.ts";
-import { parseDurationFromDurationValue } from "../../utils/TimeUtils.ts";
+import { parseDurationFromDurationValue } from "../../../core/TimeUtils.ts";
 
 export const OPEN_HOSTS = ['*'];
 /** better-auth default */

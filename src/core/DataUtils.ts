@@ -1,3 +1,4 @@
+import * as z from "zod";
 import { create as diffCreate } from "jsondiffpatch";
 import { type numberFormatOptions, REGEX_ISO8601_LOOSE } from './Atomic.ts';
 import { diff, applyChangeset, type Changeset, type Options } from 'json-diff-ts';
@@ -243,3 +244,17 @@ export const difference = (a: Array<any>, b: Array<any>) => {
     return Array.from(diff);
 };
 
+export const comparisonOperatorSchema = z.enum(['=', '>', '<']).meta({title: 'Comparison Operator', description: 'Equal, greater than, less than'});
+export type ComparisonOperator = z.infer<typeof comparisonOperatorSchema>;
+
+/** Compare actualVal to testVal IE `actualVal > testVal` */
+export const compareWithOperator = (actualVal: number, operator: ComparisonOperator, testVal: number): boolean => {
+    switch (operator) {
+        case '=':
+            return actualVal === testVal;
+        case '>':
+            return actualVal > testVal;
+        case '<':
+            return actualVal < testVal;
+    }
+}
