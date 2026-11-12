@@ -316,6 +316,13 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             }
             try {
                 const parsed = await pMap(stages, async (x) => this.transformManager.parseTransformerConfig(x));
+                if(hook === 'candidate' || hook === 'existing') {
+                    for(const stage of parsed) {
+                        if(stage.onSuccessAction !== undefined || stage.onFailureAction !== undefined || stage.onSkipAction !== undefined) {
+                            this.logger.warn(`Stage ${stage.type}${stage.name !== undefined ? `-${stage.name}` : ''} in compare.${hook} has an action (onSuccessAction/onFailureAction/onSkipAction) but actions are ignored in compare hooks`);
+                        }
+                    }
+                }
                 built[hook] = parsed;
                 builtHooks.push(`${hook} => ${parsed.map(x => `${x.type}${x.name !== undefined ? `-${x.name}` : ''}`)}`);
             } catch (e) {

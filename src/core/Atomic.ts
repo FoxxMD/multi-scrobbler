@@ -748,8 +748,8 @@ export type TypesAreEqual<T, U, Y=unknown, N=never> =
 export type MBID = `${string}-${string}-${string}-${string}-${string}`
 
 // ['queued','discovered','discarded','scrobbled','failed','duped']
-export type PlayStateCommon = 'queued' |'discarded' | 'failed' | 'duped';
-export const PLAY_STATE_COMMON: PlayStateCommon[] = ['queued', 'discarded', 'failed', 'duped'];
+export type PlayStateCommon = 'queued' |'discarded' | 'failed' | 'duped' | 'review';
+export const PLAY_STATE_COMMON: PlayStateCommon[] = ['queued', 'discarded', 'failed', 'duped','review'];
 export type PlaySourceState = PlayStateCommon | 'discovered';
 export const PLAY_SOURCE_STATE: PlaySourceState[] = [...PLAY_STATE_COMMON, 'discovered'];
 export type PlayClientState = PlayStateCommon | 'scrobbled';

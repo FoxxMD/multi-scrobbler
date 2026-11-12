@@ -1,5 +1,6 @@
 import * as z from "zod";
 import { durationComparisonSchema } from "./TimeUtils.ts";
+import type { PlayState } from "./Atomic.ts";
 
 export const META_PROVIDER_STAGE_TYPES = z.enum(['musicbrainz','rocksky','spotify']);
 export type MetadataProviderStageType = z.infer<typeof META_PROVIDER_STAGE_TYPES>;
@@ -18,9 +19,14 @@ export const flowControlTermSchema = z.enum(['continue', 'stop']).meta({title: '
 
 export type FlowControlTerm = z.infer<typeof flowControlTermSchema>;
 
-export const actionTermSchema = z.enum(['approve','ignore','review']).meta({title: 'Action Term'});
-
+export const actionTermSchema = z.enum(['approve','discard','review']).meta({title: 'Action Term'});
 export type ActionTerm = z.infer<typeof actionTermSchema>;
+
+export const actionTermPlayState: Record<Extract<ActionTerm, 'discard' | 'review'>, PlayState> = {
+    discard: 'discarded',
+    review: 'review'
+}
+
 
 /** Options for a configured Transformer, not used in a Stage */
 export const transformOptionsSchema = z.object({

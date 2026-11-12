@@ -11,7 +11,7 @@ import type {WebhookPayload} from "../../common/infrastructure/config/health/web
 import NativeTransformer from "../../common/transforms/NativeTransformer.ts";
 import { initMemoryCache } from "../../common/Cache.ts";
 import { Cacheable } from "cacheable";
-import type {PlayMatchResult, PlayObject, QueueContext} from "../../../core/Atomic.ts";
+import type {LifecycleStep, PlayMatchResult, PlayObject, QueueContext} from "../../../core/Atomic.ts";
 import TransformerManager from "../../common/transforms/TransformerManager.ts";
 import type AbstractTransformer from "../../common/transforms/AbstractTransformer.ts";
 import { transientCache } from "../utils/TransientTestUtils.ts";
@@ -25,7 +25,7 @@ import RockskyTransformer from "../../common/transforms/rocksky/RockskyTransform
 import CoverArtArchiveTransformer from "../../common/transforms/coverartarchive/CoverArtArchiveTransformer.ts";
 import { parseDurationComparison } from "../../../core/TimeUtils.ts";
 import MatchTransformer from "../../common/transforms/match/MatchTransformer.ts";
-import { testPlayParts, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
+import { getActionFromLifecycleSteps, testPlayParts, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import { SkipTransformStageError, TransformRulesError } from "../../common/errors/MSErrors.ts";
 import { COMPONENT_STATE, type ComponentState, type TrackSearchResult } from "../../../core/Api.ts";
 import type { PlayWith, PlaySelectWithQueueStates } from "../../common/database/drizzle/drizzleTypes.ts";
@@ -804,6 +804,38 @@ describe('Play Transforms', function () {
             expect(stage.searchWhenMissing).eql(['album']);
             expect(stage.allowedTypes).eql(['back']);
             expect(stage.forceSearch).is.true;
+        });
+    });
+
+    describe('Stage Actions', function () {
+
+        const step = (actionResult?: LifecycleStep['actionResult']): LifecycleStep => ({stageName: 'test', stageType: 'user', hook: 'preCompare', source: 'test', createdAt: 'same', actionResult});
+
+        it('Last step with an action wins, even with identical createdAt', function () {
+            expect(getActionFromLifecycleSteps([step('discard'), step(), step('review'), step()])).eq('review');
+            expect(getActionFromLifecycleSteps([step('discard'), step('approve')])).eq('approve');
+            expect(getActionFromLifecycleSteps([step(), step()])).is.undefined;
+        });
+
+        it('Sets step actionResult from the action term matching the stage outcome', async function () {
+            component.config = {
+                id: componentId(),
+                options: {
+                    playTransform: {
+                        preCompare: [
+                            {type: 'user', title: ['something'], onSuccessAction: 'discard', onSkipAction: 'review'},
+                            {type: 'user', title: ['nothing'], when: {title: 'will not match'}, onSuccessAction: 'discard', onSkipAction: 'review'},
+                            {type: 'user', title: ['cool'], onSuccessAction: 'approve', onSkipAction: 'review'},
+                        ]
+                    }
+                }
+            }
+            await component.buildTransformRules();
+
+            const {steps} = await component.transformPlay(generatePlay({ track: nameToCredit('My coolsomething track') }), TRANSFORM_HOOK.preCompare, {useCachedResult: false});
+            expect(steps.map(x => x.actionResult)).eql(['discard', 'review', 'approve']);
+            // a later approve negates earlier actions
+            expect(getActionFromLifecycleSteps(steps)).eq('approve');
         });
     });
 

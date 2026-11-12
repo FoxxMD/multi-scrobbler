@@ -33,7 +33,7 @@ import { CALCULATED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {QueueContext, ReportedPlayerStatus, ScrobbleResult} from '../../core/Atomic.ts';
 import type {ClientType} from "../../core/Atomic.ts";
 import type {CommonClientConfig, NowPlayingOptions, UpstreamRefreshOptions} from "../common/infrastructure/config/client/index.ts";
-import { TRANSFORM_HOOK } from "../../core/Transform.ts";
+import { actionTermPlayState, actionTermSchema, TRANSFORM_HOOK } from "../../core/Transform.ts";
 import type { Notifiers } from "../notifier/Notifiers.ts";
 import {
     isDebugMode,
@@ -72,6 +72,7 @@ import { PLAY_EVENT_TYPE, type PlayEvent } from "../../core/PlayEvent.ts";
 import { dupeCheckToPlayEvent, queueCompletionStateToPlayEvent, scrobbleToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from "../common/database/drizzle/entityUtils.ts";
 import type { PlayProcessingResult } from "../common/infrastructure/PlayProcessing.ts";
 import { PlayProcessingError } from "../common/errors/PlayProcessingError.ts";
+import { getActionFromLifecycleSteps, getLastLifecycleStepWithAction } from "../utils/PlayTransformUtils.ts";
 
 type SourceMappedPlayer = {player: SourcePlayerObj, source: SourceIdentifier};
 type PlatformMappedPlays = Map<string, SourceMappedPlayer>;
@@ -1137,6 +1138,14 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 const {play, steps} = await this.transformPlay(playEntity.play, TRANSFORM_HOOK.preCompare, {useCachedResult: useCache});
                 if(steps.length > 0) {
                     events.push({...transformToPlayEvent(steps), createdAt: dayjs()});
+                    const step = getLastLifecycleStepWithAction(steps);
+                    if(step !== undefined && step.actionResult !== actionTermSchema.enum.approve) {
+                        events.push(stateChangeToPlayEvent({ state: actionTermPlayState[step.actionResult], reason: step.actionReason ?? 'Triggered by a Stage' }));
+                        events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));
+                        playEntity.state = actionTermPlayState[step.actionResult];
+                        playEntity.play = play;
+                        return {playEntity, queue: queueState, events};
+                    }
                 }
                 playEntity.play = play;
             }
@@ -1183,6 +1192,14 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 playEntity.play = transformedScrobble;
                 if (steps.length > 0) {
                     events.push({ ...transformToPlayEvent(steps), createdAt: dayjs() });
+                    const step = getLastLifecycleStepWithAction(steps);
+                    if(step !== undefined && step.actionResult !== actionTermSchema.enum.approve) {
+                        events.push(stateChangeToPlayEvent({ state: actionTermPlayState[step.actionResult], reason: step.actionReason ?? 'Triggered by a Stage' }));
+                        events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));
+                        playEntity.state = actionTermPlayState[step.actionResult];
+                        playEntity.play = transformedScrobble;
+                        return {playEntity, queue: queueState, events};
+                    }
                 }
                 signal?.throwIfAborted();
                 try {
@@ -1331,7 +1348,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
         const sourceId = `${source.name}-${source.type}`;
         if(data.play !== undefined) {
-            data.play = (await this.transformPlay(data.play, TRANSFORM_HOOK.preCompare)).play;
+            const {play, steps} = await this.transformPlay(data.play, TRANSFORM_HOOK.preCompare);
+            const action = getActionFromLifecycleSteps(steps);
+            if(action !== undefined && action !== actionTermSchema.enum.approve) {
+                this.npLogger.debug(`Not queueing now playing ${buildTrackString(play, {include: ['artist', 'track', 'platform']})} from ${sourceId} because preCompare resulted in action '${action}'`);
+                return;
+            }
+            data.play = play;
         }
         if(isDebugMode()) {
             let playHint = '';

@@ -210,8 +210,8 @@ export type QueryPlaysOptsJson = {
     with?: ("input" | "parent" | "parent-input" | "queues")[];
     limit?: number;
     offset?: number;
-    state?: ("queued" | "discovered" | "discarded" | "scrobbled" | "failed" | "duped")[];
-    stateNot?: ("queued" | "discovered" | "discarded" | "scrobbled" | "failed" | "duped")[];
+    state?: ("queued" | "discovered" | "discarded" | "scrobbled" | "failed" | "duped" | "review")[];
+    stateNot?: ("queued" | "discovered" | "discarded" | "scrobbled" | "failed" | "duped" | "review")[];
     componentId?: number;
     seenAt?: {
         type: "eq" | "ne" | "gt" | "gte" | "lt" | "lte";

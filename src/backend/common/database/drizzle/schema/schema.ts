@@ -76,7 +76,7 @@ export const plays = sqliteTable("plays", {
   seenAt: DayjsTimestamp('seenAt'),
   updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()).$onUpdate(() => dayjs()),
   play: PlayJson('play').notNull(), //  text({ mode: 'json' }).notNull().$type<PlayObject>(),
-  state: text({enum: ['queued','discovered','discarded','scrobbled','failed','duped']}).notNull(),
+  state: text({enum: ['queued','discovered','discarded','scrobbled','failed','duped','review']}).notNull(),
   // https://orm.drizzle.team/docs/indexes-constraints#foreign-key
   parentId: integer().references((): AnySQLiteColumn => plays.id, {onDelete: 'set null', onUpdate: 'cascade'}),
   jobId: integer().references(() => jobs.id, {onDelete: 'cascade', onUpdate: 'cascade'}),

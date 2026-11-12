@@ -1,11 +1,12 @@
 import type { searchAndReplace as searchAndReplaceFunc} from "@foxxmd/regex-buddy-core";
 import { testMaybeRegex as testMaybeRegexFunc } from "@foxxmd/regex-buddy-core";
-import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import type {LifecycleStep, PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
 
-import { type WhenParts, type WhenConditions } from "../../core/Transform.ts";
+import { type WhenParts, type WhenConditions, type ActionTerm } from "../../core/Transform.ts";
 import dayjs from "dayjs";
 import { playImages } from "../../core/MusicMetadata.ts";
 import { compareDuration, type DurationComparison } from "../../core/TimeUtils.ts";
+import type { MarkRequired } from "ts-essentials";
 
 /** Test a Play part against a parsed test value (string/regex, comparison, etc...) */
 export type PlayPartTester<T = string> = (test: T, play: PlayObject, options?: SuppliedRegex) => boolean;
@@ -112,6 +113,11 @@ export interface SuppliedRegex {
     searchAndReplace?: typeof searchAndReplaceFunc,
     testMaybeRegex?: typeof testMaybeRegexFunc,
 }
+
+/** Steps are in the order they ran (createdAt is not precise enough to sort by) */
+export const getLastLifecycleStepWithAction = (steps: LifecycleStep[]): MarkRequired<LifecycleStep, 'actionResult'> | undefined =>
+    steps.findLast(x => x.actionResult !== undefined) as MarkRequired<LifecycleStep, 'actionResult'> | undefined;
+export const getActionFromLifecycleSteps = (steps: LifecycleStep[]): ActionTerm | undefined => getLastLifecycleStepWithAction(steps)?.actionResult;
 
 export const baseFormatPlayObj = (data: any, play: PlayObjectMinimal): PlayObject => {
     const original = {
