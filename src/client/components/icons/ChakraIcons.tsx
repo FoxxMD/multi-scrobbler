@@ -42,7 +42,7 @@ import {
     LuLogIn,
     LuLogOut,
 } from "react-icons/lu"
-import { VscDebugRestart } from 'react-icons/vsc';
+import { VscDebugRestart, VscDebugStepOver } from 'react-icons/vsc';
 import { HiMiniStop } from "react-icons/hi2";
 import { FaTrashCan, FaFlagCheckered } from "react-icons/fa6";
 import { MdOutlineFiberNew } from "react-icons/md";
@@ -207,6 +207,8 @@ export const DebugCopy = (props: {value: Clipboard.RootProps['value']} & Compone
 }
 
 export const RetryIcon = VscDebugRestart;
+/** Retry while bypassing normal processing (EX ignore Stage actions) */
+export const RetryForceIcon = VscDebugStepOver;
 export const RetryButton = makeIconButton(RetryIcon);
 
 export const PowerIcon = LuPower;

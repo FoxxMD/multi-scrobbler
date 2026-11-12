@@ -33,6 +33,9 @@ export const PlayStateBadge = (props: PropsWithChildren<ComponentProps<typeof Ba
     case 'discarded':
       badgeColor = 'orange';
       break;
+    case 'review':
+      badgeColor = 'yellow';
+      break;
   }
 
   return <Badge variant="surface" colorPalette={badgeColor} {...rest}>{children ?? badgeText}{suffix}</Badge>

@@ -772,7 +772,9 @@ export const queueContextSchema = z.object({
     dupeCheck: z.boolean().optional(),
     useCache: z.boolean().optional(),
     reason: z.string().optional(),
-    isRetry: z.boolean().optional()
+    isRetry: z.boolean().optional(),
+    /** Do not change Play state based on Stage actions (onSuccessAction...) */
+    ignoreActions: z.boolean().optional()
 });
 
 export type QueueContext = z.infer<typeof queueContextSchema>;

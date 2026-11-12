@@ -1013,6 +1013,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             isRetry = false,
             transform = true,
             dupeCheck = true,
+            ignoreActions = false,
         } = context || {};
 
         const isDead = queueState.retries > 0 || isRetry;
@@ -1035,7 +1036,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 preCompared = play;
                 if(steps.length > 0) {
                     events.push({...transformToPlayEvent(steps), createdAt: dayjs()});
-                    const step = getLastLifecycleStepWithAction(steps);
+                    const step = ignoreActions ? undefined : getLastLifecycleStepWithAction(steps);
                     if(step !== undefined && step.actionResult !== actionTermSchema.enum.approve) {
                         events.push(stateChangeToPlayEvent({ state: actionTermPlayState[step.actionResult], reason: step.actionReason ?? 'Triggered by a Stage' }));
                         events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));
@@ -1081,7 +1082,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                     postCompared = play;
                     if(steps.length > 0) {
                         events.push({...transformToPlayEvent(steps), createdAt: dayjs()});
-                        const step = getLastLifecycleStepWithAction(steps);
+                        const step = ignoreActions ? undefined : getLastLifecycleStepWithAction(steps);
                         if(step !== undefined && step.actionResult !== actionTermSchema.enum.approve) {
                             events.push(stateChangeToPlayEvent({ state: actionTermPlayState[step.actionResult], reason: step.actionReason ?? 'Triggered by a Stage' }));
                             events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));

@@ -14,7 +14,7 @@ import { EphemeralElement, PlayStateBadge } from "./Badges";
 import { ShortDateDisplay } from "./DateDisplay";
 import { ErrorAlert } from "./ErrorAlert";
 import { ExpandCollapse } from "./ExpandCollapse";
-import { DebugIcon, EllipsisButton, ExclamationCircleIcon, ExclamationTriangleIcon, FinishIconRaw, InsertedIcon, type PowerOffButton, RetryButton, RetryIcon, StopButton, StopIconRaw, TrashIconRaw, UpdatedIcon } from "./icons/ChakraIcons";
+import { DebugIcon, EllipsisButton, ExclamationCircleIcon, ExclamationTriangleIcon, FinishIconRaw, InsertedIcon, type PowerOffButton, RetryButton, RetryForceIcon, RetryIcon, StopButton, StopIconRaw, TrashIconRaw, UpdatedIcon } from "./icons/ChakraIcons";
 import { PlayData } from "./play/PlayData";
 import { TextMuted } from "./TextMuted";
 import { capitalize } from '../../core/StringUtils';
@@ -249,7 +249,8 @@ const opts = formOptions.strictSchema(queueContextSchema, {
         defaultValues: {
             transform: true,
             dupeCheck: true,
-            useCache: true
+            useCache: true,
+            ignoreActions: false
         },
         validators: [{
             run: queueContextSchema,
@@ -305,6 +306,10 @@ const RetryWithDialog = (props: { open: boolean, setOpen: (open: boolean) => voi
                                 <form.Field
                                     name="useCache"
                                     children={(field) => (<FormCheckbox field={field} label="Use Cache?"/>)}
+                                />
+                                <form.Field
+                                    name="ignoreActions"
+                                    children={(field) => (<FormCheckbox field={field} label="Ignore Stage Actions?"/>)}
                                 />
                             </Stack>
                         </Dialog.Body>
@@ -380,6 +385,7 @@ const playStateMenuItem = (Icon: IconType, value: string, name?: string) => (pro
 
 const MenuItemRetry = playStateMenuItem(RetryIcon, 'retry');
 const MenuItemRetryWith = playStateMenuItem(RetryIcon, 'retryWith', 'Retry With...');
+const MenuItemRetryIgnoreActions = playStateMenuItem(RetryForceIcon, 'retryIgnoreActions', 'Retry Ignoring Actions');
 const MenuItemCancel = playStateMenuItem(StopIconRaw, 'cancel');
 const MenuItemTrash = playStateMenuItem(TrashIconRaw, 'delete');
 const MenuItemDebug = playStateMenuItem(DebugIcon, 'debug');
@@ -441,6 +447,9 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
             case 'retryWith':
                 setRetryOpen(true);
                 break;
+            case 'retryIgnoreActions':
+                mutate({action: 'queue', context: {ignoreActions: true}});
+                break;
             case 'cancel':
                 mutate({action: 'cancel'});
                 break;
@@ -476,6 +485,10 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
                 menuItems.unshift(<MenuItemCancel disabled={isPending}/>)
                 //primaryAction = <StopButton size={{base: '2xs', smTo2xl: 'xs'}} color="red.400" margin="1px" variant="subtle" onClick={() => mutate({action: 'cancel'})}/>;
             }
+            break
+        case 'review':
+            primaryAction = <RetryButton size={{base: '2xs', smTo2xl: 'xs'}} margin="1px" variant="subtle" onClick={() => mutate({action: 'queue'})}/>;
+            menuItems = [<MenuItemRetryIgnoreActions disabled={isPending} />,<MenuItemRetryWith disabled={isPending} />,<MenuItemDebug/>,<MenuItemTrash disabled={isPending}  color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }}/>];
             break
         default:
             primaryAction = <RetryButton size={{base: '2xs', smTo2xl: 'xs'}} margin="1px" variant="subtle" onClick={() => mutate({action: 'queue'})}/>;
