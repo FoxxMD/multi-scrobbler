@@ -11,7 +11,7 @@ import type {CommonClientConfig} from "./infrastructure/config/client/index.ts";
 import type {CommonSourceConfig} from "./infrastructure/config/source/index.ts";
 import { generateLoggableAbortReason, mergeSimpleError, SimpleError, SkipTransformStageError, StageChangeError, StagePrerequisiteError, StageTransformError, TransformRulesError } from "./errors/MSErrors.ts";
 import {
-    FLOW_CONTROL_TERM,
+    flowControlTermSchema,
     type PlayTransformRules,
     type StageCommon,
     TRANSFORM_HOOK,
@@ -463,7 +463,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                     const [step, stepPlay] = await this.generateStepFromStage(transformedPlay, hookItem, hookType, opts);
                     steps.push(step);
                     cacheOk = step.error === undefined || (step.error !== undefined && step.flowKnownState !== undefined);
-                    if(step.flowResult === FLOW_CONTROL_TERM.stop) {
+                    if(step.flowResult === flowControlTermSchema.enum.stop) {
                         if(step.error !== undefined && step.flowKnownState !== 'skip' && !step.returnPartial) {
                             // revert to original play but keep steps for paper trail
                             transformedPlay = play;
@@ -593,8 +593,11 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     protected generateStepFromStage = async (playTruth: PlayObject, hookItem: StageCommon, hookType: TransformHook, opts: { logger?: Logger, asyncId?: string } & OptionalCacheUsage = {}): Promise<[LifecycleStep, PlayObject]> => {
         const {
             onSuccess = 'continue',
+            onSuccessAction,
             onFailure = 'stop',
+            onFailureAction,
             onSkip = 'continue',
+            onSkipAction,
             failureReturnPartial = false,
         } = hookItem;
 
@@ -650,6 +653,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 let skipMsg = `Stage '${stageName}' was skipped`;
                 step.flowResult = onSkip;
                 step.flowKnownState = 'skip';
+                step.actionResult = onSkipAction;
 
                 if (onSkip === 'stop') {
                     skipMsg += ' and will stop transform due to onSkip: stop';
@@ -682,11 +686,13 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                     logger[reqError !== undefined ? 'warn' : 'error'](merged, reason);
                 }
                 step.flowReason = reason;
+                step.actionResult = onFailureAction;
 
                 return [step, playTruth];
             }
         } else {
             step.flowResult = onSuccess;
+            step.actionResult = onSuccessAction;
 
             if (!objectsEqual(playTruth.data, newTransformedPlay.data)) {
                 const o = JSON.parse(JSON.stringify(playTruth.data));

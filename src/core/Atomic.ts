@@ -2,7 +2,7 @@ import type { Dayjs } from "dayjs";
 import type { AdditionalTrackInfoResponse } from "./vendor/listenbrainz/interfaces.ts";
 import type { Merge, RequiredKeys, StrictOmit } from "ts-essentials";
 import type {ErrorObject} from "serialize-error";
-import type { FlowControlTerm, TransformHook } from "./Transform.ts";
+import type { ActionTerm, FlowControlTerm, TransformHook } from "./Transform.ts";
 import type {Changeset} from "json-diff-ts";
 import type {IParseBaseOptions} from 'qs';
 import * as z from "zod";
@@ -435,6 +435,8 @@ export interface LifecycleStep {
     flowResult?: FlowControlTerm
     flowReason?: string
     flowKnownState?: 'skip' | 'prereq'
+    actionResult?: ActionTerm
+    actionReason?: string
     error?: ErrorLike
     patch?: Changeset
     inputs?: LifecycleInput[]

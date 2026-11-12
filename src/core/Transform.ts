@@ -17,10 +17,10 @@ export const TRANSFORM_HOOK = {
 export const flowControlTermSchema = z.enum(['continue', 'stop']).meta({title: 'Flow Control Term'});
 
 export type FlowControlTerm = z.infer<typeof flowControlTermSchema>;
-export const FLOW_CONTROL_TERM = {
-    continue: 'continue',
-    stop: 'stop'
-} as const satisfies Record<string, FlowControlTerm>;
+
+export const actionTermSchema = z.enum(['approve','ignore','review']).meta({title: 'Action Term'});
+
+export type ActionTerm = z.infer<typeof actionTermSchema>;
 
 /** Options for a configured Transformer, not used in a Stage */
 export const transformOptionsSchema = z.object({
@@ -163,6 +163,9 @@ export const stageCommonSchema = z.object({
     onSuccess: flowControlTermSchema.optional().meta({description: 'Default: continue'}),
     onFailure: flowControlTermSchema.optional().meta({description: 'Default: stop'}),
     onSkip: flowControlTermSchema.optional().meta({description: 'Default: continue'}),
+    onSuccessAction: actionTermSchema.optional(),
+    onFailureAction: actionTermSchema.optional(),
+    onSkipAction: actionTermSchema.optional(),
     failureReturnPartial: z.boolean().optional().meta({description: 'On failure, keep changes from earlier Stages in Hook'}),
 });
 
