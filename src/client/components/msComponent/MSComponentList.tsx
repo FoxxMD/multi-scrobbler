@@ -8,6 +8,7 @@ import { tanQueries } from "../../queries";
 import { MSErrorBoundary } from "../ErrorBoundary";
 import { useLocalStorage } from 'usehooks-ts'
 import { TextMuted } from "../TextMuted";
+import { ManualScrobbleButton } from "../play/ManualScrobble";
 
 export interface ComponentListProps {
     components: ComponentsApiJson[]
@@ -33,6 +34,7 @@ export const MSComponentList = (props: ComponentListProps) => {
                         <SegmentGroup.Indicator />
                         <SegmentGroup.Items items={["All", "Sources", "Clients"]} />
                     </SegmentGroup.Root>
+                    {props.components.some(x => x.mode === 'client') ? <ManualScrobbleButton/> : null}
                 <Box hideBelow="md">
                     <Field.Root>
                         <Field.Label><TextMuted>Grid Max Width</TextMuted></Field.Label>
