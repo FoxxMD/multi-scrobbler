@@ -491,7 +491,6 @@ export interface AmbPlayObject<D extends DateLike = Dayjs, T = {}> {
     meta: PlayMeta<D,T>
     original?: PlayOriginal<D>
     scrobble?: ScrobbleResult<D>
-    lifecycle?: LifecycleStep[]
 }
 
 export type AmbPlayObjectMinimal<D extends DateLike = Dayjs, T = {}> = Pick<AmbPlayObject<D,T>, RequiredKeys<AmbPlayObject<D>>> & Pick<AmbPlayObject<D,T>, 'id' | 'uid'>;

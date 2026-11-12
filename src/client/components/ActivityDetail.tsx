@@ -1,4 +1,4 @@
-import { Accordion, Alert, Dialog, Box, Text, Group, Portal, Code, Collapsible, Flex, HStack, Separator, Menu, Skeleton, SkeletonText, Span, Stack, useAccordionItemContext, type BadgeProps, type MenuItemProps, type MenuSelectionDetails, useClipboard, CloseButton, Button } from '@chakra-ui/react';
+import { Accordion, Dialog, Box, Text, Group, Portal, Collapsible, Flex, HStack, Separator, Menu, Skeleton, SkeletonText, Span, Stack, useAccordionItemContext, type BadgeProps, type MenuItemProps, type MenuSelectionDetails, useClipboard, CloseButton, Button } from '@chakra-ui/react';
 import { useSSEContext, useSSEEvent } from "@flamefrontend/sse-runtime-react";
 import { useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import React, { Fragment, useCallback, useEffect, useState, type ComponentProps } from "react";
@@ -154,70 +154,6 @@ export const ActivitySummaryFetchable = (props: MarkOptional<ActivitySummaryProp
     return <ActivitySummary {...props} activity={activity}/>
 }
 
-export const ActivityErrorSummary = (props: {activity: ActivityDetailProps['activity']}) => {
-        const {
-        activity: {
-            play: {
-                lifecycle = [],
-                scrobble,
-            } = {},
-            error,
-        } = {}
-    } = props;
-    if(error !== undefined && error !== null) {
-        return <ErrorAlert error={error} />;
-    }
-    const lifecycleError = lifecycle.find(x => x.error !== undefined && x.error !== null && Object.keys(x.error).length > 0);
-    if(lifecycleError !== undefined) {
-        return (
-        <Alert.Root status="error">
-            <Alert.Indicator />
-            <Alert.Content>
-                <Alert.Title>Error occurred during Play Transform in <Span color="fg.muted">Stage </Span>{lifecycleError.stageType}-{lifecycleError.stageName}<Span color="fg.muted"> in Hook </Span>{lifecycleError.hook} <Span color="fg.muted">from</Span> {lifecycleError.source}</Alert.Title>
-                <Alert.Description>
-                    <Stack gap="0.5">
-                        <Code width="fit-content" my="2" variant="surface">{lifecycleError.error?.message}</Code>                        
-                        <Box>Open the <strong>Timeline</strong> to find the error specifics.</Box>
-                    </Stack>                    
-                </Alert.Description>
-            </Alert.Content>
-        </Alert.Root>
-        );
-    }
-    if(scrobble?.error !== undefined) {
-        return (
-        <Alert.Root status="error">
-            <Alert.Indicator />
-            <Alert.Content>
-                <Alert.Title>Error occurred during while trying to scrobble</Alert.Title>
-                <Alert.Description>
-                    <Stack gap="0.5">
-                        <Code width="fit-content" my="2" variant="surface">{scrobble.error.message}</Code>                        
-                        <Box>Open the <strong>Timeline</strong> to find the error specifics.</Box>
-                    </Stack>  
-                </Alert.Description>
-            </Alert.Content>
-        </Alert.Root>
-        );
-    }
-    if(scrobble?.warnings !== undefined) {
-        return (
-        <Alert.Root status="warning">
-            <Alert.Indicator />
-            <Alert.Content>
-                <Alert.Title>There were warnings while scrobbling</Alert.Title>
-                <Alert.Description>
-                    <Stack gap="0.5">
-                        <Box>Open the <strong>Timeline</strong> to find warning specifics.</Box>
-                    </Stack>  
-                </Alert.Description>
-            </Alert.Content>
-        </Alert.Root>
-        )
-    }
-    return null;
-}
-
 // defined at module level so it isn't a new component type (remounted) on every ActivityDetails render
 const ExpandCollapseContext = (props: {onClick: (val: boolean) => void}) => {
     const item = useAccordionItemContext();
@@ -249,7 +185,6 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
 
     return (
         <Stack gap="2">
-        {/* <ActivityErrorSummary activity={props.activity}/> */}
         {error !== undefined && error !== null ? <ErrorAlert error={error}/> : null}
         <Accordion.Root width="full" variant="enclosed" collapsible multiple>
             <Accordion.Item value="info">

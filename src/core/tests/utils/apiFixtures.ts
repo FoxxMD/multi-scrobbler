@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import type {AlbumSearchResult, ArtistSearchResult, ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentHistoricalApi, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi, TrackSearchResult} from "../../Api.ts";
-import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes, type MBID, type Credit, type MusicServices, musicServiceName } from "../../Atomic.ts";
+import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes, type MBID, type Credit, type MusicServices, musicServiceName, type LifecycleStep } from "../../Atomic.ts";
 import { generateArtist, generateISRC, generateMbid, generatePlay, normalizePlays } from "./PlayTestUtils.ts";
 import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.ts";
 import { asJsonPlayObject } from "../../PlayMarshalUtils.ts";
@@ -89,11 +89,14 @@ export const generatePlayApiCommonDetailed = (opts: {
     playOpts?: Parameters<typeof generatePlayApiCommon>,
     inputOpts?: Parameters<typeof generatePlayInputApi>,
     queueOpts?: Parameters<typeof generateQueueStateApi>
+    /** Transform steps, added as a transform event */
+    steps?: LifecycleStep[]
 } = {}, error?: ErrorIsh): PlayApiCommonDetailed => {
     const {
         playOpts = [],
         inputOpts = [],
-        queueOpts = [] } =  opts;
+        queueOpts = [],
+        steps = [] } =  opts;
 
     const playCommon = generatePlayApiCommon(...playOpts);
     const inputRes = generatePlayInputApi(...inputOpts);
@@ -105,6 +108,7 @@ export const generatePlayApiCommonDetailed = (opts: {
         queueStates: [queueRes],
         error,
         events: [
+            ...(steps.length > 0 ? [{eventName: 'transform' as const, playId: 1, data: steps}] : []),
             {eventName: 'queueStateChange', playId: 1, data: {queueName: 'ingress', queueStatus: 'queued', retries: 2,
                 error: serializeError(generateFakeError()),
                  context: {reason: 'Bulk scrobble for dead Plays by system', dupeCheck: false, transform: true}}},
@@ -346,31 +350,37 @@ export const logsApiResponse = () => {
 }
 
 export const generatePlayApiCommonDetailedList = async (opts: {endDate?: Dayjs, initialDate?: Dayjs} = {}) => {
-      const queued = normalizePlays(generateArray(7, () => generatePlayWithLifecycle()), { endDate: opts.initialDate === undefined ? opts.endDate ?? dayjs() : undefined, initialDate: opts.initialDate }).map(x => {
+      const queuedGenerated = generateArray(7, () => generatePlayWithLifecycle());
+      const queued = normalizePlays(queuedGenerated.map(x => x.play), { endDate: opts.initialDate === undefined ? opts.endDate ?? dayjs() : undefined, initialDate: opts.initialDate }).map((x, index) => {
         const jsonPlay = asJsonPlayObject(x);
-        return generatePlayApiCommonDetailed({ playOpts: [{ state: 'queued', play: jsonPlay }], inputOpts: [{ play: jsonPlay }] })
+        return generatePlayApiCommonDetailed({ playOpts: [{ state: 'queued', play: jsonPlay }], inputOpts: [{ play: jsonPlay }], steps: queuedGenerated[index].steps })
       });
     
-      const scrobbledPlay = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle({ lifecycleSteps: { preCompare: [true, 'skipped', true] } })));
+      const scrobbledGenerated = generatePlayWithLifecycle({ lifecycleSteps: { preCompare: [true, 'skipped', true] } });
+      const scrobbledPlay = asJsonPlayObject(await playWithLifecycleScrobble(scrobbledGenerated.play));
       const scrobbledApi = generatePlayApiCommonDetailed({
         playOpts: [{ play: scrobbledPlay, state: 'scrobbled' }],
-        inputOpts: [{ play: scrobbledPlay }]
+        inputOpts: [{ play: scrobbledPlay }],
+        steps: scrobbledGenerated.steps
       });
     
-      const scrobbleErrorPlay = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle(), { error: true }));
+      const scrobbleErrorGenerated = generatePlayWithLifecycle();
+      const scrobbleErrorPlay = asJsonPlayObject(await playWithLifecycleScrobble(scrobbleErrorGenerated.play, { error: true }));
     
       const scrobbleError = generatePlayApiCommonDetailed({
         playOpts: [{ play: scrobbleErrorPlay, state: 'failed' }],
-        inputOpts: [{ play: scrobbleErrorPlay }]
+        inputOpts: [{ play: scrobbleErrorPlay }],
+        steps: scrobbleErrorGenerated.steps
       });
     
-      const promisedScrobbled = generateArray(10, () => playWithLifecycleScrobble(generatePlayWithLifecycle({ lifecycleSteps: { preCompare: [true, 'skipped', true] } })));
-      const promised = await Promise.all(promisedScrobbled);
-      const yesterdayScrobbled = normalizePlays(promised, { endDate: dayjs().subtract(1, 'd').subtract(100, 'm') }).map((x) => {
+      const yesterdayGenerated = generateArray(10, () => generatePlayWithLifecycle({ lifecycleSteps: { preCompare: [true, 'skipped', true] } }));
+      const promised = await Promise.all(yesterdayGenerated.map(x => playWithLifecycleScrobble(x.play)));
+      const yesterdayScrobbled = normalizePlays(promised, { endDate: dayjs().subtract(1, 'd').subtract(100, 'm') }).map((x, index) => {
         const jPlay = asJsonPlayObject(x);
         return generatePlayApiCommonDetailed({
           playOpts: [{ play: jPlay, state: 'scrobbled' }],
-          inputOpts: [{ play: jPlay }]
+          inputOpts: [{ play: jPlay }],
+          steps: yesterdayGenerated[index].steps
         });
       });
       return [

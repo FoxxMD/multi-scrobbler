@@ -380,10 +380,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
     }
 
-    public transformPlay = async (playInput: PlayObject, hookType: TransformHook, transformOpts: {log?: boolean | 'all'} & OptionalCacheUsage = {}): Promise<TransformPlayResult> => {
-
-        // legacy plays (old db rows) may carry steps on the play itself, always start fresh without them
-        const {lifecycle: _legacyLifecycle, ...play} = playInput;
+    public transformPlay = async (play: PlayObject, hookType: TransformHook, transformOpts: {log?: boolean | 'all'} & OptionalCacheUsage = {}): Promise<TransformPlayResult> => {
 
         const {
             log,

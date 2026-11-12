@@ -13,7 +13,7 @@ import { type CompactableProperty, type RetentionOptions, retentionPlayTypes } f
 import type {ErrorLike, SourceType} from "../../../../../core/Atomic.ts";
 import type {FindMany, FindWhere, FindWith, PlayInputNew, PlayNew, PlaySelect, PlaySelectWithQueueStates, PlayWith, QueueStateSelect, WhereClause} from "../drizzleTypes.ts";
 import { type DbConcrete, runTransaction } from "../drizzleUtils.ts";
-import { generateInputEntity, generatePlayEntity, hydratePlaySelect, stateChangeToPlayEvent, transformToPlayEvent, type PlayEntityOpts, type PlayHydateOptions } from "../entityUtils.ts";
+import { generateInputEntity, generatePlayEntity, hydratePlaySelect, stateChangeToPlayEvent, type PlayEntityOpts, type PlayHydateOptions } from "../entityUtils.ts";
 import { playEvents, playInputs, plays, queueStates, relations, type TSchema } from "../schema/schema.ts";
 import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
 import type {PaginatedResponse} from "../../../../../core/Api.ts";
@@ -124,14 +124,11 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
             const entitiesData = entitiesOpts.map((data) => {
                 const {
-                    play: {
-                        lifecycle,
-                        ...playRest
-                    },
+                    play,
                     input,
                     ...rest
                 } = data;
-                return generatePlayEntity(playRest, { componentId: this.componentId, ...rest });
+                return generatePlayEntity(play, { componentId: this.componentId, ...rest });
             });
 
             const nakedPlays = await this.db.insert(plays).values(entitiesData).returning();
@@ -150,22 +147,6 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             });
 
             const inputRows = await this.db.insert(playInputs).values(inputDatas).returning();
-
-            const eventData = nakedPlays.map((x, index) => {
-                const {
-                    play: {
-                        lifecycle = [],
-                    } = {}
-                } = entitiesOpts[index];
-
-                if(lifecycle.length > 0) {
-                    return {...transformToPlayEvent(lifecycle), playId: x.id}
-                }
-                return undefined;
-            }).filter(x => x !== undefined);
-            if(eventData.length > 0) {
-                await this.db.insert(playEvents).values(eventData);
-            }
 
             playRows = nakedPlays.map((x, index) => ({...x, play: hydratePlaySelect(x, hydrate), input: inputRows[index]}));
         });

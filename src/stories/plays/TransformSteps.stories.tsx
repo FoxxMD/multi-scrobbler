@@ -26,11 +26,11 @@ decorators: [
 });
 
 const original = generatePlay();
-const multiPlay = asJsonPlayObject(generatePlayWithLifecycle({lifecycleSteps: { preCompare: 2}, original}));
+const multiPlay = generatePlayWithLifecycle({lifecycleSteps: { preCompare: 2}, original});
 // More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
 export const Multiple = meta.story({
   args: {
-    steps: multiPlay.lifecycle!,
+    steps: multiPlay.steps,
     original: asJsonPlayObject(original),
     collapsibleOpen: true
   }

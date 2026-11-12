@@ -5,7 +5,7 @@ import { generatePlayWithLifecycle, playWithLifecycleScrobble } from "../../../c
 describe('#PlayFixtures', function () {
 
     it('Generates a Play with lifecycle', async function () {
-        await assert.isFulfilled(playWithLifecycleScrobble(generatePlayWithLifecycle()))
+        await assert.isFulfilled(playWithLifecycleScrobble(generatePlayWithLifecycle().play))
     });
 
 });

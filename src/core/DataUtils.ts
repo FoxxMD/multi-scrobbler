@@ -15,9 +15,6 @@ import { serializeError } from "serialize-error";
 const console = new ConsoleFormatter();
 
 export const jdiff = diffCreate({
-    propertyFilter(name, context) {
-        return name !== 'lifecycle';
-    },
     cloneDiffValues: true
     //omitRemovedValues: true
 });
