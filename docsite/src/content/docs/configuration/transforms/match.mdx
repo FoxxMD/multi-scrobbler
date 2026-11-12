@@ -16,7 +16,13 @@ Instead, the Stage **succeeds** if the Play matches and **fails** if it does not
 
 ## Configuration
 
-The Match Stage does **not** have a [Default Stage](/configuration/transforms#stage-names-and-default-stages). You must create at least one Match Stage in the top-level `transformers` of your [AIO Config](/configuration?configType=aio#configuration-types). It can be empty:
+The Match Stage has a [Default Stage](/configuration/transforms#stage-names-and-default-stages). You do not need to create one in the top-level `transformers` of your [AIO Config](/configuration?configType=aio#configuration-types).
+
+However, you can create one here if you want subsequent usage of this transformer to always have default rules, using [Rules](#rules) `defaults`.
+
+<details>
+
+<summary>Example</summary>
 
 ```json5 title="config.json" brackets
 {
@@ -25,13 +31,16 @@ The Match Stage does **not** have a [Default Stage](/configuration/transforms#st
   "transformers": [
     {
       "type": "match",
-      "name": "MyMatch"
+      "name": "MyMatch",
+      "defaults": {
+        "title": "MyCoolTitle" // [!ref] always added when using "MyMatch" in a Source/Client...
+      }
     }
   ]
 }
 ```
 
-Any [Rules](#rules) in `defaults` are added to the Rules of every Match Stage that uses this configuration.
+</details>
 
 ### Search Expression
 
