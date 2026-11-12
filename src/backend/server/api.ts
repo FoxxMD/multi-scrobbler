@@ -36,7 +36,8 @@ import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalSc
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
 import {componentStateBodySchema, playStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson, asSerializablePlaySelect, trackDataCreditBaseSchema, type TrackDataCreditBase, NDJSON_MEDIA_TYPE, trackSearchSimpleRequestQuerySchema, albumSearchSimpleRequestQuerySchema, artistSearchSimpleRequestQuerySchema } from "../../core/Api.ts";
 import { asDayjsHydratedObject } from "../../core/DataUtils.ts";
-import type {Dayjs} from "dayjs";
+import dayjs, {type Dayjs} from "dayjs";
+import { playDataStrictSchema, type JsonPlayObject } from "../../core/Atomic.ts";
 import { serializeError } from "serialize-error";
 import { z } from 'zod';
 import type { createTypedRouter, TypedMiddleware } from "@minisylar/express-typed-router";
@@ -647,6 +648,46 @@ Note: this is only supported by some components.`
 
         const playRes = await component.updatePlay(playUid as string, play.data);
         return res.json(asSerializablePlaySelect(playRes));
+    });
+
+    router.post('/scrobble', {
+        docs: {operationId: 'manual-scrobble'},
+        middleware: [jsonParser],
+        tags: ['Plays'],
+        summary: 'Manual Scrobble',
+        description: 'Scrobble a play by hand to Clients, using the same path as Sources. playDate defaults to now. Omit or empty clients to scrobble to all Clients.',
+        bodySchema: z.object({
+            play: playDataStrictSchema,
+            clients: z.string().array().optional().meta({description: 'Client ids (uid). Empty or missing means all clients.'})
+        })
+    }, async (req, res) => {
+        const {play: data, clients = []} = req.body;
+
+        const jsonPlay: JsonPlayObject = {
+            data: {...data, playDate: data.playDate ?? dayjs().toISOString()},
+            meta: {source: 'manual'}
+        };
+        const play: PlayObject = asPlayCheap(jsonPlay);
+
+        const playDate = dayjs(play.data.playDate);
+        if (!playDate.isValid()) {
+            return res.status(400).json({error: 'playDate is not a valid date'});
+        }
+        if (playDate.isAfter(dayjs().add(1, 'minute'))) {
+            return res.status(400).json({error: 'playDate cannot be more than 1 minute in the future'});
+        }
+
+        if (clients.length > 0) {
+            const known = scrobbleClients.clients.map(x => x.getUid());
+            const unknown = clients.filter(x => !known.includes(x));
+            if (unknown.length > 0) {
+                return res.status(400).json({error: `Unknown client ids: ${unknown.join(', ')}`});
+            }
+        }
+
+        await scrobbleClients.scrobble(play, {scrobbleTo: clients, scrobbleFrom: 'manual'});
+        const queued = clients.length > 0 ? clients : scrobbleClients.clients.map(x => x.getUid());
+        return res.status(202).json({queued});
     });
 
     router.post('/components/:id/plays/queue', {
