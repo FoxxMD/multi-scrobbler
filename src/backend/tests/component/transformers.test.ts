@@ -23,7 +23,9 @@ import MusicbrainzTransformer from "../../common/transforms/MusicbrainzTransform
 import SpotifyTransformer from "../../common/transforms/SpotifyTransformer.ts";
 import RockskyTransformer from "../../common/transforms/rocksky/RockskyTransformer.ts";
 import CoverArtArchiveTransformer from "../../common/transforms/coverartarchive/CoverArtArchiveTransformer.ts";
-import { testWhenConditions } from "../../utils/PlayTransformUtils.ts";
+import { parseDurationComparison } from "../../../core/TimeUtils.ts";
+import ActionTransformer from "../../common/transforms/action/ActionTransformer.ts";
+import { testPlayParts, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import { SkipTransformStageError, TransformRulesError } from "../../common/errors/MSErrors.ts";
 import { COMPONENT_STATE, type ComponentState, type TrackSearchResult } from "../../../core/Api.ts";
 import type { PlayWith, PlaySelectWithQueueStates } from "../../common/database/drizzle/drizzleTypes.ts";
@@ -821,6 +823,82 @@ describe('Play Transforms', function () {
         it('Applies artist alias', function () {
             const play = generatePlay({artists: [nameToCredit('Elephant Gym')]});
             expect(testWhenConditions(whenSchema.parse({artist: 'Nope'}), play)).is.false;
+        });
+
+        it('Empty test matches missing part', function () {
+            const play = generatePlay({artists: [nameToCredit('Elephant Gym')]});
+            expect(testWhenConditions(whenSchema.parse({artists: ''}), play)).is.false;
+            expect(testWhenConditions(whenSchema.parse({albumArtists: ''}), {...play, data: {...play.data, albumArtists: []}})).is.true;
+        });
+
+        it('Tests parts after art', function () {
+            const play = generatePlay({artists: [nameToCredit('Elephant Gym')]});
+            const noArt = {...play, data: {...play.data, art: undefined, album: undefined}, meta: {...play.meta, deviceId: 'abc'}};
+            expect(testWhenConditions(whenSchema.parse({art: '', deviceId: 'nope'}), noArt)).is.false;
+            expect(testWhenConditions(whenSchema.parse({art: '', deviceId: 'abc'}), noArt)).is.true;
+        });
+
+        it('Tests duration with built-in tester', function () {
+            const play = generatePlay({duration: 120});
+            expect(testPlayParts({duration: parseDurationComparison('> 7s')}, play, {})).is.true;
+            expect(testPlayParts({duration: parseDurationComparison('< 7s')}, play, {})).is.false;
+            expect(testPlayParts({duration: parseDurationComparison('> 7s')}, generatePlay({duration: undefined}), {})).is.false;
+        });
+
+        it('Tests parts with supplied typed testers', function () {
+            const play = generatePlay({duration: 120, track: nameToCredit('My Song')});
+            const testers = {duration: (test: number, p: PlayObject) => p.data.duration === test};
+            expect(testPlayParts({duration: 120, title: 'Song'}, play, testers)).is.true;
+            expect(testPlayParts({duration: 90}, play, testers)).is.false;
+            expect(testPlayParts({title: 'Nope'}, play, {})).is.false;
+            // @ts-expect-error built-in duration tester takes a DurationComparison, so a number tester must be supplied
+            const typeCheckOnly = () => testPlayParts({duration: 120}, play, {});
+            // @ts-expect-error bpm has no built-in tester so one must be supplied
+            expect(() => testPlayParts({bpm: 120}, play, {})).to.throw('No tester');
+        });
+    });
+
+    describe('Action Stage', function () {
+
+        class TestAction extends ActionTransformer {
+            public test(play: PlayObject, stage: unknown) {
+                const {matches = [], ...topLevel} = this.parseConfig(stage);
+                return [topLevel, ...matches].some(unit => this.testRulesUnit(play, unit));
+            }
+        }
+        const t = new TestAction({name: 'test', type: 'action'}, {logger: loggerTest, cache: memorycache()});
+        const base = {type: 'action', actionOnSuccess: 'approve', actionOnFailure: 'ignore'};
+        const play = generatePlay({artists: [nameToCredit('Elephant Gym')]});
+        play.meta.deviceId = 'abc';
+
+        it('Requires every part to match', function () {
+            expect(t.test(play, {...base, artists: 'Elephant', deviceId: 'abc'})).is.true;
+            expect(t.test(play, {...base, artists: 'Elephant', deviceId: 'nope'})).is.false;
+        });
+
+        it('Matches any term in a part', function () {
+            expect(t.test(play, {...base, deviceId: ['nope', 'abc']})).is.true;
+        });
+
+        it('Matches any rule set', function () {
+            expect(t.test(play, {...base, deviceId: 'nope', matches: [{artists: 'Elephant'}]})).is.true;
+            expect(t.test(play, {...base})).is.false;
+        });
+
+        it('Skips terms with unmet when', function () {
+            expect(t.test(play, {...base, deviceId: {search: 'abc', when: {title: 'zzzzzz'}}})).is.false;
+        });
+
+        it('Tests duration with comparison', function () {
+            const p = {...play, data: {...play.data, duration: 120}};
+            expect(t.test(p, {...base, duration: '> 7 s'})).is.true;
+            expect(t.test(p, {...base, duration: ['< 7 s', '= 2 minutes']})).is.true;
+            expect(t.test(p, {...base, duration: {search: '< 7 s'}})).is.false;
+        });
+
+        it('Rejects invalid duration comparison and untestable parts', function () {
+            expect(() => t.test(play, {...base, duration: '120'})).to.throw();
+            expect(() => t.test(play, {...base, meta: '120'})).to.not.throw();
         });
     });
 

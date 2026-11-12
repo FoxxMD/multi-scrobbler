@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { durationComparisonSchema } from "./TimeUtils.ts";
 
 export const META_PROVIDER_STAGE_TYPES = z.enum(['musicbrainz','rocksky','spotify']);
 export type MetadataProviderStageType = z.infer<typeof META_PROVIDER_STAGE_TYPES>;
@@ -64,6 +65,8 @@ export const whenPartsSchema = z.object({
     art: z.string().optional().meta({description: 'String or regex matching any Play art url. Empty string matches no art'}),
     artist: z.string().optional().meta({description: 'Alias of artists', deprecated: true}),
     albumArtist: z.string().optional().meta({description: 'Alias of albumArtists', deprecated: true}),
+    duration: durationComparisonSchema.optional().meta({description: 'Compare duration of the track against a value'}),
+    listenedFor: durationComparisonSchema.optional().meta({description: 'Compare time listened for against a value'}),
     deviceId: z.string().optional().meta({description: 'String or regex matching device id'}),
     user: z.string().optional().meta({description: 'String or regex matching user id/name'}),
     library: z.string().optional().meta({description: 'String or regex matching library id/name'}),
@@ -81,15 +84,24 @@ export const whenSchema = maybeArraySchema(whenPartsSchema).meta({title: 'When',
 
 export type WhenConditions = z.output<typeof whenSchema>;
 
-export const searchTermSchema = z.union([
-    z.string().meta({title: 'Search Term', description: 'String or regex to match'}),
+/**
+ * Build a term that tests a Play part, optionally only when `when` matches
+ *
+ * Always outputs `{search, when?}` where `search` is the output of `test` (string, parsed comparison, etc...)
+ *
+ * @param title Identifies this term in a union/docs
+ * */
+export const buildSearchTermSchema = <T extends z.ZodType>(test: T, title: string) => z.union([
+    test.transform((search): {search: z.output<T>, when?: WhenConditions} => ({search})),
     z.object({
-        search: z.string().meta({description: 'String or regex to match'}),
+        search: test,
         when: whenSchema.optional(),
-    }).meta({title: 'Apply When', description: 'Use transformed data for this part if when matches'}),
-]).meta({title: 'Search'});
+    }).meta({title: `${title} When`, description: 'Only test if when matches'}),
+]).meta({title});
 
-export type SearchTerm = z.output<typeof searchTermSchema>;
+export const searchTermSchema = buildSearchTermSchema(z.string().meta({title: 'Search String', description: 'String or regex to match'}), 'Search Term');
+
+export type SearchTerm<T = string> = {search: T, when?: WhenConditions};
 
 export const searchReplaceTermSchema = z.union([
     z.string().meta({title: 'Search Term', description: 'String or regex to remove'}),
