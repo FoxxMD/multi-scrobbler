@@ -11,6 +11,9 @@ tableOfContents:
 import JsonConfig from '@site/../config/blackbox.json.example?raw';
 import ENVConfig from "@site/src/content/docs/configuration/clients/_env_configs/_blackbox.md";
 import { Badge } from '@astrojs/starlight/components'
+import SchemaExample from '@site/src/components/SchemaExample.mdx';
+import ScrobbleExample from './_blackbox/scrobble.json?raw';
+import NowPlayingExample from './_blackbox/nowPlaying.json?raw';
 
 **Blackbox** is a generic Client that sends your scrobbles and [**Now Playing**](/configuration/clients#now-playing) activity to any URL you choose, like a webhook.
 
@@ -34,28 +37,61 @@ Your endpoint must accept a `POST` request with a JSON body. Any `2xx` response 
 
 ### Payload
 
-Choose the shape of the JSON body with `payloadStyle` (or `BLACKBOX_PAYLOAD_STYLE`):
+You can specify the style of payload MS will send to your endpoint using `payloadStyle` (or ENV `BLACKBOX_PAYLOAD_STYLE`):
+
+* `ms` (default) - sends Multi-Scrobbler's in-house Play object
+* `listenbrainz` - same payload as the [ListenBrainz submit listens API.](https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#post--1-submit-listens)
 
 <Tabs>
 <TabItem label="ms (default)">
 
-Multi-Scrobbler's own Play shape:
+Sends payloads with Multi-Scrobbler's in-house Play object.
 
-```json5
-{
-  "type": "scrobble", // or "nowPlaying"
-  "play": { /* Multi-Scrobbler Play data */ }
-}
-```
+This contains *much* more information than `listenbrainz` style but its specific to MS. Use in config like:
 
-When Now Playing stops, a `nowPlaying` payload is sent with `"play": null`.
+* File/AIO - `"payloadStyle": "ms"`
+* ENV - `BLACKBOX_PAYLOAD_STYLE=ms`
+
+<Badge text="Note" size="small" variant="note" /> Now Playing uses the same behavior as Discord and othe realtime Clients IE events are sent when a Source Player is stopped, paused, Play changes, etc...
+
+<details>
+
+<summary>Configuration Explorer, Json Schema Download, and Example</summary>
+
+<Tabs>
+<TabItem label="Scrobble">
+
+`play` is the scrobbled Play.
+
+[**Download Scrobble JSON Schema**](/schemas/blackbox-payload-scrobble.json)
+
+<SchemaExample schemaName="blackbox-payload-scrobble" content={ScrobbleExample}/>
+
+</TabItem>
+<TabItem label="Now Playing">
+
+`play` is the Player reporting Now Playing, which includes the Play being listened to. When Now Playing stops, `play` is `null`.
+
+[**Download Now Playing JSON Schema**](/schemas/blackbox-payload-nowPlaying.json)
+
+<SchemaExample schemaName="blackbox-payload-nowPlaying" content={NowPlayingExample}/>
+
+</TabItem>
+</Tabs>
+
+</details>
 
 </TabItem>
 <TabItem label="listenbrainz">
 
 The same payload as the [ListenBrainz submit listens API.](https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#post--1-submit-listens)
 
-Scrobbles use `"listen_type": "single"` and Now Playing uses `"listen_type": "playing_now"`. Nothing is sent when Now Playing stops.
+* File/AIO - `"payloadStyle": "listenbrainz"`
+* ENV - `BLACKBOX_PAYLOAD_STYLE=listenbrainz`
+
+Scrobbles use `"listen_type": "single"` and Now Playing uses `"listen_type": "playing_now"`.
+
+<Badge text="Note" size="small" variant="note" /> Now Playing uses the same behavior as Listenbrainz IE events are only sent when the current Play changes.
 
 </TabItem>
 </Tabs>
