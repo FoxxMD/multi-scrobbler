@@ -11,7 +11,7 @@ import type {PlayApiCommonDetailed} from "../../core/Api";
 import { DEAD_QUEUE, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, QUEUE_STATUS_QUEUED, type ComponentType, type JsonPlayObject, type LifecycleStep, type PlayMatchResult, type ScrobbleResult } from "../../core/Atomic";
 import { sortByNewestDate } from "../../core/PlayUtils";
 import { capitalizeWords } from "../../core/StringUtils";
-import { shortTodayAwareFormat } from "../../core/TimeUtils";
+import { shortTodayAwareFormat } from "../utils/index";
 import { activityTransformHasIssue, timelineIconProps, TimelineItemSummaryText } from "../utils/ComponentUtils";
 import { ChakraCodeBlockShort } from "./CodeBlock";
 import { ErrorAlert } from "./ErrorAlert";

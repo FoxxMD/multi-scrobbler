@@ -1,7 +1,7 @@
 import { Text } from "@chakra-ui/react"
 import type {Dayjs} from 'dayjs';
 import dayjs from 'dayjs';
-import { shortTodayAwareFormat } from "../../core/TimeUtils";
+import { shortTodayAwareFormat } from "../utils/index";
 import type {ComponentProps} from "react";
 
 export type DateDisplayProps = {
