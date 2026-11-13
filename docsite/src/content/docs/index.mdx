@@ -23,11 +23,12 @@ A dockerized app that monitors your music listening activity from *everywhere* a
 
 Plus...
 
-* Enhance/correct scrobble data with [search patterns](/configuration/transforms), [built-in corrections](/configuration/transforms), or the [Musicbrainz](/configuration/transforms/musicbrainz) or [Spotify](/configuration/transforms/spotify) catalogs
+* Enhance/correct scrobble data with [search patterns](/configuration/transforms), [built-in corrections](/configuration/transforms), and the [Musicbrainz](/configuration/transforms/musicbrainz), [Spotify](/configuration/transforms/spotify), or [Rocksky](/configuration/transforms/rocksky) catalogs
 * Monitor status of Sources and Clients using [webhooks (Gotify, Ntfy, Apprise)](/configuration#webhook-configurations) or [healthcheck endpoint](/configuration#health-endpoint)
 * Supports [Now Playing](/configuration/clients#now-playing) for scrobble Clients
 * Supports configuring for single or multiple users (scrobbling for your friends and family!)
 * Mobile-friendly web interface for stats, control, scrobble audit trail, and logs
+* [Secure instance with authentication](/security/overview) and display a Public Dashboard and iframe with your stats and latest activity
 * Graceful network and client failure handling (queued scrobbles that auto-retry)
 * Smart handling of credentials (persistent, authorization through app)
 * Easy configuration through [ENVs or JSON](/configuration#configuration-types)
