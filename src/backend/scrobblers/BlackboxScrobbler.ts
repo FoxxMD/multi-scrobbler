@@ -48,10 +48,10 @@ export default class BlackboxScrobbler extends AbstractScrobbleClient {
             const res = await request
             .get(this.config.data.endpointHealth)
             .set(this.config.data.headers ?? {});
-            if(res.statusCode === 200) {
+            if(res.statusCode >= 200 && res.statusCode < 300) {
                 return true;
             }
-            throw new SimpleError(`Returned non-200 status code: ${res.statusCode}`);
+            throw new SimpleError(`Returned non-2xx status code: ${res.statusCode}`);
         }
         return undefined;
     }
@@ -61,10 +61,10 @@ export default class BlackboxScrobbler extends AbstractScrobbleClient {
             const res = await request
             .get(this.config.data.endpointAuth)
             .set(this.config.data.headers ?? {});
-            if(res.statusCode === 200) {
+            if(res.statusCode >= 200 && res.statusCode < 300) {
                 return true;
             }
-            throw new SimpleError(`Returned non-200 status code: ${res.statusCode}`);
+            throw new SimpleError(`Returned non-2xx status code: ${res.statusCode}`);
         }
         return true;
     }

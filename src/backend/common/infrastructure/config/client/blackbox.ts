@@ -18,11 +18,11 @@ export const blackboxDataSchema = z.object({
         examples: [{"Authorization": "Bearer mytoken"}]
     }),
     endpointHealth: httpUrl.optional().meta({
-        description: "URL to use for testing service is reachable and ready. Any 200 response is treated as success.",
+        description: "URL to use for testing service is reachable and ready. Any 2xx response is treated as success.",
         examples: ["http://192.168.1.100:8080"]
     }),
     endpointAuth: httpUrl.optional().meta({
-        description: "URL to use for testing auth (through headers) is working. Any 200 response is treated as success.",
+        description: "URL to use for testing auth (through headers) is working. Any 2xx response is treated as success.",
         examples: ["http://192.168.1.100:8080/authenticated"]
     }),
 });
