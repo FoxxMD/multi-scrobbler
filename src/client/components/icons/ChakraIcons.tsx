@@ -74,6 +74,9 @@ import Jellyfin from "./custom/jellyfin.svg?react";
 import Spotify from "./custom/spotify.svg?react";
 import Youtube from "./custom/youtube.svg?react";
 import Plex from "./custom/plex.svg?react";
+import MusicAssistant from "./custom/music-assistant.svg?react";
+import Navidrome from "./custom/navidrome.svg?react";
+import Tidal from "./custom/tidal.svg?react";
 
  import { FaMixcloud } from "react-icons/fa";
  import { FcVlc } from "react-icons/fc";
@@ -294,6 +297,8 @@ export const getMusicServiceIcon = (service?: string): IconType | undefined => {
             return Lastfm as unknown as IconType;
         case 'maloja':
             return Maloja as unknown as IconType;
+        case 'navidrome':
+            return Navidrome as unknown as IconType;
         case 'ymbridge':
             return YandexMusic as unknown as IconType;
         case 'subsonic':
@@ -304,8 +309,12 @@ export const getMusicServiceIcon = (service?: string): IconType | undefined => {
             return FaMixcloud;
         case 'vlc':
             return FcVlc;
+        case 'musicassistant':
+            return MusicAssistant as unknown as IconType;
         case 'webscrobbler':
             return Webscrobbler as unknown as IconType;
+        case 'tidal':
+            return Tidal as unknown as IconType;
         default:
             return undefined;
     }

@@ -4,58 +4,25 @@ sidebar:
   order: 1
 ---
 import Carousel from '@site/src/components/Carousel/NextCarousel';
+import ServiceGrid from '@site/src/components/ServiceGrid.astro';
+import { sources, clients } from '@site/src/data/services';
 
 [![Latest Release](https://img.shields.io/github/v/release/foxxmd/multi-scrobbler)](/updating/changelog/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/FoxxMD/multi-scrobbler/blob/master/LICENSE)
 ![Docker Pulls](https://img.shields.io/docker/pulls/foxxmd/multi-scrobbler)
 
-<img src={withBase("img/icon.png")} align="right" alt="multi-scrobbler logo" width="180" height="180"/>
-
 A dockerized app that monitors your music listening activity from *everywhere* and scrobbles it *anywhere*.
 
-* Supports monitoring activity from many [**Sources**](/configuration/sources)
-    * [Apple Music](/configuration/sources/applemusic)
-    * [Azuracast](/configuration/sources/azuracast)
-    * [Deezer](/configuration/sources/deezer)
-    * [Google Cast (Chromecast)](/configuration/sources/google-cast)
-    * [Icecast](/configuration/sources/icecast)
-    * [Jellyfin](/configuration/sources/jellyfin)
-    * [JRiver](/configuration/sources/jriver)
-    * [Kodi](/configuration/sources/kodi)
-    * [Koito](/configuration/sources/koito-source)
-    * [Last.fm](/configuration/sources/lastfm-source)
-    * [Libre.fm](/configuration/sources/librefm-source)
-    * [Last.fm (Endpoint)](/configuration/sources/lastfm-endpoint)
-    * [ListenBrainz](/configuration/sources/listenbrainz-source)
-    * [ListenBrainz (Endpoint)](/configuration/sources/listenbrainz-endpoint) (Home Assistant, Navidrome, TIDAL Hi-Fi)
-    * [Maloja](/configuration/sources/maloja)
-    * [Mixcloud](/configuration/sources/mixcloud)
-    * [Mopidy](/configuration/sources/mopidy)
-    * [MPD (Music Player Daemon)](/configuration/sources/mpd)
-    * [MPRIS (Linux Desktop)](/configuration/sources/mpris)
-    * [Musikcube](/configuration/sources/musikcube)
-    * [Music Assistant](/configuration/sources/listenbrainz-endpoint#setup-for-popular-apps)
-    * [Plex](/configuration/sources/plex)
-    * [Rocksky](/configuration/sources/rocksky-source)
-    * [Sonos](/configuration/sources/sonos)
-    * [Spotify](/configuration/sources/spotify)
-    * [Subsonic-compatible APIs](/configuration/sources/subsonic) (like [Navidrome](https://www.navidrome.org/) and [Gonic](https://github.com/sentriz/gonic))
-    * [teal.fm](/configuration/sources/tealfm-source)
-    * [WebScrobbler](/configuration/sources/webscrobbler)
-    * [VLC](/configuration/sources/vlc)
-    * [Yamaha MusicCast](/configuration/sources/yamaha-musiccast)
-    * [Yandex Music](/configuration/sources/yandex-music)
-    * [Youtube Music](/configuration/sources/youtube-music)
-* Supports scrobbling to many [**Clients**](/configuration/clients)
-    * [Discord](/configuration/clients/discord) (Now Playing)
-    * [Koito](/configuration/clients/koito)
-    * [Last.fm](/configuration/clients/lastfm)
-    * [Libre.fm](/configuration/clients/librefm)
-    * [ListenBrainz](/configuration/clients/listenbrainz)
-    * [Maloja](/configuration/clients/maloja)
-    * [Rocksky](/configuration/clients/rocksky)
-    * [teal.fm](/configuration/clients/tealfm)
-    * [Tuneshine](/configuration/clients/tuneshine) (Now Playing)
+<h4 style={{fontWeight: 500}}>Monitor activity from many [**Sources**](/configuration/sources)</h4>
+
+<ServiceGrid services={sources} label="Sources"/>
+
+<h4 style={{fontWeight: 500}}>Scrobble to many [**Clients**](/configuration/clients)</h4>
+
+<ServiceGrid services={clients} label="Clients"/>
+
+Plus...
+
 * Enhance/correct scrobble data with [search patterns](/configuration/transforms), [built-in corrections](/configuration/transforms), or the [Musicbrainz](/configuration/transforms/musicbrainz) or [Spotify](/configuration/transforms/spotify) catalogs
 * Monitor status of Sources and Clients using [webhooks (Gotify, Ntfy, Apprise)](/configuration#webhook-configurations) or [healthcheck endpoint](/configuration#health-endpoint)
 * Supports [Now Playing](/configuration/clients#now-playing) for scrobble Clients
