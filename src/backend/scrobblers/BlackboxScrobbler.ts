@@ -2,15 +2,15 @@ import type { Logger } from "@foxxmd/logging";
 import type EventEmitter from "events";
 import request from 'superagent';
 import dayjs from "dayjs";
-import type { PlayObject, SourcePlayerJson, SourcePlayerObj } from "../../core/Atomic.ts";
+import type { PlayObject, SourcePlayerObj } from "../../core/Atomic.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
 import type { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.ts";
-import type { BlackboxClientConfig, BlackboxScrobblePayload } from "../common/infrastructure/config/client/blackbox.ts";
+import type { BlackboxClientConfig, BlackboxNowPlayingPayload, BlackboxScrobblePayload } from "../common/infrastructure/config/client/blackbox.ts";
 import { playToSubmitPayload } from "../common/vendor/listenbrainz/lzUtils.ts";
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.ts";
 import {redactString} from "@foxxmd/redact-string";
 import { SimpleError } from "../common/errors/MSErrors.ts";
-import { asJsonPlayObject } from "../../core/PlayMarshalUtils.ts";
+import { toPublicPlay, toPublicPlayer } from "../../core/PlayJsonSchema.ts";
 import type { SubmitPayload } from "../../core/vendor/listenbrainz/interfaces.ts";
 
 /**
@@ -73,7 +73,7 @@ export default class BlackboxScrobbler extends AbstractScrobbleClient {
         if(this.config.data.payloadStyle === 'listenbrainz') {
             return playToSubmitPayload(playObj, {listenType: type === 'scrobble' ? 'single' : 'playing_now'});
         }
-        return {play: asJsonPlayObject(playObj), type: 'scrobble'};
+        return {play: toPublicPlay(playObj), type: 'scrobble'};
     }
 
     protected send = async (payload: object) => request.post(this.config.data.endpoint).set(this.config.data.headers ?? {}).type('json').send(payload);
@@ -92,7 +92,7 @@ export default class BlackboxScrobbler extends AbstractScrobbleClient {
             }
             await this.send({play: null, type: 'nowPlaying'});
         } else {
-            await this.send(this.config.data.payloadStyle === 'listenbrainz' ? this.playToClientPayload(data.play, 'nowPlaying') : {play: data as SourcePlayerJson, type: 'nowPlaying'});
+            await this.send(this.config.data.payloadStyle === 'listenbrainz' ? this.playToClientPayload(data.play, 'nowPlaying') : {play: toPublicPlayer(data), type: 'nowPlaying'} satisfies BlackboxNowPlayingPayload);
         }
     }
 }
