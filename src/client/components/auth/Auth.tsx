@@ -10,6 +10,7 @@ import { Tooltip } from "../ChakraTooltip";
 import { isPublicDashboardEnabled, PublicDashboardFetchable } from "../PublicDashboard";
 import { tanQueries } from "../../queries";
 import { InfoPopover } from "../ToggleTip";
+import { isoToHuman } from "../../utils/index";
 
 const AuthCard = (props: PropsWithChildren<{title: string, description?: string | React.JSX.Element}>) => (
     <Box display="flex" justifyContent="center" width="full" py="8">
@@ -395,7 +396,8 @@ const UsernameForm = (props: {current: string}) => {
     );
 }
 
-const formatDate = (d: Date | string) => new Date(d).toLocaleString();
+// always include date so table columns are consistent
+const formatDate = (d: Date | string) => isoToHuman(d, {includeDate: true});
 
 /** Active sessions of the logged in user, with revoke */
 const SessionList = (props: {currentSessionId: string}) => {

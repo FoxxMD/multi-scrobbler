@@ -20,7 +20,8 @@ import type { CacheClearType } from "../../../core/Api";
 import { EphemeralElement } from "../Badges";
 import { AccountSettings } from "../auth/Auth";
 import { PublicDashboardSettingsFetchable } from "./PublicDashboardSettings";
-import { DATE_FORMATS, type DateFormatPref, formatNumericDate, useDateFormat } from "../../utils/index";
+import dayjs from "dayjs";
+import { DATE_FORMATS, TIME_FORMATS, dayjsTimeFormat, formatNumericDate, useDateFormat, useTimeFormat } from "../../utils/index";
 
 const DarkIcon = makeChakraIcon(LuMoon);
 const LightIcon = makeChakraIcon(LuSun);
@@ -29,19 +30,33 @@ const SystemIcon = makeChakraIcon(BsCircleHalf);
 // day > 12 so the example makes field order unambiguous
 const EXAMPLE_DATE = {year: new Date().getFullYear(), month: 12, day: 31};
 
-const DateFormatSelect = () => {
-    const [pref, setPref] = useDateFormat();
+const PrefSelect = <T extends string>(props: {label: string, value: T | null, onChange: (val: T | null) => void, browserExample: string, options: {value: T, label: string}[]}) => (
+    <Field.Root width="max-content">
+        <Field.Label>{props.label}</Field.Label>
+        <NativeSelect.Root size="sm">
+            <NativeSelect.Field value={props.value ?? ''} onChange={(e) => props.onChange(e.currentTarget.value === '' ? null : e.currentTarget.value as T)}>
+                <option value="">Browser Default ({props.browserExample})</option>
+                {props.options.map(x => <option key={x.value} value={x.value}>{x.label}</option>)}
+            </NativeSelect.Field>
+            <NativeSelect.Indicator />
+        </NativeSelect.Root>
+    </Field.Root>
+);
+
+const EXAMPLE_TIME = dayjs().hour(14).minute(5).second(0);
+
+const DateTimeFormatSelects = () => {
+    const [datePref, setDatePref] = useDateFormat();
+    const [timePref, setTimePref] = useTimeFormat();
     return (
-        <Field.Root width="max-content">
-            <Field.Label>Date Format</Field.Label>
-            <NativeSelect.Root size="sm">
-                <NativeSelect.Field value={pref ?? ''} onChange={(e) => setPref(e.currentTarget.value === '' ? null : e.currentTarget.value as DateFormatPref)}>
-                    <option value="">Browser Default ({formatNumericDate(null, EXAMPLE_DATE)})</option>
-                    {DATE_FORMATS.map(x => <option key={x} value={x}>{x} ({formatNumericDate(x, EXAMPLE_DATE)})</option>)}
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-            </NativeSelect.Root>
-        </Field.Root>
+        <>
+            <PrefSelect label="Date Format" value={datePref} onChange={setDatePref}
+                browserExample={formatNumericDate(null, EXAMPLE_DATE)}
+                options={DATE_FORMATS.map(x => ({value: x, label: `${x} (${formatNumericDate(x, EXAMPLE_DATE)})`}))}/>
+            <PrefSelect label="Time Format" value={timePref} onChange={setTimePref}
+                browserExample={EXAMPLE_TIME.format(dayjsTimeFormat(null))}
+                options={TIME_FORMATS.map(x => ({value: x, label: `${x === '12h' ? '12 Hour' : '24 Hour'} (${EXAMPLE_TIME.format(dayjsTimeFormat(x))})`}))}/>
+        </>
     );
 }
 
@@ -96,7 +111,7 @@ export const SettingsContainer = () => {
                         <SegmentGroup.ItemHiddenInput />
                     </SegmentGroup.Item>
                 </SegmentGroup.Root>
-                <DateFormatSelect/>
+                <DateTimeFormatSelects/>
             </VStack>
             </Tabs.Content>
             <Tabs.Content value="publicDashboard" pt="8">

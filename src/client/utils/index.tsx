@@ -1,7 +1,7 @@
 import type {TrackStringOptions} from "../../core/Atomic";
 import React, {type ReactElement, Fragment} from "react";
 import {defaultBuildTrackStringTransformers} from "../../core/StringUtils";
-import dayjs from 'dayjs';
+import dayjs, {type Dayjs} from 'dayjs';
 import {useLocalStorage} from 'usehooks-ts';
 import {browserLocale} from "../components/Country";
 
@@ -42,8 +42,6 @@ export interface DateFormatOptions {
     includeDate?: boolean
 }
 
-export const DAYJS_TIMEZ_FORMAT = 'HH:mm:ssZ';
-export const DAYJS_TIME_FORMAT = 'HH:mm:ss';
 
 export const DATE_FORMATS = ['MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD'] as const;
 /** null = use browser locale */
@@ -93,23 +91,48 @@ export const parseNumericDate = (pref: Exclude<DateFormatPref, null>, value: str
 }
 
 const DATE_FORMAT_KEY = 'pref-date-format';
-const toDateFormatPref = (val: unknown): DateFormatPref => DATE_FORMATS.includes(val as typeof DATE_FORMATS[number]) ? val as DateFormatPref : null;
+const TIME_FORMAT_KEY = 'pref-time-format';
 
-export const useDateFormat = (): [DateFormatPref, (pref: DateFormatPref) => void] => {
-    const [pref, setPref] = useLocalStorage<DateFormatPref>(DATE_FORMAT_KEY, null);
-    return [toDateFormatPref(pref), setPref];
-}
+/** Returns val if it is one of allowed, otherwise null (browser default) */
+const toPref = <T extends string>(allowed: readonly T[], val: unknown): T | null => allowed.includes(val as T) ? val as T : null;
 
-/** Non-hook read of the Date Format preference. Does not re-render on change, use useDateFormat in components when possible */
-export const getDateFormatPref = (): DateFormatPref => {
+/** Non-hook read of a preference (stored as JSON by usehooks-ts). Does not re-render on change, use the hook version in components when possible */
+const readPref = <T extends string>(key: string, allowed: readonly T[]): T | null => {
     try {
-        return toDateFormatPref(JSON.parse(localStorage.getItem(DATE_FORMAT_KEY) ?? 'null'));
+        return toPref(allowed, JSON.parse(localStorage.getItem(key) ?? 'null'));
     } catch {
         return null;
     }
 }
 
-export const isoToHuman = (iso?: string | null, opts?: DateFormatOptions) => {
+export const useDateFormat = (): [DateFormatPref, (pref: DateFormatPref) => void] => {
+    const [pref, setPref] = useLocalStorage<DateFormatPref>(DATE_FORMAT_KEY, null);
+    return [toPref(DATE_FORMATS, pref), setPref];
+}
+export const getDateFormatPref = (): DateFormatPref => readPref(DATE_FORMAT_KEY, DATE_FORMATS);
+
+export const TIME_FORMATS = ['12h', '24h'] as const;
+/** null = use browser locale */
+export type TimeFormatPref = typeof TIME_FORMATS[number] | null;
+
+const browserUses12h = ['h11', 'h12'].includes(new Intl.DateTimeFormat(browserLocale, {hour: 'numeric'}).resolvedOptions().hourCycle ?? '');
+
+export const useTimeFormat = (): [TimeFormatPref, (pref: TimeFormatPref) => void] => {
+    const [pref, setPref] = useLocalStorage<TimeFormatPref>(TIME_FORMAT_KEY, null);
+    return [toPref(TIME_FORMATS, pref), setPref];
+}
+export const getTimeFormatPref = (): TimeFormatPref => readPref(TIME_FORMAT_KEY, TIME_FORMATS);
+
+/** dayjs format tokens for time-of-day using the Time Format preference */
+export const dayjsTimeFormat = (pref: TimeFormatPref = getTimeFormatPref()): string => (pref === null ? browserUses12h : pref === '12h') ? 'h:mm:ss A' : 'HH:mm:ss';
+
+/** Client version of core shortTodayAwareFormat that respects Time Format preference. EX today: 2:05:00 PM, otherwise: Nov 13 2:05:00 PM */
+export const shortTodayAwareFormat = (date: Dayjs): string => {
+    const time = dayjsTimeFormat();
+    return date.format(dayjs().isSame(date, 'day') ? time : `MMM D ${time}`);
+}
+
+export const isoToHuman = (iso?: string | Date | null, opts?: DateFormatOptions) => {
     const {
         includeRelative = false,
         includeDate
@@ -127,7 +150,7 @@ export const isoToHuman = (iso?: string | null, opts?: DateFormatOptions) => {
     if(useDate) {
         parts.push(formatNumericDate(getDateFormatPref(), {year: date.year(), month: date.month() + 1, day: date.date()}));
     }
-    parts.push(date.format(DAYJS_TIME_FORMAT));
+    parts.push(date.format(dayjsTimeFormat()));
 
     if(includeRelative) {
         parts.push(`(${date.fromNow()})`);

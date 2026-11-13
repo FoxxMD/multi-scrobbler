@@ -10,7 +10,7 @@ import {
     useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
 import dayjs from "dayjs";
-import { shortTodayAwareFormat } from "../../../core/TimeUtils.js";
+import { shortTodayAwareFormat } from "../../utils/index.js";
 import { TextTip } from "../ToggleTip.js";
 
 type Color = BadgeProps['colorPalette'] & IconBaseProps['color'];
