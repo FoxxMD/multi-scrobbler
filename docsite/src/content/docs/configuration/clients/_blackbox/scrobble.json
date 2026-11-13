@@ -1,0 +1,47 @@
+{
+  "type": "scrobble",
+  "play": {
+    "data": {
+      "track": {
+        "name": "Hand In Glove",
+        "metadata": [
+          {
+            "name": "spotify",
+            "id": "1xlkleZh90GUEyBegEKyr3",
+            "idType": "track"
+          },
+          {
+            "name": "isrc",
+            "id": "GBKQU2696027"
+          }
+        ] 
+      },
+      "artists": [
+        { 
+          "name": "The Smiths",
+          "metadata": [
+            {
+              "name": "musicbrainz",
+              "id": "5df4799b-67f4-4ccd-97c7-bc8114b727e0",
+              "idType": "artist"
+            }
+	        ]
+        }
+      ],
+      "albumArtists": [{ "name": "The Smiths" }],
+      "album": { "name": "The Smiths", "image": "https://example.com/art/the-smiths.jpg" },
+      "duration": 205,
+      "playDate": "2026-11-13T14:05:00.000Z",
+      "listenedFor": 198
+    },
+    "meta": {
+      "source": "jellyfin",
+      "parsedFrom": "player",
+      "trackId": "a1b2c3d4",
+      "user": "foxx",
+      "deviceId": "living-room-tv",
+      "mediaPlayerName": "Jellyfin Web",
+      "url": { "web": "https://jellyfin.example.com/details?id=a1b2c3d4" }
+    }
+  }
+}

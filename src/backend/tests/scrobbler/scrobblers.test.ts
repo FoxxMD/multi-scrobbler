@@ -875,6 +875,24 @@ describe('Manages scrobble queue', function() {
         expect(play.state).eq('duped');
     });
 
+    it('Does not Scrobble a duplicate of a Play scrobbled by MS when upstream refresh is disabled', async function() {
+        await using testScrobbler = await generateTestScrobbler({name: 'test', id: 'test-norefresh', options: {refreshEnabled: false}});
+        const upstream = spy(testScrobbler, 'getScrobblesForTimeRange');
+
+        const scrobbled = generatePlay({playDate: dayjs().subtract(10, 'minutes')});
+        await testScrobbler.playRepoTest.createPlays([{play: scrobbled, state: 'scrobbled', input: {}}]);
+        const dupScrobble = clone(scrobbled);
+        dupScrobble.data.playDate = scrobbled.data.playDate!.add(2, 'seconds');
+
+        // processing path: no upstream plays, only MS-recorded scrobbles
+        const result = await testScrobbler.existingPlay(dupScrobble, []);
+        expect(result.match).is.true;
+
+        // queue path
+        expect(await testScrobbler.queuePlay(dupScrobble)).length(0);
+        expect(upstream.called).is.false;
+    });
+
     it('Delays scrobbles when many are queued', async function () {
         await using testScrobbler = await normalizedMonitoringScrobbler();
 

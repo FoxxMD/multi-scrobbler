@@ -1,0 +1,33 @@
+import ExplorerFetch from './Schema/ExplorerFetch';
+import FileExample from './FileExample';
+import './GenericConfiguration.scss';
+
+{/* Shows a JSON schema explorer next to a validated, editable example. Expects schema at public/schemas/{props.schemaName}.json */}
+
+<div class="schemaWrapper" style={{display: "flex"}}>
+    <div style={{ padding: '0 1em 0 1em', flexBasis: 'min-content', flexGrow: 2}}>
+        <DetailsAdmo type="note" summary="Structure">
+            All possible properties with their shape, types, and descriptions.
+        </DetailsAdmo>
+        <ExplorerFetch client:only="react" name={`schemas/${props.schemaName}`} />
+    </div>
+    <div style={{ flexBasis: 'auto', flexGrow: 3 }}>
+        <div class="fileEditor">
+            <DetailsAdmo type="note" summary="Example">
+                An example that adheres to the shown **Structure**. Edits are validated against it, any errors show up as squiggly lines.
+            </DetailsAdmo>
+        </div>
+        <div class="file-example" data-mode="plain">
+            <FileExample
+                client:only="react"
+                data={props.content}
+                schemaName={props.schemaName}
+                readOnlyAtWidth={500}
+                externalPlain
+            />
+            <div class="file-example__plain">
+                <Code code={props.content} lang="json" />
+            </div>
+        </div>
+    </div>
+</div>

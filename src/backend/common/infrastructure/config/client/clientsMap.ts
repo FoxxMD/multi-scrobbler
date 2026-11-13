@@ -7,6 +7,7 @@ import type { RockSkyClientAIOConfig, RockSkyClientConfig} from "./rocksky.ts";
 import type { LibrefmClientAIOConfig, LibrefmClientConfig} from "./librefm.ts";
 import type { DiscordClientAIOConfig, DiscordClientConfig} from "./discord.ts";
 import type { TuneshineClientAIOConfig, TuneshineClientConfig} from "./tuneshine.ts";
+import type { BlackboxClientAIOConfig, BlackboxClientConfig} from "./blackbox.ts";
 import type { ClientAIOConfig } from "./clients.ts";
 import type { CommonClientConfig, EnvClientSchema } from "./index.ts";
 import type {ZodType, ZodObject} from 'zod';
@@ -24,6 +25,7 @@ export interface ClientTypeConfigMap extends Record<ClientType, [CommonClientCon
     rocksky: [RockSkyClientConfig,RockSkyClientAIOConfig, Partial<Pick<RockSkyClientConfig, 'data' | 'options'>>],
     discord: [DiscordClientConfig,DiscordClientAIOConfig, Partial<Pick<DiscordClientConfig, 'data' | 'options'>>]
     tuneshine: [TuneshineClientConfig,TuneshineClientAIOConfig, Partial<Pick<TuneshineClientConfig, 'data' | 'options'>>]
+    blackbox: [BlackboxClientConfig,BlackboxClientAIOConfig, Partial<Pick<BlackboxClientConfig, 'data' | 'options'>>]
 }
 
 export const clientConfigSchemaMapAsync: { [K in keyof ClientTypeConfigMap]:() => Promise<[ZodType<ClientTypeConfigMap[K][0]>,ZodType<ClientTypeConfigMap[K][1]>,EnvClientSchema<ZodObject, ClientTypeConfigMap[K][0]>]> } = {
@@ -62,6 +64,10 @@ export const clientConfigSchemaMapAsync: { [K in keyof ClientTypeConfigMap]:() =
     tuneshine: async() => {
         const {tuneshineClientConfigSchema, tuneshineClientAIOConfigSchema, envSchemas} = (await import('./tuneshine.ts'));
         return [tuneshineClientConfigSchema,tuneshineClientAIOConfigSchema,envSchemas]
+    },
+    blackbox: async() => {
+        const {blackboxClientConfigSchema, blackboxClientAIOConfigSchema, envSchemas} = (await import('./blackbox.ts'));
+        return [blackboxClientConfigSchema,blackboxClientAIOConfigSchema,envSchemas]
     }
 }
 

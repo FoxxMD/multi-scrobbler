@@ -1,0 +1,125 @@
+---
+title: Blackbox
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 5
+---
+
+
+
+
+import JsonConfig from '@site/../config/blackbox.json.example?raw';
+import ENVConfig from "@site/src/content/docs/configuration/clients/_env_configs/_blackbox.md";
+import { Badge } from '@astrojs/starlight/components'
+import SchemaExample from '@site/src/components/SchemaExample.mdx';
+import ScrobbleExample from './_blackbox/scrobble.json?raw';
+import NowPlayingExample from './_blackbox/nowPlaying.json?raw';
+
+**Blackbox** is a generic Client that sends your scrobbles and [**Now Playing**](/configuration/clients#now-playing) activity to any URL you choose, like a webhook.
+
+Use it to feed your own app, script, or home automation with listening activity from any of your [Sources](/configuration/sources).
+
+<DetailsAdmo type="note" summary="One-Way Only">
+
+For a Blackbox Client, Multi-Scrobbler only **sends** data to your endpoint.
+
+It deliberately does not have any functions for fetching existing scrobbles from your client (for duplicate detection). This is to keep the Blackbox implementation simple.
+
+If you need this richer functionality you are better off emulating a [Listenbrainz Client](/configuration/clients/listenbrainz). 
+
+<Badge text="Note" size="small" variant="note" /> Blackbox **does still do [duplicate detection](/configuration/duplicates)** but only uses scrobbles Multi-Scrobbler has already sent to this Client.
+
+</DetailsAdmo>
+
+## Setup
+
+Your endpoint must accept a `POST` request with a JSON body. Any `2xx` response is treated as a successful scrobble. Anything else fails the scrobble and it will be [retried later.](/configuration/clients#dead-scrobbles)
+
+### Payload
+
+You can specify the style of payload MS will send to your endpoint using `payloadStyle` (or ENV `BLACKBOX_PAYLOAD_STYLE`):
+
+* `ms` (default) - sends Multi-Scrobbler's in-house Play object
+* `listenbrainz` - same payload as the [ListenBrainz submit listens API.](https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#post--1-submit-listens)
+
+<Tabs>
+<TabItem label="ms (default)">
+
+Sends payloads with Multi-Scrobbler's in-house Play object.
+
+This contains *much* more information than `listenbrainz` style but its specific to MS. Use in config like:
+
+* File/AIO - `"payloadStyle": "ms"`
+* ENV - `BLACKBOX_PAYLOAD_STYLE=ms`
+
+<Badge text="Note" size="small" variant="note" /> Now Playing uses the same behavior as Discord and othe realtime Clients IE events are sent when a Source Player is stopped, paused, Play changes, etc...
+
+<details>
+
+<summary>Configuration Explorer, Json Schema Download, and Example</summary>
+
+<Tabs>
+<TabItem label="Scrobble">
+
+`play` is the scrobbled Play.
+
+[**Download Scrobble JSON Schema**](/schemas/blackbox-payload-scrobble.json)
+
+<SchemaExample schemaName="blackbox-payload-scrobble" content={ScrobbleExample}/>
+
+</TabItem>
+<TabItem label="Now Playing">
+
+`play` is the Player reporting Now Playing, which includes the Play being listened to. When Now Playing stops, `play` is `null`.
+
+[**Download Now Playing JSON Schema**](/schemas/blackbox-payload-nowPlaying.json)
+
+<SchemaExample schemaName="blackbox-payload-nowPlaying" content={NowPlayingExample}/>
+
+</TabItem>
+</Tabs>
+
+</details>
+
+</TabItem>
+<TabItem label="listenbrainz">
+
+The same payload as the [ListenBrainz submit listens API.](https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#post--1-submit-listens)
+
+* File/AIO - `"payloadStyle": "listenbrainz"`
+* ENV - `BLACKBOX_PAYLOAD_STYLE=listenbrainz`
+
+Scrobbles use `"listen_type": "single"` and Now Playing uses `"listen_type": "playing_now"`.
+
+<Badge text="Note" size="small" variant="note" /> Now Playing uses the same behavior as Listenbrainz IE events are only sent when the current Play changes.
+
+</TabItem>
+</Tabs>
+
+### Headers
+
+Use `headers` to send extra headers with every request, like an API key or token:
+
+```json5
+"headers": {
+  "Authorization": "Bearer mytoken"
+}
+```
+
+Header values are partially redacted when logged on startup.
+
+### Health and Auth Checks
+
+Optional URLs Multi-Scrobbler calls with a `GET` request (including your `headers`) when the Client starts:
+
+* `endpointHealth` (or ENV `BLACKBOX_ENDPOINT_HEALTH`) checks that your service is reachable and ready
+* `endpointAuth` checks that your `headers` are accepted
+  * <Badge text="Note" size="small" variant="note" /> There is no ENV equivalent for this due to the potential complexity of headers. You will need to use File/AIO config if you need auth + headers.
+
+A `2xx` response is treated as success. If these are not set, Multi-Scrobbler skips the check and assumes your endpoint is ready.
+
+## Configuration
+
+<Config config="BlackboxClientConfig" fileContent={JsonConfig} client ambiguous name="blackbox">
+<ENVConfig/>
+</Config>

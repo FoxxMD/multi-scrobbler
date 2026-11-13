@@ -915,7 +915,8 @@ export type ClientType =
     'tealfm' |
     'rocksky' |
     'discord' |
-    'tuneshine';
+    'tuneshine' |
+    'blackbox';
 export const clientTypes: ClientType[] = [
     'maloja',
     'lastfm',
@@ -925,7 +926,8 @@ export const clientTypes: ClientType[] = [
     'tealfm',
     'rocksky',
     'discord',
-    'tuneshine'
+    'tuneshine',
+    'blackbox'
 ];
 export type ReportedPlayerStatus = 'playing' | 'stopped' | 'paused' | 'unknown';
 export const REPORTED_PLAYER_STATUSES = {
