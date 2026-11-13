@@ -1,234 +1,123 @@
-import type {Logger} from "@foxxmd/logging";
 import type { searchAndReplace as searchAndReplaceFunc} from "@foxxmd/regex-buddy-core";
 import { testMaybeRegex as testMaybeRegexFunc } from "@foxxmd/regex-buddy-core";
-import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import type {LifecycleStep, PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
 
-import {
-    type ConditionalSearchAndReplaceRegExp,
-    type ConditionalSearchAndReplaceTerm,
-    type ExternalMetadataTerm,
-    type PlayTransformStage,
-    type SearchAndReplaceTerm,
-    STAGE_TYPES,
-    type StageTypedConfig,
-    type WhenConditionsConfig,
-    type WhenParts, type PlayTransformHooks } from "../../core/Transform.ts";
+import { type WhenParts, type WhenConditions, type ActionTerm } from "../../core/Transform.ts";
 import dayjs from "dayjs";
 import { playImages } from "../../core/MusicMetadata.ts";
-import type { CommonClientOptions } from "../common/infrastructure/config/client/index.ts";
-import type { CommonSourceOptions } from "../common/infrastructure/config/source/index.ts";
-import { loggerNoop } from "../common/MaybeLogger.ts";
+import { compareDuration, type DurationComparison } from "../../core/TimeUtils.ts";
+import type { MarkRequired } from "ts-essentials";
 
-export const transformPresetEnv = <T extends CommonClientOptions | CommonSourceOptions>(prefix: string, existing: T | undefined = undefined, logger: Logger = loggerNoop): undefined | T => {
+/** Test a Play part against a parsed test value (string/regex, comparison, etc...) */
+export type PlayPartTester<T = string> = (test: T, play: PlayObject, options?: SuppliedRegex) => boolean;
 
-    const env = process.env[`${prefix}_TRANSFORMS`];
-    if (env === undefined || env.trim() === '') {
-        return existing;
-    }
+/** Get the strings of a Play part that a string/regex test is matched against. Empty if the Play does not have the part */
+export type PlayPartStringReader = (play: PlayObject) => string[];
 
-    const preCompare: NonNullable<PlayTransformHooks<ExternalMetadataTerm>['preCompare']> = [];
-    const popts: PlayTransformHooks<ExternalMetadataTerm> = {
-        preCompare
-    };
-    const transformTypes = env.split(',').map(x => x.trim().toLocaleLowerCase());
-    for (const p of transformTypes) {
-        switch (p) {
-            case 'native':
-                preCompare.push({ type: 'native'});
-                break;
-            case 'musicbrainz':
-                preCompare.push({ type: 'musicbrainz' });
-                break;
-            case 'rocksky':
-                preCompare.push({ type: 'rocksky' });
-                break;
-            case 'spotify':
-                preCompare.push({ type: 'spotify'});
-                break;
-            case 'coverartarchive':
-                preCompare.push({type: 'coverartarchive'});
-                break;
-            default:
-                logger.warn(`Unrecognized transformer type '${p} in env ${env}'`);
-                break;
-        }
-    }
+const definedStrings = (...vals: (string | undefined | null)[]): string[] => vals.filter((x): x is string => x !== undefined && x !== null);
 
-    // @ts-expect-error T is fine
-    return {
-        ...(existing || {}),
-        playTransform: popts
-    };
-};
-
-
-
-export const isWhenCondition = (val: unknown): val is WhenParts<string> => {
-    if (val !== null && typeof val === 'object') {
-        if ('artists' in val && typeof val.artists !== 'string') {
-            return false;
-        }
-        if ('title' in val && typeof val.title !== 'string') {
-            return false;
-        }
-        if ('album' in val && typeof val.album !== 'string') {
-            return false;
-        }
-        return true;
-    }
-    return false;
-}
-export const isWhenConditionConfig = (val: unknown): val is WhenConditionsConfig => {
-    return Array.isArray(val) && val.every(isWhenCondition);
-}
-export const configValToSearchReplace = (val: string | undefined | object): ConditionalSearchAndReplaceRegExp | undefined => {
-    if (val === undefined || val === null) {
-        return undefined;
-    }
-    if (typeof val === 'string') {
-        return {
-            search: val,
-            replace: ''
-        }
-    }
-    if (isConditionalSearchAndReplace(val)) {
-        return val as ConditionalSearchAndReplaceRegExp;
-    }
-    throw new Error(`Value must be a string or an object containing 'search: string' and 'replace: 'string'. Given: ${val}`);
-}
-export const isConditionalSearchAndReplace = (val: unknown): val is ConditionalSearchAndReplaceRegExp => {
-    return typeof val === 'object' && val !== null
-        && ('search' in val && typeof val.search === 'string')
-        && ('replace' in val && typeof val.replace === 'string')
-        && (!('when' in val) || isWhenConditionConfig(val.when));
-}
-
-export const isSearchAndReplaceTerm = (val: unknown | string | ConditionalSearchAndReplaceTerm): val is SearchAndReplaceTerm => {
-    const tf = typeof val;
-    if(tf === 'string') {
-        return true;
-    }
-    if(!(tf == 'object')) {
-        throw new Error(`Must be a string or an object, but found ${tf}`);
-    }
-    if(tf === null) {
-        throw new Error('Cannot be null');
-    }
-    return isConditionalSearchAndReplace(val);
-}
-
-export const isExternalMetadataTerm = (val: unknown): val is ExternalMetadataTerm => {
-    if(val === undefined) {
-        return true;
-    }
-    const tf = typeof val;
-    if(tf === 'boolean') {
-        return true;
-    }
-    if(tf === null) {
-        throw new Error(`Value is null but must be one of: true, undefined, or object with 'when'`);
-    }
-    if(tf === 'object') {
-        if(isWhenConditionConfig(val)) {
-            return true;
-        }
-        throw new Error(`Value is not a proper 'when' object`);
-    }
-    throw new Error(`Value is type of ${tf} but must be one of: boolean, undefined, or object with 'when'`);
-}
-
-export const isStageTyped = (val: unknown): val is StageTypedConfig => {
-    if(typeof val !== 'object' || val === null) {
-        return false;
-    }
-    return 'type' in val;
-}
-
-export const isPlayTransformStage = (val: object | Partial<PlayTransformStage<SearchAndReplaceTerm[]>>): val is PlayTransformStage<SearchAndReplaceTerm[]> => {
-    if (!('type' in val)) {
-        throw new Error(`Stage is missing 'type'. Must be one of: ${STAGE_TYPES.join(', ')}`);
-    }
-    if (typeof val.type !== 'string' || !STAGE_TYPES.includes(val.type)) {
-        throw new Error(`Stage has invalid 'type'. Must be one of: ${STAGE_TYPES.join(', ')}`);
-    }
-
-    for (const k of ['artists', 'title', 'album']) {
-        if (!(k in val)) {
-            continue;
-        }
-        if (val.type === 'user') {
-            if (!Array.isArray((val as any)[k])) {
-                throw new Error(`${k} must be an array`);
-            }
-            try {
-                isSearchAndReplaceTerm((val as any)[k]);
-            } catch (e) {
-                throw new Error(`Property '${k}' was not a valid type`, { cause: e });
-            }
-        } else {
-            try {
-                isExternalMetadataTerm((val as any)[k]);
-
-            } catch (e) {
-                throw new Error(`Property '${k}' was not a valid type`, { cause: e });
-            }
-        }
-    }
-
-    return true;
-}
-
-export const isUserStage = <T>(val: StageTypedConfig): val is StageTypedConfig => {
-    return val.type.toLocaleLowerCase().trim() === 'user';
-}
-
-export const testWhen = (parts: WhenParts<string>, play: PlayObject, options?: SuppliedRegex): boolean => {
+/**
+ * Test if any value of a Play part matches a string/regex
+ *
+ * An empty (or whitespace) test matches only if the part has no values IE "test that Play has no artists"
+ * */
+export const testPlayPartValues = (test: string, values: string[], options?: SuppliedRegex): boolean => {
     const {
         testMaybeRegex = testMaybeRegexFunc,
-    } = options || {}
+    } = options || {};
+    if (test.trim() === '') {
+        return values.length === 0;
+    }
+    return values.some(x => testMaybeRegex(test, x)[0]);
+}
 
-    if(parts.title !== undefined) {
-        if(!testMaybeRegex(parts.title, play.data.track?.name ?? '')[0]) {
+/**
+ * Build a tester for a Play part from a reader, that gets the part's value from a Play, and a test for that value
+ *
+ * @template V Value of the Play part
+ * @template T Parsed test value
+ * */
+export const partTester = <V, T>(read: (play: PlayObject) => V, test: (test: T, value: V, options?: SuppliedRegex) => boolean): PlayPartTester<T> =>
+    (testVal, play, options) => test(testVal, read(play), options);
+
+/** Build a string/regex tester for a Play part from the strings it has */
+export const stringPartTester = (read: PlayPartStringReader): PlayPartTester<string> => partTester(read, testPlayPartValues);
+
+/** Built-in testers for Play parts */
+export const PLAY_PART_TESTERS = {
+    title: stringPartTester((play) => definedStrings(play.data.track?.name)),
+    artists: stringPartTester((play) => (play.data.artists ?? []).map(x => x.name)),
+    albumArtists: stringPartTester((play) => (play.data.albumArtists ?? []).map(x => x.name)),
+    album: stringPartTester((play) => definedStrings(play.data.album?.name)),
+    art: stringPartTester((play) => playImages(play.data)),
+    deviceId: stringPartTester((play) => definedStrings(play.meta.deviceId)),
+    user: stringPartTester((play) => definedStrings(play.meta.user)),
+    library: stringPartTester((play) => definedStrings(play.meta.library)),
+    musicService: stringPartTester((play) => definedStrings(play.meta.musicService)),
+    playlist: stringPartTester((play) => definedStrings(play.meta.playlistId, play.meta.playlistName)),
+    // Play without a duration never matches
+    duration: partTester((play) => play.data.duration, (test: DurationComparison, value) =>
+        value !== undefined && compareDuration(dayjs.duration(value, 'seconds'), test.operator, test.duration)),
+    listenedFor: partTester((play) => play.data.listenedFor, (test: DurationComparison, value) =>
+        value !== undefined && compareDuration(dayjs.duration(value, 'seconds'), test.operator, test.duration)),
+} satisfies Record<string, PlayPartTester<any>>;
+
+export type BuiltInPlayPart = keyof typeof PLAY_PART_TESTERS;
+
+/** Test value the built-in tester for a part accepts */
+type BuiltInTest<K extends BuiltInPlayPart> = Parameters<typeof PLAY_PART_TESTERS[K]>[0];
+
+/** A tester for every part of P, typed by the part's (parsed) test value */
+export type PlayPartTesters<P> = { [K in keyof P]-?: PlayPartTester<NonNullable<P[K]>> };
+
+/** Parts of P a built-in tester covers: same key and a test value the built-in accepts */
+type BuiltInCoveredParts<P> = { [K in keyof P]-?: K extends BuiltInPlayPart ? (NonNullable<P[K]> extends BuiltInTest<K> ? K : never) : never }[keyof P];
+
+/**
+ * Testers that must be supplied to test P: required for parts without a built-in tester, optional overrides for the rest
+ *
+ * Narrow P (EX zod `.omit()`/`.pick()` on its schema) to require fewer testers
+ * */
+export type SuppliedPlayPartTesters<P> = Omit<PlayPartTesters<P>, BuiltInCoveredParts<P>> & Partial<Pick<PlayPartTesters<P>, BuiltInCoveredParts<P>>>;
+
+/** Get the supplied, or built-in, tester for a part. Throws if there is none (only possible when types are bypassed) */
+export const getPlayPartTester = <T>(part: string, testers: object = {}): PlayPartTester<T> => {
+    const tester = (testers as Partial<Record<string, PlayPartTester<T>>>)[part] ?? (PLAY_PART_TESTERS as Partial<Record<string, PlayPartTester<any>>>)[part];
+    if (tester === undefined) {
+        throw new Error(`No tester for Play part '${part}'`);
+    }
+    return tester;
+}
+
+/** Test that every given part of a Play matches its test (AND) */
+export const testPlayParts = <P extends object>(parts: P, play: PlayObject, testers: SuppliedPlayPartTesters<P>, options?: SuppliedRegex): boolean => {
+    for (const [part, test] of Object.entries(parts)) {
+        if (test === undefined) {
+            continue;
+        }
+        if (!getPlayPartTester(part, testers)(test, play, options)) {
             return false;
         }
-    }
-    const artistsTest = parts.artists;
-    if(artistsTest !== undefined) {
-        // allows user to test if artists are empty
-        const artists = artistsTest.length === 0 ? [{name: ''}] : (play.data.artists ?? []);
-        if(artists.every(x => !testMaybeRegex(artistsTest, x.name)[0])) {
-            return false;
-        }
-    }
-    if(parts.album !== undefined) {
-        if(!testMaybeRegex(parts.album, play.data.album?.name ?? '')[0]) {
-            return false;
-        }
-    }
-    if(parts.art !== undefined) {
-        const images = playImages(play.data);
-        if(parts.art.trim() === '') {
-            // user is testing to see if there is no art
-            // if test is empty string and there is no art then it passes
-            return images.length === 0;
-        }
-        // passes if any art url matches the search
-        return images.some(x => testMaybeRegex(parts.art!, x)[0]);
     }
     return true;
 }
 
-export const testWhenConditions = (when: WhenConditionsConfig, play: PlayObject, options?: SuppliedRegex) => when.some(x => testWhen(x, play, options));
+/** Testers for `when` parts without a built-in tester */
+const WHEN_PART_TESTERS: SuppliedPlayPartTesters<WhenParts> = {};
+
+export const testWhen = (parts: WhenParts, play: PlayObject, options?: SuppliedRegex): boolean => testPlayParts(parts, play, WHEN_PART_TESTERS, options);
+
+export const testWhenConditions = (when: WhenConditions, play: PlayObject, options?: SuppliedRegex) => when.some(x => testWhen(x, play, options));
 
 export interface SuppliedRegex {
     searchAndReplace?: typeof searchAndReplaceFunc,
     testMaybeRegex?: typeof testMaybeRegexFunc,
 }
 
-export interface TransformPlayPartsOptions {
-    logger?: () => Logger,
-    regex?: SuppliedRegex
-}
+/** Steps are in the order they ran (createdAt is not precise enough to sort by) */
+export const getLastLifecycleStepWithAction = (steps: LifecycleStep[]): MarkRequired<LifecycleStep, 'actionResult'> | undefined =>
+    steps.findLast(x => x.actionResult !== undefined) as MarkRequired<LifecycleStep, 'actionResult'> | undefined;
+export const getActionFromLifecycleSteps = (steps: LifecycleStep[]): ActionTerm | undefined => getLastLifecycleStepWithAction(steps)?.actionResult;
 
 export const baseFormatPlayObj = (data: any, play: PlayObjectMinimal): PlayObject => {
     const original = {

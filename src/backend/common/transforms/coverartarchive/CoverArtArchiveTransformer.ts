@@ -1,7 +1,6 @@
 import { type Credit, type LifecycleInput, type OptionalCacheUsage, type PlayObject } from "../../../../core/Atomic.ts";
-import { isWhenCondition } from "../../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../../infrastructure/config/health/webhooks.ts";
-import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../../core/Transform.ts";
+import type {ApplyTerm} from "../../../../core/Transform.ts";
 import AtomicPartsTransformer from "../AtomicPartsTransformer.ts";
 import { creditMbid, type CreditRules, withImage } from "../../../../core/MusicMetadata.ts";
 import type {TransformerOptions} from "../AbstractTransformer.ts";
@@ -11,13 +10,13 @@ import { difference } from '../../../../core/DataUtils.ts';
 import { intersect } from '../../../../core/DataUtils.ts';
 import { SimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError } from "../../errors/MSErrors.ts";
 import type { Cacheable } from "cacheable";
-import { hasArtFields, type CAAMissingType, type CoverArtArchiveTransformData, type CovertArtArchiveTransformerConfig } from "./CoverArtArchiveTransformerUtil.ts";
+import { hasArtFields, type CAAMissingType, type CoverArtArchiveStage, coverArtArchiveStageSchema, type CoverArtArchiveTransformData, type CovertArtArchiveTransformerConfig } from "./CoverArtArchiveTransformerUtil.ts";
 import { CoverArtClientPool } from "../../vendor/musicbrainz/CovertArtApiPool.ts";
 import { coverImageHas, type CoverArtReleaseResponse } from "../../vendor/musicbrainz/CoverArtApiTypes.ts";
 
 export type CoverArtArchiveTransformDataStrong = CoverArtArchiveTransformData & Required<Pick<CoverArtArchiveTransformData, 'searchWhenMissing' | 'allowedTypes' | 'forceSearch' | 'allowedSizes'>>;
 
-export type CoverArtArchiveTransformerDataStage = CoverArtArchiveTransformData & PlayTransformMetadataStage;
+export type CoverArtArchiveTransformerDataStage = CoverArtArchiveStage;
 
 type MSCoverArtReleaseResponse = CoverArtReleaseResponse & {type?: 'album' | 'releaseGroup', requestQuery: string, lifecycleInputs?: LifecycleInput[]};
 
@@ -44,9 +43,11 @@ export const parseStageConfig = (data: CoverArtArchiveTransformData | undefined 
     return config;
 }
 
-export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<ExternalMetadataTerm, ArtUriData, CoverArtArchiveTransformerDataStage> {
+export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<ApplyTerm, ArtUriData, CoverArtArchiveTransformerDataStage> {
 
     declare config: CovertArtArchiveTransformerConfig;
+
+    protected readonly stageSchema = coverArtArchiveStageSchema;
 
     protected defaults!: CoverArtArchiveTransformDataStrong;
 
@@ -70,33 +71,12 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
         return true;
     }
 
-    protected doParseConfig(data: CoverArtArchiveTransformerDataStage) {
-        if (data.type.toLocaleLowerCase().trim() !== 'coverartarchive') {
-            throw new Error(`CoverArtAchive Transformer is only usable with 'coverartarchive' type stages`);
-        }
-
-        const stage: CoverArtArchiveTransformerDataStage = {
+    protected doParseConfig(data: CoverArtArchiveTransformerDataStage): CoverArtArchiveTransformerDataStage {
+        // Stage values override Transformer defaults, which override built-in defaults from parseStageConfig
+        return {
             ...data,
-            ...parseStageConfig(data),
-            type: 'coverartarchive'
-        }
-
-        for (const k of ['art'] as const) {
-            if (!(k in stage)) {
-                stage[k] = true;
-                continue;
-            }
-            if (Array.isArray(stage[k])) {
-                throw new Error(`${k} must be a boolean or when object`);
-            }
-            if (typeof stage[k] === 'boolean') {
-                continue;
-            }
-            if (typeof stage[k] === 'object' && !isWhenCondition(stage[k])) {
-                throw new Error(`${k} is not a valid when object`);
-            }
-        }
-        return stage;
+            ...parseStageConfig({...(this.config.defaults ?? {}), ...data}),
+        };
     }
 
     public async handlePreFetch(play: PlayObject, stageConfig: CoverArtArchiveTransformerDataStage): Promise<void> {
@@ -266,16 +246,16 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<E
 
     protected override readonly hydratesCredits = true;
 
-    protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, transformData: ArtUriData, rules: CreditRules): Promise<Credit | undefined> {
+    protected async handleTitle(play: PlayObject, parts: ApplyTerm, transformData: ArtUriData, rules: CreditRules): Promise<Credit | undefined> {
         return play.data.track;
     }
-    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: ArtUriData, rules: CreditRules): Promise<Credit[] | undefined> {
+    protected async handleArtists(play: PlayObject, parts: ApplyTerm, transformData: ArtUriData, rules: CreditRules): Promise<Credit[] | undefined> {
         return play.data.artists;
     }
-    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: ArtUriData, rules: CreditRules): Promise<Credit[] | undefined> {
+    protected async handleAlbumArtists(play: PlayObject, parts: ApplyTerm, transformData: ArtUriData, rules: CreditRules): Promise<Credit[] | undefined> {
         return play.data.albumArtists;
     }
-    protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, transformData: ArtUriData, rules: CreditRules): Promise<Credit | undefined> {
+    protected async handleAlbum(play: PlayObject, parts: ApplyTerm, transformData: ArtUriData, rules: CreditRules): Promise<Credit | undefined> {
         return rules.art ? withImage(play.data.album, transformData.uri) : play.data.album;
     }
 

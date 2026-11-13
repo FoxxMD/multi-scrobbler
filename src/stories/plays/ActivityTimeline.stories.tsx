@@ -45,18 +45,20 @@ export const NotLoaded = meta.story({
 export const ActivityTimelineStory = meta.story({
     loaders: [
     async (ctx) => {
-      const scrobbleError = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle(
+      const {play: scrobbleErrorGenerated, steps} = generatePlayWithLifecycle(
         {
         lifecycleSteps: {
           preCompare: 1,
           postCompare: 1,
         }
       }
-      )));
+      );
+      const scrobbleError = asJsonPlayObject(await playWithLifecycleScrobble(scrobbleErrorGenerated));
       return {
         activity: generatePlayApiCommonDetailed({
         playOpts: [{play: scrobbleError}],
-        inputOpts: [{play: scrobbleError}]
+        inputOpts: [{play: scrobbleError}],
+        steps
       }),
     };
     }
@@ -66,11 +68,13 @@ export const ActivityTimelineStory = meta.story({
 export const ScrobbleError = meta.story({
     loaders: [
     async () => {
-      const scrobbleError = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle(), {error: true}));
+      const {play: scrobbleErrorGenerated, steps} = generatePlayWithLifecycle();
+      const scrobbleError = asJsonPlayObject(await playWithLifecycleScrobble(scrobbleErrorGenerated, {error: true}));
       return {
         activity: generatePlayApiCommonDetailed({
         playOpts: [{play: scrobbleError}],
-        inputOpts: [{play: scrobbleError}]
+        inputOpts: [{play: scrobbleError}],
+        steps
       })
     }
   }
@@ -80,16 +84,18 @@ export const ScrobbleError = meta.story({
 export const TransformError = meta.story({
     loaders: [
     async () => {
-      const scrobbleError = asJsonPlayObject(await generatePlayWithLifecycle({
+      const {play: scrobbleErrorGenerated, steps} = generatePlayWithLifecycle({
         lifecycleSteps: {
           preCompare: 2,
           postCompare: [false],
         }
-      }));
+      });
+      const scrobbleError = asJsonPlayObject(scrobbleErrorGenerated);
       return {
         activity: generatePlayApiCommonDetailed({
         playOpts: [{play: scrobbleError}],
-        inputOpts: [{play: scrobbleError}]
+        inputOpts: [{play: scrobbleError}],
+        steps
       })
     }
     }
@@ -99,15 +105,17 @@ export const TransformError = meta.story({
 export const TransformSkip = meta.story({
     loaders: [
     async () => {
-      const play = asJsonPlayObject(await generatePlayWithLifecycle({
+      const {play: playGenerated, steps} = generatePlayWithLifecycle({
         lifecycleSteps: {
           preCompare: [true, 'skipped', true],
         }
-      }));
+      });
+      const play = asJsonPlayObject(playGenerated);
       return {
         activity: generatePlayApiCommonDetailed({
         playOpts: [{play}],
-        inputOpts: [{play}]
+        inputOpts: [{play}],
+        steps
       })
     }
     }
@@ -117,15 +125,17 @@ export const TransformSkip = meta.story({
 export const TransformPrereq = meta.story({
     loaders: [
     async () => {
-      const play = asJsonPlayObject(await generatePlayWithLifecycle({
+      const {play: playGenerated, steps} = generatePlayWithLifecycle({
         lifecycleSteps: {
           preCompare: [true, 'prereq'],
         }
-      }));
+      });
+      const play = asJsonPlayObject(playGenerated);
       return {
         activity: generatePlayApiCommonDetailed({
         playOpts: [{play}],
-        inputOpts: [{play}]
+        inputOpts: [{play}],
+        steps
       })
     }
     }
@@ -135,15 +145,17 @@ export const TransformPrereq = meta.story({
 export const TransformStop = meta.story({
     loaders: [
     async () => {
-      const play = asJsonPlayObject(await generatePlayWithLifecycle({
+      const {play: playGenerated, steps} = generatePlayWithLifecycle({
         lifecycleSteps: {
           preCompare: [true, 'stop'],
         }
-      }));
+      });
+      const play = asJsonPlayObject(playGenerated);
       return {
         activity: generatePlayApiCommonDetailed({
         playOpts: [{play}],
-        inputOpts: [{play}]
+        inputOpts: [{play}],
+        steps
       })
     }
     }

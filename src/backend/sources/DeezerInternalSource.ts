@@ -348,9 +348,9 @@ export default class DeezerInternalSource extends MemorySource {
 
     async existingDiscovered(play: PlayObject): Promise<PlayMatchResult> {
         const list: PlayObject[] = await this.getRecentPlays();
-        const candidate = await this.transformPlay(play, TRANSFORM_HOOK.candidate);
+        const {play: candidate} = await this.transformPlay(play, TRANSFORM_HOOK.candidate);
         const existing = await findAsync(list, async x => {
-            const e = await this.transformPlay(x, TRANSFORM_HOOK.existing);
+            const {play: e} = await this.transformPlay(x, TRANSFORM_HOOK.existing);
             return genericSourcePlayMatch(e, candidate);
         });
         if(existing) {
@@ -365,7 +365,7 @@ export default class DeezerInternalSource extends MemorySource {
         }
         if(this.config.options?.fuzzyDiscoveryIgnore === true || this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
             const fuzzyIndex = (await findIndexAsync(list, async x => {
-                const e = await this.transformPlay(x, TRANSFORM_HOOK.existing);
+                const {play: e} = await this.transformPlay(x, TRANSFORM_HOOK.existing);
                 let temporalOptions: TemporalPlayComparisonOptions = {};
                 const temporalAccuracy: TemporalAccuracy[] = [TA_EXACT, TA_CLOSE, TA_FUZZY];
                 if(this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {

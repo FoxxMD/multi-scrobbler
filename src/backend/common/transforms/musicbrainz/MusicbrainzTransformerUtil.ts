@@ -1,118 +1,68 @@
-import type { MissingMbidType, TransformerCommon, TransformOptions } from "../../../../core/Atomic.ts";
 import type { MusicbrainzApiConfigData } from "../../infrastructure/Atomic.ts";
 import { MaybeLogger } from "../../MaybeLogger.ts";
-import { DEFAULT_TRANSFORMER_ENV_NAME } from "../../../../core/Transform.ts";
-import type { MBReleaseGroupPrimaryType, MBReleaseGroupSecondaryType, MBReleaseStatus } from "../../vendor/musicbrainz/MusicbrainzTypes.ts";
+import { applyTermSchema, buildRulesSchema, buildStageSchema, DEFAULT_TRANSFORMER_ENV_NAME, type TransformerCommon, type TransformOptions } from "../../../../core/Transform.ts";
+import { mBReleasePrimaryGroupTypesSchema, mBReleaseSecondaryGroupTypesSchema, mBReleaseStatusesSchema } from "../../vendor/musicbrainz/MusicbrainzTypes.ts";
+import { maybeStringLowerArrayFromString } from "../../../utils/ZodUtils.ts";
+import * as z from 'zod';
 
 export interface MusicbrainzTransformerDataConfig {
     apis: MusicbrainzApiConfigData[];
 }
 
-export type MusicbrainzTransformerConfig = TransformerCommon<MusicbrainzTransformerData, MusicbrainzTransformerDataConfig> & {options?: TransformOptions & {logUrl?: boolean}}
+export type MusicbrainzTransformerConfig = TransformerCommon & { defaults?: MusicbrainzTransformerData, data?: MusicbrainzTransformerDataConfig, options?: TransformOptions & {logUrl?: boolean} }
 
 export type SearchType = 'freetext' | 'album' | 'artist' | 'basic' | 'basicorids' | 'isrc' | 'mbidrecording';
 
 export const DEFAULT_SEARCHTYPE_ORDER: SearchType[] = ['isrc', 'basic'];
 
-export interface MusicbrainzTransformerData {
-    searchWhenMissing?: MissingMbidType[];
-    forceSearch?: boolean;
-    score?: number;
-    fallbackArtistSearch?: ('naive' | 'native');
-    fallbackFreeText?: boolean;
-    fallbackAlbumSearch?: boolean;
-    logPreMbid?: boolean;
-    searchOrder?: SearchType[];
-    searchArtistMethod?: ('naive' | 'native');
+const searchArtistMethodSchema = z.enum(['naive', 'native']);
 
-    /** Ignore album artist if it is "Various Artists"
-     *
-     * @default true
-     */
-    ignoreVA?: boolean;
+/** Musicbrainz Stage options. Used for transformer `defaults` and for overrides in a Stage. Values are normalized by `parseStageConfig` */
+export const musicbrainzStageOptionsSchema = z.object({
+    searchWhenMissing: z.array(z.string()).optional().meta({description: 'Search if Play is missing any of: artists, title, album, duration'}),
+    forceSearch: z.boolean().optional().meta({description: 'Always search, even if nothing is missing'}),
+    score: z.number().optional().meta({description: 'Minimum match score (0-100). Default 90'}),
+    fallbackArtistSearch: searchArtistMethodSchema.optional().meta({description: "DEPRECATED. Use searchOrder 'artist'", deprecated: true}),
+    fallbackFreeText: z.boolean().optional().meta({description: "DEPRECATED. Use searchOrder 'freetext'", deprecated: true}),
+    fallbackAlbumSearch: z.boolean().optional().meta({description: "DEPRECATED. Use searchOrder 'album'", deprecated: true}),
+    logPreMbid: z.boolean().optional().meta({description: 'Log MBIDs Play has before searching'}),
+    searchOrder: z.array(z.string()).optional().meta({description: 'Search methods, in order. Any of: isrc, mbidrecording, basicorids, basic, artist, album, freetext'}),
+    searchArtistMethod: searchArtistMethodSchema.optional().meta({description: "Artist parsing for 'artist' search. Default native"}),
+    ignoreVA: z.boolean().optional().meta({description: "Ignore 'Various Artists' album artist. Default true"}),
 
-    /** Allow only releases with release groups with these primary types
-     *
-     * @see https://wiki.musicbrainz.org/Release_Group/Type#Primary_types
-    */
-    releaseGroupPrimaryTypeAllow?: MBReleaseGroupPrimaryType[];
-    /** Filter out any releases with release groups with these primary types
-     *
-     * @see https://wiki.musicbrainz.org/Release_Group/Type#Primary_types
-    */
-    releaseGroupPrimaryTypeDeny?: MBReleaseGroupPrimaryType[];
-    /** Prioritise releases to use based on the order of these release group types
-      *
-      * @see https://wiki.musicbrainz.org/Release_Group/Type#Primary_types
-     */
-    releaseGroupPrimaryTypePriority?: MBReleaseGroupPrimaryType[];
+    releaseGroupPrimaryTypeAllow: mBReleasePrimaryGroupTypesSchema.optional().meta({description: 'Only allow releases with these release group primary types'}),
+    releaseGroupPrimaryTypeDeny: mBReleasePrimaryGroupTypesSchema.optional().meta({description: 'Deny releases with these release group primary types'}),
+    releaseGroupPrimaryTypePriority: mBReleasePrimaryGroupTypesSchema.optional().meta({description: 'Prioritize releases by these release group primary types, in order'}),
 
-    /** Allow only releases with release groups with these secondary types
-     *
-     * @see https://wiki.musicbrainz.org/Release_Group/Type#Secondary_types
-    */
-    releaseGroupSecondaryTypeAllow?: MBReleaseGroupSecondaryType[];
-    /** Filter out any releases with release groups with these secondary types
-     *
-     * @see https://wiki.musicbrainz.org/Release_Group/Type#Secondary_types
-    */
-    releaseGroupSecondaryTypeDeny?: MBReleaseGroupSecondaryType[];
-    /** Prioritise releases to use based on the order of these release group secondary types
-     *
-     * @see https://wiki.musicbrainz.org/Release_Group/Type#Secondary_types
-    */
-    releaseGroupSecondaryTypePriority?: MBReleaseGroupSecondaryType[];
+    releaseGroupSecondaryTypeAllow: mBReleaseSecondaryGroupTypesSchema.optional().meta({description: 'Only allow releases with these release group secondary types'}),
+    releaseGroupSecondaryTypeDeny: mBReleaseSecondaryGroupTypesSchema.optional().meta({description: 'Deny releases with these release group secondary types. Default audiobook'}),
+    releaseGroupSecondaryTypePriority: mBReleaseSecondaryGroupTypesSchema.optional().meta({description: 'Prioritize releases by these release group secondary types, in order'}),
 
-    /** Allow only releases with these statuses
-     *
-     * @see https://wiki.musicbrainz.org/Release#Status
-    */
-    releaseStatusAllow?: MBReleaseStatus[];
-    /** Filter out any releases with these statuses
-     *
-     * @see https://wiki.musicbrainz.org/Release#Status
-    */
-    releaseStatusDeny?: MBReleaseStatus[];
-    /** Prioritise releases to used based on the order of these statuses
-     *
-     * @see https://wiki.musicbrainz.org/Release#Status
-    */
-    releaseStatusPriority?: MBReleaseStatus[];
+    releaseStatusAllow: mBReleaseStatusesSchema.optional().meta({description: 'Only allow releases with these statuses'}),
+    releaseStatusDeny: mBReleaseStatusesSchema.optional().meta({description: 'Deny releases with these statuses'}),
+    releaseStatusPriority: mBReleaseStatusesSchema.optional().meta({description: 'Prioritize releases by these statuses, in order'}),
 
-    /** Allow only releases from these ISO2 countries
- *
- * @see https://beta.musicbrainz.org/doc/Release/Country
-*/
-    releaseCountryAllow?: string[];
-    /** Filter out any releases rom these ISO2 countries
-     *
-     * @see https://beta.musicbrainz.org/doc/Release/Country
-    */
-    releaseCountryDeny?: string[];
-    /** Prioritise releases to used based on the order of these ISO2 countries
-     *
-     * @see https://beta.musicbrainz.org/doc/Release/Country
-    */
-    releaseCountryPriority?: string[];
+    releaseCountryAllow: maybeStringLowerArrayFromString.optional().meta({description: 'Only allow releases from these ISO2 countries'}),
+    releaseCountryDeny: maybeStringLowerArrayFromString.optional().meta({description: 'Deny releases from these ISO2 countries'}),
+    releaseCountryPriority: maybeStringLowerArrayFromString.optional().meta({description: 'Prioritize releases by these ISO2 countries, in order'}),
 
-    /** Do not filter out a recording if it initially has no releases
-     *
-     * Use in conjunction with release filters by setting to `true`
-     * to prevent recordings from being filtered out solely becauase they don't have any releases to begin with
-     *
-     */
-    releaseAllowEmpty?: boolean;
+    releaseAllowEmpty: z.boolean().optional().meta({description: 'Keep recordings that have no releases'}),
+    allowMusicVideo: z.boolean().optional().meta({description: 'Allow music video recordings. Default false'}),
 
-    /** Allow music video Recording types?
-     * 
-     * @default false
-    */
-    allowMusicVideo?: boolean
+    titleWeight: z.union([z.number(), z.literal(true)]).optional().meta({description: 'Weight of title when ranking matches'}),
+    artistWeight: z.union([z.number(), z.literal(true)]).optional().meta({description: 'Weight of artist when ranking matches'}),
+    albumWeight: z.union([z.number(), z.literal(true)]).optional().meta({description: 'Weight of album when ranking matches'}),
+});
 
-    titleWeight?: number | true;
-    artistWeight?: number | true;
-    albumWeight?: number | true;
-}
+export type MusicbrainzTransformerData = z.input<typeof musicbrainzStageOptionsSchema>;
+
+export const musicbrainzStageSchema = buildStageSchema(
+    'musicbrainz',
+    buildRulesSchema(applyTermSchema, {title: true, artists: true, albumArtists: true, album: true, duration: true, meta: true}),
+    musicbrainzStageOptionsSchema
+).meta({title: 'Musicbrainz Stage'});
+
+export type MusicbrainzStage = z.output<typeof musicbrainzStageSchema>;
 
 export const DEFAULTS_SENSIBLE: MusicbrainzTransformerData = {
     // use official release over anything else
@@ -182,7 +132,7 @@ export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
             defaults: {}
         };
         const presets = mbEnv.split(',').map(x => x.trim().toLocaleLowerCase());
-        const soSet = new Set<SearchType>();
+        const soSet = new Set<string>();
         for (const pName of presets) {
             const p = PRESETS[pName];
             if (p === undefined) {

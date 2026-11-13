@@ -3,7 +3,7 @@ import { defineRelations } from 'drizzle-orm';
 import dayjs, { type Dayjs } from "dayjs";
 import { COMPONENT_TYPE_CLIENT, COMPONENT_TYPE_SOURCE, type ErrorLike, type PlayObject, type QueueContext } from "../../../../../core/Atomic.ts";
 import { asPlayCheap } from "../../../../../core/PlayMarshalUtils.ts";
-import type {ExternalMetadataTerm, PlayTransformPartsConfig, SearchAndReplaceTerm} from "../../../../../core/Transform.ts";
+import type {PlayTransformConfig} from "../../../transforms/stageSchemas.ts";
 import type {JobRangeCount, JobRangeTime} from "../../../infrastructure/Job.ts";
 import { serializeError, deserializeError } from "serialize-error";
 import { generatePlayUid } from "../../../../../core/StringUtils.ts";
@@ -76,7 +76,7 @@ export const plays = sqliteTable("plays", {
   seenAt: DayjsTimestamp('seenAt'),
   updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()).$onUpdate(() => dayjs()),
   play: PlayJson('play').notNull(), //  text({ mode: 'json' }).notNull().$type<PlayObject>(),
-  state: text({enum: ['queued','discovered','discarded','scrobbled','failed','duped']}).notNull(),
+  state: text({enum: ['queued','discovered','discarded','scrobbled','failed','duped','review']}).notNull(),
   // https://orm.drizzle.team/docs/indexes-constraints#foreign-key
   parentId: integer().references((): AnySQLiteColumn => plays.id, {onDelete: 'set null', onUpdate: 'cascade'}),
   jobId: integer().references(() => jobs.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
@@ -209,7 +209,7 @@ export const jobs = sqliteTable("jobs", {
   status: text({enum: ['idle','completed','failed','processing']}).notNull().default('idle'),
   retries: integer().notNull().default(0),
   error: ErrorLikeJson('error'),
-  transformOptions: text({ mode: 'json' }).$type<PlayTransformPartsConfig<SearchAndReplaceTerm[] | ExternalMetadataTerm>>(),
+  transformOptions: text({ mode: 'json' }).$type<PlayTransformConfig["preCompare"]>(),
   initialParameters: text({ mode: 'json' }).$type<JobRangeCount | JobRangeTime>(),
   cursor: text({ mode: 'json' }),
   total: integer(),

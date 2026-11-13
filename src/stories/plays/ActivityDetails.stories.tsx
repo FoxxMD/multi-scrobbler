@@ -42,18 +42,20 @@ decorators: [
 export const ActivityDetailStory = meta.story({
     loaders: [
     async (ctx) => {
-      const play = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle(
+      const {play: playGenerated, steps} = generatePlayWithLifecycle(
         {
         lifecycleSteps: {
           preCompare: 1,
           postCompare: 1,
         }
       }
-      )));
+      );
+      const play = asJsonPlayObject(await playWithLifecycleScrobble(playGenerated));
       return {
         activity: generatePlayApiCommonDetailed({
         playOpts: [{play: play}],
-        inputOpts: [{play: play}]
+        inputOpts: [{play: play}],
+        steps
       })
     };
     }
