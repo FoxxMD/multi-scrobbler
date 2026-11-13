@@ -6,7 +6,9 @@ import {
     Group,
     Box,
     Button,
-    Tabs
+    Tabs,
+    Field,
+    NativeSelect
 } from "@chakra-ui/react"
 import { useTheme } from "next-themes"
 import { BsCircleHalf } from "react-icons/bs";
@@ -18,10 +20,30 @@ import type { CacheClearType } from "../../../core/Api";
 import { EphemeralElement } from "../Badges";
 import { AccountSettings } from "../auth/Auth";
 import { PublicDashboardSettingsFetchable } from "./PublicDashboardSettings";
+import { DATE_FORMATS, type DateFormatPref, formatNumericDate, useDateFormat } from "../../utils/index";
 
 const DarkIcon = makeChakraIcon(LuMoon);
 const LightIcon = makeChakraIcon(LuSun);
 const SystemIcon = makeChakraIcon(BsCircleHalf);
+
+// day > 12 so the example makes field order unambiguous
+const EXAMPLE_DATE = {year: new Date().getFullYear(), month: 12, day: 31};
+
+const DateFormatSelect = () => {
+    const [pref, setPref] = useDateFormat();
+    return (
+        <Field.Root width="max-content">
+            <Field.Label>Date Format</Field.Label>
+            <NativeSelect.Root size="sm">
+                <NativeSelect.Field value={pref ?? ''} onChange={(e) => setPref(e.currentTarget.value === '' ? null : e.currentTarget.value as DateFormatPref)}>
+                    <option value="">Browser Default ({formatNumericDate(null, EXAMPLE_DATE)})</option>
+                    {DATE_FORMATS.map(x => <option key={x} value={x}>{x} ({formatNumericDate(x, EXAMPLE_DATE)})</option>)}
+                </NativeSelect.Field>
+                <NativeSelect.Indicator />
+            </NativeSelect.Root>
+        </Field.Root>
+    );
+}
 
 export const SettingsContainer = () => {
     const { resolvedTheme, setTheme, theme } = useTheme();
@@ -52,11 +74,11 @@ export const SettingsContainer = () => {
                 <Tabs.Trigger value="publicDashboard">Public Dashboard</Tabs.Trigger>
                 <Tabs.Trigger value="cache">Cache</Tabs.Trigger>
             </Tabs.List>
-            <Tabs.Content value="account">
+            <Tabs.Content value="account" pt="8">
                 <AccountSettings/>
             </Tabs.Content>
-            <Tabs.Content value="appearance">
-            <VStack alignItems="flex-start">
+            <Tabs.Content value="appearance" pt="8">
+            <VStack alignItems="flex-start" gap="10">
                 <SegmentGroup.Root size="md" value={theme === 'system' ? 'system' : resolvedTheme} onValueChange={(val) => val.value !== null && setThemeCB(val.value)}>
                     <SegmentGroup.Indicator />
                     <SegmentGroup.Item key="dark" value="dark">
@@ -74,12 +96,13 @@ export const SettingsContainer = () => {
                         <SegmentGroup.ItemHiddenInput />
                     </SegmentGroup.Item>
                 </SegmentGroup.Root>
+                <DateFormatSelect/>
             </VStack>
             </Tabs.Content>
-            <Tabs.Content value="publicDashboard">
+            <Tabs.Content value="publicDashboard" pt="8">
                 <PublicDashboardSettingsFetchable/>
             </Tabs.Content>
-            <Tabs.Content value="cache">
+            <Tabs.Content value="cache" pt="8">
             <Box>
             <Group attached>
                 <Button colorPalette="red"

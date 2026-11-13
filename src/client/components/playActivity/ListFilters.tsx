@@ -3,7 +3,7 @@ import type {
     ZonedDateTime
 } from "@internationalized/date";
 import {
-    type DateValue,
+    CalendarDate,
     getLocalTimeZone,
     parseAbsolute,
     Time,
@@ -18,6 +18,8 @@ import { type ComponentType, isComponentTypeSource, PLAY_CLIENT_STATE, PLAY_SOUR
 import { capitalizeWords } from '../../../core/StringUtils.js';
 import { tanQueries, useQueryWatcher } from '../../queries/index.js';
 import { cardHeaderSeparator } from '../../utils/ComponentUtils.js';
+import { browserLocale } from '../Country.js';
+import { formatNumericDate, parseNumericDate, useDateFormat } from '../../utils/index.js';
 import { PlayStateBadge } from '../Badges.js';
 import { CalendarButton, RefreshButton } from '../icons/ChakraIcons.js';
 
@@ -89,13 +91,6 @@ interface PlayDateRangeFilterProps {
 export const getTodayRange = (): [string, string] => [toZoned(toCalendarDateTime(today(tz), new Time(0, 0, 0, 0)), tz).toAbsoluteString(), toZoned(toCalendarDateTime(today(tz), new Time(23, 59, 59)), tz).toAbsoluteString()];
 
 
-const format = (date: DateValue) => {
-  const day = date.day.toString().padStart(2, "0")
-  const month = date.month.toString().padStart(2, "0")
-  const year = (date.year).toString()
-  return `${year}-${month}-${day}`
-}
-
 export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps & {containerProps?: ComponentProps<typeof DatePicker.Root>}) => {
     const {
         onChange = noop,
@@ -103,6 +98,22 @@ export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps & {container
         initialValues,
         containerProps = {}
     } = props;
+
+    const [dateFormat] = useDateFormat();
+    // locale always follows browser (month names, first day of week). Only the numeric input text follows the Date Format preference
+    const formatProps = useMemo<Partial<ComponentProps<typeof DatePicker.Root>>>(() => {
+        if (dateFormat === null) {
+            return {};
+        }
+        return {
+            placeholder: dateFormat,
+            format: (date) => formatNumericDate(dateFormat, date),
+            parse: (value) => {
+                const parsed = parseNumericDate(dateFormat, value);
+                return parsed === undefined ? undefined : new CalendarDate(parsed.year, parsed.month, parsed.day);
+            }
+        };
+    }, [dateFormat]);
 
     // computed on mount (instead of module load) so presets/defaults are not stale if the app is left open past midnight
     const presets = useMemo(() => {
@@ -138,6 +149,8 @@ export const PlayDateRangeFilter = (props: PlayDateRangeFilterProps & {container
     return (
         <DatePicker.Root
         {...containerProps}
+        locale={browserLocale}
+        {...formatProps}
         onValueChange={onChangeCB}
         value={stateVals}
         defaultValue={parsedInitialValues}
