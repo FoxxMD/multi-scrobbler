@@ -62,7 +62,7 @@ export const getLogsDirCandidates = (): DirCandidates => {
     return candidates;
 }
 export const getLogsDir = (): string => {
-    let dataDirVal: string | undefined = getDataDirCandidates().find(x => x[1] !== undefined)?.[1];
+    let dataDirVal: string | undefined = getLogsDirCandidates().find(x => x[1] !== undefined)?.[1];
 
     // this shouldn't happen...
     // but if it does we need to have some known path fallback so things don't explode

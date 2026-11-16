@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 import path from 'node:path';
-import { getConfigDir, getDataDir } from '../../common/index.ts';
+import { getConfigDir, getDataDir, getLogsDir } from '../../common/index.ts';
 import { createTmpDir } from '../utils/tmpDir.ts';
 
 /**
@@ -44,5 +44,11 @@ describe('Config and Data Directories', function () {
         await using tmp = await createTmpDir('dataDirCwd');
         const dir = withCwdEnv(tmp.path, { DATA_DIR: './myData', STATE_DIRECTORY: undefined }, getDataDir);
         expect(dir).eq(path.join(tmp.path, 'myData'));
+    });
+
+    it('resolves relative LOGS_DIR from cwd', async function () {
+        await using tmp = await createTmpDir('logsDirCwd');
+        const dir = withCwdEnv(tmp.path, { LOGS_DIR: './myLogs', LOGS_DIRECTORY: undefined, DATA_DIR: './myData' }, getLogsDir);
+        expect(dir).eq(path.join(tmp.path, 'myLogs'));
     });
 });
