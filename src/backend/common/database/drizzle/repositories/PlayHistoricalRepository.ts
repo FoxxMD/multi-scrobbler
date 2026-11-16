@@ -6,6 +6,7 @@ import type {FindWhere, FindMany, WhereClause, PlayHistoricalSelect, PlayHistori
 import type { MarkOptional } from "ts-essentials";
 import { removeUndefinedKeys } from '../../../../../core/DataUtils.ts';
 import { inArray, sql } from "drizzle-orm";
+import { EmptyFilter } from "drizzle-orm/relations";
 import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
 import type {PaginatedResponse} from "../../../../../core/Api.ts";
 import { hashObject } from "../../../../utils/StringUtils.ts";
@@ -55,7 +56,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         const res = await this.db.query.playsHistorical.findFirst({
             where: {
                 uid,
-                componentId: opts.componentId ?? this.componentId
+                componentId: opts.componentId ?? this.componentId ?? EmptyFilter
             }
         });
         if(res === undefined) {
@@ -70,7 +71,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
             columns: {id: true},
             where: {
                 uid,
-                componentId: opts.componentId ?? this.componentId
+                componentId: opts.componentId ?? this.componentId ?? EmptyFilter
             }
         });
         return res !== undefined;
@@ -228,7 +229,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         //     endRange = getScrobbleTsSOCDate(play).add(dateGranularity, 's');
         // }
         const where: FindWhere<'playsHistorical'> = {
-            componentId,
+            componentId: componentId ?? EmptyFilter,
             playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play)),
         };
 
@@ -271,7 +272,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         const query: FindMany<'playsHistorical'> = {};
 
         const where: FindWhere<'playsHistorical'> = {
-            componentId,
+            componentId: componentId ?? EmptyFilter,
             playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play, {bufferTime})),
         };
         query.where = where;
@@ -294,7 +295,7 @@ export const buildPlayHistoricalWhere = (args: PlayWhereOpts): WhereClause<'play
     // let where: Parameters<(ReturnType<typeof getDb>)['query']['plays']['findMany']>[0]['where'] = {
     // };
     const where: FindWhere<'playsHistorical'> = {
-        componentId: args.componentId
+        componentId: args.componentId ?? EmptyFilter
     };
     if (args.seenAt !== undefined) {
         where.seenAt = buildDateCompare(args.seenAt);

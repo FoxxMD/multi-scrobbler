@@ -1,6 +1,7 @@
 import { childLogger } from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
 import { and, eq, inArray, isNull, relationsFilterToSQL, sql } from "drizzle-orm";
+import { EmptyFilter } from "drizzle-orm/relations";
 import assert from "node:assert";
 import type { MarkOptional, ElementOf } from "ts-essentials";
 import { type DateLike, type DeepReplaceValue, type PlayObject, type PlayState, QUEUE_STATUS_QUEUED, type QueueName, SCROBBLE_TS_SOC_END, TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
@@ -11,7 +12,7 @@ import { hashObject } from "../../../../utils/StringUtils.ts";
 import { comparePlayTemporally, getScrobbleTsSOCDateWithContext, getTemporalAccuracyCloseVal, hasAcceptableTemporalAccuracy } from "../../../../utils/TimeUtils.ts";
 import { type CompactableProperty, type RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.ts";
 import type {ErrorLike, SourceType} from "../../../../../core/Atomic.ts";
-import type {FindMany, FindWhere, FindWith, PlayInputNew, PlayNew, PlaySelect, PlaySelectWithQueueStates, PlayWith, QueueStateSelect, WhereClause} from "../drizzleTypes.ts";
+import type {FilterValue, FindMany, FindWhere, FindWith, PlayInputNew, PlayNew, PlaySelect, PlaySelectWithQueueStates, PlayWith, QueueStateSelect, WhereClause} from "../drizzleTypes.ts";
 import { type DbConcrete, runTransaction } from "../drizzleUtils.ts";
 import { generateInputEntity, generatePlayEntity, hydratePlaySelect, stateChangeToPlayEvent, transformToPlayEvent, type PlayEntityOpts, type PlayHydateOptions } from "../entityUtils.ts";
 import { playEvents, playInputs, plays, queueStates, relations, type TSchema } from "../schema/schema.ts";
@@ -82,7 +83,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         const res = await this.db.query.plays.findFirst({
             where: {
                 uid,
-                componentId: opts.componentId ?? this.componentId
+                componentId: opts.componentId ?? this.componentId ?? EmptyFilter
             },
             with: buildPlayWith([...(opts.with ?? []), 'queues'])
         });
@@ -303,7 +304,8 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             // @ts-expect-error don't have a good way to type this yet
             where,
             relations.plays.relations,
-            relations);
+            relations,
+            new Map());
         // https://github.com/drizzle-team/drizzle-orm/discussions/3119#discussioncomment-16379557
         const count = await this.db.$count(plays, filter);
 
@@ -339,14 +341,13 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
         const where: FindWhere<'plays'> = {
             component: {
-                id: componentId
+                id: componentId ?? EmptyFilter
             },
             [dateComparer]: {
                 lte: olderThanDate
             },
-            NOT: {
-                children: {}
-            }
+            // false = relation absent (not exists)
+            children: false
         };
 
         if (states !== undefined) {
@@ -544,7 +545,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                     id: {
                         notIn: notIds
                     },
-                    componentId: componentId,
+                    componentId: componentId ?? EmptyFilter,
                     queueStates: {
                         queueName: queueName,
                         queueStatus: status,
@@ -579,7 +580,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                     id: true
         },
         where: {
-            componentId: this.componentId,
+            componentId: this.componentId ?? EmptyFilter,
             queueStates: {
                 queueName: sql.placeholder('queueName'),
                 queueStatus: 'queued',
@@ -600,7 +601,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
     protected prepareGetQueuedScrobbleRange = () => this.db.query.plays.findMany({
         where: {
-            componentId: this.componentId,
+            componentId: this.componentId ?? EmptyFilter,
             queueStates: {
                 queueName: sql.placeholder('queueName'),
                 queueStatus: 'queued',
@@ -639,7 +640,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             hydrate
         } = opts;
         const where: FindWhere<'plays'> = {
-            componentId
+            componentId: componentId ?? EmptyFilter
         }
         if(retries !== undefined) {
             where.queueStates = {
@@ -701,7 +702,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         //     endRange = play.data.playDate.add(dateGranularity, 's');
         // }
         const where: FindWhere<'plays'> = {
-            componentId,
+            componentId: componentId ?? EmptyFilter,
             playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play, {useDuration: true})),
         };
 
@@ -748,12 +749,12 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         * it's also how we ignore exact plays from history-polling sources
         * since those plays are always the same
         */
-        const playHashOrConds: NonNullable<ElementOf<NonNullable<typeof where.AND>>['OR']> = [
+        const playHashOrConds: FilterValue<ElementOf<FilterValue<typeof where.AND>>['OR']> = [
             {
                 playHash: hash
             }
         ];
-        const playHashOr: ElementOf<NonNullable<typeof where.AND>> = {
+        const playHashOr: ElementOf<FilterValue<typeof where.AND>> = {
             OR: playHashOrConds
         };
 
@@ -833,7 +834,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         const query: FindMany<'plays'> = {};
 
         const where: FindWhere<'plays'> = {
-            componentId,
+            componentId: componentId ?? EmptyFilter,
             playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play, {bufferTime})),
         };
         if(states !== undefined) {
@@ -1035,7 +1036,7 @@ export const buildPlayWhere = (args: PlayWhereOpts): WhereClause<'plays'> => {
     // let where: Parameters<(ReturnType<typeof getDb>)['query']['plays']['findMany']>[0]['where'] = {
     // };
     const where: FindWhere<'plays'> = {
-        componentId: args.componentId
+        componentId: args.componentId ?? EmptyFilter
     };
     if (args.state !== undefined) {
         where.state = {
@@ -1070,9 +1071,9 @@ export const buildPlayWhere = (args: PlayWhereOpts): WhereClause<'plays'> => {
         }
         // so that we can use this type
         // or else assigning an array to OR using only `typeof where.queueStates` causes a type error
-        const queueWhere: NonNullable<typeof where.queueStates.OR>[0][] = [];
+        const queueWhere: FilterValue<typeof where.queueStates.OR>[0][] = [];
         for(const q of queues) {
-            const qWhereCriteria: NonNullable<typeof where.queueStates.OR>[0] =  {
+            const qWhereCriteria: FilterValue<typeof where.queueStates.OR>[0] =  {
                 queueName: q.queueName,
                 queueStatus: typeof q.queueStatus === 'string' ? q.queueStatus : {
                     in: q.queueStatus
