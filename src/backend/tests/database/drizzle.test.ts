@@ -48,6 +48,8 @@ describe('Migrations', function () {
     });
 
     it('Detects pending migrations', async function () {
+        // spawns drizzle-kit which can be slow to start on a busy machine
+        this.timeout(10000);
 
         const allFiles = await fs.readdir(path.resolve(projectRootDir, 'src/backend/common/database/drizzle/migrations'));
         const migrationFiles = allFiles
@@ -111,6 +113,8 @@ describe('Migrations', function () {
     });
 
     it('Backs up database when migrations are pending', async function () {
+        // spawns drizzle-kit which can be slow to start on a busy machine
+        this.timeout(10000);
 
         const allFiles = await fs.readdir(path.resolve(projectRootDir, 'src/backend/common/database/drizzle/migrations'));
         const migrationFiles = allFiles
