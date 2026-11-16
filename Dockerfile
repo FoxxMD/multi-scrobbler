@@ -61,7 +61,7 @@ FROM app-src AS test
 
 # Runs the test suite as part of the image build, used by CI with `--target test`.
 # Not a dependency of the app target so a normal build skips it.
-RUN npm run test
+RUN npm run test:parallel
 
 #
 #

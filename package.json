@@ -11,6 +11,7 @@
     "circular:frontend": "npx madge --circular --extensions ts src/client/index.tsx",
     "test": "npm run -s test:backend",
     "test:backend": "mocha --reporter spec",
+    "test:parallel": "mocha --parallel",
     "test:leaks": "mocha --config ./src/backend/tests/utils/leakProbe.mocharc.cjs",
     "dev": "node src/backend/index.ts",
     "start": "NODE_ENV=production node src/backend/index.ts",
@@ -253,7 +254,6 @@
     "usehooks-ts": "^3.1.1",
     "vite": "^8.0.12",
     "vite-plugin-svgr": "^5.2.0",
-    "with-local-tmp-dir": "^7.0.1",
     "zocker": "^3.0.0",
     "zod": "^4.6.7"
   },

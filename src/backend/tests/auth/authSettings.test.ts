@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import withLocalTmpDir from 'with-local-tmp-dir';
+import { createTmpDir } from '../utils/tmpDir.ts';
 import { resolveAuthSettings, getOrCreateSecret } from '../../common/auth/authSettings.ts';
 
 const http = new URL('http://localhost:9078');
@@ -98,11 +98,11 @@ describe('Auth Settings', function () {
     });
 
     it('persists a generated secret and prefers env', async function () {
-        await withLocalTmpDir(async () => {
-            const first = getOrCreateSecret({}, process.cwd());
-            expect(first.length).gt(20);
-            expect(getOrCreateSecret({}, process.cwd())).eq(first);
-            expect(getOrCreateSecret({BETTER_AUTH_SECRET: 'fromEnv'}, process.cwd())).eq('fromEnv');
-        }, {unsafeCleanup: true});
+        await using tmp = await createTmpDir('authSecret');
+        const dir = tmp.path;
+        const first = getOrCreateSecret({}, dir);
+        expect(first.length).gt(20);
+        expect(getOrCreateSecret({}, dir)).eq(first);
+        expect(getOrCreateSecret({BETTER_AUTH_SECRET: 'fromEnv'}, dir)).eq('fromEnv');
     });
 });

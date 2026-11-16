@@ -8,6 +8,7 @@ const cliSpec = process.argv.slice(2).some(arg => /\.test\.ts$/.test(arg));
 module.exports = {
     ...base,
     exit: false,
-    require: ['./src/backend/tests/utils/leakProbe.ts'],
+    // probe must load first so it sees everything the other required setup files create
+    require: ['./src/backend/tests/utils/leakProbe.ts', ...base.require],
     spec: cliSpec ? [] : base.spec,
 };
