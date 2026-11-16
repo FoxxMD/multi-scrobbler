@@ -344,9 +344,8 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             [dateComparer]: {
                 lte: olderThanDate
             },
-            NOT: {
-                children: {}
-            }
+            // false = relation absent (not exists)
+            children: false
         };
 
         if (states !== undefined) {
