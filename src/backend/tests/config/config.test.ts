@@ -177,6 +177,10 @@ describe('Sample Configs', function () {
             let tmp: Awaited<ReturnType<typeof createTmpDir>>;
             let ogKeys: string[] = [];
 
+            before(function() {
+                ogKeys = Object.keys(process.env);
+            });
+
             beforeEach(async function() {
                 tmp = await createTmpDir('clientConfigParse');
             });
