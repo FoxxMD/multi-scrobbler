@@ -483,7 +483,11 @@ export const generateArtistsStr = (options: CompoundArtistGenerateOptions = {}):
 
 export const generateLastfmTrackObject = (): LastFMTrackObject => {
     const now = dayjs();
-    const artist = faker.music.artist();
+    let artist = faker.music.artist();
+    // last.fm artist strings are split on comma when there is no single artist mbid (ie "Earth, Wind & Fire")
+    while(artist.includes(',')) {
+        artist = faker.music.artist();
+    }
     return {
         album: {
             '#text': faker.music.album(),

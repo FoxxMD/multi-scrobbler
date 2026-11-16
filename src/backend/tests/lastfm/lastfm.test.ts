@@ -1,4 +1,4 @@
-import { creditIds, creditMbid } from "../../../core/MusicMetadata.ts";
+import { creditIds, creditMbid, creditsToNames } from "../../../core/MusicMetadata.ts";
 import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { describe, it } from 'mocha';
@@ -28,6 +28,24 @@ describe('#LFM Scrobble Payload Behavior', function () {
 });
 
 describe('#LFM Track to Play', function() {
+
+    it('Does not split artist with comma when it has a single mbid', function() {
+        const to = generateLastfmTrackObject();
+        to.artist['#text'] = 'Earth, Wind & Fire';
+        to.artist.name = 'Earth, Wind & Fire';
+        to.artist.mbid = generateMbid();
+        const play = formatPlayObj(to);
+        expect(creditsToNames(play.data.artists)).to.eql(['Earth, Wind & Fire']);
+        expect(creditIds(play.data.artists, 'musicbrainz', 'artist')).to.eql([to.artist.mbid]);
+    });
+
+    it('Splits artist with comma into trimmed names when it has no mbid', function() {
+        const to = generateLastfmTrackObject();
+        to.artist['#text'] = 'Artist A, Artist B';
+        to.artist.name = 'Artist A, Artist B';
+        const play = formatPlayObj(to);
+        expect(creditsToNames(play.data.artists)).to.eql(['Artist A', 'Artist B']);
+    });
 
     it('Sets mbids to undefined when values are empty strings', function() {
 
