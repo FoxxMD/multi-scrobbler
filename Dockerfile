@@ -111,6 +111,12 @@ RUN npm ci --omit=dev --no-audit \
     && npm cache clean --force \
     ## peerDependency of validbot and can(?) be removed for production
     && rm -r node_modules/typescript \
+    ## drizzle-kit is an optional peer of better-auth, installed because it is also a devDependency
+    ## it is only used to generate migrations during development, prod runs migrations with drizzle-orm
+    ## the other packages are drizzle-kit-only dependencies, recheck with `npm ls <pkg>` when bumping drizzle-kit
+    && rm -rf node_modules/drizzle-kit node_modules/@drizzle-team/brocli \
+              node_modules/@js-temporal/polyfill node_modules/jsbi \
+              node_modules/get-tsconfig node_modules/resolve-pkg-maps node_modules/jiti \
     ## youtubei.js includes a large folder of maps and d.ts files that
     ## are only used for frontend bundling, we we don't need
     && rm -rf node_modules/youtubei.js/bundle \
