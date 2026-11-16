@@ -275,6 +275,9 @@
     },
     "musicbrainz-api": {
       "rate-limit-threshold": "0.2.1"
+    },
+    "castv2": {
+      "protobufjs": "^8.8.1"
     }
   },
   "msw": {
