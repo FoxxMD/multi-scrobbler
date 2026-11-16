@@ -1,4 +1,6 @@
 import { loggerTest } from '@foxxmd/logging';
+import chai from 'chai';
+import asPromised from 'chai-as-promised';
 import { getRoot } from "../ioc.ts";
 import { transientCache, transientDb } from './utils/TransientTestUtils.ts';
 import dayjs from 'dayjs';
@@ -10,6 +12,10 @@ import timezone from 'dayjs/plugin/timezone.js';
 import week from 'dayjs/plugin/weekOfYear.js';
 import utc from 'dayjs/plugin/utc.js';
 import { retryTiming } from '../common/infrastructure/Atomic.ts';
+
+// register globally so every test file has chai-as-promised assertions,
+// even when run alone or in a parallel worker before any file that registers it itself
+chai.use(asPromised);
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
