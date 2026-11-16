@@ -161,6 +161,7 @@ describe('#Credit shape migration', function () {
             input: { data: { foo: 'bar' }, play: inputPlay as unknown as PlayObject }
         }]);
         const [created] = await repo.findPlays({});
+        await db.insert(playEvents).values({ playId: created.id, eventName: 'transform', data: finalPlay.lifecycle });
         await db.insert(playEvents).values({ playId: created.id, eventName: 'scrobbleResult', data: finalPlay.scrobble });
         await db.insert(playsHistorical).values(generatePlayHistoricalEntity(finalPlay as unknown as PlayObject, { componentId: component.id }));
 

@@ -150,6 +150,30 @@ describe('Sources use transform plays correctly', function () {
         expect(discovered[0].data.track?.name).is.eq('my fun track');
     });
 
+    it('Stage action sets Play state unless actions are ignored', async function() {
+        await using source = await generateSource();
+        source.config.options = {
+            playTransform: {
+                preCompare: {
+                    type: 'user',
+                    title: ['cool'],
+                    onSuccessAction: 'review'
+                }
+            }
+        };
+        await source.buildTransformRules();
+
+        await source.queuePlay([generatePlay({track: nameToCredit('my cool track')})]);
+        await sleep(3);
+        expect(await source.getRecentlyDiscoveredPlays()).length(0);
+
+        await source.queuePlay([generatePlay({track: nameToCredit('my cool song')})], {ignoreActions: true});
+        await sleep(3);
+        const discovered = await source.getRecentlyDiscoveredPlays();
+        expect(discovered).length(1);
+        expect(discovered[0].data.track?.name).eq('my  song');
+    });
+
     it('Transforms play on postCompare', async function() {
         await using source = await generateSource();
         source.config.options = {

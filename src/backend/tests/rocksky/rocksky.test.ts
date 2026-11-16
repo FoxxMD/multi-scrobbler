@@ -60,7 +60,7 @@ describe('Rocksky API', function () {
             await rsTransformer.initialize();
 
             const res = await rsTransformer.getTransformerData(play, {
-                type: "musicbrainz",
+                type: "rocksky",
                 searchWhenMissing: DEFAULT_ROCKSKY_MISSING_TYPES,
                 searchOrder: DEFAULT_SEARCHTYPE_ORDER
             });
@@ -109,7 +109,7 @@ describe('Rocksky API', function () {
             await rsTransformer.initialize();
 
             const res = await rsTransformer.getTransformerData(play, {
-                type: "musicbrainz",
+                type: "rocksky",
                 searchWhenMissing: DEFAULT_ROCKSKY_MISSING_TYPES,
                 searchOrder: DEFAULT_SEARCHTYPE_ORDER
             });

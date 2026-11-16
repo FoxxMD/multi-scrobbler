@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 import { closeToPlayEnd, closeToPlayStart, repeatDurationPlayed, timePassesScrobbleThreshold } from '../../utils/TimeUtils.ts';
+import { compareDuration, durationComparisonSchema, parseDurationComparison, parseDurationFromDurationValue } from '../../../core/TimeUtils.ts';
 import { DEFAULT_CLOSE_POSITION_ABSOLUTE, DEFAULT_CLOSE_POSITION_PERCENT, DEFAULT_DURATION_REPEAT_ABSOLUTE, DEFAULT_DURATION_REPEAT_PERCENT, DEFAULT_SCROBBLE_DURATION_THRESHOLD, DEFAULT_SCROBBLE_PERCENT_THRESHOLD } from '../../common/infrastructure/Atomic.ts';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
 
@@ -101,5 +102,48 @@ describe('Scrobble Threshold Checks', function() {
         const results = timePassesScrobbleThreshold({}, DEFAULT_SCROBBLE_DURATION_THRESHOLD + 1, 0);
         expect(results.duration.passes).is.true;
         expect(results.passes).is.true;
+    });
+});
+describe('Duration Parsing', function() {
+
+    it('parses short and long units', function() {
+        expect(parseDurationFromDurationValue('37s').asSeconds()).eq(37);
+        expect(parseDurationFromDurationValue('2 mins').asSeconds()).eq(120);
+        expect(parseDurationFromDurationValue('500ms').asMilliseconds()).eq(500);
+        expect(parseDurationFromDurationValue('3 hours').asHours()).eq(3);
+        expect(parseDurationFromDurationValue('PT5S').asSeconds()).eq(5);
+    });
+
+    describe('Comparison', function() {
+        it('parses operator and duration', function() {
+            for (const [val, op, seconds] of [['> 7 s', '>', 7], ['= 2 minutes', '=', 120], ['< 37s', '<', 37], [' >90 ', '>', 90]] as const) {
+                const res = parseDurationComparison(val);
+                expect(res.operator).eq(op);
+                expect(res.duration.asSeconds()).eq(seconds);
+            }
+        });
+
+        it('rejects invalid values', function() {
+            for (const val of ['7 s', '>= 7s', '> 7 fortnights', '>', '! 7s']) {
+                expect(() => parseDurationComparison(val), val).to.throw();
+                expect(durationComparisonSchema.safeParse(val).success, val).is.false;
+            }
+        });
+
+        it('parses with schema', function() {
+            const res = durationComparisonSchema.parse('< 37s');
+            expect(res.operator).eq('<');
+            expect(res.duration.asSeconds()).eq(37);
+        });
+    });
+});
+
+describe('Duration Compare', function() {
+    it('compares durations with operator', function() {
+        const {operator, duration} = parseDurationComparison('> 7 s');
+        expect(compareDuration(parseDurationFromDurationValue(8), operator, duration)).is.true;
+        expect(compareDuration(parseDurationFromDurationValue(7), operator, duration)).is.false;
+        expect(compareDuration(parseDurationFromDurationValue(120), '=', parseDurationFromDurationValue('2 minutes'))).is.true;
+        expect(compareDuration(parseDurationFromDurationValue(36), '<', parseDurationFromDurationValue('37s'))).is.true;
     });
 });

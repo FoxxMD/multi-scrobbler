@@ -66,7 +66,7 @@ In more concrete terms this is the structure of hooks within a configuration (ca
     "options": {
       "playTransform": {
         "preCompare": [/* ... */],
-        "compare": [/* ... */],
+        "compare": {"candidate": [/* ... */], "existing": [/* ... */]},
         "postCompare": [/* ... */]
       }
     }
@@ -116,13 +116,11 @@ The `compare` [hook](#hook) is slightly different than `preCompare` and `postCom
     // ...
     "options": {
       "playTransform": {
-        // [!code focus:6]
-        "compare": [
-          {
-            "candidate": {/* ... */}, // [!callout /candidate/] modify the "new" Play being compared
-            "existing": {/* ... */}, // [!callout /existing/] modify all "existing" Play/Scrobbles the new Play is being compared against
-          }
-        ],
+        // [!code focus:4]
+        "compare": {
+          "candidate": [/* ... */], // [!callout /candidate/] Stages that modify the "new" Play being compared
+          "existing": [/* ... */], // [!callout /existing/] Stages that modify all "existing" Play/Scrobbles the new Play is being compared against
+        },
       }
     }
   }
@@ -136,6 +134,7 @@ The `compare` [hook](#hook) is slightly different than `preCompare` and `postCom
 Each [**hook**](#hook) is made up of one or more **Stages**. A Stage is a self-contained, unique way of enhancing or modifying the Play data. Some examples of a Stage:
 
 * The [User](/configuration/transforms/user) Stage allows a user to define search-and-replace terms for Artist/Title/Album
+* The [Match](/configuration/transforms/match) Stage uses search expressions to match data from your Play, useful for combining with other Stages or flagging a Play for review
 * The [Native](/configuration/transforms/native) Stage uses MS's built-in heuristics to extract Artists from a single Artist string
 * The [Musicbrainz](/configuration/transforms/musicbrainz) Stage tries to match Play data with the Musicbrainz database and to standardize the Artist/Title/Album data
 * The [Rocksky](/configuration/transforms/rocksky) Stage tries to match Play data with the Rocksky metadata API to enrich meta IDs (like MBID, ISRC), duration, and artwork
@@ -458,27 +457,43 @@ Specifying these Rules is **not** the same as [configuring the Stage](#configuri
 
 Stages may be optionally configured to **continue** to the next Stage or **stop** (end early) all subsequent Stages, based on the outcome of the currently running Stage.
 
-These three properties can be added to the [Modification Stage](#stage) data, alongside [Rules](#stage-rules):
+These properties can be added to the [Modification Stage](#stage) data, alongside [Rules](#stage-rules):
 
 * `onSuccess` (default `continue`) - If the Stage successfully finishes processing
 * `onFailure` (default `stop`) - If the Stage encounters an error while processing, or otherwise fails to achieve the transformation result
 * `onSkip` (default `continue`) - If the Stage does not process the Play data due to stage-level [`when`](#conditional-modification) or other stage-specific skip conditions
+* `failureReturnPartial` (default `false`) - When `true`, persists all the previous, successful Stage transforms to your Play data even if the current Stage fails.
 
-<Aside type="important" title="A Failed or Skipped Stage Never Applies Its Own Changes">
+<Aside type="important" title="Flow Control and Applying Play Changes">
 
+The Flow Control terms above are **not** responsibile for determining if the result of the current Stage will transform the Play or not.
 
-`onFailure`/`onSkip` only control whether **later** Stages in the same Hook still run -- they do **not** cause a failed or skipped Stage to partially apply, or fall back to, any changes. A Stage that fails (EX no results found) or is skipped (EX a `when` condition wasn't met, or a stage-specific prerequisite wasn't met) contributes nothing to your Play.
+Flow Control terms **only** determine whether later Stages in the same Hook will run.
 
-If you want a Stage to only ever apply data from a single, specific match method (EX only from an ID lookup) and do nothing at all otherwise, you don't need any special configuration for this -- it's the default behavior whenever that lookup method doesn't succeed.
-
-By default (`onFailure: "stop"`), a failure also reverts your Play all the way back to how it was **before any Stage in that Hook ran** -- so if you have multiple Stages in one Hook and a later one fails, earlier successful changes from that same Hook are discarded too. Set `failureReturnPartial: true` on the failing Stage to instead keep whatever earlier Stages in the same Hook already successfully applied, and only discard the failed Stage's own (nonexistent) contribution.
-
+* if the Stage succeeds, it **always** transforms the Play (based on your Rules)
+* if the Stage fails, it **always** passes the Play on, unchanged, except in the scenarios listed below...
 
 </Aside>
 
-:::tip
+<Aside type="important" title="Transforms Fail Open">
 
-The default behaviors for Flow Control are the same as you would intuitively think Stages should run IE the next Stage you have defined runs if the current Stage does not fail. 
+If a Stage **fails** and the hook ends there (either as the last Stage, or through `onFailure: stop`) then, by default, Multi-Scrobbler "fails open" with your data and reverts it to its original state before *all* previous Stages were applied. This is the default behavior so that no unexpected modifications happen to your data.
+
+You can override this behavior in two ways:
+
+<h5>`continue` into a Successful Stage</h5>
+
+If you use `onFailure: continue` and a subsequent Stage succeeds, then all of the changes applied by previous, successful Stages are kept.
+
+<h5>`failureReturnPartial`</h5>
+
+Using `failureReturnPartial: true` causes MS to keep all the changes made by previous, successful Stages *even when the current Stage fails and the hook ends.* Use this when you don't care that the current stage failed and you know the previous Stages have good data.
+
+</Aside>
+
+<Aside type="tip" title="It's More Intuitive Than It Sounds">
+
+The above descriptions sound like this is complicated but really the default behaviors for Flow Control are the same as you would intuitively think of: the next Stage you have defined runs if the current Stage does not fail. 
 
 Specifying Flow Control is only necessary if the above assumptions are not true for your scenario.
 
@@ -489,13 +504,19 @@ Specifying Flow Control is only necessary if the above assumptions are not true 
       "playTransform": {
         "preCompare": [
           {
-            // [!ref] if this stage is successful, native is run. If this stage fails, native does not run
+            // [!ref] if this stage is successful, MyNative is run. If this stage fails, MyNative does not run and its like `preCompare` was never run
             "type": "musicbrainz",
             "name": "MyMB"
           },
           {
+            // [!ref] if this stage is successful, ChangeTitle is run. If this stage fails, ChangeTitle does not run and its like `preCompare` was never run
             "type": "native",
             "name": "MyNative"
+          },
+          {
+            // [!ref] if this stage is successful, the Play has all changes from MB, MyNative, and ChangeTitle. If this stage fails, its like `preCompare` was never run
+            "type": "rocksky",
+            "name": "ChangeTitle"
           }
         ]
       }
@@ -521,12 +542,26 @@ Specifying Flow Control is only necessary if the above assumptions are not true 
     }
 ```
 :::
+</Aside>
+
+:::tip
+
+Check out [Examples](#examples) below for more examples of how to use **Flow Control** in more complex scenarios.
+
+:::
 
 ### Conditionally Run {#conditional-modification}
 
 [Stages](#stage) within a [Hook](#hook), and [Rules](#stage-rules) within each Stage, support a `when` object for testing **if they should be run.**
 
-The `when` object may have propertes for rule. Each property may be a string or regular expression.  The value of the property is used to match the **pre-transformation** values from Play data.
+The `when` object may have any of these properties. The value of each property is used to match the **pre-transformation** values from Play data (the data before the Stage runs).
+
+* `title` `artists` `albumArtists` `album` - a string or regular expression. `artists`/`albumArtists` match if **any** artist matches.
+* `art` - a string or regular expression matching any album, track, or artist art URL
+* `user` `deviceId` `library` `playlist` `musicService` - a string or regular expression. Only available for Sources that report this info. `playlist` matches the playlist name or id.
+* `duration` `listenedFor` - a comparison: `=` `>` or `<` followed by a duration. EX `> 7 s` `< 2 minutes` `= 30s`. A Play without this data never matches.
+
+For string/regex properties, an **empty string** (`""`) matches when the Play does **not** have that data, IE `"album": ""` matches a Play with no album.
 
 All parts of an individual `when` clause must test true to "pass" but if **any** `when` clauses pass the Stage/Rule is processed.
 
@@ -537,7 +572,7 @@ If the `when` test does not pass then the Stage is [**skipped (`onSkip`)**](#flo
 {
   "when":
     {
-      "artist": "Elephant Gym", // [!ref] Play must have an artist matching "Elephant Gym" (AND)
+      "artists": "Elephant Gym", // [!ref] Play must have an artist matching "Elephant Gym" (AND)
       "album": "Dreams" // [!ref] Play object must have an album  matching "Dreams" (AND)
     }
 }
@@ -546,7 +581,7 @@ If the `when` test does not pass then the Stage is [**skipped (`onSkip`)**](#flo
 {
   "when": [
     {
-      "artist": "Elephant Gym", // [!ref] Play must have an artist matching "Elephant Gym" (AND)
+      "artists": "Elephant Gym", // [!ref] Play must have an artist matching "Elephant Gym" (AND)
       "album": "Dreams" // [!ref] Play object must have an album  matching "Dreams" (AND)
     },
     // [!ref] OR...
@@ -555,6 +590,15 @@ If the `when` test does not pass then the Stage is [**skipped (`onSkip`)**](#flo
       "album": "Various Artists" // [!ref] Play album must match "Various Artists" (AND)
     }
   ]
+}
+```
+```json5 label="Duration and Source details"
+{
+  "when":
+    {
+      "deviceId": "kitchen-speaker", // [!ref] Play must be from the device "kitchen-speaker" (AND)
+      "duration": "> 10 minutes" // [!ref] Play track must be longer than 10 minutes (AND)
+    }
 }
 ```
 :::
@@ -591,7 +635,7 @@ EX: only run stage if art does *not* come from deezer, use deezer's cdn in a not
 
 More succinctly:
 
-* All parts (`artist` `album` `albumArtist` `duration` `meta` `title` `art`) of a `when` are `AND` conditions
+* All parts (`title` `artists` `duration` `deviceId` etc...) of a `when` are `AND` conditions
 * All part-objects in the `when` array are `OR` conditions
 
 :::code-tabs
@@ -604,7 +648,7 @@ More succinctly:
         // [!ref] Only run `native` if these conditions are true...
         "when": [
           {
-            "artist": "/Elephant Gym/" // [!ref] if artist is `Elephant Gym` 
+            "artists": "/Elephant Gym/" // [!ref] if artist is `Elephant Gym` 
           }
         ]
       }
@@ -621,7 +665,7 @@ More succinctly:
         {
           "when": [  // [!ref] Only apply `artists` if Play artist was *originally* `Elephant Gym`
             {
-              "artist": "/Elephant Gym/"
+              "artists": "/Elephant Gym/"
             }
           ]
         },
@@ -629,6 +673,45 @@ More succinctly:
   }
 }
 ```
+:::
+
+## Play State Control
+
+Alongside [Stage Flow Control](#stage-flow-control) you can add properties to a [Stage](#stage) to **set a Play's state based on the outcome of a Stage**:
+
+* `onSuccessAction` - Set Play's state when this Stage succeeds
+* `onFailureAction` - Set Play's state when this Stage fails
+* `onSkipAction` - Set Play's state when this Stage is skipped
+
+The possible values for these properties are:
+
+* `approve` (default) - "Approve" of this hook. This value negates any other action already set.
+* `discard` - Set the Play's state to **Discarded**
+* `review` - Set the Play's state to **Needs Review**
+
+These state control values **persist through subsequent stages** until the hook is finished. The hook will then apply whatever state is remaining to the Play at that point in its lifecycle.
+
+If the state is `discard` or `review` then the Play's processing is exited early and it's state set to the value you set.
+
+:::tip
+
+This is a useful way to short-circuit Play processing when some Stage you **need** to succeed ends up failing, or the Play otherwise doesn't have the data you want in it.
+
+```json5 label="Stage with 'when' condition" expandable={8}
+{
+  "playTransform": {
+    "preCompare": [
+      {
+        "type": "musicbrainz",
+        "name": "GermanyReleasesOnly",
+        "onFailureAction": "review" // [!ref] If Musicbrainz can't find a german release for this Play then the Play is put in **Needs Review** and not discovered/scrobbled until you manually address it.
+      }
+    ]
+  }
+}
+```
+See [Examples](#examples) for more complex usage of Play State Control
+
 :::
 
 ## Logging
@@ -687,15 +770,21 @@ MS uses [caching](/configuration/#caching) to reduce the number of API calls nee
 
 ## Examples
 
+:::tip
+
 See **Examples** sections in specific Stage docs (also in the sidebar):
 
 * [User Stage](/configuration/transforms/user#examples)
 * [Native Stage](/configuration/transforms/native#examples)
 * [Musicbrainz Stage](/configuration/transforms/musicbrainz#examples)
 
+:::
+
+### Walkthroughs
+
 These examples use all of the features described above. They walk you through the entire process of building configuration to transform your scrobble data, from start to end, in one usecase.
 
-## Walkthrough - Remove Something from Title {#walkthrough-user}
+#### Remove Something from Title {#walkthrough-user}
 
 You want to use the [User Stage](/configuration/transforms/user) to remove instances of `(Album Version)` in track titles from Navidrome.
 
@@ -774,7 +863,7 @@ You want to use the [User Stage](/configuration/transforms/user) to remove insta
 
 </CodeWalkthrough>
 
-## Walkthrough - Using Musicbrainz on Many Sources/Clients
+#### Using Musicbrainz on Many Sources/Clients
 
 You want to use the [Musicbrainz Stage](/configuration/transforms/musicbrainz), with specific behavior, to correct/enrich your scrobble data. It should do this for both Navidrome and Jellyfin.
 
@@ -880,3 +969,106 @@ You want to use the [Musicbrainz Stage](/configuration/transforms/musicbrainz), 
 ```
 
 </CodeWalkthrough>
+
+### Flow Control
+
+#### Use First Successful Metadata Transformer {#fallthrough-flow}
+
+Try to use all metadata transformers in order until one of them succeeds, then stop early.
+
+```json5 label="jellyfin.json" expandable={8}
+{
+  "playTransform": {
+    "preCompare": [
+      {
+        "type": "rocksy",
+        "name": "MyRocksky",
+        "onFailure": "continue", // [!ref] Continue to the next stage if this one fails
+        "onSuccess": "stop" // [!ref] Stop early if this stage succeeds
+      }
+      {
+        "type": "musicbrainz",
+        "name": "MyMB",
+        "onFailure": "continue",
+        "onSuccess": "stop"
+      }
+      {
+        "type": "spotify",
+        "name": "MySpot",
+        "onFailure": "continue",
+        "onSuccess": "stop"
+      }
+    ] // [!ref] If no stage succeeds the Play is used as-is
+  }
+}
+```
+
+#### Use `failureReturnPartial` to Keep Good Changes
+
+* You have several [User Stages](/configuration/transforms/user) that clean up data that you always want to keep
+* You want to try to update Play data if there is a German release, but its ok if it fails
+
+```json5 label="jellyfin.json" expandable={8}
+{
+  "playTransform": {
+    "preCompare": [
+      {
+        "type": "user",
+        "title": [
+          "(Remastered)", // [!ref] Removes `(Remastered)` from any titles
+        ]
+      },
+      {
+        "type": "user",
+        "album": [
+          "(Studio Version)", // [!ref] Removes `(Studio Version)` from any albums
+        ]
+      }
+      {
+        "type": "musicbrainz",
+        "name": "GermanOnly",
+        "failureReturnPartial": true // [!ref] Tries to find a German release, but if it fails we want to keep the changes made by the previous stages
+      }
+    ] 
+  }
+}
+```
+
+### Play State Control
+
+#### Use First Successful Metadata Transformer or Set Needs Review {#fallthrough-state}
+
+This is the same scenario as [Use First Successful Metadata Transformer](#fallthrough-flow) but it additionally marks the plays as **Needs Review** if none of them succeed.
+
+```json5 label="jellyfin.json" expandable={8}
+{
+  "playTransform": {
+    "preCompare": [
+      {
+        "type": "rocksy",
+        "name": "MyRocksky",
+        "onFailure": "continue", // [!ref] Continue to the next stage if this one fails
+        "onSuccess": "stop" // [!ref] Stop early if this stage succeeds
+        "onFailureAction": "review", // [!ref] On failure set State as **Needs Review** and exit Play processing early
+        "onSuccessAction": "approve", 
+      }
+      {
+        "type": "musicbrainz",
+        "name": "MyMB",
+        "onFailure": "continue",
+        "onSuccess": "stop",
+        "onFailureAction": "review",
+        "onSuccessAction": "approve", // [!ref] On success, negate earlier `review` state so Play keeps original State and continues processing normally
+      }
+      {
+        "type": "spotify",
+        "name": "MySpot",
+        "onFailure": "continue",
+        "onSuccess": "stop",
+        "onFailureAction": "review",
+        "onSuccessAction": "approve",
+      }
+    ] // [!ref] If no stage succeeds the Play is used as-is **and** it is set to **Needs Review** with processing stopping early.
+  }
+}
+```

@@ -19,7 +19,7 @@ import type {PARSED_FROM_TYPE, PlayUserId, QueueContext} from '../../core/Atomic
 import type {DeviceId} from '../../core/Atomic.ts';
 import type {SourceConfig} from '../common/infrastructure/config/source/sources.ts';
 import type {SourceType} from "../../core/Atomic.ts";
-import { TRANSFORM_HOOK } from "../../core/Transform.ts";
+import { actionTermPlayState, actionTermSchema, TRANSFORM_HOOK } from "../../core/Transform.ts";
 import TupleMap from "../common/TupleMap.ts";
 import {
     isDebugMode,
@@ -37,7 +37,6 @@ import { componentFileLogger } from '../common/logging.ts';
 import { messageWithCausesTruncatedDefault } from "../../core/ErrorUtils.ts";
 import { existingScrobble, type ExistingScrobbleOpts } from '../utils/PlayComparisonUtils.ts';
 import { consumeQueue } from '../utils/AsyncUtils.ts';
-import pMap from 'p-map';
 import type { Counter } from 'prom-client';
 import { spawn, isAbortError, delay, throwIfAborted, waitForEvent } from 'abort-controller-x';
 import { generateLoggableAbortReason, StageChangeError } from '../common/errors/MSErrors.ts';
@@ -51,6 +50,7 @@ import { PLAY_EVENT_TYPE, type PlayEvent } from '../../core/PlayEvent.ts';
 import { dupeCheckToPlayEvent, queueCompletionStateToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from '../common/database/drizzle/entityUtils.ts';
 import type { PlayProcessingResult } from '../common/infrastructure/PlayProcessing.ts';
 import { PlayProcessingError } from '../common/errors/PlayProcessingError.ts';
+import { getLastLifecycleStepWithAction } from '../utils/PlayTransformUtils.ts';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -508,21 +508,13 @@ export default abstract class AbstractSource extends AbstractComponent implement
         // return undefined;
     }
 
+    /** Forward Plays to Clients. Plays should already be postCompare transformed */
     protected scrobble = async (newDiscoveredPlays: PlayObject[], options: { forceRefresh?: boolean, [key: string]: any, discoverLocation?: 'backlog' | [key: string] } = {}) => {
 
         if(newDiscoveredPlays.length > 0) {
             newDiscoveredPlays.sort(sortByOldestPlayDate);
-            const postCompareMapped = await pMap(newDiscoveredPlays, async (x) =>  await this.transformPlay(x, TRANSFORM_HOOK.postCompare), {concurrency: 3});
-            const events: PlayEvent[] = [];
-            for(const p of postCompareMapped) {
-                const {lifecycle = []} = p;
-                const psLifecycle = lifecycle.filter(x => x.hook === TRANSFORM_HOOK.postCompare);
-                if(psLifecycle.length > 0 && p.id !== undefined) {
-                    events.push({...transformToPlayEvent(psLifecycle), playId: p.id, createdAt: dayjs()});
-                }
-            }
             this.emitEvent('discoveredToScrobble', {
-                data: postCompareMapped,
+                data: newDiscoveredPlays,
                 options: {
                     ...options,
                     checkTime: newDiscoveredPlays[newDiscoveredPlays.length-1].data.playDate?.add(2, 'second'),
@@ -1021,6 +1013,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             isRetry = false,
             transform = true,
             dupeCheck = true,
+            ignoreActions = false,
         } = context || {};
 
         const isDead = queueState.retries > 0 || isRetry;
@@ -1039,10 +1032,18 @@ export default abstract class AbstractSource extends AbstractComponent implement
             } 
             let preCompared = playEntity.play;
             if(transform) {
-                const {lifecycle = [], ...rest} = await this.transformPlay(playEntity.play, TRANSFORM_HOOK.preCompare, {useCachedResult: useCache});
-                preCompared = rest;
-                if(lifecycle.length > 0) {
-                    events.push({...transformToPlayEvent(lifecycle), createdAt: dayjs()});
+                const {play, steps} = await this.transformPlay(playEntity.play, TRANSFORM_HOOK.preCompare, {useCachedResult: useCache});
+                preCompared = play;
+                if(steps.length > 0) {
+                    events.push({...transformToPlayEvent(steps), createdAt: dayjs()});
+                    const step = ignoreActions ? undefined : getLastLifecycleStepWithAction(steps);
+                    if(step !== undefined && step.actionResult !== actionTermSchema.enum.approve) {
+                        events.push(stateChangeToPlayEvent({ state: actionTermPlayState[step.actionResult], reason: step.actionReason ?? 'Triggered by a Stage' }));
+                        events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));
+                        playEntity.state = actionTermPlayState[step.actionResult];
+                        playEntity.play = play;
+                        return {playEntity, queue: queueState, events};
+                    }
                 }
             }
             let existing: PlayObject | undefined;
@@ -1073,6 +1074,24 @@ export default abstract class AbstractSource extends AbstractComponent implement
             playEntity.play = preCompared;
             signal?.throwIfAborted();
             if(existing === undefined) {
+                // postCompare before Play is considered discovered so a Stage action can stop it from being discovered/forwarded
+                // the Source keeps the preCompare Play, only the forwarded Play is postCompare transformed
+                let postCompared = preCompared;
+                if(transform) {
+                    const {play, steps} = await this.transformPlay(preCompared, TRANSFORM_HOOK.postCompare, {useCachedResult: useCache});
+                    postCompared = play;
+                    if(steps.length > 0) {
+                        events.push({...transformToPlayEvent(steps), createdAt: dayjs()});
+                        const step = ignoreActions ? undefined : getLastLifecycleStepWithAction(steps);
+                        if(step !== undefined && step.actionResult !== actionTermSchema.enum.approve) {
+                            events.push(stateChangeToPlayEvent({ state: actionTermPlayState[step.actionResult], reason: step.actionReason ?? 'Triggered by a Stage' }));
+                            events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));
+                            playEntity.state = actionTermPlayState[step.actionResult];
+                            return {playEntity, queue: queueState, events};
+                        }
+                    }
+                    signal?.throwIfAborted();
+                }
                 playEntity.state = 'discovered';
                 //state = 'discovered';
                 events.push(stateChangeToPlayEvent({state: 'discovered'}));
@@ -1085,7 +1104,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 }
                 this.discoveredCounter.labels(this.getPrometheusLabels()).inc();
                 this.emitEvent('discovered', {play: preCompared});
-                await this.scrobble([{...playEntity.play, id: playEntity.id, uid: playEntity.uid}]);
+                await this.scrobble([{...postCompared, id: playEntity.id, uid: playEntity.uid}]);
             } else {
                 // existing plays are always from the db so should always have an id
                 if(existing.id !== undefined) {

@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import { type AmbPlayObject, type DateLike, type LifecycleInput, type LifecycleStep, type ObjectPlayData, PLAY_STATES, type PlayMatchResult, type PlayMeta, type PlayObject, type PlayOriginal, type PlayState, type ScrobbleResult } from '../../Atomic.ts';
+import { type AmbPlayObject, type DateLike, type LifecycleInput, type LifecycleStep, type ObjectPlayData, PLAY_STATES, type PlayMatchResult, type PlayMeta, type PlayObject, type PlayOriginal, type PlayState, type ScrobbleResult, type TransformPlayResult } from '../../Atomic.ts';
 import { generatePlay, type GeneratePlayOpts, generatePlays, withBrainz } from './PlayTestUtils.ts';
 import { statefulInvariantTransform } from '../../PlayUtils.ts';
 import clone from 'clone';
@@ -27,7 +27,7 @@ export interface GeneratePlayWithLifecycleOptions {
   }
 }
 
-export const generatePlayWithLifecycle = (opts: GeneratePlayWithLifecycleOptions = {}) => {
+export const generatePlayWithLifecycle = (opts: GeneratePlayWithLifecycleOptions = {}): TransformPlayResult => {
 
   const {
     original: originalOpts = {},
@@ -91,10 +91,9 @@ export const generatePlayWithLifecycle = (opts: GeneratePlayWithLifecycleOptions
     }
   }
 
-  lplay.lifecycle = steps;
   lplay.data = transformedPlay.data;
 
-  return lplay;
+  return {play: lplay, steps};
 }
 
 export const generatePlayInput = <D extends DateLike = Dayjs>(play?: AmbPlayObject<D>, data?: object | false): PlayOriginal<D> => {

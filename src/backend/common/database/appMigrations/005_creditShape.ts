@@ -257,7 +257,8 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
             processed++;
             try {
                 const legacyPlay = row.play as unknown as LegacyPlay;
-                const play = legacyPlayToCredits(legacyPlay) as unknown as PlayObject;
+                // steps stored on the play itself are from before they were moved to play events
+                const play = legacyPlayToCredits(legacyPlay) as unknown as PlayObject & {lifecycle?: LifecycleStep[]};
                 if(!isLegacyPlay(legacyPlay)) {
                     // already converted, patches and events for this play are also already converted
                     continue;

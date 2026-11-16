@@ -33,7 +33,7 @@ import { CALCULATED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {QueueContext, ReportedPlayerStatus, ScrobbleResult} from '../../core/Atomic.ts';
 import type {ClientType} from "../../core/Atomic.ts";
 import type {CommonClientConfig, NowPlayingOptions, UpstreamRefreshOptions} from "../common/infrastructure/config/client/index.ts";
-import { TRANSFORM_HOOK } from "../../core/Transform.ts";
+import { actionTermPlayState, actionTermSchema, TRANSFORM_HOOK } from "../../core/Transform.ts";
 import type { Notifiers } from "../notifier/Notifiers.ts";
 import {
     isDebugMode,
@@ -72,6 +72,7 @@ import { PLAY_EVENT_TYPE, type PlayEvent } from "../../core/PlayEvent.ts";
 import { dupeCheckToPlayEvent, queueCompletionStateToPlayEvent, scrobbleToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from "../common/database/drizzle/entityUtils.ts";
 import type { PlayProcessingResult } from "../common/infrastructure/PlayProcessing.ts";
 import { PlayProcessingError } from "../common/errors/PlayProcessingError.ts";
+import { getActionFromLifecycleSteps, getLastLifecycleStepWithAction } from "../utils/PlayTransformUtils.ts";
 
 type SourceMappedPlayer = {player: SourcePlayerObj, source: SourceIdentifier};
 type PlatformMappedPlays = Map<string, SourceMappedPlayer>;
@@ -751,7 +752,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     findExistingSubmittedPlayObj = async (playObjPre: PlayObject): Promise<([undefined, undefined] | [undefined, ScrobbledPlayObject[]] | [ScrobbledPlayObject, ScrobbledPlayObject[]])> => {
 
-        const playObj = await this.transformPlay(playObjPre, TRANSFORM_HOOK.candidate);
+        const {play: playObj} = await this.transformPlay(playObjPre, TRANSFORM_HOOK.candidate);
 
         if(this.transformRules.compare?.existing === undefined) {
             // if no existing transform then we can run cheap db match
@@ -764,7 +765,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         const closeTemporalPlays = await this.playRepo.getTemporallyClosePlays(playObj, {states: ['scrobbled'], notId: playObjPre.id});
 
-        const dtInvariantMatches = (await pMap(closeTemporalPlays.map(x => x.play), this.staggerMappers.existing(async x => (await this.transformPlay(x, TRANSFORM_HOOK.existing))), {concurrency: 3}))
+        const dtInvariantMatches = (await pMap(closeTemporalPlays.map(x => x.play), this.staggerMappers.existing(async x => (await this.transformPlay(x, TRANSFORM_HOOK.existing)).play), {concurrency: 3}))
             .filter(x => playObjDataMatch(playObj, x));
 
         if (dtInvariantMatches.length === 0) {
@@ -1114,6 +1115,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             isRetry = false,
             transform = true,
             dupeCheck = true,
+            ignoreActions = false,
         } = context ?? {};
 
         const isDead = queueState.retries > 0 || isRetry;
@@ -1134,11 +1136,19 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
 
             if(transform) {
-                const {lifecycle = [], ...rest} = await this.transformPlay(playEntity.play, TRANSFORM_HOOK.preCompare, {useCachedResult: useCache});
-                if(lifecycle.length > 0) {
-                    events.push({...transformToPlayEvent(lifecycle), createdAt: dayjs()});
+                const {play, steps} = await this.transformPlay(playEntity.play, TRANSFORM_HOOK.preCompare, {useCachedResult: useCache});
+                if(steps.length > 0) {
+                    events.push({...transformToPlayEvent(steps), createdAt: dayjs()});
+                    const step = ignoreActions ? undefined : getLastLifecycleStepWithAction(steps);
+                    if(step !== undefined && step.actionResult !== actionTermSchema.enum.approve) {
+                        events.push(stateChangeToPlayEvent({ state: actionTermPlayState[step.actionResult], reason: step.actionReason ?? 'Triggered by a Stage' }));
+                        events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));
+                        playEntity.state = actionTermPlayState[step.actionResult];
+                        playEntity.play = play;
+                        return {playEntity, queue: queueState, events};
+                    }
                 }
-                playEntity.play = rest;
+                playEntity.play = play;
             }
 
             let historicalPlays: PlayObject[] = [];
@@ -1179,12 +1189,18 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
             signal?.throwIfAborted();
             if (!isDupe) {
-                const transformedScrobble = transform ? await this.transformPlay(playEntity.play, TRANSFORM_HOOK.postCompare, {useCachedResult: useCache}) : playEntity.play;
-                const { lifecycle = [], ...restPlay } = transformedScrobble;
-                playEntity.play = restPlay;
-                const psLifecycle = lifecycle.filter(x => x.hook === TRANSFORM_HOOK.postCompare);
-                if (psLifecycle.length > 0) {
-                    events.push({ ...transformToPlayEvent(psLifecycle), createdAt: dayjs() });
+                const { play: transformedScrobble, steps } = transform ? await this.transformPlay(playEntity.play, TRANSFORM_HOOK.postCompare, {useCachedResult: useCache}) : {play: playEntity.play, steps: []};
+                playEntity.play = transformedScrobble;
+                if (steps.length > 0) {
+                    events.push({ ...transformToPlayEvent(steps), createdAt: dayjs() });
+                    const step = ignoreActions ? undefined : getLastLifecycleStepWithAction(steps);
+                    if(step !== undefined && step.actionResult !== actionTermSchema.enum.approve) {
+                        events.push(stateChangeToPlayEvent({ state: actionTermPlayState[step.actionResult], reason: step.actionReason ?? 'Triggered by a Stage' }));
+                        events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));
+                        playEntity.state = actionTermPlayState[step.actionResult];
+                        playEntity.play = transformedScrobble;
+                        return {playEntity, queue: queueState, events};
+                    }
                 }
                 signal?.throwIfAborted();
                 try {
@@ -1333,8 +1349,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
         const sourceId = `${source.name}-${source.type}`;
         if(data.play !== undefined) {
-            const transformed = await this.transformPlay(data.play, TRANSFORM_HOOK.preCompare);
-            data.play = transformed;
+            const {play, steps} = await this.transformPlay(data.play, TRANSFORM_HOOK.preCompare);
+            const action = getActionFromLifecycleSteps(steps);
+            if(action !== undefined && action !== actionTermSchema.enum.approve) {
+                this.npLogger.debug(`Not queueing now playing ${buildTrackString(play, {include: ['artist', 'track', 'platform']})} from ${sourceId} because preCompare resulted in action '${action}'`);
+                return;
+            }
+            data.play = play;
         }
         if(isDebugMode()) {
             let playHint = '';

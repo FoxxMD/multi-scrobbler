@@ -1,4 +1,4 @@
-import { Accordion, Alert, Dialog, Box, Text, Group, Portal, Code, Collapsible, Flex, HStack, Separator, Menu, Skeleton, SkeletonText, Span, Stack, useAccordionItemContext, type BadgeProps, type MenuItemProps, type MenuSelectionDetails, useClipboard, CloseButton, Button } from '@chakra-ui/react';
+import { Accordion, Dialog, Box, Text, Group, Portal, Collapsible, Flex, HStack, Separator, Menu, Skeleton, SkeletonText, Span, Stack, useAccordionItemContext, type BadgeProps, type MenuItemProps, type MenuSelectionDetails, useClipboard, CloseButton, Button } from '@chakra-ui/react';
 import { useSSEContext, useSSEEvent } from "@flamefrontend/sse-runtime-react";
 import { useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import React, { Fragment, useCallback, useEffect, useState, type ComponentProps } from "react";
@@ -14,7 +14,7 @@ import { EphemeralElement, PlayStateBadge } from "./Badges";
 import { ShortDateDisplay } from "./DateDisplay";
 import { ErrorAlert } from "./ErrorAlert";
 import { ExpandCollapse } from "./ExpandCollapse";
-import { DebugIcon, EllipsisButton, ExclamationCircleIcon, ExclamationTriangleIcon, FinishIconRaw, InsertedIcon, type PowerOffButton, RetryButton, RetryIcon, StopButton, StopIconRaw, TrashIconRaw, UpdatedIcon } from "./icons/ChakraIcons";
+import { DebugIcon, EllipsisButton, ExclamationCircleIcon, ExclamationTriangleIcon, FinishIconRaw, InsertedIcon, type PowerOffButton, RetryButton, RetryForceIcon, RetryIcon, ReviewIconRaw, StopButton, StopIconRaw, TrashIconRaw, UpdatedIcon } from "./icons/ChakraIcons";
 import { PlayData } from "./play/PlayData";
 import { TextMuted } from "./TextMuted";
 import { capitalize } from '../../core/StringUtils';
@@ -154,70 +154,6 @@ export const ActivitySummaryFetchable = (props: MarkOptional<ActivitySummaryProp
     return <ActivitySummary {...props} activity={activity}/>
 }
 
-export const ActivityErrorSummary = (props: {activity: ActivityDetailProps['activity']}) => {
-        const {
-        activity: {
-            play: {
-                lifecycle = [],
-                scrobble,
-            } = {},
-            error,
-        } = {}
-    } = props;
-    if(error !== undefined && error !== null) {
-        return <ErrorAlert error={error} />;
-    }
-    const lifecycleError = lifecycle.find(x => x.error !== undefined && x.error !== null && Object.keys(x.error).length > 0);
-    if(lifecycleError !== undefined) {
-        return (
-        <Alert.Root status="error">
-            <Alert.Indicator />
-            <Alert.Content>
-                <Alert.Title>Error occurred during Play Transform in <Span color="fg.muted">Stage </Span>{lifecycleError.stageType}-{lifecycleError.stageName}<Span color="fg.muted"> in Hook </Span>{lifecycleError.hook} <Span color="fg.muted">from</Span> {lifecycleError.source}</Alert.Title>
-                <Alert.Description>
-                    <Stack gap="0.5">
-                        <Code width="fit-content" my="2" variant="surface">{lifecycleError.error?.message}</Code>                        
-                        <Box>Open the <strong>Timeline</strong> to find the error specifics.</Box>
-                    </Stack>                    
-                </Alert.Description>
-            </Alert.Content>
-        </Alert.Root>
-        );
-    }
-    if(scrobble?.error !== undefined) {
-        return (
-        <Alert.Root status="error">
-            <Alert.Indicator />
-            <Alert.Content>
-                <Alert.Title>Error occurred during while trying to scrobble</Alert.Title>
-                <Alert.Description>
-                    <Stack gap="0.5">
-                        <Code width="fit-content" my="2" variant="surface">{scrobble.error.message}</Code>                        
-                        <Box>Open the <strong>Timeline</strong> to find the error specifics.</Box>
-                    </Stack>  
-                </Alert.Description>
-            </Alert.Content>
-        </Alert.Root>
-        );
-    }
-    if(scrobble?.warnings !== undefined) {
-        return (
-        <Alert.Root status="warning">
-            <Alert.Indicator />
-            <Alert.Content>
-                <Alert.Title>There were warnings while scrobbling</Alert.Title>
-                <Alert.Description>
-                    <Stack gap="0.5">
-                        <Box>Open the <strong>Timeline</strong> to find warning specifics.</Box>
-                    </Stack>  
-                </Alert.Description>
-            </Alert.Content>
-        </Alert.Root>
-        )
-    }
-    return null;
-}
-
 // defined at module level so it isn't a new component type (remounted) on every ActivityDetails render
 const ExpandCollapseContext = (props: {onClick: (val: boolean) => void}) => {
     const item = useAccordionItemContext();
@@ -249,7 +185,6 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
 
     return (
         <Stack gap="2">
-        {/* <ActivityErrorSummary activity={props.activity}/> */}
         {error !== undefined && error !== null ? <ErrorAlert error={error}/> : null}
         <Accordion.Root width="full" variant="enclosed" collapsible multiple>
             <Accordion.Item value="info">
@@ -314,7 +249,8 @@ const opts = formOptions.strictSchema(queueContextSchema, {
         defaultValues: {
             transform: true,
             dupeCheck: true,
-            useCache: true
+            useCache: true,
+            ignoreActions: false
         },
         validators: [{
             run: queueContextSchema,
@@ -370,6 +306,10 @@ const RetryWithDialog = (props: { open: boolean, setOpen: (open: boolean) => voi
                                 <form.Field
                                     name="useCache"
                                     children={(field) => (<FormCheckbox field={field} label="Use Cache?"/>)}
+                                />
+                                <form.Field
+                                    name="ignoreActions"
+                                    children={(field) => (<FormCheckbox field={field} label="Ignore Stage Actions?"/>)}
                                 />
                             </Stack>
                         </Dialog.Body>
@@ -445,10 +385,12 @@ const playStateMenuItem = (Icon: IconType, value: string, name?: string) => (pro
 
 const MenuItemRetry = playStateMenuItem(RetryIcon, 'retry');
 const MenuItemRetryWith = playStateMenuItem(RetryIcon, 'retryWith', 'Retry With...');
+const MenuItemRetryIgnoreActions = playStateMenuItem(RetryForceIcon, 'retryIgnoreActions', 'Retry Ignoring Actions');
 const MenuItemCancel = playStateMenuItem(StopIconRaw, 'cancel');
 const MenuItemTrash = playStateMenuItem(TrashIconRaw, 'delete');
 const MenuItemDebug = playStateMenuItem(DebugIcon, 'debug');
 const MenuItemFinish = playStateMenuItem(FinishIconRaw, 'finish', 'Mark Completed');
+const MenuItemReview = playStateMenuItem(ReviewIconRaw, 'review', 'Mark For Review');
 
 const primaryActionProps: ComponentProps<typeof PowerOffButton> = {
     margin: "1px",
@@ -487,6 +429,11 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
                     json: {state: data.state}
                 });
             }
+            if(data.action === 'review') {
+                return ky.post(`api/components/${props.activity.componentId}/plays/${props.activity.uid}/state`, {
+                    json: {state: 'review'}
+                });
+            }
             throw new Error(`Unknown play action '${data.action}'`);
         }
     });
@@ -505,6 +452,9 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
                 break;
             case 'retryWith':
                 setRetryOpen(true);
+                break;
+            case 'retryIgnoreActions':
+                mutate({action: 'queue', context: {ignoreActions: true}});
                 break;
             case 'cancel':
                 mutate({action: 'cancel'});
@@ -534,6 +484,7 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
             menuItems = [
                 <MenuItemDebug/>,
                 <MenuItemRetryWith disabled={isPending} />,
+                <MenuItemReview disabled={isPending} />,
                 <MenuItemFinish disabled={isPending}/>,
                 <MenuItemTrash disabled={isPending}  color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }}/>
             ];
@@ -542,9 +493,25 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
                 //primaryAction = <StopButton size={{base: '2xs', smTo2xl: 'xs'}} color="red.400" margin="1px" variant="subtle" onClick={() => mutate({action: 'cancel'})}/>;
             }
             break
+        case 'review':
+            primaryAction = <RetryButton size={{base: '2xs', smTo2xl: 'xs'}} margin="1px" variant="subtle" onClick={() => mutate({action: 'queue'})}/>;
+            menuItems = [<MenuItemRetryIgnoreActions disabled={isPending} />,<MenuItemRetryWith disabled={isPending} />,<MenuItemFinish disabled={isPending}/>,<MenuItemDebug/>,<MenuItemTrash disabled={isPending}  color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }}/>];
+            break
+        case 'duped':
+        case 'discarded':
+            primaryAction = <RetryButton size={{base: '2xs', smTo2xl: 'xs'}} margin="1px" variant="subtle" onClick={() => mutate({action: 'queue'})}/>;
+            menuItems = [
+            <MenuItemRetryWith disabled={isPending} />,
+            <MenuItemReview disabled={isPending} />,
+            <MenuItemTrash disabled={isPending}  color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }}/>
+        ];
+            break
         default:
             primaryAction = <RetryButton size={{base: '2xs', smTo2xl: 'xs'}} margin="1px" variant="subtle" onClick={() => mutate({action: 'queue'})}/>;
-            menuItems = [<MenuItemRetryWith disabled={isPending} />,<MenuItemDebug/>,<MenuItemTrash disabled={isPending}  color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }}/>];
+            menuItems = [
+            <MenuItemRetryWith disabled={isPending} />,
+            <MenuItemTrash disabled={isPending}  color="fg.error" _hover={{ bg: "bg.error", color: "fg.error" }}/>
+        ];
             break
 
     }

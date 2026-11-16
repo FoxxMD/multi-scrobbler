@@ -1,0 +1,209 @@
+---
+title: Match Stage
+description: Checking Play data to control Play State and Stage Flow
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 5
+---
+
+The **Match** [Stage](/configuration/transforms#stage) checks if a Play matches **search expressions**, provided by you. It **does not** change Play data.
+
+Instead, the Stage **succeeds** if the Play matches and **fails** if it does not. Combined with [Stage Flow Control](/configuration/transforms#flow-control) and [Play State Control](/configuration/transforms#play-state-control) this lets you decide what happens to a Play based on its data. Example scenarios:
+
+* Discarding Plays from a specific device or user
+* Marking Plays as **Needs Review** if a Title still looks wrong after the [Musicbrainz Stage](/configuration/transforms/musicbrainz) runs
+* Skipping later Stages when a Play is from an Artist you don't want to look up
+
+## Configuration
+
+The Match Stage has a [Default Stage](/configuration/transforms#stage-names-and-default-stages). You do not need to create one in the top-level `transformers` of your [AIO Config](/configuration?configType=aio#configuration-types).
+
+However, you can create one here if you want subsequent usage of this transformer to always have default rules, using [Rules](#rules) `defaults`.
+
+<details>
+
+<summary>Example</summary>
+
+```json5 title="config.json" brackets
+{
+  // [!link /AIO Config/ /configuration?configType=aio#configuration-types]
+  // ...your AIO Config
+  "transformers": [
+    {
+      "type": "match",
+      "name": "MyMatch",
+      "defaults": {
+        "title": "MyCoolTitle" // [!ref] always added when using "MyMatch" in a Source/Client...
+      }
+    }
+  ]
+}
+```
+
+</details>
+
+### Search Expression
+
+A search expression can be a plain string that matches a literal:
+
+```
+Expression: "Live"
+
+"My Song (Live)" => matches
+"My Song"        => does not match
+```
+
+or a regular expression:
+
+```
+Expression: "/(remaster|live)/i"
+
+"My Song (Remastered 2011)" => matches
+```
+
+An **empty string** (`""`) matches when the Play does **not** have that data, like a Play with no Album.
+
+Each expression may also be an object with its own [`when` condition](/configuration/transforms#conditional-modification), so it is only checked if `when` passes:
+
+```json5
+{
+    "search": "/remaster/i", // [!ref] check if Title includes 'remaster'...
+    "when": {"artists": "The Beatles"} // [!ref] ...but only for Beatles Plays
+}
+```
+
+### Rules
+
+Each Rule can be a single [search expression](#search-expression) or a list of them. If any expression in a Rule matches, the Rule matches.
+
+The Rules you can use are:
+
+* `title` `artists` `albumArtists` `album`
+* `art` - any album, track, or artist art URL
+* `user` `deviceId` `library` `playlist` `musicService` - only available for Sources that report this info
+* `duration` `listenedFor` - instead of a search expression, use a comparison: `=` `>` or `<` followed by a duration. EX `> 7 s` `< 2 minutes` `= 30s`
+
+```json5
+{
+    "type": "match",
+    "name": "MyMatch",
+    "artists": ["Elephant Gym", "Tide/Edit"], // [!ref] Artist is Elephant Gym OR Tide/Edit...
+    "listenedFor": "< 30 s" // [!ref] ...AND the Play was listened to for less than 30 seconds
+}
+```
+
+**All** Rules in a Stage must match for the Stage to succeed.
+
+#### Multiple Rule Sets
+
+To match one of several *different* combinations, put each combination in `matches`. The Stage succeeds if the Rules at the top level **or** any set in `matches` match.
+
+```json5
+{
+    "type": "match",
+    "name": "MyMatch",
+    "matches": [
+        { "deviceId": "kitchen-speaker" }, // [!ref] Play is from the kitchen speaker...
+        { "user": "guest", "album": "/Christmas/i" } // [!ref] ...OR is a guest listening to a Christmas album
+    ]
+}
+```
+
+A Match Stage with no Rules at all never matches.
+
+<Aside type="caution" title="A Match Stage That Does Not Match Is a Failure">
+
+When nothing matches, the Stage **fails**. Like any other failed Stage, by default this stops the Hook and **reverts** changes made by earlier Stages in the Hook. See [Transforms Fail Open](/configuration/transforms#flow-control).
+
+If the Match Stage comes after Stages whose changes you want to keep, add `"failureReturnPartial": true` or `"onFailure": "continue"` to it.
+
+</Aside>
+
+## Examples
+
+### Discard Short Plays from a Device
+
+Discard Plays from the kitchen speaker that were listened to for less than 30 seconds.
+
+<details>
+
+<summary>Example</summary>
+
+```json5
+{
+  "playTransform": {
+    "preCompare": [
+      {
+        "type": "match",
+        "name": "MyMatch",
+        "deviceId": "kitchen-speaker",
+        "listenedFor": "< 30 s",
+        "onSuccessAction": "discard", // [!ref] Play matched, set it to **Discarded**
+        "onFailure": "continue" // [!ref] Play did not match, nothing happens and it is processed normally
+      }
+    ]
+  }
+}
+```
+
+</details>
+
+### Review Messy Titles After Musicbrainz
+
+Use Musicbrainz to clean up the Play, then mark it as **Needs Review** if the Title still has `feat.` or `Remaster` in it.
+
+<details>
+
+<summary>Example</summary>
+
+```json5
+{
+  "playTransform": {
+    "preCompare": [
+      {
+        "type": "musicbrainz",
+        "name": "MyMB",
+        "onFailure": "continue" // [!ref] Still check the Title even if Musicbrainz could not find a match
+      },
+      {
+        "type": "match",
+        "name": "MyMatch",
+        "title": "/(feat\\.|remaster)/i",
+        "onSuccessAction": "review", // [!ref] Title still looks messy, set Play to **Needs Review**
+        "failureReturnPartial": true // [!ref] Title looks fine, keep the Musicbrainz changes
+      }
+    ]
+  }
+}
+```
+
+</details>
+
+### Only Look Up Artists You Care About
+
+Stop the Hook early, without changing anything, for Plays that are not from your favorite Artists, so Musicbrainz only runs for them.
+
+<details>
+
+<summary>Example</summary>
+
+```json5
+{
+  "playTransform": {
+    "preCompare": [
+      {
+        "type": "match",
+        "name": "MyMatch",
+        "artists": ["Elephant Gym", "Tide/Edit", "/^toe$/i"]
+        // [!ref] onFailure defaults to stop: if the Artist is not in this list, Musicbrainz never runs
+      },
+      {
+        "type": "musicbrainz",
+        "name": "MyMB"
+      }
+    ]
+  }
+}
+```
+
+</details>

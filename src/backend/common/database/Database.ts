@@ -4,7 +4,7 @@ import { childLogger, type Logger } from '@foxxmd/logging';
 import { loggerNoop } from '../MaybeLogger.ts';
 import { COMPACTABLE, type CompactableProperty, DEFAULT_RETENTION_COMPACT_AFTER, DEFAULT_RETENTION_DELETE_AFTER, type RetentionConfigValueDurationValue, type RetentionConfigValueDuration, type RetentionOptionDuration, type RetentionOptionRetentionValue, type RetentionValue, type RetentionValueUnparsed } from '../infrastructure/config/database.ts';
 import dayjs from 'dayjs';
-import { parseDurationFromDurationValue } from '../../utils/TimeUtils.ts';
+import { parseDurationFromDurationValue } from '../../../core/TimeUtils.ts';
 import assert from 'node:assert';
 import * as sqlite from 'node:sqlite';
 import { parseBoolStrict } from '../../utils.ts';

@@ -38,15 +38,15 @@ export const activityTransformHasIssue = (steps: LifecycleStep[]): 'warn' | 'err
 export const activityTimelineHasIssue = (activity: PlayApiCommonDetailed): 'warn' | 'error' | undefined => {
     const {
         queueStates = [],
+        events = [],
         play: {
-            lifecycle = [],
             scrobble: {
                 error: scrobbleError,
                 warnings: scrobbleWarnings = []
             } = {},
         } = {},
     } = activity;
-    const transformIssue = activityTransformHasIssue(lifecycle);
+    const transformIssue = activityTransformHasIssue(events.flatMap(x => x.eventName === 'transform' ? x.data : []));
     if(transformIssue !== undefined) {
         return transformIssue;
     }

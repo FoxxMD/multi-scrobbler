@@ -4,24 +4,29 @@ import asPromised from 'chai-as-promised';
 import { describe, it } from 'mocha';
 import AbstractComponent, { type AbstractComponentConfig } from "../../common/AbstractComponent.ts";
 
-import { type ConditionalSearchAndReplaceRegExp, DEFAULT_TRANSFORMER_NAME, type MetadataProviderStageType, type StageTypeMetadata, TRANSFORM_HOOK } from "../../../core/Transform.ts";
+import { DEFAULT_TRANSFORMER_NAME, type SearchReplaceTerm, type MetadataProviderStageType, TRANSFORM_HOOK, type TransformerCommon, type TransformerCommonConfig, whenSchema } from "../../../core/Transform.ts";
 
-import { isConditionalSearchAndReplace } from "../../utils/PlayTransformUtils.ts";
 import { generateArtistsStr, generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
 import type {WebhookPayload} from "../../common/infrastructure/config/health/webhooks.ts";
-import { findCauseByMessage } from "../../utils/ErrorUtils.ts";
 import NativeTransformer from "../../common/transforms/NativeTransformer.ts";
 import { initMemoryCache } from "../../common/Cache.ts";
 import { Cacheable } from "cacheable";
-import type {PlayMatchResult, PlayObject, QueueContext, TransformerCommon, TransformerCommonConfig} from "../../../core/Atomic.ts";
+import type {LifecycleStep, PlayMatchResult, PlayObject, QueueContext} from "../../../core/Atomic.ts";
 import TransformerManager from "../../common/transforms/TransformerManager.ts";
 import type AbstractTransformer from "../../common/transforms/AbstractTransformer.ts";
 import { transientCache } from "../utils/TransientTestUtils.ts";
 import dayjs from "dayjs";
 import clone from "clone";
 import { nameToCredit, creditsToNames, namesToCredits, mbMeta, creditMbid } from "../../../core/MusicMetadata.ts";
-import UserTransformer from "../../common/transforms/UserTransformer.ts";
-import { SkipTransformStageError } from "../../common/errors/MSErrors.ts";
+import UserTransformer, { type UserStage } from "../../common/transforms/UserTransformer.ts";
+import MusicbrainzTransformer from "../../common/transforms/MusicbrainzTransformer.ts";
+import SpotifyTransformer from "../../common/transforms/SpotifyTransformer.ts";
+import RockskyTransformer from "../../common/transforms/rocksky/RockskyTransformer.ts";
+import CoverArtArchiveTransformer from "../../common/transforms/coverartarchive/CoverArtArchiveTransformer.ts";
+import { parseDurationComparison } from "../../../core/TimeUtils.ts";
+import MatchTransformer from "../../common/transforms/match/MatchTransformer.ts";
+import { getActionFromLifecycleSteps, testPlayParts, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
+import { SkipTransformStageError, TransformRulesError } from "../../common/errors/MSErrors.ts";
 import { COMPONENT_STATE, type ComponentState, type TrackSearchResult } from "../../../core/Api.ts";
 import type { PlayWith, PlaySelectWithQueueStates } from "../../common/database/drizzle/drizzleTypes.ts";
 import type { PlayProcessingResult } from "../../common/infrastructure/PlayProcessing.ts";
@@ -127,7 +132,7 @@ describe('Play Transforms', function () {
 
         describe('Stage Parsing', function () {
 
-            it(`Throws an error if stage is an unexpected value`, function () {
+            it(`Throws an error if stage is an unexpected value`, async function () {
                 component.config = {
                     options: {
                         playTransform: {
@@ -140,10 +145,7 @@ describe('Play Transforms', function () {
                     }
                 }
 
-                // https://github.com/chaijs/chai/issues/655#issuecomment-204386414
-                expect(component.buildTransformRules()).to.eventually.throw(Error).that.satisfies((e: any) => {
-                    return findCauseByMessage(e, `No transformer of type 'test'`);
-                });
+                await expect(component.buildTransformRules()).to.be.rejectedWith(TransformRulesError);
             });
 
         });
@@ -214,9 +216,9 @@ describe('Play Transforms', function () {
                 await component.buildTransformRules();
 
                 expect(component.transformRules.preCompare![0]).to.exist;
-                expect(component.transformRules.preCompare![0].title).to.exist;
-                expect(Array.isArray(component.transformRules.preCompare![0].title)).is.true;
-                expect(isConditionalSearchAndReplace((component.transformRules.preCompare![0].title as any[])[0])).is.true
+                expect((component.transformRules.preCompare![0] as UserStage).title).to.exist;
+                expect(Array.isArray((component.transformRules.preCompare![0] as UserStage).title)).is.true;
+                expect(((component.transformRules.preCompare![0] as UserStage).title as any[])[0]).to.include.keys('search', 'replace')
             });
 
             it('Converts transform config into real S&P data with default being empty string', async function () {
@@ -235,10 +237,10 @@ describe('Play Transforms', function () {
                 await component.buildTransformRules();
 
                 expect(component.transformRules.preCompare![0]).to.exist;
-                expect(component.transformRules.preCompare![0].title).to.exist;
-                expect(Array.isArray(component.transformRules.preCompare![0].title)).is.true;
-                expect(isConditionalSearchAndReplace((component.transformRules.preCompare![0].title as any[])[0])).is.true
-                const title = (component.transformRules.preCompare![0].title as any[])[0] as ConditionalSearchAndReplaceRegExp;
+                expect((component.transformRules.preCompare![0] as UserStage).title).to.exist;
+                expect(Array.isArray((component.transformRules.preCompare![0] as UserStage).title)).is.true;
+                expect(((component.transformRules.preCompare![0] as UserStage).title as any[])[0]).to.include.keys('search', 'replace')
+                const title = ((component.transformRules.preCompare![0] as UserStage).title as any[])[0] as SearchReplaceTerm;
                 expect(title.search).is.eq('something');
                 expect(title.replace).is.eq('');
             });
@@ -265,10 +267,10 @@ describe('Play Transforms', function () {
                 await component.buildTransformRules();
 
                 expect(component.transformRules.preCompare![0]).to.exist;
-                expect(component.transformRules.preCompare![0].title).to.exist;
-                expect(Array.isArray(component.transformRules.preCompare![0].title)).is.true;
-                expect(isConditionalSearchAndReplace((component.transformRules.preCompare![0].title as any[])[0])).is.true
-                const title = (component.transformRules.preCompare![0].title as any[])[0] as ConditionalSearchAndReplaceRegExp;
+                expect((component.transformRules.preCompare![0] as UserStage).title).to.exist;
+                expect(Array.isArray((component.transformRules.preCompare![0] as UserStage).title)).is.true;
+                expect(((component.transformRules.preCompare![0] as UserStage).title as any[])[0]).to.include.keys('search', 'replace')
+                const title = ((component.transformRules.preCompare![0] as UserStage).title as any[])[0] as SearchReplaceTerm;
                 expect(title.search).is.eq('nothing');
                 expect(title.replace).is.eq('anything');
             });
@@ -278,7 +280,7 @@ describe('Play Transforms', function () {
 
             describe('Non-User Stage Types', function () {
 
-                for(const t of ['native']) {
+                for(const t of ['native'] as const) {
 
                     it(`Allows non-user Stage Type ${t}`, async function () {
                         component.config = {
@@ -286,7 +288,7 @@ describe('Play Transforms', function () {
                             options: {
                                 playTransform: {
                                     preCompare: {
-                                        type: t as StageTypeMetadata,
+                                        type: t,
                                         title: true
                                     }
                                 }
@@ -313,7 +315,7 @@ describe('Play Transforms', function () {
                 await component.buildTransformRules();
 
                 const play = generatePlay();
-                const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                 expect(JSON.stringify(play)).equal(JSON.stringify(transformed));
             });
 
@@ -333,7 +335,7 @@ describe('Play Transforms', function () {
                     await component.buildTransformRules();
 
                     const play = generatePlay({ track: nameToCredit('My coolsomething track') });
-                    const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                     expect(transformed.data.track?.name).equal('My cool track');
                 });
 
@@ -352,7 +354,7 @@ describe('Play Transforms', function () {
                     await component.buildTransformRules();
 
                     const play = generatePlay({ track: nameToCredit('My coolsomething track') });
-                    const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                     expect(transformed.data.track?.name).equal('My  track');
                 });
 
@@ -376,7 +378,7 @@ describe('Play Transforms', function () {
                     await component.buildTransformRules();
 
                     const play = generatePlay({ track: nameToCredit('My cool something track') });
-                    const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                     expect(transformed.data.track?.name).equal('My cool thing track');
                 });
 
@@ -401,7 +403,7 @@ describe('Play Transforms', function () {
                     await component.buildTransformRules();
 
                     const play = generatePlay({ artists: namesToCredits(['My Artist One / My Artist Two / Another Guy']) });
-                    const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                     expect(transformed.data.artists).length(1)
                     expect(transformed.data.artists![0].name).equal('My Artist One');
                 });
@@ -421,7 +423,7 @@ describe('Play Transforms', function () {
                     await component.buildTransformRules();
 
                     const play = generatePlay({ track: nameToCredit('something') });
-                    const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                     expect(transformed.data.track).is.undefined;
                 });
 
@@ -440,7 +442,7 @@ describe('Play Transforms', function () {
                     await component.buildTransformRules();
 
                     const play = generatePlay({ album: nameToCredit('something') });
-                    const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                     expect(transformed.data.album).is.undefined;
                 });
 
@@ -459,7 +461,7 @@ describe('Play Transforms', function () {
                     await component.buildTransformRules();
 
                     const play = generatePlay({ artists: namesToCredits(['something', 'big']) });
-                    const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                     expect(transformed.data.artists!.length).is.eq(1)
                     expect(transformed.data.artists![0].name).is.eq('big')
                 });
@@ -543,7 +545,7 @@ describe('Play Transforms', function () {
                 await component.buildTransformRules();
 
                 const play = generatePlay({ artists: namesToCredits(['something', 'big']), album: nameToCredit('It Has No Match') });
-                const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                 expect(transformed.data.artists!.length).is.eq(2)
                 expect(transformed.data.artists![0].name).is.eq('something')
             });
@@ -568,7 +570,7 @@ describe('Play Transforms', function () {
                 await component.buildTransformRules();
 
                 const play = generatePlay({ artists: namesToCredits(['something', 'big']), album: nameToCredit('It Has This Match') });
-                const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                 expect(transformed.data.artists!.length).is.eq(1)
                 expect(transformed.data.artists![0].name).is.eq('big')
             });
@@ -600,7 +602,7 @@ describe('Play Transforms', function () {
                 await component.buildTransformRules();
 
                 const play = generatePlay({ artists: namesToCredits(['something', 'big']), album: nameToCredit('It Has No Match') });
-                const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                 expect(transformed.data.artists!.length).is.eq(2)
                 expect(transformed.data.artists![0].name).is.eq('something')
             });
@@ -630,7 +632,7 @@ describe('Play Transforms', function () {
                 await component.buildTransformRules();
 
                 const play = generatePlay({ artists: namesToCredits(['something', 'big']), album: nameToCredit('It Has This Match') });
-                const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                 expect(transformed.data.artists!.length).is.eq(1)
                 expect(transformed.data.artists![0].name).is.eq('big')
             });
@@ -671,7 +673,7 @@ describe('Play Transforms', function () {
 
             await component.buildTransformRules();
             const play = generatePlay({ track: nameToCredit('My cool something track') });
-            const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+            const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
             expect(transformed.data.track?.name).equal('My cool final thing track');
         });
 
@@ -702,7 +704,7 @@ describe('Play Transforms', function () {
 
             await component.buildTransformRules();
             const play = generatePlay({ track: nameToCredit('My cool something track'), artists: namesToCredits([str]) });
-            const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+            const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
             expect(transformed.data.track?.name).equal('My cool bar track');
             expect(creditsToNames(transformed.data.artists!)).eql(primaries.concat(secondaries));
         });
@@ -739,14 +741,14 @@ describe('Play Transforms', function () {
 
             await component.buildTransformRules();
             const play = generatePlay({ track: nameToCredit('My cool something track'), artists: namesToCredits([str]), playDate: dayjs().subtract(10, 'm') });
-            const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare, {log: 'all'});
+            const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare, {log: 'all'});
             expect(transformed.data.track?.name).equal('My cool bar track');
             expect(creditsToNames(transformed.data.artists!)).eql(primaries.concat(secondaries));
 
             const cachablePlay = clone(play);
             const laterDate = dayjs().subtract(5, 'm');
             cachablePlay.data.playDate = laterDate;
-            const cacheTransformed = await component.transformPlay(cachablePlay, TRANSFORM_HOOK.preCompare, {log: 'all'});
+            const {play: cacheTransformed} = await component.transformPlay(cachablePlay, TRANSFORM_HOOK.preCompare, {log: 'all'});
             expect(cacheTransformed.data.track?.name).equal('My cool bar track');
             expect(creditsToNames(cacheTransformed.data.artists!)).eql(primaries.concat(secondaries));
             expect(cacheTransformed.data.playDate!.isSame(cachablePlay.data.playDate));
@@ -762,6 +764,205 @@ describe('Play Transforms', function () {
             await expect(t.handle(stage, play)).to.be.rejectedWith(SkipTransformStageError);
         });
 
+    });
+
+    describe('Stage Defaults', function () {
+
+        const opts = () => ({logger: loggerTest, cache: memorycache()});
+
+        it('Musicbrainz uses transformer defaults over built-in defaults', function () {
+            const t = new MusicbrainzTransformer({name: 'test', type: 'musicbrainz', defaults: {score: 50, searchWhenMissing: ['title'], releaseGroupSecondaryTypeDeny: []}}, opts());
+            const stage = t.parseConfig({type: 'musicbrainz'});
+            expect(stage.score).eq(50);
+            expect(stage.searchWhenMissing).eql(['title']);
+            expect(stage.releaseGroupSecondaryTypeDeny).eql([]);
+        });
+
+        it('Stage options override transformer defaults', function () {
+            const t = new MusicbrainzTransformer({name: 'test', type: 'musicbrainz', defaults: {score: 50}}, opts());
+            expect(t.parseConfig({type: 'musicbrainz', score: 70}).score).eq(70);
+        });
+
+        it('Spotify uses transformer defaults over built-in defaults', function () {
+            const t = new SpotifyTransformer({name: 'test', type: 'spotify', defaults: {score: 0.9, searchWhenMissing: ['isrc']}}, opts());
+            const stage = t.parseConfig({type: 'spotify'});
+            expect(stage.score).eq(0.9);
+            expect(stage.searchWhenMissing).eql(['isrc']);
+        });
+
+        it('Rocksky uses transformer defaults and stage searchWhenMissing', function () {
+            const t = new RockskyTransformer({name: 'test', type: 'rocksky', defaults: {score: 50, searchWhenMissing: ['album']}}, opts());
+            const stage = t.parseConfig({type: 'rocksky'});
+            expect(stage.score).eq(50);
+            expect(stage.searchWhenMissing).eql(['album']);
+            expect(t.parseConfig({type: 'rocksky', searchWhenMissing: ['isrc']}).searchWhenMissing).eql(['isrc']);
+        });
+
+        it('Cover Art Archive uses transformer defaults over built-in defaults', function () {
+            const t = new CoverArtArchiveTransformer({name: 'test', type: 'coverartarchive', defaults: {searchWhenMissing: ['album'], allowedTypes: ['back'], forceSearch: true}}, opts());
+            const stage = t.parseConfig({type: 'coverartarchive'});
+            expect(stage.searchWhenMissing).eql(['album']);
+            expect(stage.allowedTypes).eql(['back']);
+            expect(stage.forceSearch).is.true;
+        });
+    });
+
+    describe('Stage Actions', function () {
+
+        const step = (actionResult?: LifecycleStep['actionResult']): LifecycleStep => ({stageName: 'test', stageType: 'user', hook: 'preCompare', source: 'test', createdAt: 'same', actionResult});
+
+        it('Last step with an action wins, even with identical createdAt', function () {
+            expect(getActionFromLifecycleSteps([step('discard'), step(), step('review'), step()])).eq('review');
+            expect(getActionFromLifecycleSteps([step('discard'), step('approve')])).eq('approve');
+            expect(getActionFromLifecycleSteps([step(), step()])).is.undefined;
+        });
+
+        it('Sets step actionResult from the action term matching the stage outcome', async function () {
+            component.config = {
+                id: componentId(),
+                options: {
+                    playTransform: {
+                        preCompare: [
+                            {type: 'user', title: ['something'], onSuccessAction: 'discard', onSkipAction: 'review'},
+                            {type: 'user', title: ['nothing'], when: {title: 'will not match'}, onSuccessAction: 'discard', onSkipAction: 'review'},
+                            {type: 'user', title: ['cool'], onSuccessAction: 'approve', onSkipAction: 'review'},
+                        ]
+                    }
+                }
+            }
+            await component.buildTransformRules();
+
+            const {steps} = await component.transformPlay(generatePlay({ track: nameToCredit('My coolsomething track') }), TRANSFORM_HOOK.preCompare, {useCachedResult: false});
+            expect(steps.map(x => x.actionResult)).eql(['discard', 'review', 'approve']);
+            // a later approve negates earlier actions
+            expect(getActionFromLifecycleSteps(steps)).eq('approve');
+        });
+    });
+
+    describe('When Conditions', function () {
+
+        it('Tests album artists', function () {
+            const play = generatePlay({albumArtists: [nameToCredit('Various Artists')]});
+            expect(testWhenConditions(whenSchema.parse({albumArtists: 'Various'}), play)).is.true;
+            expect(testWhenConditions(whenSchema.parse({albumArtists: 'Nope'}), play)).is.false;
+        });
+
+        it('Accepts artist and albumArtist as aliases', function () {
+            expect(whenSchema.parse({artist: 'foo', albumArtist: 'bar'})).eql([{artists: 'foo', albumArtists: 'bar'}]);
+            expect(whenSchema.parse({artist: 'foo', artists: 'bar'})).eql([{artists: 'bar'}]);
+        });
+
+        it('Applies artist alias', function () {
+            const play = generatePlay({artists: [nameToCredit('Elephant Gym')]});
+            expect(testWhenConditions(whenSchema.parse({artist: 'Nope'}), play)).is.false;
+        });
+
+        it('Empty test matches missing part', function () {
+            const play = generatePlay({artists: [nameToCredit('Elephant Gym')]});
+            expect(testWhenConditions(whenSchema.parse({artists: ''}), play)).is.false;
+            expect(testWhenConditions(whenSchema.parse({albumArtists: ''}), {...play, data: {...play.data, albumArtists: []}})).is.true;
+        });
+
+        it('Tests parts after art', function () {
+            const play = generatePlay({artists: [nameToCredit('Elephant Gym')]});
+            const noArt = {...play, data: {...play.data, art: undefined, album: undefined}, meta: {...play.meta, deviceId: 'abc'}};
+            expect(testWhenConditions(whenSchema.parse({art: '', deviceId: 'nope'}), noArt)).is.false;
+            expect(testWhenConditions(whenSchema.parse({art: '', deviceId: 'abc'}), noArt)).is.true;
+        });
+
+        it('Tests duration with built-in tester', function () {
+            const play = generatePlay({duration: 120});
+            expect(testPlayParts({duration: parseDurationComparison('> 7s')}, play, {})).is.true;
+            expect(testPlayParts({duration: parseDurationComparison('< 7s')}, play, {})).is.false;
+            expect(testPlayParts({duration: parseDurationComparison('> 7s')}, generatePlay({duration: undefined}), {})).is.false;
+        });
+
+        it('Tests parts with supplied typed testers', function () {
+            const play = generatePlay({duration: 120, track: nameToCredit('My Song')});
+            const testers = {duration: (test: number, p: PlayObject) => p.data.duration === test};
+            expect(testPlayParts({duration: 120, title: 'Song'}, play, testers)).is.true;
+            expect(testPlayParts({duration: 90}, play, testers)).is.false;
+            expect(testPlayParts({title: 'Nope'}, play, {})).is.false;
+            // @ts-expect-error built-in duration tester takes a DurationComparison, so a number tester must be supplied
+            const typeCheckOnly = () => testPlayParts({duration: 120}, play, {});
+            // @ts-expect-error bpm has no built-in tester so one must be supplied
+            expect(() => testPlayParts({bpm: 120}, play, {})).to.throw('No tester');
+        });
+    });
+
+    describe('Match Stage', function () {
+
+        class TestMatch extends MatchTransformer {
+            public test(play: PlayObject, stage: unknown) {
+                const {matches = [], ...topLevel} = this.parseConfig(stage);
+                return [topLevel, ...matches].some(unit => this.testRulesUnit(play, unit));
+            }
+        }
+        const t = new TestMatch({name: 'test', type: 'match'}, {logger: loggerTest, cache: memorycache()});
+        const base = {type: 'match'};
+        const play = generatePlay({artists: [nameToCredit('Elephant Gym')]});
+        play.meta.deviceId = 'abc';
+
+        it('Requires every part to match', function () {
+            expect(t.test(play, {...base, artists: 'Elephant', deviceId: 'abc'})).is.true;
+            expect(t.test(play, {...base, artists: 'Elephant', deviceId: 'nope'})).is.false;
+        });
+
+        it('Matches any term in a part', function () {
+            expect(t.test(play, {...base, deviceId: ['nope', 'abc']})).is.true;
+        });
+
+        it('Matches any rule set', function () {
+            expect(t.test(play, {...base, deviceId: 'nope', matches: [{artists: 'Elephant'}]})).is.true;
+            expect(t.test(play, {...base})).is.false;
+        });
+
+        it('Skips terms with unmet when', function () {
+            expect(t.test(play, {...base, deviceId: {search: 'abc', when: {title: 'zzzzzz'}}})).is.false;
+        });
+
+        it('Tests duration with comparison', function () {
+            const p = {...play, data: {...play.data, duration: 120}};
+            expect(t.test(p, {...base, duration: '> 7 s'})).is.true;
+            expect(t.test(p, {...base, duration: ['< 7 s', '= 2 minutes']})).is.true;
+            expect(t.test(p, {...base, duration: {search: '< 7 s'}})).is.false;
+        });
+
+        it('Rejects invalid duration comparison and untestable parts', function () {
+            expect(() => t.test(play, {...base, duration: '120'})).to.throw();
+            expect(() => t.test(play, {...base, meta: '120'})).to.not.throw();
+        });
+    });
+
+    describe('Match Stage Transforming', function () {
+
+        it('Runs a match stage through transformPlay', async function () {
+            const tmanager = new TestTransformerManager(loggerTest, transientCache());
+            tmanager.addTransformerConfig({type: 'match', name: 'test'});
+            const matchComponent = createTestComponent({
+                transformManager: tmanager,
+                options: {
+                    playTransform: {
+                        preCompare: [
+                            {type: 'match', artists: 'Elephant', onSuccessAction: 'review', onFailure: 'continue'},
+                            {type: 'match', artists: 'Nope', onFailureAction: 'discard', onFailure: 'continue'},
+                        ]
+                    }
+                }
+            });
+            await matchComponent.buildTransformRules();
+
+            const play = generatePlay({artists: [nameToCredit('Elephant Gym')]});
+            const {play: transformed, steps} = await matchComponent.transformPlay(play, TRANSFORM_HOOK.preCompare, {useCachedResult: false});
+
+            expect(steps.map(x => x.stageType)).eql(['match', 'match']);
+            expect(steps[0].error).is.undefined;
+            expect(steps[0].actionResult).eq('review');
+            expect(steps[1].flowKnownState).eq('prereq');
+            expect(steps[1].actionResult).eq('discard');
+            // match never changes the Play
+            expect(transformed.data).eql(play.data);
+        });
     });
 
     describe('Credit Metadata', function () {
@@ -852,7 +1053,7 @@ describe('Play Transforms', function () {
                 }
             };
             await multiTransformComponent.buildTransformRules();
-            const transformed = await multiTransformComponent.transformPlay(play, TRANSFORM_HOOK.preCompare);
+            const {play: transformed} = await multiTransformComponent.transformPlay(play, TRANSFORM_HOOK.preCompare);
             expect(transformed.data.track?.name).eq('My Bar Title');
         });
 

@@ -3,7 +3,10 @@ import type {MigrateBaseContext} from '../appMigrator.ts';
 import { plays as drizzlePlays } from '../drizzle/schema/schema.ts';
 import clone from 'clone';
 import { eq } from 'drizzle-orm';
-import type {PlayLifecycle, PlayObject} from '../../../../core/Atomic.ts';
+import type {LifecycleStep, PlayLifecycle, PlayObject} from '../../../../core/Atomic.ts';
+
+/** Shape of a Play after this migration. Steps were later moved to play events */
+type PlayWithLifecycle = PlayObject & {lifecycle?: LifecycleStep[]};
 
 
 export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase, ctx: MigrateBaseContext | undefined): Promise<void> => {
@@ -36,7 +39,7 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
                     continue;
                 }
                 if (steps.length > 0) {
-                    row.play.lifecycle = clone(steps);
+                    (row.play as PlayWithLifecycle).lifecycle = clone(steps);
                 }
                 if (scrobble !== undefined) {
                     row.play.scrobble = clone(scrobble);

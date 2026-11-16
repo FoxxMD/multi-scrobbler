@@ -10,7 +10,7 @@ import type {CacheConfigOptions} from "./common/infrastructure/Atomic.ts";
 import type { MusicBrainzSingletonMap, CovertArtSingletonMap } from './common/vendor/musicbrainz/MusicbrainzTypes.ts';
 import { MSCache } from "./common/Cache.ts";
 import TransformerManager from "./common/transforms/TransformerManager.ts";
-import type {TransformerCommonConfig} from "../core/Atomic.ts";
+import type {TransformerCommonConfig} from "../core/Transform.ts";
 import prom from 'prom-client';
 import { CoverArtApiClient } from "./common/vendor/musicbrainz/CoverArtApiClient.ts";
 import { version, stable } from "./version.ts";

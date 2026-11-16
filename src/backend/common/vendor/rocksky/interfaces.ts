@@ -1,5 +1,4 @@
 import * as z from 'zod';
-import type { RockskyMissingField, TransformerCommon, TransformOptions } from '../../../../core/Atomic.ts';
 
 export const searchType = z.enum(['basic', 'basicorids', 'mbid', 'isrc', 'artist']);
 export type SearchType = z.infer<typeof searchType>;
@@ -61,25 +60,4 @@ export type RockskyApiClientConfig = z.infer<typeof rockskyApiClientConfig>;
 // }
 
 export const ROCKSKY_URL = 'https://api.rocksky.app';
-export interface RockskyTransformerData {
-    searchWhenMissing?: RockskyMissingField[];
-    forceSearch?: boolean;
-    score?: number;
-    allowNoMatch?: boolean;
-    // logPreMbid?: boolean;
-    searchOrder?: SearchType[];
-    searchArtistMethod?: ('naive' | 'native');
-
-    // /** Ignore album artist if it is "Various Artists"
-    //  *
-    //  * @default true
-    //  */
-    // ignoreVA?: boolean;
-
-    // titleWeight?: number | true;
-    // artistWeight?: number | true;
-    // albumWeight?: number | true;
-}
-
-export type RockskyTransformerConfig = TransformerCommon<RockskyTransformerData, RockskyApiClientConfig> & { options?: TransformOptions & { logUrl?: boolean; }; };
 

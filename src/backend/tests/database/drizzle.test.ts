@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { getDb, migrateDb, getDbMigrationStatus, type DbConcrete } from '../../common/database/drizzle/drizzleUtils.ts';
 import withLocalTmpDir from 'with-local-tmp-dir';
-import { components, playInputs, plays, queueStates } from '../../common/database/drizzle/schema/schema.ts';
+import { components, playEvents, playInputs, plays, queueStates } from '../../common/database/drizzle/schema/schema.ts';
 import dayjs from 'dayjs';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { getDbPath } from '../../common/database/Database.ts';
@@ -11,6 +11,7 @@ import * as fs from 'fs/promises';
 import { fixtureCreateComponent, fixtureCreateInput, fixtureCreatePlay } from '../utils/databaseFixtures.ts';
 import { DrizzlePlayRepository, type RepositoryCreatePlayOpts } from '../../common/database/drizzle/repositories/PlayRepository.ts';
 import { generatePlayWithLifecycle, generateRandomObj } from '../../../core/tests/utils/fixtures.ts';
+import { transformToPlayEvent } from '../../common/database/drizzle/entityUtils.ts';
 import { formatNumber, generateArray } from '../../../core/DataUtils.ts';
 import { eq } from 'drizzle-orm';
 import { loggerDebug } from '@foxxmd/logging';
@@ -415,20 +416,22 @@ describe('DB Size Stats', function () {
                 const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
                 const playRepo = new DrizzlePlayRepository(db);
-                const playData = generateArray<RepositoryCreatePlayOpts>(100, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlayWithLifecycle({lifecycleSteps: {preCompare: 1}}) }), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } }));
-                await playRepo.createPlays(playData);
+                const createPlaysWithSteps = async (count: number) => {
+                    const generated = generateArray(count, () => generatePlayWithLifecycle({lifecycleSteps: {preCompare: 1}}));
+                    const rows = await playRepo.createPlays(generated.map(({play}) => ({ ...fixtureCreatePlay({ componentId: component[0].id, play }), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } })));
+                    await db.insert(playEvents).values(rows.map((row, index) => ({...transformToPlayEvent(generated[index].steps), playId: row.id})));
+                }
+                await createPlaysWithSteps(100);
 
                 const Play100Component = await fs.stat(path.resolve('./ms.db'));
                 loggerDebug.debug(`100 Plays => ${Play100Component.size / 1024}kb`);
 
-                const morePlayData = generateArray<RepositoryCreatePlayOpts>(900, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlayWithLifecycle({lifecycleSteps: {preCompare: 1}}) }), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } }));
-                await playRepo.createPlays(morePlayData);
+                await createPlaysWithSteps(900);
                 const Play1000Component = await fs.stat(path.resolve('./ms.db'));
                 loggerDebug.debug(`1000 Plays => ${formatNumber(Play1000Component.size / 1024 / 1024, {toFixed: 2})}mb`);
 
                 for(let i = 0; i < 9; i++) {
-                    const evenMorePlayData = generateArray<RepositoryCreatePlayOpts>(1000, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlayWithLifecycle({lifecycleSteps: {preCompare: 1}}) }), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } }));
-                    await playRepo.createPlays(evenMorePlayData);
+                    await createPlaysWithSteps(1000);
                 }
                 const Play10000Component = await fs.stat(path.resolve('./ms.db'));
                 loggerDebug.debug(`10000 Plays => ${formatNumber(Play10000Component.size / 1024 / 1024, {toFixed: 2})}mb`);

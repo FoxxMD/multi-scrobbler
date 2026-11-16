@@ -1,7 +1,7 @@
 import * as z from "zod";
 import {requestRetryOptionsSchema, commonConfigSchema, monitorOptionsSchema, deadLetterOptionsSchema} from "../common.ts";
 import {retentionConfigDurationValueSchema} from "../database.ts";
-import {playTransformOptionsSchema} from "../../../../../core/Transform.ts";
+import {type PlayTransformConfig, playTransformSchema} from "../../../transforms/stageSchemas.ts";
 import type { PipeUnwrapDirection } from "../../../../utils/ZodUtils.ts";
 
 export const sourceRetryOptionsSchema = z.object({
@@ -160,7 +160,8 @@ export const commonSourceOptionsSchema = z.object({
         description: "The number of listens to fetch when scrobbling from backlog"
     }),
 
-    playTransform: playTransformOptionsSchema.optional(),
+    // component configs are not parsed by this schema, playTransform is parsed by the component, so type it as raw user input
+    playTransform: (playTransformSchema as z.ZodType<PlayTransformConfig>).optional().meta({description: 'Enhance/correct Play data by applying a transform pipeline'}),
 
     retention: retentionConfigDurationValueSchema.optional(),
 });
