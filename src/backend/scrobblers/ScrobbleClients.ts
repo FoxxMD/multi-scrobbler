@@ -384,6 +384,11 @@ export default class ScrobbleClients {
                     await this.instantiateClients('tuneshine', strongConfigs, clientDefaults, TuneshineScrobbler,
                         (config, options) => [config.name ?? config.id, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
                 } break;
+                case 'blackbox': {
+                    const BlackboxScrobbler = (await import('./BlackboxScrobbler.ts')).default;
+                    await this.instantiateClients('blackbox', strongConfigs, clientDefaults, BlackboxScrobbler,
+                        (config, options) => [config.name ?? config.id, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
+                } break;
             }
     }
 

@@ -1,0 +1,14 @@
+[
+  {
+    "id": "MyBlackbox",
+    "name": "MyCoolBlackbox",
+    "data": {
+      "endpoint": "http://192.168.1.100:8080/scrobble",
+      "payloadStyle": "ms",
+      "headers": {
+        "Authorization": "Bearer mytoken"
+      }
+    },
+    "enable": true
+  }
+]
