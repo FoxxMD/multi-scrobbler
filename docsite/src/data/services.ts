@@ -45,6 +45,7 @@ export const sources: Service[] = [
 ];
 
 export const clients: Service[] = [
+	{ name: 'Blackbox', href: '/configuration/clients/discord', icon: 'blackbox', note: 'Generic Client' },
 	{ name: 'Discord', href: '/configuration/clients/discord', icon: 'discord', note: 'Now Playing' },
 	{ name: 'Koito', href: '/configuration/clients/koito', icon: 'koito' },
 	{ name: 'Last.fm', href: '/configuration/clients/lastfm', icon: 'last-fm' },
