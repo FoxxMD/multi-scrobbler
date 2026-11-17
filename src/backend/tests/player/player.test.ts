@@ -4,8 +4,8 @@ import { assert, expect } from 'chai';
 import clone from "clone";
 import dayjs, { type Dayjs } from "dayjs";
 import { describe, it } from 'mocha';
-import {
-    type PlayerStateDataMaybePlay} from "../../common/infrastructure/Atomic.ts";
+import type {
+    PlayerStateDataMaybePlay} from "../../common/infrastructure/Atomic.ts";
 import { SINGLE_USER_PLATFORM_ID } from '../../../core/Atomic.ts';
 import { NO_USER } from '../../../core/Atomic.ts';
 import { NO_DEVICE } from '../../../core/Atomic.ts';

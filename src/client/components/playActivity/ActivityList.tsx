@@ -9,7 +9,7 @@ import { fetchPlaysPage, tanQueries, useQueryWatcher } from '../../queries/index
 import { ActivitySummarySkeleton } from '../ActivityDetail.js';
 import { ErrorAlert } from '../ErrorAlert.js';
 import { ListFilters, ListRefereshButton, getTodayRange } from './ListFilters.js';
-import { type ActivityLogProps } from './ListParts.js';
+import type { ActivityLogProps } from './ListParts.js';
 import { NoPlayResults, VirtualizedListDynamic } from './VirtualListDynamic.js';
 import { menuItem, type MenuItemRender } from '../buttonMenus/menuItemUtils.js';
 import { RetryIcon } from '../icons/ChakraIcons.js';

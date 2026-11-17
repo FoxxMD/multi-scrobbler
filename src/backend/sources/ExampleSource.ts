@@ -1,10 +1,10 @@
 import type { EventEmitter } from "events";
 import request from 'superagent';
 import type {PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
-import {
-    type FormatPlayObjectOptions,
-    type InternalConfig,
-    type PlayerStateData,
+import type {
+    FormatPlayObjectOptions,
+    InternalConfig,
+    PlayerStateData,
 } from "../common/infrastructure/Atomic.ts";
 import { PARSED_FROM, SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';

@@ -23,7 +23,7 @@ import { readJson } from './utils/DataUtils.ts';
 import ScrobbleClients from './scrobblers/ScrobbleClients.ts';
 import ScrobbleSources from './sources/ScrobbleSources.ts';
 import { Notifiers } from './notifier/Notifiers.ts';
-import { type DbConcrete } from './common/database/drizzle/drizzleUtils.ts';
+import type { DbConcrete } from './common/database/drizzle/drizzleUtils.ts';
 import { getDbPath } from './common/database/Database.ts';
 import { createRetentionCleanupTask } from './tasks/retentionCleanup.ts';
 import { type MSCache, parseUserConfig } from './common/Cache.ts';

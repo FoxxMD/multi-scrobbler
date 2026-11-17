@@ -6,7 +6,7 @@ import utc from 'dayjs/plugin/utc.js';
 import type {Request} from "express";
 // https://github.com/jfromaniello/url-join#in-nodejs
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
-import { type MissingMbidType, type PlayObject } from "../core/Atomic.ts";
+import type { MissingMbidType, PlayObject } from "../core/Atomic.ts";
 import {
     asPlayerStateDataMaybePlay,
     type PlayerStateDataMaybePlay,

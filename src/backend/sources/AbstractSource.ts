@@ -41,7 +41,7 @@ import pMap from 'p-map';
 import type { Counter } from 'prom-client';
 import { spawn, isAbortError, delay, throwIfAborted, waitForEvent } from 'abort-controller-x';
 import { generateLoggableAbortReason, StageChangeError } from '../common/errors/MSErrors.ts';
-import { type QueryPlaysOpts, type RequestPlayQuery, type WithPlayRelation } from '../common/database/drizzle/repositories/PlayRepository.ts';
+import type { QueryPlaysOpts, RequestPlayQuery, WithPlayRelation } from '../common/database/drizzle/repositories/PlayRepository.ts';
 import { asPlay } from '../../core/PlayMarshalUtils.ts';
 import { AsyncTask, SimpleIntervalJob } from 'toad-scheduler';
 import { COMPONENT_STATE, type ComponentSourceApiJson, type ComponentState, type PlayApiCommonDetailed } from '../../core/Api.ts';

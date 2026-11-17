@@ -1,9 +1,9 @@
 import { type Credit, DEFAULT_MISSING_TYPES, type LifecycleInput, type MissingMbidType, type MusicServices, type MusicServicesBase, musicServicesBaseSchema, type OptionalCacheUsage, type PlayObject, type TrackMetaIsrc } from "../../../core/Atomic.ts";
 import { MB_RELEASE_GROUP_SECONDARY_TYPES, mBReleaseSecondaryGroupTypesSchema, type RecordingRankedMatched, type IRecordingMSList } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
-import { type MBReleaseGroupSecondaryType } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
-import { type MBReleaseGroupPrimaryType } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
+import type { MBReleaseGroupSecondaryType } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
+import type { MBReleaseGroupPrimaryType } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { mBReleasePrimaryGroupTypesSchema } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
-import { type MBReleaseStatus } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
+import type { MBReleaseStatus } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { mBReleaseStatusesSchema } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import { isWhenCondition } from "../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";

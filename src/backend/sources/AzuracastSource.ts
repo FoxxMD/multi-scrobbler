@@ -6,10 +6,10 @@ import type { CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket';
 import { WS } from 'iso-websocket'
 import pEvent from 'p-event';
 import type {PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
-import {
-    type FormatPlayObjectOptions,
-    type InternalConfig,
-    type PlayerStateDataMaybePlay,
+import type {
+    FormatPlayObjectOptions,
+    InternalConfig,
+    PlayerStateDataMaybePlay,
 } from "../common/infrastructure/Atomic.ts";
 import { SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';

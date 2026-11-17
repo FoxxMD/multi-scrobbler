@@ -4,7 +4,7 @@ import { expect } from 'chai';
 import EventEmitter from "events";
 import sinon from 'sinon';
 import clone from 'clone';
-import { SimpleIntervalJob } from 'toad-scheduler';
+import type { SimpleIntervalJob } from 'toad-scheduler';
 import SpotifySource from "../../sources/SpotifySource.ts";
 import { envSchemas, type SpotifySourceConfig } from "../../common/infrastructure/config/source/spotify.ts";
 import currentlyPlayingNoIsrcPayload from '../plays/spotifyCurrentlyPlayingNoIsrc.json' with { type: "json" };

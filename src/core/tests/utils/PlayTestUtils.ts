@@ -19,7 +19,7 @@ import { arrayListAnd } from '../../StringUtils.ts';
 import { isrcMeta, nameToCredit, spotifyMeta } from "../../MusicMetadata.ts";
 import { namesToCredits } from "../../MusicMetadata.ts";
 import { creditMbid, mbMeta, withMetadata } from '../../MusicMetadata.ts';
-import { type MBIdType } from "../../Atomic.ts";
+import type { MBIdType } from "../../Atomic.ts";
 import { findDelimiters, normalizeStr } from "../../StringUtils.ts";
 import type {ListRecord} from '../../../backend/common/infrastructure/config/client/tealfm.ts';
 import { nanoid } from 'nanoid';

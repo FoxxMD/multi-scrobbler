@@ -53,7 +53,7 @@ import type { Gauge } from 'prom-client';
 import type { PlayProcessingResult } from "./infrastructure/PlayProcessing.ts";
 import { isAbortError } from "abort-controller-x";
 import { PlayProcessingError } from "./errors/PlayProcessingError.ts";
-import { type PlayEvent, type PlayEventPlayStateChange } from "../../core/PlayEvent.ts";
+import type { PlayEvent, PlayEventPlayStateChange } from "../../core/PlayEvent.ts";
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
 
