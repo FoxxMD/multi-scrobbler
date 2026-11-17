@@ -36,8 +36,8 @@ import type {RetentionOptions} from "./infrastructure/config/database.ts";
 import { getRetentionCompactAfterFromEnv, getRetentionDeleteAfterFromEnv, isCompactableProperty, parseRetentionOptions, parseRetentionOptionsDurations } from "./database/Database.ts";
 import type {DbConcrete} from "./database/drizzle/drizzleUtils.ts";
 import type {ComponentSelect, PlayEventNew, PlayEventSelect, PlaySelect, PlaySelectWithQueueStates, PlayWith, QueueStateSelect} from "./database/drizzle/drizzleTypes.ts";
-import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, type WithPlayRelation } from "./database/drizzle/repositories/PlayRepository.ts";
-import type {ClientType, JsonPlayObject, MonitoringStatus, OptionalCacheUsage, PlayMatchResult, QueueContext, TrackData} from "../../core/Atomic.ts";
+import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts } from "./database/drizzle/repositories/PlayRepository.ts";
+import type {ClientType, JsonPlayObject, MonitoringStatus, OptionalCacheUsage, PlayMatchResult, QueueContext} from "../../core/Atomic.ts";
 import type {SourceType} from "../../core/Atomic.ts";
 import { DrizzleComponentRepository } from "./database/drizzle/repositories/ComponentRepository.ts";
 import dayjs, { type Dayjs } from "dayjs";
@@ -53,7 +53,7 @@ import type { Gauge } from 'prom-client';
 import type { PlayProcessingResult } from "./infrastructure/PlayProcessing.ts";
 import { isAbortError } from "abort-controller-x";
 import { PlayProcessingError } from "./errors/PlayProcessingError.ts";
-import { type PlayEvent, type PlayEventPlayStateChange } from "../../core/PlayEvent.ts";
+import type { PlayEvent, PlayEventPlayStateChange } from "../../core/PlayEvent.ts";
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
 

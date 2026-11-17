@@ -1,7 +1,6 @@
 import { useCallback } from "react"
 import {
     VStack,
-    Heading,
     SegmentGroup,
     Group,
     Box,

@@ -1,8 +1,8 @@
 import * as dotenv from 'dotenv';
 import { loggerTest } from "@foxxmd/logging";
-import chai, { expect } from 'chai';
+import chai from 'chai';
 import asPromised from 'chai-as-promised';
-import { before, describe, it } from 'mocha';
+import { describe, it } from 'mocha';
 import { initMemoryCache } from "../../common/Cache.ts";
 import { Cacheable } from "cacheable";
 import { getPathFromCWD } from '../../common/index.ts';

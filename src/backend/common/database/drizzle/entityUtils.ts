@@ -4,7 +4,7 @@ import type {PlayInputNew} from "./drizzleTypes.ts";
 import type {QueueStateNew} from "./drizzleTypes.ts";
 import type {ComponentNew} from "./drizzleTypes.ts";
 import type { MarkOptional, MarkRequired } from "ts-essentials";
-import { type ErrorLike, type LifecycleStep, type PlayObject } from "../../../../core/Atomic.ts";
+import type { ErrorLike, LifecycleStep, PlayObject } from "../../../../core/Atomic.ts";
 import dayjs from "dayjs";
 import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../utils/PlayComparisonUtils.ts";
 import { hashObject } from "../../../utils/StringUtils.ts";

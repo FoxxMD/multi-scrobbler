@@ -4,9 +4,9 @@ import request from 'superagent';
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import type {PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
-import {
-    type InternalConfig,
-    type PlayerStateDataMaybePlay,
+import type {
+    InternalConfig,
+    PlayerStateDataMaybePlay,
 } from "../common/infrastructure/Atomic.ts";
 import { NO_USER } from '../../core/Atomic.ts';
 import { NO_DEVICE } from '../../core/Atomic.ts';

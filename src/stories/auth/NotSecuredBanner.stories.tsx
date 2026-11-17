@@ -1,5 +1,4 @@
 import preview from "../../../.storybook/preview.js";
-import React from 'react';
 import { reactRouterParameters } from 'storybook-addon-remix-react-router';
 import { NotSecuredBanner } from "../../client/components/auth/Auth.js";
 import { authDecorators, setupStatus } from "./authMocks.js";

@@ -1,6 +1,6 @@
-import { AbsoluteCenter, Avatar, Box, Combobox, HStack, Icon, Menu, Portal, Span, Spinner, Switch, StackSeparator, Text, InputGroup, type ListCollection, Flex } from "@chakra-ui/react"
+import { AbsoluteCenter, Avatar, Box, Combobox, HStack, Icon, Menu, Portal, Span, Spinner, StackSeparator, Text, InputGroup, type ListCollection, Flex } from "@chakra-ui/react"
 import type { MetadataResultBase, MetadataResultImage, MetadataResultServiceScore } from "../../../core/Api"
-import { BracesIcon, getMusicServiceIconElement, LettersButton, SearchButton, TextIcon } from "../icons/ChakraIcons"
+import { BracesIcon, getMusicServiceIconElement, SearchButton, TextIcon } from "../icons/ChakraIcons"
 import React, { useRef, useState, type ComponentProps } from "react"
 import { useDebouncer } from "@tanstack/react-pacer"
 import { MSErrorBoundary } from "../ErrorBoundary"

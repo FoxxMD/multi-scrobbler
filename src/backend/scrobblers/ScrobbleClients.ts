@@ -14,7 +14,7 @@ import type AbstractScrobbleClient from "./AbstractScrobbleClient.ts";
 import clone from 'clone';
 import { stripIndents } from 'common-tags';
 import { normalizeStr } from "../../core/StringUtils.ts";
-import { type StringNormalizationOptions } from "../../core/StringUtils.ts";
+import type { StringNormalizationOptions } from "../../core/StringUtils.ts";
 import { prettifyError, ZodError } from 'zod';
 import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvConfigSchema, generateConfigLocation, type CommonConfigPrimitives, type UnparsedConfig } from '../common/infrastructure/config/common.ts';
 import type { CommonClientConfig } from '../common/infrastructure/config/client/index.ts';

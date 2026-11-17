@@ -2,10 +2,10 @@ import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import type { EventEmitter } from "events";
 import type {PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
-import {
-    type FormatPlayObjectOptions,
-    type InternalConfig,
-    type PlayerStateData,
+import type {
+    FormatPlayObjectOptions,
+    InternalConfig,
+    PlayerStateData,
 } from "../common/infrastructure/Atomic.ts";
 import { SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
 import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.ts";

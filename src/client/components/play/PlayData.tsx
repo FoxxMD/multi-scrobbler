@@ -11,10 +11,10 @@ import { formatNumber } from '../../../core/DataUtils.js';
 import { Muted } from '../Typography.js';
 import { ArtistCreditTags } from '../ArtistCreditDisplay.js';
 import { MSErrorBoundary } from '../ErrorBoundary.js';
-import { EditIconRaw, EllipsisButton, EyeClosedIcon, EyeIcon, hasMusicServiceIcon } from '../icons/ChakraIcons.js';
+import { EditIconRaw, EllipsisButton, hasMusicServiceIcon } from '../icons/ChakraIcons.js';
 import type { IconType } from 'react-icons/lib';
 import { capitalize, capitalizeWords } from '../../../core/StringUtils.js';
-import { getMusicServiceIconTooltip, MusicServiceIndicators, MusicServiceIndicatorStack } from '../musicServices/MusicServiceIndicators.js';
+import { getMusicServiceIconTooltip, MusicServiceIndicatorStack } from '../musicServices/MusicServiceIndicators.js';
 import type { PublicPlay } from '../../../core/Api.js';
 
 const EmptyPlayData = () => {

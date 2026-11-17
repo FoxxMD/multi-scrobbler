@@ -1,10 +1,10 @@
 import { withAlbumArt } from "../../core/MusicMetadata.ts";
 import type { EventEmitter } from "events";
 import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
-import {
-    type FormatPlayObjectOptions,
-    type InternalConfig,
-    type PlayerStateDataMaybePlay,
+import type {
+    FormatPlayObjectOptions,
+    InternalConfig,
+    PlayerStateDataMaybePlay,
 } from "../common/infrastructure/Atomic.ts";
 import { NO_USER } from '../../core/Atomic.ts';
 import { NO_DEVICE } from '../../core/Atomic.ts';

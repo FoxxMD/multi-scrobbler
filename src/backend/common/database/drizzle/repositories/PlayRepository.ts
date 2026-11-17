@@ -19,7 +19,7 @@ import { playEvents, playInputs, plays, queueStates, relations, type TSchema } f
 import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
 import type {PaginatedResponse} from "../../../../../core/Api.ts";
 import type {PaginatedQueryResponse} from "../../../../../core/Api.ts";
-import { type PlayEventTransform } from "../../../../../core/PlayEvent.ts";
+import type { PlayEventTransform } from "../../../../../core/PlayEvent.ts";
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 

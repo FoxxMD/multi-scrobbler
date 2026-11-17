@@ -1,5 +1,5 @@
 import type {Dayjs} from "dayjs";
-import { type AbstractPlayerState } from "./AbstractPlayerState.ts";
+import type { AbstractPlayerState } from "./AbstractPlayerState.ts";
 import type {PlayerStateDataMaybePlay} from "../../common/infrastructure/Atomic.ts";
 import { PositionalPlayerState } from "./PositionalPlayerState.ts";
 import { type ListenRange, ListenRangeTS } from "./ListenRange.ts";

@@ -10,12 +10,12 @@ import { buildTrackString } from "../../core/MusicMetadata.ts";
 import { nameToCredit } from "../../core/MusicMetadata.ts";
 import { namesToCredits } from "../../core/MusicMetadata.ts";
 import { NETWORK_ERROR_FAILURE_CODES } from "../common/errors/NodeErrors.ts";
-import {
-    type FormatPlayObjectOptions,
-    type InternalConfig,
-    type MdnsDeviceInfo,
-    type PlayerStateData,
-    type SourceData,
+import type {
+    FormatPlayObjectOptions,
+    InternalConfig,
+    MdnsDeviceInfo,
+    PlayerStateData,
+    SourceData,
 } from "../common/infrastructure/Atomic.ts";
 import { NO_DEVICE, NO_USER } from '../../core/Atomic.ts';
 import type {ChromecastSourceConfig} from "../common/infrastructure/config/source/chromecast.ts";

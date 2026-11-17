@@ -2,7 +2,7 @@ import { Badge, HStack, Separator, Spinner } from "@chakra-ui/react";
 import { useSSEContext, useSSEEvent } from "@flamefrontend/sse-runtime-react";
 import React, { type ComponentProps, type PropsWithChildren, type ReactNode, useCallback, useEffect, useState } from "react";
 import { useTimeout } from 'react-use-timeout';
-import { COMPONENT_STATE, type ComponentCommonApiJson, type ComponentsApiJson, componentStateToFriendly, type MsSseEvent, type PlayApiCommon } from "../../core/Api";
+import { COMPONENT_STATE, type ComponentsApiJson, componentStateToFriendly, type MsSseEvent, type PlayApiCommon } from "../../core/Api";
 import type {Milliseconds} from "../../core/TimeUtils";
 import { capitalizeWords } from "../../core/StringUtils";
 import { TextTip } from "./ToggleTip";

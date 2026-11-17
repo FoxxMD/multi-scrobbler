@@ -1,4 +1,4 @@
-import { Heading, Box, Icon, Span, Stack, Text, Timeline, Tabs} from '@chakra-ui/react';
+import { Box, Icon, Span, Stack, Text, Timeline, Tabs} from '@chakra-ui/react';
 import React, { Fragment, useMemo } from "react";
 import { BsExclamationTriangle, BsSkipForward, BsStoplights } from "react-icons/bs";
 import { MdMusicNote } from "react-icons/md";

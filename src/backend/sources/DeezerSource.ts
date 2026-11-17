@@ -11,7 +11,6 @@ import { readJson } from '../utils/DataUtils.ts';
 import { joinedUrl } from "../utils/NetworkUtils.ts";
 import AbstractSource, { type RecentlyPlayedOptions } from "./AbstractSource.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
-import { SimpleError } from "../common/errors/MSErrors.ts";
 
 export default class DeezerSource extends AbstractSource {
     workingCredsPath;

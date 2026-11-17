@@ -8,6 +8,8 @@
     },
     "files.associations": {
         "**/config/*.json": "jsonc"
-    }
+    },
+    "eslint.enable": false,
+    "oxc.enable.oxlint": true,
     
 }
