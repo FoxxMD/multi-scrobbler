@@ -99,7 +99,9 @@ export const playToListenPayload = (play: PlayObject, options: PlayToListenPaylo
         origin_url: msAdditionalInfo.origin_url,
         isrc: creditIsrc(play.data.track) ?? msAdditionalInfo.isrc,
         tracknumber: brainz.trackNumber ?? msAdditionalInfo.tracknumber,
-        duration_played: play.data.listenedFor !== undefined ? Math.floor(play.data.listenedFor) : undefined
+        // listenbrainz expects this to be a non-zero, positive integer
+        // so if we have listenedFor but its 0 or less than , then omit this field so LZ doesn't return a 400
+        duration_played: play.data.listenedFor !== undefined && Math.floor(play.data.listenedFor) !== 0 ? Math.floor(play.data.listenedFor) : undefined
     };
     if(includePlayPosition && play.meta.trackProgressPosition !== undefined) {
         addInfo.position_ms = play.meta.trackProgressPosition * 1000;

@@ -396,7 +396,31 @@ describe('Listenbrainz Endpoint Behavior', function() {
         const state = playStateFromRequest({listen_type: 'single', payload: [payload]});
         expect(state[0].play.data.artists?.some(x => x.name === 'Alohaii')).is.true;
         expect(state[0].play.data.artists?.some(x => x.name === 'Rachie')).is.true;
-    })
+    });
+
+    it('Should not set duration_played to 0', function() {
+
+        const fractionPlayed = generatePlay({listenedFor: 0.5});
+        const fractionPayload = playToListenPayload(fractionPlayed);
+        expect(fractionPayload.track_metadata.additional_info!.duration_played).to.be.undefined;
+
+        const zeroPlayed = generatePlay({listenedFor: 0});
+        const zeroPayload = playToListenPayload(zeroPlayed);
+        expect(zeroPayload.track_metadata.additional_info!.duration_played).to.be.undefined;
+
+    });
+
+    it('Should only set duration_played to positive integer', function() {
+
+        const fractionPlayed = generatePlay({listenedFor: 3.5});
+        const fractionPayload = playToListenPayload(fractionPlayed);
+        expect(fractionPayload.track_metadata.additional_info!.duration_played).to.eq(3);
+
+        const intPlayed = generatePlay({listenedFor: 5});
+        const intPayload = playToListenPayload(intPlayed);
+        expect(intPayload.track_metadata.additional_info!.duration_played).to.eq(5)
+
+    });
 
 });
 
