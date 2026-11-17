@@ -34,7 +34,12 @@ const defaultRules = {
 const preferArrowFunctions = [
     "warn",
     {
-        allowNamedFunctions: false,
+        // still flags declarations (function foo() {}) but allows named function expressions
+        // EX forwardRef(function Tooltip(props, ref) {...}) -- the name is what React DevTools shows as the component name
+        allowNamedFunctions: "only-expressions",
+        // allows object methods and functions assigned to object properties
+        // EX drizzle customType hooks  dataType() {...}, Proxy handlers, storybook  render: function Render(args) {...}
+        allowObjectProperties: true,
         classPropertiesAllowed: false,
         disallowPrototype: false,
         returnStyle: "unchanged",
