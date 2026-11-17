@@ -14,6 +14,7 @@
     "test:parallel": "mocha --parallel",
     "test:leaks": "mocha --config ./src/backend/tests/utils/leakProbe.mocharc.cjs",
     "lint": "oxlint",
+    "lint:fix:unused-imports": "oxlint -c oxlint.unusedImports.config.ts --fix src; oxlint -c oxlint.unusedImports.config.ts --fix src; oxlint -c oxlint.unusedImports.config.ts src",
     "lint:fix:type-imports": "oxlint -c oxlint.typeImports.config.ts --fix --fix-suggestions src; oxlint -c oxlint.typeImports.config.ts --fix --fix-suggestions src; oxlint -c oxlint.typeImports.config.ts src",
     "dev": "node src/backend/index.ts",
     "start": "NODE_ENV=production node src/backend/index.ts",

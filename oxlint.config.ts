@@ -1,5 +1,6 @@
 import { defineConfig } from "oxlint";
 import { typeImportRules } from "./oxlint.typeImports.config.ts";
+import { unusedImportsJsPlugins, unusedImportsRules } from "./oxlint.unusedImports.config.ts";
 
 // Migrated from eslint.config.js (eslint10 + typescript-eslint + plugins)
 //
@@ -280,10 +281,11 @@ export default defineConfig({
             }
         },
         {
+            // see oxlint.unusedImports.config.ts
             files: ["**/*.{ts,tsx,mts,cts}"],
-            jsPlugins: ["eslint-plugin-unused-imports"],
+            jsPlugins: unusedImportsJsPlugins,
             rules: {
-                "unused-imports/no-unused-imports": "error"
+                ...unusedImportsRules
             }
         },
         // this ruleset helps keep backend, frontend, and core keep imports isolated
