@@ -4,7 +4,6 @@ import type {PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts"
 import type {
     FormatPlayObjectOptions,
     InternalConfig,
-    PlayerStateData,
     PlayerStateDataMaybePlay,
 } from "../common/infrastructure/Atomic.ts";
 import { SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';

@@ -1,6 +1,6 @@
 import * as z from "zod";
 import {playTransformOptionsSchema} from "../../../../../core/Transform.ts";
-import {commonConfigSchema, requestRetryOptionsSchema, monitorOptionsSchema, type CommonComponentEnvShape, deadLetterOptionsSchema} from "../common.ts";
+import {commonConfigSchema, requestRetryOptionsSchema, monitorOptionsSchema, deadLetterOptionsSchema} from "../common.ts";
 import {retentionConfigDurationValueSchema} from "../database.ts";
 import type { PipeUnwrapDirection } from "../../../../utils/ZodUtils.ts";
 

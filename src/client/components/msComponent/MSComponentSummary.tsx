@@ -1,6 +1,6 @@
 import React, { type ComponentProps, Fragment } from "react"
 import { Stack, Heading, Separator, HStack, Flex, Badge, Card,  LinkOverlay, LinkBox } from '@chakra-ui/react';
-import { type ComponentClientApiJson, type ComponentCommonApiJson, type ComponentsApiJson, isComponentClientApiJson, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
+import { type ComponentCommonApiJson, type ComponentsApiJson, isComponentClientApiJson, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
 import { Link } from "react-router";
 import { TextMuted } from "../TextMuted.js";
 import { capitalize } from "../../../core/StringUtils.js";

@@ -1,4 +1,4 @@
-import { type Credit, DEFAULT_MISSING_TYPES, type LifecycleInput, type MissingMbidType, type MusicServices, type MusicServicesBase, musicServicesBaseSchema, type OptionalCacheUsage, type PlayObject, type TrackMetaIsrc } from "../../../core/Atomic.ts";
+import { type Credit, DEFAULT_MISSING_TYPES, type LifecycleInput, type MissingMbidType, type MusicServicesBase, musicServicesBaseSchema, type OptionalCacheUsage, type PlayObject, type TrackMetaIsrc } from "../../../core/Atomic.ts";
 import { MB_RELEASE_GROUP_SECONDARY_TYPES, mBReleaseSecondaryGroupTypesSchema, type RecordingRankedMatched, type IRecordingMSList } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import type { MBReleaseGroupSecondaryType } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
 import type { MBReleaseGroupPrimaryType } from "../vendor/musicbrainz/MusicbrainzTypes.ts";
@@ -9,7 +9,7 @@ import { isWhenCondition } from "../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
 import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../core/Transform.ts";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
-import { creditId, creditIds, creditIsrc, creditMbid, type CreditRules, mbMeta, nameToCredit, resolveCredit, resolveCredits, withImage } from "../../../core/MusicMetadata.ts";
+import { creditId, creditIds, creditIsrc, creditMbid, type CreditRules, mbMeta, nameToCredit, resolveCredit, resolveCredits } from "../../../core/MusicMetadata.ts";
 import type {TransformerOptions} from "./AbstractTransformer.ts";
 import { ARTIST_WEIGHT, TITLE_WEIGHT } from "../infrastructure/Atomic.ts";
 import { DELIMITERS } from '../../../core/Atomic.ts';
