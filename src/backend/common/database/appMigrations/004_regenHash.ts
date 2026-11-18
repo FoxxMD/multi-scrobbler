@@ -1,7 +1,8 @@
 import type { SqliteDatabase, Migration } from 'sqlite-up';
 import type { MigrateBaseContext } from '../appMigrator.ts';
 import { plays as drizzlePlays } from '../drizzle/schema/schema.ts';
-import { eq } from 'drizzle-orm';
+import { eq, getColumns, sql } from 'drizzle-orm';
+import { asLegacyPlay } from '../../../../core/PlayMarshalUtils.ts';
 import { playContentBasicInvariantTransform, playMbidIdentifier } from '../../../utils/PlayComparisonUtils.ts';
 import { hashObject } from '../../../utils/StringUtils.ts';
 
@@ -18,12 +19,14 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
         updated = 0;
 
     while (more) {
-        const playsRows = await ctx.db.select().from(drizzlePlays).limit(100).offset(offset);
+        // read raw, plays may be in a legacy shape
+        const playsRows = await ctx.db.select({...getColumns(drizzlePlays), play: sql<string>`${drizzlePlays.play}`}).from(drizzlePlays).limit(100).offset(offset);
         for (const row of playsRows) {
             try {
+                const play = asLegacyPlay(row.play);
                 await ctx.db.update(drizzlePlays).set({
-                    playHash: hashObject(playContentBasicInvariantTransform(row.play).data),
-                    mbidIdentifier: playMbidIdentifier(row.play)
+                    playHash: hashObject(playContentBasicInvariantTransform(play).data),
+                    mbidIdentifier: playMbidIdentifier(play)
                 }).where(eq(drizzlePlays.id, row.id));
                 updated++;
                 processed++;

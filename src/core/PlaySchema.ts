@@ -23,14 +23,20 @@ import {
     type TrackMeta,
 } from "./Atomic.ts";
 
-/** ISO8601 string <-> Dayjs */
+/**
+ * ISO8601 string <-> Dayjs
+ *
+ * An invalid Dayjs serializes to null (same as Dayjs.toJSON) so null is accepted and decoded to undefined.
+ * Stored plays may already contain these nulls.
+ * */
 export const zDayjs = z.codec(
-    z.iso.datetime({offset: true, local: true}).meta({format: 'date-time', description: 'ISO8601 timestamp', examples: ['2026-11-13T14:05:00.000Z']}),
+    z.iso.datetime({offset: true, local: true}).meta({format: 'date-time'}).nullable().meta({description: 'ISO8601 timestamp', examples: ['2026-11-13T14:05:00.000Z']}),
     // meta makes the output side describable as JSON Schema (OpenAPI responses are generated from the output side)
-    z.custom<Dayjs>((v) => dayjs.isDayjs(v)).meta({type: 'string', format: 'date-time'}),
+    z.custom<Dayjs>((v) => v === undefined || dayjs.isDayjs(v)).meta({type: 'string', format: 'date-time'}),
     {
-        decode: (s) => dayjs(s),
-        encode: (d) => d.toISOString(),
+        // ponytail: null decodes to undefined even for required dates (listen range timestamps) so the type lies for broken data only
+        decode: (s) => (s === null ? undefined : dayjs(s)) as Dayjs,
+        encode: (d) => d === undefined || !d.isValid() ? null : d.toISOString(),
     }
 );
 

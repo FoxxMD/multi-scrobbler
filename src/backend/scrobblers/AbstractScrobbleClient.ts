@@ -63,7 +63,6 @@ import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetc
 import { spawn, isAbortError, delay, waitForEvent } from 'abort-controller-x';
 import type { QueryPlaysOpts, WithPlayRelation } from "../common/database/drizzle/repositories/PlayRepository.ts";
 import type {PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
-import { asPlay } from "../../core/PlayMarshalUtils.ts";
 import { GenericRepository } from "../common/database/drizzle/repositories/BaseRepository.ts";
 import assert from "node:assert";
 import { COMPONENT_STATE, type ComponentClientApiJson, type PlayApiCommonDetailed } from "../../core/Api.ts";
@@ -1306,7 +1305,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         let offset = 0;
         while (true) {
             const { data, meta } = await this.playRepo.getQueued(INGRESS_QUEUE, { offset, retries: 0 });
-            const existingQueued = await this.existingPlay(queueablePlay, data.map(x => asPlay(x.play)), false);
+            const existingQueued = await this.existingPlay(queueablePlay, data.map(x => x.play), false);
             // closestMatchedPlay is always set when match is true and queued plays from db always have an id
             const matchedId = existingQueued.closestMatchedPlay?.id;
             // want to be very confident of this

@@ -41,8 +41,8 @@ const firstPlayDate = dayjs().subtract(1, 'hour');
 const olderFirstPlayDate = dayjs().subtract(4, 'hour');
 
 const withDurPlays = withDuration.map(asPlay);
-// @ts-expect-error mixed duration is missing meta but not used for tests
-const mixedDurPlays = mixedDuration.map(asPlay);
+// mixed duration fixtures are missing meta, not used for tests
+const mixedDurPlays = mixedDuration.map(x => asPlay({meta: {}, ...x}));
 const normalizedWithDur = normalizePlays(withDurPlays, {initialDate: firstPlayDate});
 const normalizedWithMixedDur = normalizePlays(mixedDurPlays, {initialDate: firstPlayDate});
 

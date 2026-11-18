@@ -4,7 +4,7 @@ import React from 'react';
 import { PlayData } from "../../client/components/play/PlayData.js";
 import {Provider} from "../../client/components/Provider.js";
 import { Container } from '@chakra-ui/react';
-import { generateArtistCredits, generateJsonPlay, withBrainz } from "../../core/tests/utils/PlayTestUtils.js"
+import { generateArtistCredits, generateJsonPlay, generatePlay, withBrainz } from "../../core/tests/utils/PlayTestUtils.js"
 import clone from "clone";
 import { asJsonPlayObject } from '../../core/PlayMarshalUtils.js';
 import type {JsonPlayObject} from "../../core/Atomic.js";
@@ -58,8 +58,7 @@ export const PlayInfoStory = meta.story({
     }
 
     if(args.brainz) {
-      // @ts-ignore
-      args.play = asJsonPlayObject(withBrainz(args.play, {include: ['album','recording','track','artist']}));
+      args.play = withBrainz(args.play, {include: ['album','recording','track','artist']});
     }
 
     if(args.editable) {
@@ -71,7 +70,7 @@ export const PlayInfoStory = meta.story({
 
 export const PlayInfoDenseStory = meta.story({
   render: (args) => {
-    const bigPlay = asJsonPlayObject(withBrainz(generateJsonPlay({
+    const bigPlay = asJsonPlayObject(withBrainz(generatePlay({
       artists: generateArtistCredits(4,4, {mbidVal: true}),
       albumArtists: generateArtistCredits(undefined, 2, {mbidVal: true})
     }), {include: ['album','recording','track','artist']}));

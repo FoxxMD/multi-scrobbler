@@ -95,6 +95,7 @@ export const PlayEdit = (props: PlayEditProps) => {
                 track: { name: '' },
                 artists: [],
                 ...data,
+                playDate: data.playDate ?? undefined,
                 // ArrayField needs an array, an empty list is removed on submit
                 albumArtists: data.albumArtists ?? []
             },

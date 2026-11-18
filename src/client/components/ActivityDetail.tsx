@@ -131,7 +131,7 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
             </Flex>
             <TextMuted textAlign="left" truncate>{creditsToNames(play.data.artists).join(' / ')}</TextMuted>
             <HStack gap="1">
-                <ShortDateDisplay date={sortBy === 'played' ? play.data.playDate : play.meta?.seenAt} prefix={sortBy === 'played' ? 'Played' : 'Seen'} /><Separator orientation="vertical" height="4" />
+                <ShortDateDisplay date={(sortBy === 'played' ? play.data.playDate : play.meta?.seenAt) ?? undefined} prefix={sortBy === 'played' ? 'Played' : 'Seen'} /><Separator orientation="vertical" height="4" />
                 <TextMuted>{play.meta?.source}</TextMuted>
                 {play.meta?.parsedFrom !== undefined && <><Separator orientation="vertical" height="4" /><TextMuted>{capitalize(play.meta?.parsedFrom)}</TextMuted></>}
             </HStack>

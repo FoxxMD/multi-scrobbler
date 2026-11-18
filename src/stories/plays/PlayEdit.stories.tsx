@@ -6,7 +6,6 @@ import { PlayEditable, PlayEditableMutable } from "../../client/components/play/
 import {Provider} from "../../client/components/Provider.js";
 import { Container } from '@chakra-ui/react';
 import { generateArtistCredits, generateJsonPlay, withBrainz } from "../../core/tests/utils/PlayTestUtils.js"
-import { asJsonPlayObject } from '../../core/PlayMarshalUtils.js';
 import type {Credit, PlayObjectMinimal} from "../../core/Atomic.js";
 import { http, HttpResponse, delay } from 'msw';
 import { generateAlbumSearchResults, generateArtistSearchResults, generateMusicService, generateTrackSearchResults } from "../../core/tests/utils/apiFixtures.js";
@@ -85,8 +84,7 @@ export const PlayEditStory = meta.story({
     }
 
     if(args.brainz) {
-      // @ts-ignore
-      args.initialPlay = asJsonPlayObject(withBrainz(args.initialPlay, {include: ['album','recording','track','artist']}));
+      args.initialPlay = withBrainz(args.initialPlay, {include: ['album','recording','track','artist']});
     }
     return (<PlayEdit {...args}/>) 
   }
@@ -101,8 +99,7 @@ export const PlayEditableStory = meta.story({
     }
 
     if(args.brainz) {
-      // @ts-ignore
-      args.initialPlay = asJsonPlayObject(withBrainz(args.initialPlay, {include: ['album','recording','track','artist']}));
+      args.initialPlay = withBrainz(args.initialPlay, {include: ['album','recording','track','artist']});
     }
     const {initialPlay, ...rest} = args;
     return (<PlayEditable editable play={initialPlay} {...rest}/>) 
@@ -118,8 +115,7 @@ export const PlayEditableMutateStory = meta.story({
     }
 
     if(args.brainz) {
-      // @ts-ignore
-      args.initialPlay = asJsonPlayObject(withBrainz(args.initialPlay, {include: ['album','recording','track','artist']}));
+      args.initialPlay = withBrainz(args.initialPlay, {include: ['album','recording','track','artist']});
     }
     const {initialPlay, ...rest} = args;
     return (<PlayEditableMutable componentId="1" uid="1234" editable play={initialPlay} {...rest}/>) 

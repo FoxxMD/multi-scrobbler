@@ -42,7 +42,6 @@ import type { Counter } from 'prom-client';
 import { spawn, isAbortError, delay, throwIfAborted, waitForEvent } from 'abort-controller-x';
 import { generateLoggableAbortReason, StageChangeError } from '../common/errors/MSErrors.ts';
 import type { QueryPlaysOpts, RequestPlayQuery, WithPlayRelation } from '../common/database/drizzle/repositories/PlayRepository.ts';
-import { asPlay } from '../../core/PlayMarshalUtils.ts';
 import { AsyncTask, SimpleIntervalJob } from 'toad-scheduler';
 import { COMPONENT_STATE, type ComponentSourceApiJson, type ComponentState, type PlayApiCommonDetailed } from '../../core/Api.ts';
 import type {PaginatedResponse} from "../../core/Api.ts";
@@ -472,7 +471,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 order: 'desc',
                 sort: 'playedAt',
                 limit: 200
-            })).map(x => ({...asPlay(x.play), id: x.id, uid: x.uid}))
+            })).map(x => ({...x.play, id: x.id, uid: x.uid}))
             list.sort(sortByOldestPlayDate);
             await this.cache.cacheDb.set<PlayObject[]>(cacheKey, list, '2m');
         }
@@ -488,7 +487,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 order: 'desc',
                 sort: 'playedAt',
                 limit: 200
-            })).map(x => ({...asPlay(x.play), id: x.id, uid: x.uid}))
+            })).map(x => ({...x.play, id: x.id, uid: x.uid}))
             list.sort(sortByOldestPlayDate);
             await this.cache.cacheDb.set<PlayObject[]>(cacheKey, list, '2m');
         }

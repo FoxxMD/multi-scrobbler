@@ -42,7 +42,7 @@ export const generatePlayApiCommon = (commonData: Partial<PlayApiCommon> & {play
     } = commonData;
 
     return {
-        play: asJsonPlayObject(play),
+        play: typeof play.data.playDate === 'string' ? play as JsonPlayObject : asJsonPlayObject(play as PlayObject),
         ...rest,
         playedAt,
         seenAt,
