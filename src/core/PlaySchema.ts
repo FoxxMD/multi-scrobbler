@@ -154,18 +154,76 @@ export const playMetaSchema = z.object({
     lifecycleInputs: z.custom<LifecycleInput>().array().optional(),
 });
 
-/** Full Play shape without the free-form blobs (original, scrobble, lifecycle) which are typed in Atomic.ts */
-export const playObjectSchema = z.object({
+/** Play without original/scrobble/lifecycle. Used for plays nested inside another play's original/scrobble */
+export const playObjectMinimalSchema = z.object({
     id: z.int().optional(),
     uid: z.string().optional(),
     data: playDataSchema,
     meta: playMetaSchema,
 });
 
-/** Loose version of playObjectSchema for (de)serializing so unknown keys, including the free-form blobs, are passed through as-is */
-export const playObjectInternalSchema = playObjectSchema.extend({
+export const playOriginalSchema = z.object({
+    /** raw data from the Source, passed through untouched */
+    data: z.custom<object>().optional().meta({description: 'Original data from the Source the play was created from'}),
+    play: playObjectMinimalSchema.optional().meta({description: 'The play before any transforms were applied'}),
+});
+
+/** outcome of matching this Play against existing scrobbles */
+export const playMatchResultSchema = z.object({
+    /** did the play matxh an existing play? */
+    match: z.boolean().meta({description: 'did the play matxh an existing play?'}),
+    /** confidence of match, out of ~100. 90+ is high confidence */
+    score: z.number().meta({description: 'confidence of match, out of ~100. 90+ is high confidence'}),
+    /** score calculation summaries for each Play part analyzed */
+    breakdowns: z.string().array().meta({description: 'score calculation summaries for each Play part analyzed'}),
+    /** why or why not the play matched */
+    reason: z.string().optional().meta({description: 'why or why not the play matched'}),
+    closestMatchedPlay: playObjectMinimalSchema.optional(),
+    transformedPlay: playObjectMinimalSchema.optional(),
+    summary: z.string().optional(),
+    createdAt: isoString,
+}).meta({description: 'outcome of matching this Play against existing scrobbles'});
+
+/** scrobble action plus the match result before scrobbling */
+export const scrobbleResultSchema = z.object({
+    match: playMatchResultSchema.optional(),
+    /** The raw/json payload sent to the downstream scrobble service */
+    payload: z.custom<ScrobblePayload>().optional().meta({description: 'raw/json payload sent to the downstream scrobble service'}),
+    /** anomalies returned from the scrobble service, or detected by MS, that did not stop scrobbling but look suspicious */
+    warnings: z.string().array().optional().meta({description: 'anomalies returned from the scrobble service, or detected by MS, that did not stop scrobbling but look suspicious'}),
+    error: z.custom<Error | ErrorObject>().optional(),
+    /** raw/json response from the scrobble service */
+    response: z.custom<ScrobbleResponse>().optional().meta({description: 'raw/json response from the scrobble service'}),
+    /** if service responded with data, the result of merging this corrected data into MS's play */
+    mergedScrobble: playObjectMinimalSchema.optional().meta({description: 'if service responded with data, the result of merging this corrected data into MS\'s play'}),
+    createdAt: zDayjs.optional(),
+}).meta({description: 'scrobble action plus the match result before scrobbling'});
+
+export const playObjectSchema = playObjectMinimalSchema.extend({
+    original: playOriginalSchema.optional(),
+    scrobble: scrobbleResultSchema.optional(),
+    // has no dates to convert so it is passed through as-is
+    lifecycle: z.custom<LifecycleStep>().array().optional(),
+});
+
+// Loose versions of the schemas above, used for (de)serializing stored/received plays so unknown keys are passed through as-is.
+// ponytail: nested plays are loose minimal plays, so original/scrobble on a nested play are passed through without converting dates. Nothing reads them, types don't expose them.
+const playMinimalInternalSchema = playObjectMinimalSchema.extend({
     data: playDataSchema.loose(),
     meta: playMetaSchema.extend({url: playMetaUrlStrictSchema.loose().optional()}).loose(),
+}).loose();
+const playMatchResultInternalSchema = playMatchResultSchema.extend({
+    closestMatchedPlay: playMinimalInternalSchema.optional(),
+    transformedPlay: playMinimalInternalSchema.optional(),
+}).loose();
+
+export const playObjectInternalSchema = playMinimalInternalSchema.extend({
+    original: playOriginalSchema.extend({play: playMinimalInternalSchema.optional()}).loose().optional(),
+    scrobble: scrobbleResultSchema.extend({
+        match: playMatchResultInternalSchema.optional(),
+        mergedScrobble: playMinimalInternalSchema.optional(),
+    }).loose().optional(),
+    lifecycle: playObjectSchema.shape.lifecycle,
 }).loose();
 
 export const sourcePlayerSchema = z.object({
@@ -200,7 +258,7 @@ export const sourcePlayerSchema = z.object({
 
 // Types
 //
-// Play types are derived from the schemas above. The free-form blobs (original, scrobble, lifecycle) are still plain interfaces.
+// Play types are derived from the schemas above.
 
 /** Selects the JSON (`z.input`, string dates) or backend (`z.output`, Dayjs dates) side of a codec schema. Distributes over DateLike. */
 type DateSide<D extends DateLike, S extends z.ZodType> = D extends string ? z.input<S> : z.output<S>;
@@ -243,15 +301,7 @@ export type PlayMeta<D extends DateLike = Dayjs, T = {}> = Merge<PlayMetaBase<D>
 export type PlayMetaBase<D extends DateLike = Dayjs> = DateSide<D, typeof playMetaSchema>;
 
 /** scrobble action plus the match result before scrobbling */
-export interface ScrobbleResult<D extends DateLike = Dayjs> {
-    match?: PlayMatchResult<D>
-    payload?: ScrobblePayload
-    warnings?: string[]
-    error?: Error | ErrorObject
-    response?: ScrobbleResponse
-    mergedScrobble?: AmbPlayObjectMinimal<D>
-    createdAt?: D
-}
+export type ScrobbleResult<D extends DateLike = Dayjs> = DateSide<D, typeof scrobbleResultSchema>;
 
 export interface PlayLifecycle<D extends DateLike = Dayjs> {
     input?: object
@@ -268,32 +318,13 @@ export interface ScrobbleActionResult<D extends DateLike = Dayjs> {
     createdAt: string
 }
 
-export interface PlayMatchResult<D extends DateLike = Dayjs> {
-    match: boolean
-    score: number
-    breakdowns: string[]
-    reason?: string
-    closestMatchedPlay?: AmbPlayObjectMinimal<D>
-    transformedPlay?: PlayObjectMinimal
-    summary?: string
-    createdAt: string
-}
+export type PlayMatchResult<D extends DateLike = Dayjs> = DateSide<D, typeof playMatchResultSchema>;
 
-export interface PlayOriginal<D extends DateLike = Dayjs> {
-    data?: object
-    play?: PlayObjectMinimal<D>
-}
-
-/** Free-form parts of a Play that are not (yet) described by playObjectSchema */
-interface PlayBlobs<D extends DateLike> {
-    original?: PlayOriginal<D>
-    scrobble?: ScrobbleResult<D>
-    lifecycle?: LifecycleStep[]
-}
+export type PlayOriginal<D extends DateLike = Dayjs> = DateSide<D, typeof playOriginalSchema>;
 
 export type AmbPlayObject<D extends DateLike = Dayjs, T = {}> = D extends string
-    ? Merge<z.input<typeof playObjectSchema>, PlayBlobs<string> & {meta: PlayMeta<string, T>}>
-    : Merge<z.output<typeof playObjectSchema>, PlayBlobs<Dayjs> & {meta: PlayMeta<Dayjs, T>}>;
+    ? Merge<z.input<typeof playObjectSchema>, {meta: PlayMeta<string, T>}>
+    : Merge<z.output<typeof playObjectSchema>, {meta: PlayMeta<Dayjs, T>}>;
 
 export type AmbPlayObjectMinimal<D extends DateLike = Dayjs, T = {}> = Pick<AmbPlayObject<D,T>, RequiredKeys<AmbPlayObject<D>>> & Pick<AmbPlayObject<D,T>, 'id' | 'uid'>;
 
@@ -344,7 +375,7 @@ export const publicPlayMetaSchema = playMetaSchema.pick({
     mediaPlayerVersion: true, deviceId: true, sessionId: true, nowPlaying: true, url: true,
 });
 
-type PlayInternalKeys = 'id';
+type PlayInternalKeys = 'id' | 'original' | 'scrobble' | 'lifecycle';
 export const publicPlaySchema = z.object({
     uid: playObjectSchema.shape.uid,
     data: publicPlayDataSchema,

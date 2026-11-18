@@ -4,6 +4,7 @@ import { describe, it } from 'mocha';
 import { asJsonPlayObject, asPlay } from '../../../core/PlayMarshalUtils.ts';
 import { generatePlayWithLifecycle, playWithLifecycleScrobble } from '../../../core/tests/utils/fixtures.ts';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
+import { statefulInvariantTransform } from '../../../core/PlayUtils.ts';
 
 describe('Play Marshalling', function () {
 
@@ -22,6 +23,22 @@ describe('Play Marshalling', function () {
         expect(dayjs.isDayjs(decoded.meta.seenAt)).to.be.true;
         expect(dayjs.isDayjs(decoded.scrobble!.createdAt)).to.be.true;
         expect(asJsonPlayObject(decoded)).to.deep.eq(json);
+    });
+
+    it('converts dates in nested plays and leaves raw Source data untouched', async function () {
+        const play = await playWithLifecycleScrobble(generatePlayWithLifecycle());
+        play.original = {data: {releaseDate: '2020-01-01T00:00:00Z'}, play: statefulInvariantTransform(generatePlay())};
+        play.scrobble!.match!.closestMatchedPlay = statefulInvariantTransform(generatePlay(), true);
+
+        const json = JSON.parse(JSON.stringify(asJsonPlayObject(play)));
+        expect(json.original.play.data.playDate).to.be.a('string');
+
+        const decoded = asPlay(json);
+        expect(dayjs.isDayjs(decoded.original!.play!.data.playDate)).to.be.true;
+        expect(dayjs.isDayjs(decoded.scrobble!.mergedScrobble!.data.playDate)).to.be.true;
+        expect(dayjs.isDayjs(decoded.scrobble!.match!.closestMatchedPlay!.data.playDate)).to.be.true;
+        expect((decoded.original!.data as Record<string, unknown>).releaseDate).to.eq('2020-01-01T00:00:00Z');
+        expect(decoded.lifecycle).to.deep.eq(json.lifecycle);
     });
 
     it('does not mutate the Play when encoding', async function () {

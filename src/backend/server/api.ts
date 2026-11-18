@@ -35,7 +35,7 @@ import pMap from "p-map";
 import type { PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
 import { stripIndents } from "common-tags";
 import { nameToCredit } from "../../core/MusicMetadata.ts";
-import { asPlayCheap } from "../../core/PlayMarshalUtils.ts";
+import { asPlay } from "../../core/PlayMarshalUtils.ts";
 import { getOwnerId } from "../common/auth/owner.ts";
 import { getNowPlayingOptions, getPublicDashboardEntry } from "../common/dashboard.ts";
 import { deleteUserSetting, getUserSetting, getUserSettings, isUserSettingKey, setUserSetting, type UserSettingKey } from "../common/auth/userSettings.ts";
@@ -633,7 +633,7 @@ Note: this is only supported by some components.`
             body
         } = req;
 
-        const play: PlayObject = asPlayCheap(body);
+        const play: PlayObject = asPlay(body);
 
         const playRes = await component.updatePlay(playUid as string, play.data);
         return res.json(asSerializablePlaySelect(playRes));
