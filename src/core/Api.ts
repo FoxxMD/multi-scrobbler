@@ -1,9 +1,9 @@
-import type { CompareOpKey, ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
-import { creditSchema, playTrackDataSchema, PLAY_STATES, QUEUE_STATUSES, queueContextSchema, type QueueStatus, type ClientType, type ComponentAuthType, type MonitoringStatus, creditBaseSchema, trackSearchHash, albumSearchHash, artistSearchHash } from "./Atomic.ts"
+import type { ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
+import { creditSchema, playTrackDataSchema, PLAY_STATES, QUEUE_NAMES, QUEUE_STATUSES, queueContextSchema, type QueueStatus, type ClientType, type ComponentAuthType, type MonitoringStatus, creditBaseSchema, trackSearchHash, albumSearchHash, artistSearchHash } from "./Atomic.ts"
 import type { LogEvent, SourceType, TrackData } from "./Atomic.ts"
 import type { ComponentType, DateLike, ErrorLike, PlayState, QueueName, SOURCE_SOT_TYPES } from "./Atomic.ts"
 import type { JsonPlayObject, SourcePlayerJson, DateSide } from "./PlaySchema.ts"
-import { playObjectSchema, zDayjs } from "./PlaySchema.ts"
+import { playObjectSchema, zDayjs, zDayjsStrict } from "./PlaySchema.ts"
 import type { Dayjs } from "dayjs"
 import type { ErrorIsh } from "./ErrorUtils.ts"
 import { playEventSchema } from "./PlayEvent.ts"
@@ -201,38 +201,64 @@ export type PlayStateUI = PlayState | 'failed TBR';
 export type QueryPlaysOptsJsonRefreshable = Omit<QueryPlaysOptsJson, 'state'> & {nonce?: string, state?: PlayStateUI[]};
 
 
-export type QueryPlaysOptsJson = {
-    sort?: "playedAt" | "seenAt";
-    order?: "asc" | "desc";
-    with?: ("input" | "parent" | "parent-input" | "queues")[];
-    limit?: number;
-    offset?: number;
-    state?: ("queued" | "discovered" | "discarded" | "scrobbled" | "failed" | "duped")[];
-    stateNot?: ("queued" | "discovered" | "discarded" | "scrobbled" | "failed" | "duped")[];
-    componentId?: number;
-    seenAt?: {
-        type: "eq" | "ne" | "gt" | "gte" | "lt" | "lte";
-        date: string;
-    } | {
-        type: "between";
-        range: [string, string];
-        inclusive?: boolean;
-    };
-    playedAt?: {
-        type: "eq" | "ne" | "gt" | "gte" | "lt" | "lte";
-        date: string;
-    } | {
-        type: "between";
-        range: [string, string];
-        inclusive?: boolean;
-    };
-queues?: {
-        queueName: QueueName;
-        queueStatus: ('queued' | 'failed' | 'completed')[] | ('queued' | 'failed' | 'completed');
-    }[];
-    uid?: string[];
-    text?: string[];
-}
+/** Query string values are always strings so numbers are coerced */
+const zQueryInt = z.coerce.number<number>().int();
+/** boolean in a JSON body, 'true'/'false' in a query string */
+const zQueryBool = z.union([z.boolean(), z.stringbool()]);
+
+export const compareDateSchema = z.discriminatedUnion('type', [
+    z.object({
+        type: z.enum(['eq', 'ne', 'gt', 'gte', 'lt', 'lte']),
+        date: zDayjsStrict,
+    }),
+    z.object({
+        type: z.literal('between'),
+        range: z.tuple([zDayjsStrict, zDayjsStrict]),
+        /** include the range boundaries, defaults to true */
+        inclusive: zQueryBool.optional().meta({description: 'include the range boundaries, defaults to true'}),
+    }),
+]);
+export type CompareDateOp<D extends DateLike = Dayjs> = DateSide<D, typeof compareDateSchema>;
+export type CompareDateSingle<D extends DateLike = Dayjs> = Exclude<CompareDateOp<D>, {type: 'between'}>;
+export type CompareDateBetween<D extends DateLike = Dayjs> = Extract<CompareDateOp<D>, {type: 'between'}>;
+
+const playStateEnum = z.enum(PLAY_STATES as [PlayState, ...PlayState[]]);
+const queueStatusEnum = z.enum(QUEUE_STATUSES as [QueueStatus, ...QueueStatus[]]);
+
+export const queueCriteriaSchema = z.object({
+    queueName: z.enum(QUEUE_NAMES as [QueueName, ...QueueName[]]),
+    queueStatus: z.union([queueStatusEnum, queueStatusEnum.array()]),
+    /** only match queue states with retries less than or equal to this */
+    retries: zQueryInt.optional().meta({description: 'only match queue states with retries less than or equal to this'}),
+});
+
+export const playWhereOptsSchema = z.object({
+    state: playStateEnum.array().optional(),
+    stateNot: playStateEnum.array().optional(),
+    componentId: zQueryInt.optional(),
+    seenAt: compareDateSchema.optional(),
+    playedAt: compareDateSchema.optional(),
+    queues: queueCriteriaSchema.array().optional(),
+    uid: z.string().array().optional(),
+    /** match text in track title, artists or album name */
+    text: z.string().array().optional().meta({description: 'match text in track title, artists or album name'}),
+});
+
+export const WITH_PLAY_RELATIONS = ['input', 'parent', 'parent-input', 'queues', 'events', 'children'] as const;
+
+export const queryPlaysOptsSchema = playWhereOptsSchema.extend({
+    sort: z.enum(['seenAt', 'playedAt']).optional(),
+    order: z.enum(['asc', 'desc']).optional(),
+    with: z.enum(WITH_PLAY_RELATIONS).array().optional(),
+    limit: zQueryInt.optional(),
+    offset: zQueryInt.optional(),
+});
+
+/** Plays query from an API request. The Component comes from the route, never the request. */
+export const queryPlaysRequestSchema = queryPlaysOptsSchema.omit({componentId: true});
+
+export type QueryPlaysOptsJson = z.input<typeof queryPlaysRequestSchema>;
+
 export interface PaginatedQueryResponse {
     limit: number;
     offset: number;
@@ -242,17 +268,6 @@ export interface PaginatedResponse<T> {
     data: T[];
     meta: PaginatedQueryResponse;
 }
-
-export type CompareDateBetween<D extends DateLike = Dayjs> = {
-    type: 'between';
-    range: [D, D];
-    inclusive?: boolean;
-};
-
-export type CompareDateSingle<D extends DateLike = Dayjs> = {
-    type: CompareOpKey<D>;
-    date: D;
-};
 
 export type CacheClearType = 'external-api' | 'transforms';
 

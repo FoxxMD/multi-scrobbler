@@ -48,6 +48,16 @@ export const zDayjs = z.codec(
     }
 );
 
+/** Like zDayjs but without null tolerance, for request input rather than stored data */
+export const zDayjsStrict = z.codec(
+    z.iso.datetime({offset: true, local: true}).meta({format: 'date-time', description: 'ISO8601 timestamp', examples: ['2026-11-13T14:05:00.000Z']}),
+    z.custom<Dayjs>(dayjs.isDayjs).meta({type: 'string', format: 'date-time'}),
+    {
+        decode: (s) => dayjs(s),
+        encode: (d) => d.toISOString(),
+    }
+);
+
 /** ISO8601 timestamp that is a string in both JSON and backend shapes */
 const isoString = z.string().meta({format: 'date-time', examples: ['2026-11-13T14:05:00.000Z']});
 

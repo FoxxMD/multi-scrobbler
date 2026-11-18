@@ -21,12 +21,10 @@ import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import prom from 'prom-client';
 import { findAuthIssue, SimpleError } from "../common/errors/MSErrors.ts";
-import { DrizzlePlayRepository, type QueryPlaysOpts, type QueryPlaysOptsJson } from "../common/database/drizzle/repositories/PlayRepository.ts";
+import { DrizzlePlayRepository, type QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.ts";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.ts";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
-import {componentStateBodySchema, playStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson, asSerializablePlaySelect, trackDataCreditBaseSchema, type TrackDataCreditBase, NDJSON_MEDIA_TYPE, trackSearchSimpleRequestQuerySchema, albumSearchSimpleRequestQuerySchema, artistSearchSimpleRequestQuerySchema } from "../../core/Api.ts";
-import { asDayjsHydratedObject } from "../../core/DataUtils.ts";
-import type {Dayjs} from "dayjs";
+import {componentStateBodySchema, playStateBodySchema, queryPlaysRequestSchema, type ComponentClientApiJson, type ComponentSourceApiJson, asSerializablePlaySelect, trackDataCreditBaseSchema, type TrackDataCreditBase, NDJSON_MEDIA_TYPE, trackSearchSimpleRequestQuerySchema, albumSearchSimpleRequestQuerySchema, artistSearchSimpleRequestQuerySchema } from "../../core/Api.ts";
 import { serializeError } from "serialize-error";
 import { z } from 'zod';
 import type { createTypedRouter, TypedMiddleware } from "@minisylar/express-typed-router";
@@ -554,6 +552,7 @@ Note: this is only supported by some components.`
     router.get('/components/:id/plays', {
         docs: {operationId: 'get-paginated-plays'},
         middleware: [componentAwareMiddle],
+        querySchema: queryPlaysRequestSchema,
         tags: ['Plays'],
         summary: 'Get Paginated Plays'
     }, async (req, res, next) => {
@@ -562,8 +561,7 @@ Note: this is only supported by some components.`
             query
         } = req;
 
-        const hydratedQuery = asDayjsHydratedObject<QueryPlaysOptsJson, QueryPlaysOpts<Dayjs>>(query as QueryPlaysOptsJson);
-        const playRes = await component.getPlaysPaginated(hydratedQuery);
+        const playRes = await component.getPlaysPaginated(query);
 
         return res.json({...playRes, data: playRes.data.map(x => asSerializablePlaySelect(x))});
     });
@@ -641,7 +639,7 @@ Note: this is only supported by some components.`
         middleware: [componentAwareMiddle,jsonParser],
         bodySchema: z.object({
             context: queueContextSchema.optional(),
-            filters: z.looseObject({})
+            filters: queryPlaysRequestSchema
         }),
         tags: ['Plays'],
         summary: 'Requeue Bulk Plays'
@@ -651,12 +649,11 @@ Note: this is only supported by some components.`
             body
         } = req;
 
-        const hydratedQuery = asDayjsHydratedObject<QueryPlaysOptsJson, QueryPlaysOpts<Dayjs>>({...body.filters, with: ['queues']});
         res.sendStatus(200);
 
         const queueFunc = async (p: PlayWith<'queueStates'>) => await component.queuePlay([p], {...body.context, isRetry: true, reason: 'User requested reprocessing'});
 
-        const currentFilters = hydratedQuery;
+        const currentFilters: QueryPlaysOpts = {...body.filters, with: ['queues']};
         let more = true;
         while(more) {
             const res = await component.getPlaysPaginatedInternal(currentFilters);

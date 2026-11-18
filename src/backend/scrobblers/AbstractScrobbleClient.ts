@@ -1044,7 +1044,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
             //const processable = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], [QUEUE_STATUS_FAILED], retries);
             const processableArgs: QueryPlaysOpts  = {queues: [{queueName: INGRESS_QUEUE, queueStatus: QUEUE_STATUS_FAILED, retries}], with: ['queues']};
-            let processable = await this.playRepo.findPlaysPaginated(processableArgs);
+            let processable = await this.playRepo.findPlaysPaginated<'queueStates'>(processableArgs);
             this.deadLetterQueued = processable.meta.total;
 
             const total = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], {queueStatus: [QUEUE_STATUS_FAILED], retries: 10000});
@@ -1063,7 +1063,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 more = processable.data.length === processable.meta.limit;
                 if(more) {
                     offset += processable.meta.limit;
-                    processable = await this.playRepo.findPlaysPaginated({...processableArgs, offset});
+                    processable = await this.playRepo.findPlaysPaginated<'queueStates'>({...processableArgs, offset});
                 }
             }
             this.setStatus(`All processable Dead Plays have been queued`);
@@ -1549,30 +1549,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     public getQueued = (queueName: string, offset?: number) => {
         return this.playRepo.getQueued(queueName, {offset});
-    }
-
-    public getPlaysPaginated = (args: QueryPlaysOpts) => {
-        const {
-            limit,
-            offset,
-            with: withQuery = ['input','parent-input','queues'],
-            ...rest
-        } = args;
-        const parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
-        const parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
-        return this.playRepo.findPlaysPaginated({limit: parsedLimit, offset: parsedOffset, with: withQuery, ...rest});
-    }
-
-    public async getPlaysPaginatedInternal(args: QueryPlaysOpts) {
-        const {
-            limit,
-            offset,
-            with: withQuery = ['input','parent-input','queues'],
-            ...rest
-        } = args;
-        const parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
-        const parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
-        return this.playRepo.findPlaysPaginated({limit: parsedLimit, offset: parsedOffset, with: withQuery, ...rest});
     }
 
     public async deletePlay(play: PlayWith<'children'>, children?: boolean): Promise<void> {

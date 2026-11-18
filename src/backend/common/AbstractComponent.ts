@@ -37,13 +37,13 @@ import type {RetentionOptions} from "./infrastructure/config/database.ts";
 import { getRetentionCompactAfterFromEnv, getRetentionDeleteAfterFromEnv, isCompactableProperty, parseRetentionOptions, parseRetentionOptionsDurations } from "./database/Database.ts";
 import type {DbConcrete} from "./database/drizzle/drizzleUtils.ts";
 import type {ComponentSelect, PlayEventNew, PlayEventSelect, PlaySelect, PlaySelectWithQueueStates, PlayWith, QueueStateSelect} from "./database/drizzle/drizzleTypes.ts";
-import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts } from "./database/drizzle/repositories/PlayRepository.ts";
+import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts, type QueryPlaysOpts } from "./database/drizzle/repositories/PlayRepository.ts";
 import type { ClientType, MonitoringStatus, OptionalCacheUsage, QueueContext } from "../../core/Atomic.ts";
 import type { PlayMatchResult } from "../../core/PlaySchema.ts";
 import type {SourceType} from "../../core/Atomic.ts";
 import { DrizzleComponentRepository } from "./database/drizzle/repositories/ComponentRepository.ts";
 import dayjs, { type Dayjs } from "dayjs";
-import { COMPONENT_STATE, type ComponentCommonApi, type ComponentCommonApiJson, type ComponentState, type PlayApiCommonDetailed } from "../../core/Api.ts";
+import { COMPONENT_STATE, type ComponentCommonApi, type ComponentCommonApiJson, type ComponentState, type PaginatedResponse, type PlayApiCommonDetailed } from "../../core/Api.ts";
 import type {WebhookPayload} from "./infrastructure/config/health/webhooks.ts";
 import type { ElementOf, MarkRequired } from "ts-essentials";
 import { serializeError } from "serialize-error";
@@ -1185,6 +1185,15 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     }
 
     abstract processPlay(playEntity: PlaySelectWithQueueStates, signal?: AbortSignal): Promise<PlayProcessingResult>
+
+    public async getPlaysPaginated(args: QueryPlaysOpts): Promise<PaginatedResponse<PlayApiCommonDetailed<Dayjs>>> {
+        const {with: withQuery = ['input','parent-input','queues'], ...rest} = args;
+        return this.playRepo.findPlaysPaginated<'queueStates' | 'input'>({with: withQuery, ...rest});
+    }
+
+    public async getPlaysPaginatedInternal(args: QueryPlaysOpts) {
+        return this.playRepo.findPlaysPaginated<'queueStates'>({with: ['queues'], ...args});
+    }
 
     public async getPlayApiResponse(uid: string): Promise<PlayApiCommonDetailed<Dayjs> | undefined> {
         const playRow = await this.playRepo.findByUid(uid, { with: ['input','parent-input','queues','events'] }) as PlayWith<'queueStates' | 'input' | 'events'> | undefined;

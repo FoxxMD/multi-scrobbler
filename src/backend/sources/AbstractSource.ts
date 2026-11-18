@@ -42,10 +42,9 @@ import pMap from 'p-map';
 import type { Counter } from 'prom-client';
 import { spawn, isAbortError, delay, throwIfAborted, waitForEvent } from 'abort-controller-x';
 import { generateLoggableAbortReason, StageChangeError } from '../common/errors/MSErrors.ts';
-import type { QueryPlaysOpts, RequestPlayQuery } from '../common/database/drizzle/repositories/PlayRepository.ts';
+import type { QueryPlaysOpts } from '../common/database/drizzle/repositories/PlayRepository.ts';
 import { AsyncTask, SimpleIntervalJob } from 'toad-scheduler';
-import { COMPONENT_STATE, type ComponentSourceApiJson, type ComponentState, type PlayApiCommonDetailed } from '../../core/Api.ts';
-import type {PaginatedResponse} from "../../core/Api.ts";
+import { COMPONENT_STATE, type ComponentSourceApiJson, type ComponentState } from '../../core/Api.ts';
 import type { PlayWith } from '../common/database/drizzle/drizzleTypes.ts';
 import { PLAY_EVENT_TYPE, type PlayEvent } from '../../core/PlayEvent.ts';
 import { dupeCheckToPlayEvent, queueCompletionStateToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from '../common/database/drizzle/entityUtils.ts';
@@ -442,16 +441,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
     getFlatRecentlyDiscoveredPlays = async (): Promise<PlayObject[]> => {
         const list: PlayObject[] = await this.getRecentlyDiscoveredPlays();
         return list.sort(sortByNewestPlayDate);
-    }
-
-    getRecentPlaysApi = async (query: RequestPlayQuery) => {
-        const res = await this.playRepo.findPlays({
-            limit: 100,
-        });
-        return res.map((x) => {
-            const {id, ...rest} = x;
-            return rest;
-        })
     }
 
     protected recentDiscoveredCacheKey = () => {
@@ -1162,7 +1151,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
             //const processable = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], [QUEUE_STATUS_FAILED], retries);
             const processableArgs: QueryPlaysOpts  = {queues: [{queueName: INGRESS_QUEUE, queueStatus: QUEUE_STATUS_FAILED, retries}], with: ['queues']};
-            let processable = await this.playRepo.findPlaysPaginated(processableArgs);
+            let processable = await this.playRepo.findPlaysPaginated<'queueStates'>(processableArgs);
             this.deadLetterQueued = processable.meta.total;
 
             const total = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], {queueStatus: [QUEUE_STATUS_FAILED], retries: 10000});
@@ -1181,7 +1170,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 more = processable.data.length === processable.meta.limit;
                 if(more) {
                     offset += processable.meta.limit;
-                    processable = await this.playRepo.findPlaysPaginated({...processableArgs, offset});
+                    processable = await this.playRepo.findPlaysPaginated<'queueStates'>({...processableArgs, offset});
                 }
             }
             this.setStatus(`All processable Dead Plays have been queued`);
@@ -1238,30 +1227,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
             maxInterval = this.config.data.maxInterval;
         }
         return maxInterval - this.getInterval();
-    }
-
-    public async getPlaysPaginated(args: QueryPlaysOpts): Promise<PaginatedResponse<PlayApiCommonDetailed<Dayjs>>> {
-        const {
-            limit,
-            offset,
-            with: withQuery = ['input','parent-input','queues'],
-            ...rest
-        } = args;
-        const parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
-        const parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
-        return this.playRepo.findPlaysPaginated({limit: parsedLimit, offset: parsedOffset, with: withQuery, ...rest});
-    }
-
-    public async getPlaysPaginatedInternal(args: QueryPlaysOpts) {
-        const {
-            limit,
-            offset,
-            with: withQuery = ['input','parent-input','queues'],
-            ...rest
-        } = args;
-        const parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
-        const parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
-        return this.playRepo.findPlaysPaginated({limit: parsedLimit, offset: parsedOffset, with: withQuery, ...rest});
     }
 
     public async deletePlay(play: PlayWith<'children'>, children?: boolean): Promise<void> {

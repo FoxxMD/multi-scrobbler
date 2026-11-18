@@ -4,7 +4,7 @@ import { and, eq, inArray, isNull, relationsFilterToSQL, sql } from "drizzle-orm
 import { EmptyFilter } from "drizzle-orm/relations";
 import assert from "node:assert";
 import type { MarkOptional, ElementOf } from "ts-essentials";
-import { type DateLike, type DeepReplaceValue, type PlayState, QUEUE_STATUS_QUEUED, type QueueName, SCROBBLE_TS_SOC_END, TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
+import { type PlayState, QUEUE_STATUS_QUEUED, SCROBBLE_TS_SOC_END, TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
 import type { PlayObject } from "../../../../../core/PlaySchema.ts";
 import { removeUndefinedKeys } from '../../../../../core/DataUtils.ts';
 import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.ts";
@@ -17,40 +17,18 @@ import type {FilterValue, FindMany, FindWhere, FindWith, PlayInputNew, PlayNew, 
 import { type DbConcrete, runTransaction } from "../drizzleUtils.ts";
 import { generateInputEntity, generatePlayEntity, hydratePlaySelect, stateChangeToPlayEvent, transformToPlayEvent, type PlayEntityOpts, type PlayHydateOptions } from "../entityUtils.ts";
 import { playEvents, playInputs, plays, queueStates, relations, type TSchema } from "../schema/schema.ts";
-import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
-import type {PaginatedResponse} from "../../../../../core/Api.ts";
+import { buildDateCompare, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
+import type {CompareDateOp, PaginatedResponse, playWhereOptsSchema, queryPlaysOptsSchema, queueCriteriaSchema, WITH_PLAY_RELATIONS} from "../../../../../core/Api.ts";
+import type * as z from "zod";
 import type {PaginatedQueryResponse} from "../../../../../core/Api.ts";
 import type { PlayEventTransform } from "../../../../../core/PlayEvent.ts";
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 
-export interface QueueCriteria {
-    queueName: QueueName
-    queueStatus: QueueStateSelect['queueStatus'][] | QueueStateSelect['queueStatus']
-    retries?: number
-}
-
-export interface PlayWhereOpts<D extends DateLike = Dayjs> {
-    state?: PlaySelect['state'][]
-    stateNot?: PlaySelect['state'][]
-    componentId?: number
-    seenAt?: CompareDateOp<D>
-    playedAt?: CompareDateOp<D>
-    queues?: QueueCriteria[]
-    uid?: string[]
-    text?: string[]
-}
-
-export type WithPlayRelation = 'input' | 'parent' | 'parent-input' | 'queues' | 'events' | 'children';
-export interface QueryPlaysOpts<D extends DateLike = Dayjs> extends PlayWhereOpts<D> {
-    sort?: 'seenAt' | 'playedAt'
-    order?: 'asc' | 'desc'
-    with?: WithPlayRelation[]
-    limit?: number
-    offset?: number
-}
-
-export type QueryPlaysOptsJson = DeepReplaceValue<QueryPlaysOpts<Dayjs>, [[Dayjs, string]]>;
+export type QueueCriteria = z.output<typeof queueCriteriaSchema>;
+export type PlayWhereOpts = z.output<typeof playWhereOptsSchema>;
+export type WithPlayRelation = ElementOf<typeof WITH_PLAY_RELATIONS>;
+export type QueryPlaysOpts = z.output<typeof queryPlaysOptsSchema>;
 
 export interface HydrateOpts {
    hydrate?: PlayHydateOptions[] 
@@ -288,14 +266,15 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return results.map(identifierExtractor[identifier]);
     }
 
-    findPlaysPaginated = async <T = PlayWith<'queueStates' | 'input' | 'parent'>>(args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PaginatedResponse<T> & {meta: {total: number}}> => {
+    /** K is the relations loaded by args.with, which the caller must keep in sync */
+    findPlaysPaginated = async <K extends keyof TSchema['plays']['relations'] = never>(args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PaginatedResponse<PlayWith<K>> & {meta: {total: number}}> => {
         const {
             limit = 100,
             offset = 0,
             ...rest
         } = args;
         const clampedLimit = Math.min(limit, 100);
-        const res = await this.findPlays({limit: clampedLimit, offset, ...rest}, opts) as T[];
+        const res = await this.findPlays({limit: clampedLimit, offset, ...rest}, opts) as PlayWith<K>[];
 
         
         const where = buildPlayWhere({componentId: args.componentId ?? this.componentId,  ...rest});
@@ -1150,5 +1129,3 @@ export const playToRepositoryCreatePlayOpts = (data: MarkOptional<RepositoryCrea
         }
     }
 }
-
-export type RequestPlayQuery = Partial< Record<keyof Exclude<QueryPlaysOpts, 'componentId'>, string>>;
