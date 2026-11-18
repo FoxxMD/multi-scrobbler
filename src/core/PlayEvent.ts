@@ -1,7 +1,8 @@
 import type { Dayjs } from "dayjs";
-import type { DateLike, ErrorLike, LifecycleStep, PlayState, QueueContext, QueueStatus } from "./Atomic.ts";
-import type { PlayMatchResult, PlayObject, ScrobbleResult } from "./PlaySchema.ts";
 import type { Changeset } from "json-diff-ts";
+import * as z from "zod";
+import { PLAY_STATES, queueContextSchema, QUEUE_STATUSES, type DateLike, type ErrorLike, type LifecycleStep, type PlayState, type QueueStatus } from "./Atomic.ts";
+import { playMatchResultSchema, playObjectSchema, scrobbleResultSchema, zDayjs, type PlayMatchResult, type ScrobbleResult } from "./PlaySchema.ts";
 
 export type PlayEventType = 'transform' | 'queueStateChange' | 'playStateChange' | 'dupeCheck' | 'scrobbleResult' | 'updatePlay';
 export const PLAY_EVENT_TYPE = {
@@ -13,46 +14,61 @@ export const PLAY_EVENT_TYPE = {
     scrobbleResult: 'scrobbleResult'
 } as const satisfies Record<string, PlayEventType>;
 
-export interface BasePlayEvent<K extends PlayEventType, T, D extends DateLike = Dayjs> {
-    id?: number
-    playId: number
-    eventName: K
-    error?: ErrorLike
-    createdAt?: D
-    data: T
-}
+const errorLikeSchema = z.custom<ErrorLike>();
+
+const basePlayEventSchema = z.object({
+    id: z.int().optional(),
+    playId: z.int(),
+    error: errorLikeSchema.optional(),
+    createdAt: zDayjs.optional(),
+});
+
+export const playEventQueueStateChangeDataSchema = z.object({
+    queueName: z.string(),
+    queueStatus: z.enum(QUEUE_STATUSES as [QueueStatus, ...QueueStatus[]]),
+    context: queueContextSchema.nullable().optional(),
+    retries: z.number().optional(),
+    error: errorLikeSchema.nullable().optional(),
+});
+
+export const playEventPlayStateChangeDataSchema = z.object({
+    state: z.enum(PLAY_STATES as [PlayState, ...PlayState[]]),
+    error: errorLikeSchema.nullable().optional(),
+    reason: z.string().optional(),
+});
+
+export const playEventUpdatePlayDataSchema = z.object({
+    input: playObjectSchema.partial(),
+    patch: z.custom<Changeset>(),
+});
+
+export const playEventSchema = z.discriminatedUnion('eventName', [
+    basePlayEventSchema.extend({eventName: z.literal('transform'), data: z.custom<LifecycleStep>().array()}),
+    basePlayEventSchema.extend({eventName: z.literal('queueStateChange'), data: playEventQueueStateChangeDataSchema}),
+    basePlayEventSchema.extend({eventName: z.literal('playStateChange'), data: playEventPlayStateChangeDataSchema}),
+    basePlayEventSchema.extend({eventName: z.literal('dupeCheck'), data: playMatchResultSchema}),
+    basePlayEventSchema.extend({eventName: z.literal('scrobbleResult'), data: scrobbleResultSchema}),
+    basePlayEventSchema.extend({eventName: z.literal('updatePlay'), data: playEventUpdatePlayDataSchema}),
+]);
+
+/** Selects the JSON (string dates) or backend (Dayjs dates) side of playEventSchema. Distributes over DateLike. */
+export type PlayEvent<D extends DateLike = Dayjs> = D extends string ? z.input<typeof playEventSchema> : z.output<typeof playEventSchema>;
+type PlayEventOf<K extends PlayEventType, D extends DateLike> = Extract<PlayEvent<D>, {eventName: K}>;
 
 export type PlayEventTranformData = LifecycleStep[];
-export type PlayEventTransform<D extends DateLike = Dayjs> = BasePlayEvent<'transform', PlayEventTranformData, D>;
+export type PlayEventTransform<D extends DateLike = Dayjs> = PlayEventOf<'transform', D>;
 
-export interface PlayEventQueueStateChangeData {
-    queueName: string
-    queueStatus: QueueStatus
-    context?: QueueContext | null
-    retries?: number
-    error?: ErrorLike | null
-}
-export type PlayEventQueueStateChange<D extends DateLike = Dayjs> = BasePlayEvent<'queueStateChange', PlayEventQueueStateChangeData, D>;
+export type PlayEventQueueStateChangeData = z.output<typeof playEventQueueStateChangeDataSchema>;
+export type PlayEventQueueStateChange<D extends DateLike = Dayjs> = PlayEventOf<'queueStateChange', D>;
 
-export interface PlayEventPlayStateChangeData {
-    state: PlayState
-    error?: ErrorLike | null
-    reason?: string
-}
-export type PlayEventPlayStateChange<D extends DateLike = Dayjs> = BasePlayEvent<'playStateChange', PlayEventPlayStateChangeData, D>;
+export type PlayEventPlayStateChangeData = z.output<typeof playEventPlayStateChangeDataSchema>;
+export type PlayEventPlayStateChange<D extends DateLike = Dayjs> = PlayEventOf<'playStateChange', D>;
 
 export type PlayEventDupeCheckData<D extends DateLike = Dayjs> = PlayMatchResult<D>;
-export type PlayEventDupeCheck<D extends DateLike = Dayjs> = BasePlayEvent<'dupeCheck', PlayEventDupeCheckData<D>, D>;
+export type PlayEventDupeCheck<D extends DateLike = Dayjs> = PlayEventOf<'dupeCheck', D>;
 
 export type PlayEventScrobbleResultData<D extends DateLike = Dayjs> = ScrobbleResult<D>;
-export type PlayEventScrobbleResult<D extends DateLike = Dayjs> = BasePlayEvent<'scrobbleResult', PlayEventScrobbleResultData<D>, D>;
+export type PlayEventScrobbleResult<D extends DateLike = Dayjs> = PlayEventOf<'scrobbleResult', D>;
 
-export type PlayEventUpdatePlayData = {input: Partial<PlayObject>, patch: Changeset};
-export type PlayEventUpdatePlay<D extends DateLike = Dayjs> = BasePlayEvent<'updatePlay', PlayEventUpdatePlayData, D>;
-
-export type PlayEvent<D extends DateLike = Dayjs> = PlayEventTransform<D>
-    | PlayEventQueueStateChange<D>
-    | PlayEventPlayStateChange<D>
-    | PlayEventDupeCheck<D>
-    | PlayEventScrobbleResult<D>
-    | PlayEventUpdatePlay<D>;
+export type PlayEventUpdatePlayData = z.output<typeof playEventUpdatePlayDataSchema>;
+export type PlayEventUpdatePlay<D extends DateLike = Dayjs> = PlayEventOf<'updatePlay', D>;
