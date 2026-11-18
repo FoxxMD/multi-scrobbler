@@ -162,7 +162,7 @@ export const creditSchema = z.object({
     // not httpUrl because some sources (plex) use relative proxy urls
     image: z.string().optional(),
     metadata: musicServicesSchema.array().optional()
-})
+}).meta({id: 'Credit'})
 export type Credit = z.infer<typeof creditSchema>;
 
 export interface TrackMeta {

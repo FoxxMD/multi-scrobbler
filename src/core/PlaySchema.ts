@@ -92,7 +92,7 @@ export const playDataSchema = z.object({
     listenedFor: z.number().nonnegative().optional().meta({description: 'Number of seconds the track was listened to'}),
     listenRanges: listenRangeSchema.array().optional().meta({description: 'Ranges of the track that were listened to'}),
     repeat: z.boolean().optional().meta({description: 'Play was detected as a repeat of the previous play'}),
-});
+}).meta({id: 'PlayData'});
 
 export const playMetaUrlStrictSchema = z.object({
     /**
@@ -162,7 +162,7 @@ export const playMetaSchema = z.object({
     /** Was the component activitely monitoring when this Play was created? */
     wasMonitored: z.boolean().optional().meta({description: 'Was the component activitely monitoring when this Play was created?'}),
     lifecycleInputs: z.custom<LifecycleInput>().array().optional(),
-});
+}).meta({id: 'PlayMeta'});
 
 /** Play without original/scrobble/lifecycle. Used for plays nested inside another play's original/scrobble */
 export const playObjectMinimalSchema = z.object({
@@ -170,7 +170,7 @@ export const playObjectMinimalSchema = z.object({
     uid: z.string().optional(),
     data: playDataSchema,
     meta: playMetaSchema,
-});
+}).meta({id: 'PlayMinimal'});
 
 export const playOriginalSchema = z.object({
     /** raw data from the Source, passed through untouched */
@@ -192,7 +192,7 @@ export const playMatchResultSchema = z.object({
     transformedPlay: playObjectMinimalSchema.optional(),
     summary: z.string().optional(),
     createdAt: isoString,
-}).meta({description: 'outcome of matching this Play against existing scrobbles'});
+}).meta({id: 'PlayMatchResult', description: 'outcome of matching this Play against existing scrobbles'});
 
 /** scrobble action plus the match result before scrobbling */
 export const scrobbleResultSchema = z.object({
@@ -207,14 +207,14 @@ export const scrobbleResultSchema = z.object({
     /** if service responded with data, the result of merging this corrected data into MS's play */
     mergedScrobble: playObjectMinimalSchema.optional().meta({description: 'if service responded with data, the result of merging this corrected data into MS\'s play'}),
     createdAt: zDayjs.optional(),
-}).meta({description: 'scrobble action plus the match result before scrobbling'});
+}).meta({id: 'ScrobbleResult', description: 'scrobble action plus the match result before scrobbling'});
 
 export const playObjectSchema = playObjectMinimalSchema.extend({
     original: playOriginalSchema.optional(),
     scrobble: scrobbleResultSchema.optional(),
     // has no dates to convert so it is passed through as-is
     lifecycle: z.custom<LifecycleStep>().array().optional(),
-});
+}).meta({id: 'Play'});
 
 // Loose versions of the schemas above, used for (de)serializing stored/received plays so unknown keys are passed through as-is.
 // ponytail: nested plays are loose minimal plays, so original/scrobble on a nested play are passed through without converting dates. Nothing reads them, types don't expose them.
@@ -234,7 +234,7 @@ export const playObjectInternalSchema = playMinimalInternalSchema.extend({
         mergedScrobble: playMinimalInternalSchema.optional(),
     }).loose().optional(),
     lifecycle: playObjectSchema.shape.lifecycle,
-}).loose();
+}).loose().meta({id: 'PlayLoose'});
 
 export const sourcePlayerSchema = z.object({
     /** unique tuple identifying user and device */
@@ -264,7 +264,7 @@ export const sourcePlayerSchema = z.object({
         /** When player has not reported any new updates for N * 2 seconds */
         orphaned: z.boolean().meta({description: 'When player has not reported any new updates for N * 2 seconds'}),
     }).meta({description: 'status of player'}),
-});
+}).meta({id: 'Player'});
 
 // Types
 //

@@ -209,6 +209,7 @@ export const generateSourceApiJson = (data: Partial<ComponentSourceApiJson> = {}
         lastImport: undefined,
         lastImportSuccess: undefined,
         ...common,
+        mode: 'source',
         sot,
         supportsUpstreamRecentlyPlayed,
         tracksDiscovered,
@@ -239,6 +240,7 @@ export const generateClientApiJson = (data: Partial<ComponentClientApiJson> = {}
         lastImport: undefined,
         lastImportSuccess: undefined,
         ...common,
+        mode: 'client',
         tracksScrobbled: common.countLive,
         players,
         supportsNowPlaying: Object.keys(players).length > 0,
@@ -271,9 +273,9 @@ export const generateComponentApiJson = (data: Partial<ComponentCommonApiJson> =
     }
 
     if(mode === 'source') {
-        return generateSourceApiJson({mode, type, ...data});
+        return generateSourceApiJson({...data, mode, type});
     }
-    return generateClientApiJson({mode, type, ...data});
+    return generateClientApiJson({...data, mode, type});
 }
 
 export const generateSourcePlayerJson = (data: Partial<SourcePlayerJson> = {}, opts: {art?: boolean, position?: boolean, status?: boolean} = {}): SourcePlayerJson => {

@@ -1,9 +1,11 @@
 import { eq, sql } from "drizzle-orm";
 import type { Logger } from "@foxxmd/logging";
 import dayjs from "dayjs";
-import type { ComponentStat, NowPlayingOption, PublicDashboardData, PublicPlay } from "../../core/Api.ts";
+import type { ComponentStat, DashboardPlay, NowPlayingOption, PublicDashboardData } from "../../core/Api.ts";
 import { CALCULATED_PLAYER_STATUSES } from "../../core/Atomic.ts";
-import type { PlayObject, SourcePlayerJson, SourcePlayerObj } from "../../core/PlaySchema.ts";
+import type { SourcePlayerJson, SourcePlayerObj } from "../../core/PlaySchema.ts";
+import type * as z from "zod";
+import type { dashboardPlaySchema } from "../../core/Api.ts";
 import type { PublicNowPlaying } from "../../core/UserSettings.ts";
 import { getUserSettings, type UserSettingsValues } from "./auth/userSettings.ts";
 import { components } from "./database/drizzle/schema/schema.ts";
@@ -81,13 +83,14 @@ const httpUrl = (val?: string): string | undefined => {
     }
 }
 
-const toPublicPlay = (play: PlayObject): PublicPlay => {
-    const {artists, albumArtists, album, track, duration, meta, listenedFor, repeat} = play.data;
+/** Any Play, Dayjs or JSON dates, since none of the dashboard fields are dates */
+const toDashboardPlay = (play: z.input<typeof dashboardPlaySchema>): DashboardPlay => {
+    const {artists, albumArtists, album, track, duration, listenedFor, repeat} = play.data;
     const {source, musicService, url} = play.meta;
     const web = httpUrl(url?.web);
     const origin = httpUrl(url?.origin);
     return {
-        data: {artists, albumArtists, album, track, duration, meta, listenedFor, repeat},
+        data: {artists, albumArtists, album, track, duration, listenedFor, repeat},
         meta: {source, musicService, url: web === undefined && origin === undefined ? undefined : {web, origin}},
     };
 }
@@ -99,8 +102,8 @@ const toPublicPlay = (play: PlayObject): PublicPlay => {
  * When several are playing keep showing the last picked one, otherwise sort by source then platform so the pick is deterministic.
  * Returns null when nothing is playing or the configured Source does not exist (anymore).
  * */
-export const sourceNowPlaying = (userId: string, sources: DashboardComponents['sources'], from: Exclude<PublicNowPlaying, {from: 'client'}>): PublicPlay | null => {
-    const candidates: {key: string, sourceType: string, play: PlayObject}[] = [];
+export const sourceNowPlaying = (userId: string, sources: DashboardComponents['sources'], from: Exclude<PublicNowPlaying, {from: 'client'}>): DashboardPlay | null => {
+    const candidates: {key: string, sourceType: string, play: z.input<typeof dashboardPlaySchema>}[] = [];
     for (const source of sources) {
         if (!hasPlayers(source) || (from.from === 'source' && source.getUid() !== from.uid) || !source.isMonitoring()) {
             continue;
@@ -108,7 +111,7 @@ export const sourceNowPlaying = (userId: string, sources: DashboardComponents['s
         for (const player of source.players.values()) {
             const {platformId, play, status} = player.getApiState();
             if (play !== undefined && status.calculated === CALCULATED_PLAYER_STATUSES.playing && status.stale !== true && status.orphaned !== true) {
-                candidates.push({key: `${source.type}-${source.getUid()}-${platformId}`, sourceType: source.type, play: play as PlayObject});
+                candidates.push({key: `${source.type}-${source.getUid()}-${platformId}`, sourceType: source.type, play});
             }
         }
     }
@@ -118,7 +121,7 @@ export const sourceNowPlaying = (userId: string, sources: DashboardComponents['s
     }
     const picked = candidates.find(x => x.key === lastNowPlaying.get(userId)) ?? candidates.sort((a, b) => a.key.localeCompare(b.key))[0];
     lastNowPlaying.set(userId, picked.key);
-    const publicPlay = toPublicPlay(picked.play);
+    const publicPlay = toDashboardPlay(picked.play);
     publicPlay.meta.source = picked.sourceType;
     return publicPlay;
 }
@@ -130,7 +133,7 @@ export const sourceNowPlaying = (userId: string, sources: DashboardComponents['s
  * so their Now Playing is only shown until it expires upstream. Realtime clients clear it themselves.
  * Returns null when nothing is playing or the client cannot report Now Playing.
  * */
-export const clientNowPlaying = (client: NowPlayingClient): PublicPlay | null => {
+export const clientNowPlaying = (client: NowPlayingClient): DashboardPlay | null => {
     if (!client.supportsNowPlaying || !client.nowPlayingEnabled) {
         return null;
     }
@@ -138,12 +141,12 @@ export const clientNowPlaying = (client: NowPlayingClient): PublicPlay | null =>
     if (player?.play === undefined || (player.expiration !== undefined && !dayjs(player.expiration).isAfter(dayjs()))) {
         return null;
     }
-    const publicPlay = toPublicPlay(player.play as unknown as PlayObject);
+    const publicPlay = toDashboardPlay(player.play);
     publicPlay.meta.source = client.nowPlayingLastSource?.type;
     return publicPlay;
 }
 
-const resolveNowPlaying = (userId: string, comps: DashboardComponents, from: PublicNowPlaying, logger?: Logger): PublicPlay | null => {
+const resolveNowPlaying = (userId: string, comps: DashboardComponents, from: PublicNowPlaying, logger?: Logger): DashboardPlay | null => {
     if (from.from !== 'anySource') {
         const list: {getUid?: () => string}[] = from.from === 'client' ? comps.clients.filter(canNowPlay) : comps.sources.filter(hasPlayers);
         const found = list.find(x => x.getUid?.() === from.uid);
@@ -204,14 +207,14 @@ export const buildPublicDashboard = async (db: DbConcrete, userId: string, comps
             with: {parent: {with: {component: {columns: {type: true}}}}},
         });
         const seen = new Set<number>();
-        const recent: PublicPlay[] = [];
+        const recent: DashboardPlay[] = [];
         for (const row of scrobbled) {
             const key = row.parentId ?? row.id;
             if (seen.has(key)) {
                 continue;
             }
             seen.add(key);
-            const publicPlay = toPublicPlay((row.parent ?? row).play);
+            const publicPlay = toDashboardPlay((row.parent ?? row).play);
             // the play's own meta.source is whatever the source set (sometimes its name), only expose the type
             publicPlay.meta.source = row.parent?.component?.type;
             recent.push(publicPlay);

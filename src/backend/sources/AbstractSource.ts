@@ -368,6 +368,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             lastImportSuccess: undefined,
             ...super.getApiData(),
             ...this.getComponentApiData(),
+            mode: 'source',
             type: this.type,
             status: this.status,
             players: {},

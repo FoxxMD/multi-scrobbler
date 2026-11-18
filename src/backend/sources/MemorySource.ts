@@ -1,9 +1,10 @@
+import { asJsonPlayer } from "../../core/PlayMarshalUtils.ts";
 import type {Logger} from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
 import type { EventEmitter } from "events";
 import { AsyncTask, SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
 import { PARSED_FROM, SOURCE_SOT, type SOURCE_SOT_TYPES } from "../../core/Atomic.ts";
-import type { PlayObject, SourcePlayerJson, SourcePlayerObj } from "../../core/PlaySchema.ts";
+import type { PlayObject, SourcePlayerJson } from "../../core/PlaySchema.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
 import {
     asPlayerStateDataMaybePlay,
@@ -163,13 +164,11 @@ export default class MemorySource extends AbstractSource {
         return discoveredCleanupPlay;
     }
 
-    playersToObject = (): Record<string, SourcePlayerObj> => {
-        if(this.players.size === 0) {
-            return {};
-        }
-        const record: Record<string, SourcePlayerObj> = {};
+    /** Players as JSON, for the API */
+    playersToJson = (): Record<string, SourcePlayerJson> => {
+        const record: Record<string, SourcePlayerJson> = {};
         for(const [k,v] of this.players.entries()) {
-            record[k] = v.getApiState();
+            record[k] = asJsonPlayer(v.getApiState());
         }
         return record;
     }
@@ -178,7 +177,7 @@ export default class MemorySource extends AbstractSource {
         return {
             ...super.getApiData(),
             sot: this.playerSourceOfTruth,
-            players: this.playersToObject() as unknown as Record<string, SourcePlayerJson>
+            players: this.playersToJson()
         }
     }
 

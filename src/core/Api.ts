@@ -1,8 +1,8 @@
 import { creditSchema, playTrackDataSchema, COMPONENT_AUTH_TYPE, componentTypeSchema, MONITORING_ORIGIN_SYSTEM, MONITORING_ORIGIN_USER, sourceSotTypes, PLAY_STATES, QUEUE_NAMES, QUEUE_STATUSES, queueContextSchema, type QueueStatus, type ClientType, creditBaseSchema, trackSearchHash, albumSearchHash, artistSearchHash } from "./Atomic.ts"
-import type { LogEvent, SourceType, TrackData } from "./Atomic.ts"
+import type { LogEvent, SourceType } from "./Atomic.ts"
 import type { ComponentType, DateLike, ErrorLike, PlayState, QueueName } from "./Atomic.ts"
-import type { JsonPlayObject, SourcePlayerJson, DateSide } from "./PlaySchema.ts"
-import { playObjectSchema, sourcePlayerSchema, zDayjs, zDayjsStrict } from "./PlaySchema.ts"
+import type { SourcePlayerJson, DateSide } from "./PlaySchema.ts"
+import { playObjectInternalSchema, publicPlayDataSchema, publicPlayMetaSchema, sourcePlayerSchema, zDayjs, zDayjsStrict } from "./PlaySchema.ts"
 import type { Dayjs } from "dayjs"
 import type { ErrorIsh } from "./ErrorUtils.ts"
 import { playEventSchema } from "./PlayEvent.ts"
@@ -16,7 +16,8 @@ export const playApiCommonSchema = z.object({
     uid: z.string().meta({description: 'unique id for a Play'}),
     componentId: z.int().nullable().meta({description: 'id of the Source/Client Play was created in'}),
     state: z.enum(PLAY_STATES as [PlayState, ...PlayState[]]),
-    play: playObjectSchema,
+    // loose so a Play's unknown (source specific) keys are still sent
+    play: playObjectInternalSchema,
     /** dash-joined list of Play properties removed by retention compaction, IE 'input-transform' */
     compacted: z.string().nullable().meta({description: "dash-joined list of Play properties removed by retention compaction, IE 'input-transform'"}),
     playedAt: zDayjs.nullable(),
@@ -28,9 +29,9 @@ export const playInputApiSchema = z.object({
     id: z.int(),
     /** raw data the Play was built from */
     data: z.custom<object>().nullable().meta({description: 'raw data the Play was built from'}),
-    play: playObjectSchema.meta({description: 'the original play before any transforms were applied'}),
+    play: playObjectInternalSchema.meta({description: 'the original play before any transforms were applied'}),
     createdAt: zDayjs.nullable(),
-});
+}).meta({id: 'PlayInput'});
 
 export const queueStateApiSchema = z.object({
     id: z.int(),
@@ -41,14 +42,14 @@ export const queueStateApiSchema = z.object({
     updatedAt: zDayjs,
     createdAt: zDayjs,
     context: queueContextSchema.loose().nullable(),
-});
+}).meta({id: 'QueueState'});
 
 export const playApiCommonDetailedSchema = playApiCommonSchema.extend({
     error: errorLikeSchema.nullable(),
     input: playInputApiSchema.optional(),
     queueStates: queueStateApiSchema.array(),
     events: playEventSchema.array().optional(),
-});
+}).meta({id: 'PlayDetailed'});
 
 export type PlayApiCommon<D extends DateLike = string> = DateSide<D, typeof playApiCommonSchema>;
 export type PlayInputApi<D extends DateLike = string> = DateSide<D, typeof playInputApiSchema>;
@@ -153,26 +154,29 @@ const componentDetailedApiSchema = componentCommonApiSchema.extend({
 }).extend(componentHistoricalApiSchema.partial().shape);
 
 export const componentClientApiSchema = componentDetailedApiSchema.extend({
+    mode: z.literal('client'),
     tracksScrobbled: z.int(),
     supportsNowPlaying: z.boolean(),
     players: z.record(z.string(), sourcePlayerSchema.extend({
         /** when a now playing that is not realtime is cleared */
         expiration: zDayjsStrict.optional().meta({description: 'when a now playing that is not realtime is cleared'}),
     })),
-});
+}).meta({id: 'Client'});
 export type ComponentClientApiJson = z.input<typeof componentClientApiSchema>;
 
 export const componentSourceApiSchema = componentDetailedApiSchema.extend({
+    mode: z.literal('source'),
     sot: z.enum(sourceSotTypes),
     supportsUpstreamRecentlyPlayed: z.boolean(),
     tracksDiscovered: z.int(),
     wakeAt: zDayjsStrict.optional(),
     sleeping: z.boolean(),
-});
+}).meta({id: 'Source'});
 export type ComponentSourceApiJson = z.input<typeof componentSourceApiSchema>;
 
 export type SubsonicSourceApiJson = ComponentSourceApiJson & { playbackReporting?: boolean }
 
+export const componentsApiSchema = z.discriminatedUnion('mode', [componentSourceApiSchema, componentClientApiSchema]);
 export type ComponentsApiJson = ComponentSourceApiJson | ComponentClientApiJson;
 
 export const isComponentSourceApiJson = (data: ComponentCommonApiJson): data is ComponentSourceApiJson => {
@@ -269,11 +273,16 @@ export const queryPlaysRequestSchema = queryPlaysOptsSchema.omit({componentId: t
 
 export type QueryPlaysOptsJson = z.input<typeof queryPlaysRequestSchema>;
 
-export interface PaginatedQueryResponse {
-    limit: number;
-    offset: number;
-    total?: number;
-}
+export const paginatedQueryResponseSchema = z.object({
+    limit: z.int(),
+    offset: z.int(),
+    total: z.int().optional(),
+});
+export type PaginatedQueryResponse = z.infer<typeof paginatedQueryResponseSchema>;
+export const paginatedResponseSchema = <T extends z.ZodType>(item: T) => z.object({
+    data: item.array(),
+    meta: paginatedQueryResponseSchema,
+});
 export interface PaginatedResponse<T> {
     data: T[];
     meta: PaginatedQueryResponse;
@@ -439,57 +448,61 @@ export type ArtistSearchSimpleRequestQuery = z.infer<typeof artistSearchSimpleRe
 
 export const EXTERNAL_ART_URL_REGEX = new RegExp(/api\/components\/\d+\/art/);
 
-export interface ComponentStat {
-    count: number;
-    types?: (SourceType | ClientType)[];
-}
+export const componentStatSchema = z.object({
+    count: z.int(),
+    types: z.custom<SourceType | ClientType>().array().optional(),
+});
+export type ComponentStat = z.infer<typeof componentStatSchema>;
 
-export interface PublicDashboardData {
+/** The parts of a public Play shown on the public dashboard */
+export const dashboardPlaySchema = z.object({
+    data: publicPlayDataSchema.pick({track: true, artists: true, albumArtists: true, album: true, duration: true, listenedFor: true, repeat: true}),
+    /** `source` is the type of the component the Play came from (spotify, jellyfin...), never its name */
+    meta: publicPlayMetaSchema.pick({source: true, musicService: true, url: true})
+        .meta({description: '`source` is the type of the component the Play came from (spotify, jellyfin...), never its name'}),
+}).meta({id: 'DashboardPlay'});
+export type DashboardPlay = z.infer<typeof dashboardPlaySchema>;
+
+export const publicDashboardDataSchema = z.object({
     /** Total count of successfuly scrobbed Plays from all components for a user.
      * 
      * This is equivalent to the sum of the `countLive` property on all `client` type drizzle entities */
-    scrobbles?: number;
+    scrobbles: z.int().optional().meta({description: 'Total count of successfuly scrobbed Plays from all components for a user'}),
     /** Total count of discovered Plays from all components for a user.
      * 
      * This is equivalent to the sum of the `countLive` property on all `source` type drizzle entities */
-    plays?: number;
+    plays: z.int().optional().meta({description: 'Total count of discovered Plays from all components for a user'}),
     /** Total number of seconds for all discovered Plays for all components for a user.
      * 
      * This uses `listenedFor` on a Play if present, otherwise falls back to full `duration`, or the Play is skipped during summation. */
-    listened?: number;
+    listened: z.number().optional().meta({description: 'Total number of seconds for all discovered Plays for all components for a user. Uses listenedFor on a Play if present, otherwise duration'}),
     /** Data about all `source` type components for a User
      * 
      * * `count` is the total number of components
      * * `types` is an array of unique component types
      **/
-    sources?: ComponentStat;
+    sources: componentStatSchema.optional().meta({description: 'Data about all source type components for a User: count is the total number of components, types is an array of unique component types'}),
     /** Data about all `client` type components for a User
      * 
      * * `count` is the total number of components
      * * `types` is an array of unique component types
      **/
-    clients?: ComponentStat;
+    clients: componentStatSchema.optional().meta({description: 'Data about all client type components for a User: count is the total number of components, types is an array of unique component types'}),
     /** A list of unique, recently scrobbled Plays.
      * 
      * Unique in that they all have distinct PlayData, rather than the same Discovered Play sent to 3x clients (but its all the same data)
      **/
-    recent?: PublicPlay[]
-    /** The currently playing Play, null when nothing is playing. undefined = Now Playing is not enabled
-     *
-     * `meta.source` is the type of the component it came from (spotify, jellyfin...), never its name
-     * */
-    nowPlaying?: PublicPlay | null
-}
+    recent: dashboardPlaySchema.array().optional().meta({description: 'A list of unique, recently scrobbled Plays (distinct PlayData, rather than the same Discovered Play sent to many clients)'}),
+    /** The currently playing Play, null when nothing is playing. undefined = Now Playing is not enabled */
+    nowPlaying: dashboardPlaySchema.nullable().optional().meta({description: 'The currently playing Play, null when nothing is playing. Not present when Now Playing is not enabled'}),
+});
+export type PublicDashboardData = z.infer<typeof publicDashboardDataSchema>;
 
 /** A Source or client that can be picked as the public dashboard's Now Playing (publicDashboardSettings.nowPlaying) */
-export interface NowPlayingOption {
-    from: 'source' | 'client'
-    uid: string
-    name: string
-    type: string
-}
-
-export type PublicPlay = {
-    data: TrackData & Pick<JsonPlayObject['data'], 'listenedFor' | 'repeat'>,
-    meta: Pick<JsonPlayObject['meta'], 'source' | 'musicService' | 'url'>,
-}
+export const nowPlayingOptionSchema = z.object({
+    from: componentTypeSchema,
+    uid: z.string(),
+    name: z.string(),
+    type: z.string(),
+}).meta({description: "A Source or client that can be picked as the public dashboard's Now Playing"});
+export type NowPlayingOption = z.infer<typeof nowPlayingOptionSchema>;

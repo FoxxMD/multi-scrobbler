@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import { Traverse, type TraverseContext } from 'neotraverse/modern';
 import { REGEX_ISO8601_LOOSE } from './Atomic.ts';
-import type { JsonPlayObject, PlayObject } from './PlaySchema.ts';
+import type { JsonPlayObject, PlayObject, SourcePlayerJson, SourcePlayerObj } from './PlaySchema.ts';
 import { playObjectInternalSchema } from './PlaySchema.ts';
 
 interface BlockPath { key: string, parent: string };
@@ -45,6 +45,10 @@ export const asJsonPlayObject = (play: PlayObject): JsonPlayObject =>
 /** Deserialize a JSON Play to a Play (Dayjs dates). Throws if the data does not validate. */
 export const asPlay = (data: JsonPlayObject): PlayObject =>
   playObjectInternalSchema.decode(data as Parameters<typeof playObjectInternalSchema.decode>[0]) as PlayObject;
+
+/** Serialize a Player to its JSON shape. Only its Play has Dayjs dates. Throws if the Play does not validate. */
+export const asJsonPlayer = (player: SourcePlayerObj): SourcePlayerJson =>
+  ({...player, play: player.play === undefined ? undefined : asJsonPlayObject(player.play)});
 
 /**
  * Parse stored play JSON that may be in a legacy shape, without validating it.

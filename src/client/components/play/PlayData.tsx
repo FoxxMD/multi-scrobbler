@@ -15,7 +15,7 @@ import { EditIconRaw, EllipsisButton, hasMusicServiceIcon } from '../icons/Chakr
 import type { IconType } from 'react-icons/lib';
 import { capitalize, capitalizeWords } from '../../../core/StringUtils.js';
 import { getMusicServiceIconTooltip, MusicServiceIndicatorStack } from '../musicServices/MusicServiceIndicators.js';
-import type { PublicPlay } from '../../../core/Api.js';
+import type { DashboardPlay } from '../../../core/Api.js';
 
 const EmptyPlayData = () => {
     return (
@@ -160,7 +160,7 @@ const SourceMaybeLink = (props: PropsWithChildren<{link?: string}>) => {
     return <Link key="weblink" variant="underline" target="_blank" href={props.link}>{props.children}</Link>
 }
 
-export const PlayDataDataList = (props: { play: PublicPlay, dates?: DisplayDates, showMbid?: boolean }) => {
+export const PlayDataDataList = (props: { play: DashboardPlay, dates?: DisplayDates, showMbid?: boolean }) => {
 
     const {
         play,

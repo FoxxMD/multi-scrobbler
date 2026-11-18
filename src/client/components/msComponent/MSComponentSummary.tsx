@@ -105,7 +105,7 @@ export const MSComponentSummaryFetchable = (props: {componentId: number, data: C
                         if(old === undefined) {
                             return old;
                         }
-                        const componentData = payload.data as MsSseEventPayload<Partial<ComponentCommonApiJson>>;
+                        const componentData = payload.data as MsSseEventPayload<Partial<Omit<ComponentCommonApiJson, 'mode'>>>;
                             return {...old, ...componentData.data};
                     });
             }

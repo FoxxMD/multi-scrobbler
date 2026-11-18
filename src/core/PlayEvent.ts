@@ -49,7 +49,7 @@ export const playEventSchema = z.discriminatedUnion('eventName', [
     basePlayEventSchema.extend({eventName: z.literal('dupeCheck'), data: playMatchResultSchema}),
     basePlayEventSchema.extend({eventName: z.literal('scrobbleResult'), data: scrobbleResultSchema}),
     basePlayEventSchema.extend({eventName: z.literal('updatePlay'), data: playEventUpdatePlayDataSchema}),
-]);
+]).meta({id: 'PlayEvent'});
 
 /** Selects the JSON (string dates) or backend (Dayjs dates) side of playEventSchema. Distributes over DateLike. */
 export type PlayEvent<D extends DateLike = Dayjs> = D extends string ? z.input<typeof playEventSchema> : z.output<typeof playEventSchema>;

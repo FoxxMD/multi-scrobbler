@@ -24,7 +24,7 @@ import { findAuthIssue, SimpleError } from "../common/errors/MSErrors.ts";
 import { DrizzlePlayRepository, type QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.ts";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.ts";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
-import {componentStateBodySchema, playStateBodySchema, queryPlaysRequestSchema, type ComponentClientApiJson, type ComponentSourceApiJson, asSerializablePlaySelect, trackDataCreditBaseSchema, type TrackDataCreditBase, NDJSON_MEDIA_TYPE, trackSearchSimpleRequestQuerySchema, albumSearchSimpleRequestQuerySchema, artistSearchSimpleRequestQuerySchema } from "../../core/Api.ts";
+import {componentStateBodySchema, playStateBodySchema, queryPlaysRequestSchema, componentsApiSchema, componentClientApiSchema, paginatedResponseSchema, playApiCommonDetailedSchema, publicDashboardDataSchema, nowPlayingOptionSchema, type ComponentClientApiJson, type ComponentSourceApiJson, asSerializablePlaySelect, trackDataCreditBaseSchema, type TrackDataCreditBase, NDJSON_MEDIA_TYPE, trackSearchSimpleRequestQuerySchema, albumSearchSimpleRequestQuerySchema, artistSearchSimpleRequestQuerySchema } from "../../core/Api.ts";
 import { serializeError } from "serialize-error";
 import { z } from 'zod';
 import type { createTypedRouter, TypedMiddleware } from "@minisylar/express-typed-router";
@@ -33,7 +33,7 @@ import pMap from "p-map";
 import type { PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
 import { stripIndents } from "common-tags";
 import { nameToCredit } from "../../core/MusicMetadata.ts";
-import { asPlay } from "../../core/PlayMarshalUtils.ts";
+import { asJsonPlayer, asPlay } from "../../core/PlayMarshalUtils.ts";
 import { getOwnerId } from "../common/auth/owner.ts";
 import { getNowPlayingOptions, getPublicDashboardEntry } from "../common/dashboard.ts";
 import { deleteUserSetting, getUserSetting, getUserSettings, isUserSettingKey, setUserSetting, type UserSettingKey } from "../common/auth/userSettings.ts";
@@ -334,7 +334,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     setupLastfmEndpointRoutes(app, publicRouter, logger, scrobbleSources);
     setupAuthRoutes(app, router, logger, scrobbleSources, scrobbleClients);
 
-    router.get('/components', {docs: {operationId: 'get-all-sources-clients'}, tags: ['Source/Client'], summary: 'Get All Sources/Clients'}, async (req, res, next) => {
+    router.get('/components', {docs: {operationId: 'get-all-sources-clients'}, tags: ['Source/Client'], summary: 'Get All Sources/Clients', responseSchema: componentsApiSchema.array()}, async (req, res, next) => {
 
         const sourceData = scrobbleSources.sources.filter(x => x.databaseOK).map((x) => {
             const {
@@ -394,16 +394,16 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.json([...sourceData, ...clientData]);
     });
 
-    router.get('/components/:id/players', {docs: {operationId: 'get-source-client-players'}, middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Source/Client Players'}, async (req, res, next) => {
+    router.get('/components/:id/players', {docs: {operationId: 'get-source-client-players'}, middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Source/Client Players', responseSchema: componentClientApiSchema.shape.players}, async (req, res, next) => {
         if(req.component instanceof MemorySource) {
-            return res.json(req.component.playersToObject());
+            return res.json(req.component.playersToJson());
         } else if(req.component instanceof AbstractScrobbleClient && req.component.nowPlayingEnabled) {
             return res.json(req.component.getNowPlayingPlayers());
         }
         return res.json({});
     });
 
-    router.get('/components/:id/players/:platformId', {docs: {operationId: 'get-specific-source-client-player'}, middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Specific Source/Client Player'}, async (req, res, next) => {
+    router.get('/components/:id/players/:platformId', {docs: {operationId: 'get-specific-source-client-player'}, middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Specific Source/Client Player', responseSchema: componentClientApiSchema.shape.players.valueType}, async (req, res, next) => {
         const {
             params: {
                 platformId
@@ -415,7 +415,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
             if(player === undefined) {
                 return res.status(400).json({error: `No player with platform id ${platformId} exists`});
             }
-            return res.json(player);
+            return res.json(asJsonPlayer(player.getApiState()));
         } else if(req.component instanceof AbstractScrobbleClient && req.component.nowPlayingEnabled) {
             const players = req.component.getNowPlayingPlayers();
             if(players[platformId as string] === undefined) {
@@ -426,7 +426,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.status(400).json({error: `Component does not support players`});
     });
 
-    router.get('/components/:id', {docs: {operationId: 'get-source-client'}, middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Source/Client'}, async (req, res) => {
+    router.get('/components/:id', {docs: {operationId: 'get-source-client'}, middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Source/Client', responseSchema: componentsApiSchema}, async (req, res) => {
         const {
             component,
         } = req;
@@ -553,6 +553,7 @@ Note: this is only supported by some components.`
         docs: {operationId: 'get-paginated-plays'},
         middleware: [componentAwareMiddle],
         querySchema: queryPlaysRequestSchema,
+        responseSchema: paginatedResponseSchema(playApiCommonDetailedSchema),
         tags: ['Plays'],
         summary: 'Get Paginated Plays'
     }, async (req, res, next) => {
@@ -563,12 +564,13 @@ Note: this is only supported by some components.`
 
         const playRes = await component.getPlaysPaginated(query);
 
-        return res.json({...playRes, data: playRes.data.map(x => asSerializablePlaySelect(x))});
+        return res.json(paginatedResponseSchema(playApiCommonDetailedSchema).encode({...playRes, data: playRes.data.map(x => asSerializablePlaySelect(x))}));
     });
 
     router.get('/components/:id/plays/:uid', {
         docs: {operationId: 'get-play'},
         middleware: [componentAwareMiddle],
+        responseSchema: playApiCommonDetailedSchema,
         tags: ['Plays'],
         summary: 'Get Play'
     }, async (req, res, next) => {
@@ -583,7 +585,7 @@ Note: this is only supported by some components.`
         if(playRes === undefined) {
             return res.sendStatus(404);
         }
-        return res.json(asSerializablePlaySelect(playRes));
+        return res.json(playApiCommonDetailedSchema.encode(asSerializablePlaySelect(playRes)));
     });
 
     router.delete('/components/:id/plays/:uid', {
@@ -618,7 +620,8 @@ Note: this is only supported by some components.`
         middleware: [componentAwareMiddle,jsonParser],
         tags: ['Plays'],
         summary: 'Update Play',
-        bodySchema: playEditStrictCreateSchema
+        bodySchema: playEditStrictCreateSchema,
+        responseSchema: playApiCommonDetailedSchema
     }, async (req, res, next) => {
         const {
             component,
@@ -631,7 +634,7 @@ Note: this is only supported by some components.`
         const play: PlayObject = asPlay(body);
 
         const playRes = await component.updatePlay(playUid as string, play.data);
-        return res.json(asSerializablePlaySelect(playRes));
+        return res.json(playApiCommonDetailedSchema.encode(asSerializablePlaySelect(playRes)));
     });
 
     router.post('/components/:id/plays/queue', {
@@ -1000,7 +1003,8 @@ Note: this is only supported by some components.`
     publicRouter.get('/api/dashboard', {
         docs: {operationId: 'get-dashboard'},
         tags: ['App Meta'],
-        description: 'Data for the default public dashboard, if it is enabled'
+        description: 'Data for the default public dashboard, if it is enabled',
+        responseSchema: publicDashboardDataSchema
     }, async (req, res) => {
         const db = await root.items.db();
         const {data, expires} = await getPublicDashboardEntry(db, await getOwnerId(db), {sources: scrobbleSources.sources, clients: scrobbleClients.clients}, logger);
@@ -1012,7 +1016,8 @@ Note: this is only supported by some components.`
     router.get('/dashboard/now-playing-options', {
         docs: {operationId: 'get-dashboard-now-playing-options'},
         tags: ['App Meta'],
-        description: 'Sources and clients that can be used as Now Playing for the public dashboard'
+        description: 'Sources and clients that can be used as Now Playing for the public dashboard',
+        responseSchema: nowPlayingOptionSchema.array()
     }, async (req, res) => res.json(getNowPlayingOptions({sources: scrobbleSources.sources, clients: scrobbleClients.clients})));
 
     publicRouter.get('/api/version', {docs: {operationId: 'get-version'}, tags: ['App Meta']}, async (req, res) => {

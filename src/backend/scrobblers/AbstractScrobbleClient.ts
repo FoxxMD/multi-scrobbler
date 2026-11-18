@@ -1,3 +1,4 @@
+import { asJsonPlayer } from "../../core/PlayMarshalUtils.ts";
 import { childLogger, type Logger, type LogLevel } from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
 import type {Duration} from "dayjs/plugin/duration.js";
@@ -440,6 +441,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             lastImportSuccess: undefined,
             ...super.getApiData(),
             ...this.getComponentApiData(),
+            mode: 'client',
             type: this.type,
             status: this.status,
             queued: this.queuedLength,
@@ -459,7 +461,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             return {};
         }
         return {
-            [this.nowPlayingLastPlay.platformId]: {...(this.nowPlayingLastPlay as unknown as SourcePlayerJson), expiration: !this.nowPlayingIsRealtime ? this.nowPlayingExpirationDate?.toISOString() : undefined }
+            [this.nowPlayingLastPlay.platformId]: {...asJsonPlayer(this.nowPlayingLastPlay), expiration: !this.nowPlayingIsRealtime ? this.nowPlayingExpirationDate?.toISOString() : undefined }
         }
     }
 
