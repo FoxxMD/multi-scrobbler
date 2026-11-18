@@ -4,10 +4,10 @@ import { Container, Stack } from '@chakra-ui/react';
 
 import {Provider} from "../../../client/components/Provider.js";
 import { ListFilters, getTodayRange } from "../../../client/components/playActivity/ListFilters.js";
-import type {QueryPlaysOptsJson} from "../../../core/Api.js";
+import type {QueryPlaysOptsJsonRefreshable} from "../../../core/Api.js";
 
 const ContainedFilter = (props: any) => {
-    const [filters, setFilter] = useState<QueryPlaysOptsJson>({
+    const [filters, setFilter] = useState<QueryPlaysOptsJsonRefreshable>({
       playedAt: {
         type: 'between',
         range: getTodayRange(),

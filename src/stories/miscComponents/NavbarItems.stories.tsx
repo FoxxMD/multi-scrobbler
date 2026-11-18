@@ -24,7 +24,7 @@ const meta = preview.meta({
      return (<SideNavItems {...args} />) 
     },
 decorators: [
-    (Story) => (<Provider><Container maxWidth="lg"><Box display="flex" flexDir="column" gap="6" flex="1"><Story/></Box></Container></Provider>),
+    (Story: React.ComponentType) => (<Provider><Container maxWidth="lg"><Box display="flex" flexDir="column" gap="6" flex="1"><Story/></Box></Container></Provider>),
     withRouter
   ]
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args

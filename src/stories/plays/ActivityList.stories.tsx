@@ -4,7 +4,7 @@ import React from 'react';
 import { http, HttpResponse, delay, sse, type StrictRequest, type DefaultBodyType, type JsonBodyType } from 'msw';
 
 import { Container } from '@chakra-ui/react';
-import { ListContainerFetchable, ListContainerFilterable, ActivityList } from "../../client/components/playActivity/ActivityList.js";
+import { ListContainerFetchable, ListContainerFilterable } from "../../client/components/playActivity/ActivityList.js";
 import {Provider} from "../../client/components/Provider.js";
 import { generatePlay } from "../../core/tests/utils/PlayTestUtils.js";
 import { type PlayState, qsOptions } from "../../core/Atomic.js";
@@ -22,7 +22,7 @@ import { faker } from '@faker-js/faker';
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
   title: 'Plays/List',
-  component: ActivityList,
+  component: ListContainerFilterable,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
@@ -30,11 +30,11 @@ const meta = preview.meta({
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
   // More on argTypes: https://storybook.js.org/docs/api/argtypes
-  // args: {
-  //    data:[
-  //     ] ,
-  // },
-  render: function Render(args, { loaded: { data } }) { return (<ActivityList {...args} data={data ?? []}/>) },
+  args: {
+    componentId: 1,
+    componentType: 'source' as const,
+  },
+  render: function Render(args) { return (<ListContainerFilterable {...args}/>) },
 decorators: [
     (Story) => (<Provider><Container maxWidth="4xl"><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Container></Provider>),
   ]
@@ -85,13 +85,7 @@ const handlePlayRequest = async ({params, request}: PlayRequestMock, list: PlayA
 
 let listLiveData: PlayApiCommonDetailed[] = [];
 export const ListLive = meta.story({
-  component: ListContainerFetchable,
-  render: function Render(args, { loaded: { data } }) { return (<ListContainerFetchable {...args}/>) },
-  args: {
-    render: "virtDynamic",
-    componentId: 1,
-    componentType: 'source'
-  },
+  render: function Render(args) { return (<ListContainerFetchable {...args}/>) },
   parameters: {
     msw: {
       handlers: [
@@ -123,13 +117,6 @@ export const ListLive = meta.story({
 
 let livePlayData: PlayApiCommonDetailed[] = [];
 export const ListLiveFilterable = meta.story({
-  component: ListContainerFilterable,
-  render: function Render(args, { loaded: { data } }) { return (<ListContainerFilterable {...args}/>) },
-  args: {
-    render: "virtDynamic",
-    componentId: 1,
-    componentType: 'source'
-  },
   parameters: {
     msw: {
       handlers: [
@@ -159,13 +146,6 @@ export const ListLiveFilterable = meta.story({
 });
 
 export const ListLiveEmpty = meta.story({
-  component: ListContainerFilterable,
-  render: function Render(args, { loaded: { data } }) { return (<ListContainerFilterable {...args}/>) },
-  args: {
-    render: "virtDynamic",
-    componentId: 1,
-    componentType: 'source'
-  },
   parameters: {
     msw: {
       handlers: [
@@ -183,13 +163,6 @@ export const ListLiveEmpty = meta.story({
 
 let liveNoMorePlayData: PlayApiCommonDetailed[] = [];
 export const ListLiveNoMorePlay = meta.story({
-  component: ListContainerFilterable,
-  render: function Render(args) { return (<ListContainerFilterable {...args}/>) },
-  args: {
-    render: "virtDynamic",
-    componentId: 1,
-    componentType: 'source'
-  },
   parameters: {
     msw: {
       handlers: [
@@ -235,13 +208,6 @@ export const ListLiveNoMorePlay = meta.story({
 
 let liveUpdateData: PlayApiCommonDetailed[] = [];
 export const ListLiveUpdates = meta.story({
-  component: ListContainerFilterable,
-  render: function Render(args, { loaded: { data } }) { return (<ListContainerFilterable {...args}/>) },
-  args: {
-    render: "virtDynamic",
-    componentId: 1,
-    componentType: 'source'
-  },
   parameters: {
     msw: {
       handlers: [
@@ -287,13 +253,6 @@ export const ListLiveUpdates = meta.story({
 
 let livePlayInsertData: PlayApiCommonDetailed[] = [];
 export const ListLiveInsert = meta.story({
-  component: ListContainerFilterable,
-  render: function Render(args, { loaded: { data } }) { return (<ListContainerFilterable {...args}/>) },
-  args: {
-    render: "virtDynamic",
-    componentId: 1,
-    componentType: 'source'
-  },
   parameters: {
     msw: {
       handlers: [

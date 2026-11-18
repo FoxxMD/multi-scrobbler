@@ -45,7 +45,7 @@ const meta = preview.meta({
     },
 decorators: [
     withRouter,
-    (Story) => (<Provider><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Provider>),
+    (Story: React.ComponentType) => (<Provider><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Provider>),
   ]
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });

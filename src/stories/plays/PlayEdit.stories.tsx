@@ -119,7 +119,7 @@ export const PlayEditableMutateStory = meta.story({
       args.initialPlay = withBrainz(args.initialPlay, {include: ['album','recording','track','artist']});
     }
     const {initialPlay, ...rest} = args;
-    return (<PlayEditableMutable componentId="1" uid="1234" editable play={initialPlay} {...rest}/>) 
+    return (<PlayEditableMutable componentId={1} uid="1234" editable play={initialPlay} {...rest}/>) 
   }
 });
 
