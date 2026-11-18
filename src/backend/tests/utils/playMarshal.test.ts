@@ -6,7 +6,7 @@ import { generatePlayWithLifecycle, playWithLifecycleScrobble } from '../../../c
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { statefulInvariantTransform } from '../../../core/PlayUtils.ts';
 import { playEventSchema } from '../../../core/PlayEvent.ts';
-import { scrobbleToPlayEvent, stateChangeToPlayEvent } from '../../common/database/drizzle/entityUtils.ts';
+import { asPlayEvents, scrobbleToPlayEvent, stateChangeToPlayEvent } from '../../common/database/drizzle/entityUtils.ts';
 
 describe('Play Marshalling', function () {
 
@@ -78,6 +78,17 @@ describe('Play Marshalling', function () {
         expect(dayjs.isDayjs(scrobbleEvent.eventName === 'scrobbleResult' && scrobbleEvent.data.createdAt)).to.be.true;
         expect(dayjs.isDayjs(stateEvent.createdAt)).to.be.true;
         expect(playEventSchema.array().encode(decoded)).to.deep.eq(json);
+    });
+
+    it('decodes Play Event rows with JSON data', async function () {
+        const play = await playWithLifecycleScrobble(generatePlayWithLifecycle());
+        const createdAt = dayjs();
+        const {createdAt: _, ...event} = scrobbleToPlayEvent(play.scrobble!);
+        // data column is stored as JSON so dates come back as strings, createdAt column is a Dayjs
+        const row = {...JSON.parse(JSON.stringify(event)), id: 1, playId: 1, error: null, createdAt};
+        const [decoded] = asPlayEvents([row]);
+        expect(decoded.createdAt).to.eq(createdAt);
+        expect(dayjs.isDayjs(decoded.eventName === 'scrobbleResult' && decoded.data.createdAt)).to.be.true;
     });
 
     it('rejects an unknown Play Event', function () {

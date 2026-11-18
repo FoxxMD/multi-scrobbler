@@ -105,12 +105,12 @@ const NewItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen' | 'compone
                                 <Tabs.Root size="sm" variant="outline" defaultValue="play">
                                     <Tabs.List>
                                         <Tabs.Trigger value="play">Play</Tabs.Trigger>
-                                        {ogInput !== undefined ? <Tabs.Trigger value="source">Source Data</Tabs.Trigger> : null}
+                                        {ogInput ? <Tabs.Trigger value="source">Source Data</Tabs.Trigger> : null}
                                     </Tabs.List>
                                     <Tabs.Content value="play">
                                         <PlayData play={original} />
                                     </Tabs.Content>
-                                    {ogInput !== undefined ? (<Tabs.Content value="source">
+                                    {ogInput ? (<Tabs.Content value="source">
                                         <ChakraCodeBlockShort code={ogInput} />
                                     </Tabs.Content>) : null}
                                 </Tabs.Root>

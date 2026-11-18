@@ -107,7 +107,7 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
         activity,
         sortBy
     } = props;
-    const [updated, setUpdated] = useState<{lastUpdated?: string, updated: boolean}>({lastUpdated: updatedAt, updated: false});
+    const [updated, setUpdated] = useState<{lastUpdated?: string | null, updated: boolean}>({lastUpdated: updatedAt, updated: false});
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setUpdated((old) => {
@@ -258,7 +258,7 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
                 </Accordion.ItemTrigger>
                 <Accordion.ItemContent>
                     <Accordion.ItemBody>
-                        <PlayEditableMutable editable uid={activity.uid} componentId={activity.componentId} compareDefault='Final' play={original ?? activity.play} final={activity.play} />
+                        <PlayEditableMutable editable uid={activity.uid} componentId={activity.componentId!} compareDefault='Final' play={original ?? activity.play} final={activity.play} />
                     </Accordion.ItemBody>
                 </Accordion.ItemContent>
             </Accordion.Item>

@@ -52,11 +52,11 @@ import { generateLoggableAbortReason, ScrobbleSubmitError, SimpleError, StageCha
 import { serializeError} from 'serialize-error';
 import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.ts";
 import { spawn, isAbortError, delay, waitForEvent } from 'abort-controller-x';
-import type { QueryPlaysOpts, WithPlayRelation } from "../common/database/drizzle/repositories/PlayRepository.ts";
+import type { QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.ts";
 import type {PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
 import { GenericRepository } from "../common/database/drizzle/repositories/BaseRepository.ts";
 import assert from "node:assert";
-import { COMPONENT_STATE, type ComponentClientApiJson, type PlayApiCommonDetailed } from "../../core/Api.ts";
+import { COMPONENT_STATE, type ComponentClientApiJson } from "../../core/Api.ts";
 import type {ComponentState} from "react";
 import { PLAY_EVENT_TYPE, type PlayEvent } from "../../core/PlayEvent.ts";
 import { dupeCheckToPlayEvent, queueCompletionStateToPlayEvent, scrobbleToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from "../common/database/drizzle/entityUtils.ts";
@@ -1573,13 +1573,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         const parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
         const parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
         return this.playRepo.findPlaysPaginated({limit: parsedLimit, offset: parsedOffset, with: withQuery, ...rest});
-    }
-
-    public async getPlayApiResponse(uid: string, opts: {with?: WithPlayRelation[]} = {}): Promise<PlayApiCommonDetailed> {
-        const {
-            with: withQuery = ['input','parent-input','queues','events'],
-        } = opts;
-        return await this.playRepo.findByUid(uid, { with: withQuery as WithPlayRelation[] }) as unknown as PlayApiCommonDetailed;
     }
 
     public async deletePlay(play: PlayWith<'children'>, children?: boolean): Promise<void> {

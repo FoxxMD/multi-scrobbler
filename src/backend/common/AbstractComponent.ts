@@ -39,23 +39,23 @@ import type {DbConcrete} from "./database/drizzle/drizzleUtils.ts";
 import type {ComponentSelect, PlayEventNew, PlayEventSelect, PlaySelect, PlaySelectWithQueueStates, PlayWith, QueueStateSelect} from "./database/drizzle/drizzleTypes.ts";
 import { DrizzlePlayRepository, playToRepositoryCreatePlayOpts } from "./database/drizzle/repositories/PlayRepository.ts";
 import type { ClientType, MonitoringStatus, OptionalCacheUsage, QueueContext } from "../../core/Atomic.ts";
-import type { JsonPlayObject, PlayMatchResult } from "../../core/PlaySchema.ts";
+import type { PlayMatchResult } from "../../core/PlaySchema.ts";
 import type {SourceType} from "../../core/Atomic.ts";
 import { DrizzleComponentRepository } from "./database/drizzle/repositories/ComponentRepository.ts";
 import dayjs, { type Dayjs } from "dayjs";
-import { COMPONENT_STATE, type ComponentCommonApi, type ComponentCommonApiJson, type ComponentState, type PlayApiCommonDetailed, type QueueStateApi } from "../../core/Api.ts";
+import { COMPONENT_STATE, type ComponentCommonApi, type ComponentCommonApiJson, type ComponentState, type PlayApiCommonDetailed } from "../../core/Api.ts";
 import type {WebhookPayload} from "./infrastructure/config/health/webhooks.ts";
 import type { ElementOf, MarkRequired } from "ts-essentials";
 import { serializeError } from "serialize-error";
 import { DrizzleQueueRepository } from "./database/drizzle/repositories/QueueRepository.ts";
 import { DrizzlePlayEventsRepository } from "./database/drizzle/repositories/PlayEventsRepository.ts";
-import { entityIsPlayEntity, playUpdateToEvent, queueCompletionStateToPlayEvent, queueStateToPlayEvent, stateChangeToPlayEvent } from "./database/drizzle/entityUtils.ts";
+import { asPlayEvents, entityIsPlayEntity, playUpdateToEvent, queueCompletionStateToPlayEvent, queueStateToPlayEvent, stateChangeToPlayEvent } from "./database/drizzle/entityUtils.ts";
 import pMap from "p-map";
 import type { Gauge } from 'prom-client';
 import type { PlayProcessingResult } from "./infrastructure/PlayProcessing.ts";
 import { isAbortError } from "abort-controller-x";
 import { PlayProcessingError } from "./errors/PlayProcessingError.ts";
-import type { PlayEvent, PlayEventPlayStateChange } from "../../core/PlayEvent.ts";
+import type { PlayEventPlayStateChange } from "../../core/PlayEvent.ts";
 
 export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
 
@@ -797,10 +797,10 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
         this.emitEvent('componentUpdate', payload);
     }
-    protected emitPlayUpdate = (payload: MarkRequired<Partial<PlayApiCommonDetailed>, 'uid'>) => {
+    protected emitPlayUpdate = (payload: MarkRequired<Partial<PlayApiCommonDetailed<Dayjs>>, 'uid'>) => {
         this.emitEvent('playUpdate', payload);
     }
-    protected emitPlayInsert = (payload: PlayApiCommonDetailed) => {
+    protected emitPlayInsert = (payload: PlayApiCommonDetailed<Dayjs>) => {
         this.emitEvent('playInsert', payload);
     }
 
@@ -886,7 +886,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 } else {
                     (playSelect as unknown as PlayWith<'events'>).events = events;
                 }
-                this.emitPlayUpdate({ ...playSelect } as unknown as PlayApiCommonDetailed);
+                this.emitPlayUpdate({ ...playSelect, events: asPlayEvents((playSelect as unknown as PlayWith<'events'>).events) });
                 this.emitEvent('playQueued', {queuedPlay: playSelect});
                 createdQueuedPlays.push(playSelect);
                 this.queuedLength += 1;
@@ -948,14 +948,14 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 const createdEvents = await this.playEventsRepo.createMany([
                     { playId: playRow[0].id, ...stateChangeToPlayEvent({ state: 'queued' }), createdAt: (playRow[0].seenAt ?? dayjs()).add(1, 'ms') },
                     { playId: playRow[0].id, ...queueStateToPlayEvent(queueState), createdAt: queueState.createdAt }
-                ]);
+                ]) as PlayEventSelect[];
                 createdQueuedPlays.push(playRow[0]);
                 this.logger.debug(`Added ${buildTrackString(queueablePlay)} to the queue`);
                 if(this.componentType === COMPONENT_TYPE_CLIENT) {
                     this.setStatus(`Added Play from parent ${queueablePlay.uid} to queue`);
                 }
                 this.emitEvent('playQueued', {queuedPlay: queueablePlay});
-                this.emitPlayInsert({ ...playRow[0], queueStates: [queueState], events: createdEvents } as unknown as PlayApiCommonDetailed);
+                this.emitPlayInsert({ ...playRow[0], queueStates: [queueState], events: asPlayEvents(createdEvents) });
                 this.queuedLength += 1;
                 this.queuedGauge.labels(this.getPrometheusLabels()).inc();
                 // nothing to do with failed/deadletter since these are brand-new plays
@@ -1054,9 +1054,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 const createdEvents = await this.playEventsRepo.createMany(res.events.map(x => ({...x, playId: playEntity.id}))) as PlayEventSelect[];
                 this.emitPlayUpdate({
                     ...res.playEntity, 
-                    events: ((res.playEntity as unknown as PlayWith<'events'>).events ?? []).concat(createdEvents),
+                    events: asPlayEvents(((res.playEntity as unknown as PlayWith<'events'>).events ?? []).concat(createdEvents)),
                     queueStates
-                } as unknown as PlayApiCommonDetailed);
+                });
             }
         }
     }
@@ -1095,8 +1095,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
         this.emitPlayUpdate({uid: dead.uid,
                 state: dead.state,
-                queueStates: dead.queueStates.filter(x => x.queueName !== INGRESS_QUEUE) as unknown as QueueStateApi[],
-                events: createdEvents as unknown as PlayEvent<string>[]
+                queueStates: dead.queueStates.filter(x => x.queueName !== INGRESS_QUEUE),
+                events: asPlayEvents(createdEvents)
         });
 
         if(!lastWasNonFailureState) {
@@ -1169,9 +1169,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         await this.playRepo.updateById(playEntity.id, {state: playEntity.state});
         this.emitPlayUpdate({
             ...playEntity,
-            queueStates: playEntity.queueStates.filter(x => x.queueName !== INGRESS_QUEUE) as unknown as QueueStateApi[],
-            events: ((playEntity as unknown as PlayWith<'events'>).events ?? []).concat(createdEvents),
-        } as unknown as PlayApiCommonDetailed);
+            queueStates: playEntity.queueStates.filter(x => x.queueName !== INGRESS_QUEUE),
+            events: asPlayEvents(((playEntity as unknown as PlayWith<'events'>).events ?? []).concat(createdEvents)),
+        });
         if(queueState.queueStatus !== 'queued') {
             // in failure queue state with retries
             this.emitEvent('deadLetterDequeued', { queuedScrobble: playEntity });
@@ -1186,8 +1186,13 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     abstract processPlay(playEntity: PlaySelectWithQueueStates, signal?: AbortSignal): Promise<PlayProcessingResult>
 
-    public async updatePlay(uid: string, data: Partial<PlayData>): Promise<PlayApiCommonDetailed> {
-        const playRow = await this.playRepo.findByUidWith<'events'>(uid, ['events']);
+    public async getPlayApiResponse(uid: string): Promise<PlayApiCommonDetailed<Dayjs> | undefined> {
+        const playRow = await this.playRepo.findByUid(uid, { with: ['input','parent-input','queues','events'] }) as PlayWith<'queueStates' | 'input' | 'events'> | undefined;
+        return playRow === undefined ? undefined : {...playRow, events: asPlayEvents(playRow.events)};
+    }
+
+    public async updatePlay(uid: string, data: Partial<PlayData>): Promise<PlayApiCommonDetailed<Dayjs>> {
+        const playRow = await this.playRepo.findByUidWith<'events' | 'queueStates'>(uid, ['events', 'queues']);
         if(playRow === undefined) {
             throw new SimpleError(`No play exists with uid ${uid}`);
         }
@@ -1211,14 +1216,14 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         const patch = diffObjects(original, modified);
         const event = playUpdateToEvent({input: {data}, patch});
         await this.playRepo.updateById(playRow.id, {play: playRow.play});
-        const createdEvent = await this.playEventsRepo.create({...event, playId: playRow.id});
-        // @ts-expect-error this should be fine
+        const createdEvent = await this.playEventsRepo.create({...event, playId: playRow.id}) as PlayEventSelect;
         playRow.events.push(createdEvent);
+        const events = asPlayEvents(playRow.events);
         this.emitPlayUpdate({
             uid,
-            events: playRow.events as unknown as PlayEvent<string>[],
-            play: playRow.play as unknown as JsonPlayObject
+            events,
+            play: playRow.play
         })
-        return playRow as unknown as PlayApiCommonDetailed;
+        return {...playRow, events};
     }
 }

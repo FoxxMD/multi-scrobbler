@@ -1,79 +1,75 @@
 import type { CompareOpKey, ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
-import { creditSchema, playTrackDataSchema, type ClientType, type ComponentAuthType, type MonitoringStatus, type QueueContext, type Replace, creditBaseSchema, trackSearchHash, albumSearchHash, artistSearchHash } from "./Atomic.ts"
+import { creditSchema, playTrackDataSchema, PLAY_STATES, QUEUE_STATUSES, queueContextSchema, type QueueStatus, type ClientType, type ComponentAuthType, type MonitoringStatus, creditBaseSchema, trackSearchHash, albumSearchHash, artistSearchHash } from "./Atomic.ts"
 import type { LogEvent, SourceType, TrackData } from "./Atomic.ts"
 import type { ComponentType, DateLike, ErrorLike, PlayState, QueueName, SOURCE_SOT_TYPES } from "./Atomic.ts"
-import type { JsonPlayObject, SourcePlayerJson } from "./PlaySchema.ts"
+import type { JsonPlayObject, SourcePlayerJson, DateSide } from "./PlaySchema.ts"
+import { playObjectSchema, zDayjs } from "./PlaySchema.ts"
 import type { Dayjs } from "dayjs"
 import type { ErrorIsh } from "./ErrorUtils.ts"
-import type { PlayEvent } from "./PlayEvent.ts"
+import { playEventSchema } from "./PlayEvent.ts"
 import * as z from "zod"
-import type { ElementOf, MarkOptional } from "ts-essentials";
 import type { ErrorObject } from "serialize-error";
 import { serializeError } from "serialize-error";
 
-export interface PlayApiCommon {
-    uid: string
-    componentId: number
-    state: PlayState
-    play: JsonPlayObject
-    compacted: boolean
-    playedAt: string
-    seenAt: string
-    updatedAt: string
-    parentUid?: string
-    // TODO add parent source type/name?
-}
+const errorLikeSchema = z.custom<ErrorLike>();
 
-export interface PlayInputApi {
-    id: number
-    data?: object
-    play?: JsonPlayObject
-    createdAt: string
-}
+export const playApiCommonSchema = z.object({
+    uid: z.string().meta({description: 'unique id for a Play'}),
+    componentId: z.int().nullable().meta({description: 'id of the Source/Client Play was created in'}),
+    state: z.enum(PLAY_STATES as [PlayState, ...PlayState[]]),
+    play: playObjectSchema,
+    /** dash-joined list of Play properties removed by retention compaction, IE 'input-transform' */
+    compacted: z.string().nullable().meta({description: "dash-joined list of Play properties removed by retention compaction, IE 'input-transform'"}),
+    playedAt: zDayjs.nullable(),
+    seenAt: zDayjs.nullable().meta({description: 'when the Source/Client created this Play, can be different than playedAt'}),
+    updatedAt: zDayjs,
+});
 
-export interface QueueStateApi {
-    id: number
-    queueName: string
-    queueStatus: string
-    retries: number
-    error?: ErrorLike
-    updatedAt: string
-    createdAt: string
-    context?: QueueContext
-}
+export const playInputApiSchema = z.object({
+    id: z.int(),
+    /** raw data the Play was built from */
+    data: z.custom<object>().nullable().meta({description: 'raw data the Play was built from'}),
+    play: playObjectSchema.meta({description: 'the original play before any transforms were applied'}),
+    createdAt: zDayjs.nullable(),
+});
 
-export interface PlayApiCommonDetailed extends PlayApiCommon {
-    error?: ErrorIsh
-    input?: PlayInputApi
-    queueStates: QueueStateApi[]
-    events: PlayEvent<string>[]
-}
+export const queueStateApiSchema = z.object({
+    id: z.int(),
+    queueName: z.string(),
+    queueStatus: z.enum(QUEUE_STATUSES as [QueueStatus, ...QueueStatus[]]),
+    retries: z.int(),
+    error: errorLikeSchema.nullable(),
+    updatedAt: zDayjs,
+    createdAt: zDayjs,
+    context: queueContextSchema.loose().nullable(),
+});
 
-export type SerializablePlaySelect = Replace<MarkOptional<PlayApiCommonDetailed, 'queueStates'>, 'error', ErrorObject> & {queueStates?: Replace<ElementOf<PlayApiCommonDetailed['queueStates']>, 'error', ErrorObject | undefined>[]};
-export const asSerializablePlaySelect = (data: MarkOptional<PlayApiCommonDetailed, 'queueStates'>): SerializablePlaySelect => {
+export const playApiCommonDetailedSchema = playApiCommonSchema.extend({
+    error: errorLikeSchema.nullable(),
+    input: playInputApiSchema.optional(),
+    queueStates: queueStateApiSchema.array(),
+    events: playEventSchema.array().optional(),
+});
+
+export type PlayApiCommon<D extends DateLike = string> = DateSide<D, typeof playApiCommonSchema>;
+export type PlayInputApi<D extends DateLike = string> = DateSide<D, typeof playInputApiSchema>;
+export type QueueStateApi<D extends DateLike = string> = DateSide<D, typeof queueStateApiSchema>;
+export type PlayApiCommonDetailed<D extends DateLike = string> = DateSide<D, typeof playApiCommonDetailedSchema>;
+
+const serializeIfError = <E>(e: E) => e instanceof Error ? serializeError(e) : e;
+
+/** Serialize Errors so they survive JSON.stringify */
+export const asSerializablePlaySelect = <T extends Partial<Pick<PlayApiCommonDetailed<DateLike>, 'error' | 'queueStates'>>>(data: T): T => {
   const {
     error,
-    queueStates = [],
+    queueStates,
     ...rest
   } = data;
-
-  const qMapped = queueStates.map((x) => {
-    const {
-      error: e,
-      ...restQ
-    } = x;
-    return {
-      ...restQ,
-      error: e instanceof Error ? serializeError(e) : e
-    }
-  });
-
   return {
     ...rest,
-    // @ts-expect-error
-    error: error instanceof Error ? serializeError(error) : error,
-    queueStates: qMapped
-  }
+    error: serializeIfError(error),
+    queueStates: queueStates?.map(x => ({...x, error: serializeIfError(x.error)}))
+  } as T;
 }
 
 export type ComponentState = 1 | 2 | 3 | 4 | 5 | 6 | 7;

@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import type {AlbumSearchResult, ArtistSearchResult, ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentHistoricalApi, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi, TrackSearchResult} from "../../Api.ts";
-import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ComponentType, QUEUE_STATUSES, sourceSotTypes, type MBID, type Credit, type MusicServices, musicServiceName } from "../../Atomic.ts";
+import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ErrorLike, type ComponentType, QUEUE_STATUSES, sourceSotTypes, type MBID, type Credit, type MusicServices, musicServiceName } from "../../Atomic.ts";
 import type { JsonPlayObject, PlayObject, SourcePlayerJson } from "../../PlaySchema.ts";
 import { generateISRC, generateMbid, generatePlay, normalizePlays } from "./PlayTestUtils.ts";
 import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.ts";
@@ -15,7 +15,6 @@ import { isClientType } from '../../Atomic.ts';
 import { CALCULATED_PLAYER_STATUSES } from '../../Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../Atomic.ts';
 import { generateArray } from "../../DataUtils.ts";
-import type {ErrorIsh} from "../../ErrorUtils.ts";
 import { serializeError } from "serialize-error";
 import { stripIndents } from "common-tags";
 import { SimpleError } from "../../../backend/common/errors/MSErrors.ts";
@@ -36,7 +35,7 @@ export const generatePlayApiCommon = (commonData: Partial<PlayApiCommon> & {play
         playedAt = typeof play.data.playDate === 'string' ? play.data.playDate : play.data.playDate!.toISOString(),
         seenAt = playedAt,
         updatedAt = dayjs().toISOString(),
-        compacted = false,
+        compacted = null,
         state = randomPlayState(),
         componentId = faker.number.int({min: 1, max: 10}),
         uid = generatePlayUid()
@@ -61,8 +60,8 @@ export const generatePlayInputApi = (inputData: Partial<PlayInputApi> = {}, ...a
     return {
         id: faker.number.int({min: 1, max: 100}),
         createdAt,
-        data: res.data,
-        play: res.play !== undefined ? asJsonPlayObject(res.play) : undefined,
+        data: res.data ?? null,
+        play: asJsonPlayObject(res.play ?? generatePlay()),
         ...inputData }
 }
 
@@ -75,6 +74,8 @@ export const generateQueueStateApi = (data: Partial<QueueStateApi>): QueueStateA
         updatedAt: cAt,
         retries: 0,
         createdAt: cAt,
+        error: null,
+        context: null,
         ...data
     }
 }
@@ -83,7 +84,7 @@ export const generatePlayApiCommonDetailed = (opts: {
     playOpts?: Parameters<typeof generatePlayApiCommon>,
     inputOpts?: Parameters<typeof generatePlayInputApi>,
     queueOpts?: Parameters<typeof generateQueueStateApi>
-} = {}, error?: ErrorIsh): PlayApiCommonDetailed => {
+} = {}, error: ErrorLike | null = null): PlayApiCommonDetailed => {
     const {
         playOpts = [],
         inputOpts = [],

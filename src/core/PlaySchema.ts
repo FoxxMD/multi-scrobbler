@@ -261,7 +261,7 @@ export const sourcePlayerSchema = z.object({
 // Play types are derived from the schemas above.
 
 /** Selects the JSON (`z.input`, string dates) or backend (`z.output`, Dayjs dates) side of a codec schema. Distributes over DateLike. */
-type DateSide<D extends DateLike, S extends z.ZodType> = D extends string ? z.input<S> : z.output<S>;
+export type DateSide<D extends DateLike, S extends z.ZodType> = D extends string ? z.input<S> : z.output<S>;
 
 export interface TrackStringOptions<T = string> {
     include?: PlayObjectIncludeTypes[]

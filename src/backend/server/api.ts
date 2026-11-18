@@ -565,11 +565,7 @@ Note: this is only supported by some components.`
         const hydratedQuery = asDayjsHydratedObject<QueryPlaysOptsJson, QueryPlaysOpts<Dayjs>>(query as QueryPlaysOptsJson);
         const playRes = await component.getPlaysPaginated(hydratedQuery);
 
-        // @ts-expect-error its fine
-        playRes.data = playRes.data.map(x => asSerializablePlaySelect(x))
-        //PlayApiCommonDetailed
-        // plus paginatioon
-        return res.json(playRes);
+        return res.json({...playRes, data: playRes.data.map(x => asSerializablePlaySelect(x))});
     });
 
     router.get('/components/:id/plays/:uid', {
@@ -586,8 +582,9 @@ Note: this is only supported by some components.`
         } = req;
 
         const playRes = await component.getPlayApiResponse(playUid as string);
-        //PlayApiCommonDetailed
-        // plus paginatioon
+        if(playRes === undefined) {
+            return res.sendStatus(404);
+        }
         return res.json(asSerializablePlaySelect(playRes));
     });
 

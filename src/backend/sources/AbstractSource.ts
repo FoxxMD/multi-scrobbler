@@ -42,7 +42,7 @@ import pMap from 'p-map';
 import type { Counter } from 'prom-client';
 import { spawn, isAbortError, delay, throwIfAborted, waitForEvent } from 'abort-controller-x';
 import { generateLoggableAbortReason, StageChangeError } from '../common/errors/MSErrors.ts';
-import type { QueryPlaysOpts, RequestPlayQuery, WithPlayRelation } from '../common/database/drizzle/repositories/PlayRepository.ts';
+import type { QueryPlaysOpts, RequestPlayQuery } from '../common/database/drizzle/repositories/PlayRepository.ts';
 import { AsyncTask, SimpleIntervalJob } from 'toad-scheduler';
 import { COMPONENT_STATE, type ComponentSourceApiJson, type ComponentState, type PlayApiCommonDetailed } from '../../core/Api.ts';
 import type {PaginatedResponse} from "../../core/Api.ts";
@@ -1240,7 +1240,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return maxInterval - this.getInterval();
     }
 
-    public async getPlaysPaginated(args: QueryPlaysOpts): Promise<PaginatedResponse<PlayApiCommonDetailed>> {
+    public async getPlaysPaginated(args: QueryPlaysOpts): Promise<PaginatedResponse<PlayApiCommonDetailed<Dayjs>>> {
         const {
             limit,
             offset,
@@ -1262,13 +1262,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
         const parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
         const parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
         return this.playRepo.findPlaysPaginated({limit: parsedLimit, offset: parsedOffset, with: withQuery, ...rest});
-    }
-
-    public async getPlayApiResponse(uid: string, opts: {with?: WithPlayRelation[]} = {}): Promise<PlayApiCommonDetailed> {
-        const {
-            with: withQuery = ['input','parent-input','queues','events'],
-        } = opts;
-        return await this.playRepo.findByUid(uid, { with: withQuery as WithPlayRelation[] }) as unknown as PlayApiCommonDetailed;
     }
 
     public async deletePlay(play: PlayWith<'children'>, children?: boolean): Promise<void> {
