@@ -89,14 +89,14 @@ export const musicServiceMBSchema = z.object({
     ...musicServiceIdBaseSchema.shape,
     name: z.literal(musicServiceName.enum.musicbrainz),
     idType: z.enum(['recording', 'release', 'track', 'artist', 'release-group']).optional()
-});
+}).meta({title: 'MusicBrainz ID'});
 export type MusicServiceMB = z.infer<typeof musicServiceMBSchema>;
 export const musicServiceNonMBSchema = z.object({
     ...musicServiceIdBaseSchema.shape,
     name: musicServiceName.exclude(['musicbrainz']),
-});
+}).meta({title: 'Music Service ID'});
 export type MusicServiceNonMB = z.infer<typeof musicServiceNonMBSchema>;
-export const musicServicesBaseSchema = z.discriminatedUnion('name', [musicServiceMBSchema.omit({image: true}), musicServiceNonMBSchema.omit({image: true})]);
+export const musicServicesBaseSchema = z.discriminatedUnion('name', [musicServiceMBSchema.omit({image: true}).meta({title: 'MusicBrainz ID'}), musicServiceNonMBSchema.omit({image: true}).meta({title: 'Music Service ID'})]);
 export type MusicServicesBase = z.infer<typeof musicServicesBaseSchema>;
 export const musicServicesSchema = z.discriminatedUnion('name', [musicServiceMBSchema, musicServiceNonMBSchema]);
 
@@ -496,7 +496,7 @@ export const queueContextSchema = z.object({
     useCache: z.boolean().optional(),
     reason: z.string().optional(),
     isRetry: z.boolean().optional()
-});
+}).meta({title: 'Queue Context'});
 
 export type QueueContext = z.infer<typeof queueContextSchema>;
 

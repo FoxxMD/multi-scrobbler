@@ -41,7 +41,7 @@ export const queueStateApiSchema = z.object({
     error: errorLikeSchema.nullable(),
     updatedAt: zDayjs,
     createdAt: zDayjs,
-    context: queueContextSchema.loose().nullable(),
+    context: queueContextSchema.loose().meta({title: 'Queue Context'}).nullable(),
 }).meta({id: 'QueueState'});
 
 export const playApiCommonDetailedSchema = playApiCommonSchema.extend({
@@ -161,7 +161,7 @@ export const componentClientApiSchema = componentDetailedApiSchema.extend({
         /** when a now playing that is not realtime is cleared */
         expiration: zDayjsStrict.optional().meta({description: 'when a now playing that is not realtime is cleared'}),
     })),
-}).meta({id: 'Client'});
+}).meta({id: 'Client', title: 'Client'});
 export type ComponentClientApiJson = z.input<typeof componentClientApiSchema>;
 
 export const componentSourceApiSchema = componentDetailedApiSchema.extend({
@@ -171,7 +171,7 @@ export const componentSourceApiSchema = componentDetailedApiSchema.extend({
     tracksDiscovered: z.int(),
     wakeAt: zDayjsStrict.optional(),
     sleeping: z.boolean(),
-}).meta({id: 'Source'});
+}).meta({id: 'Source', title: 'Source'});
 export type ComponentSourceApiJson = z.input<typeof componentSourceApiSchema>;
 
 export type SubsonicSourceApiJson = ComponentSourceApiJson & { playbackReporting?: boolean }
@@ -224,13 +224,13 @@ export const compareDateSchema = z.discriminatedUnion('type', [
     z.object({
         type: z.enum(['eq', 'ne', 'gt', 'gte', 'lt', 'lte']),
         date: zDayjsStrict,
-    }),
+    }).meta({title: 'Date Comparison'}),
     z.object({
         type: z.literal('between'),
         range: z.tuple([zDayjsStrict, zDayjsStrict]),
         /** include the range boundaries, defaults to true */
         inclusive: zQueryBool.optional().meta({description: 'include the range boundaries, defaults to true'}),
-    }),
+    }).meta({title: 'Date Range'}),
 ]);
 export type CompareDateOp<D extends DateLike = Dayjs> = DateSide<D, typeof compareDateSchema>;
 export type CompareDateSingle<D extends DateLike = Dayjs> = Exclude<CompareDateOp<D>, {type: 'between'}>;
@@ -460,7 +460,7 @@ export const dashboardPlaySchema = z.object({
     /** `source` is the type of the component the Play came from (spotify, jellyfin...), never its name */
     meta: publicPlayMetaSchema.pick({source: true, musicService: true, url: true})
         .meta({description: '`source` is the type of the component the Play came from (spotify, jellyfin...), never its name'}),
-}).meta({id: 'DashboardPlay'});
+}).meta({id: 'DashboardPlay', title: 'Dashboard Play'});
 export type DashboardPlay = z.infer<typeof dashboardPlaySchema>;
 
 export const publicDashboardDataSchema = z.object({

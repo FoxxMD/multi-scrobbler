@@ -43,12 +43,12 @@ export const playEventUpdatePlayDataSchema = z.object({
 });
 
 export const playEventSchema = z.discriminatedUnion('eventName', [
-    basePlayEventSchema.extend({eventName: z.literal('transform'), data: z.custom<LifecycleStep>().array()}),
-    basePlayEventSchema.extend({eventName: z.literal('queueStateChange'), data: playEventQueueStateChangeDataSchema}),
-    basePlayEventSchema.extend({eventName: z.literal('playStateChange'), data: playEventPlayStateChangeDataSchema}),
-    basePlayEventSchema.extend({eventName: z.literal('dupeCheck'), data: playMatchResultSchema}),
-    basePlayEventSchema.extend({eventName: z.literal('scrobbleResult'), data: scrobbleResultSchema}),
-    basePlayEventSchema.extend({eventName: z.literal('updatePlay'), data: playEventUpdatePlayDataSchema}),
+    basePlayEventSchema.extend({eventName: z.literal('transform'), data: z.custom<LifecycleStep>().array()}).meta({title: 'Transform Event'}),
+    basePlayEventSchema.extend({eventName: z.literal('queueStateChange'), data: playEventQueueStateChangeDataSchema}).meta({title: 'Queue State Change Event'}),
+    basePlayEventSchema.extend({eventName: z.literal('playStateChange'), data: playEventPlayStateChangeDataSchema}).meta({title: 'Play State Change Event'}),
+    basePlayEventSchema.extend({eventName: z.literal('dupeCheck'), data: playMatchResultSchema}).meta({title: 'Dupe Check Event'}),
+    basePlayEventSchema.extend({eventName: z.literal('scrobbleResult'), data: scrobbleResultSchema}).meta({title: 'Scrobble Result Event'}),
+    basePlayEventSchema.extend({eventName: z.literal('updatePlay'), data: playEventUpdatePlayDataSchema}).meta({title: 'Update Play Event'}),
 ]).meta({id: 'PlayEvent'});
 
 /** Selects the JSON (string dates) or backend (Dayjs dates) side of playEventSchema. Distributes over DateLike. */
