@@ -543,8 +543,11 @@ export type DeepReplaceValue<Type, ReplaceTuple extends readonly [any, any][]> =
 export const qsOptions: IParseBaseOptions = { 
     ignoreQueryPrefix: true, 
     depth: 5,
-    parameterLimit: 20,
+    // a plays query with every filter is ~80 params
+    parameterLimit: 100,
     arrayLimit: 20,
+    // fail instead of silently dropping params (or turning an array into an object) over the limits
+    throwOnLimitExceeded: true,
     plainObjects: true,
     allowPrototypes: false
 };

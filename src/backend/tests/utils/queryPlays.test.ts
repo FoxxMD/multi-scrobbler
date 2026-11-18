@@ -30,6 +30,26 @@ describe('Plays Query', function () {
         expect(parseQueryString({componentId: 2})).to.not.have.property('componentId');
     });
 
+    it('parses a query with every filter', function () {
+        const states: QueryPlaysOptsJson['state'] = ['queued', 'discovered', 'discarded', 'scrobbled', 'failed', 'duped'];
+        const queue = {queueStatus: ['queued', 'failed', 'completed'], retries: 1} satisfies Omit<NonNullable<QueryPlaysOptsJson['queues']>[number], 'queueName'>;
+        const range: CompareDateBetween<string> = {type: 'between', range: ['2026-11-01T00:00:00.000Z', '2026-11-18T00:00:00.000Z'], inclusive: true};
+        const parsed = parseQueryString({
+            state: states, stateNot: states, seenAt: range, playedAt: range,
+            queues: [{queueName: 'ingress', ...queue}, {queueName: 'dead', ...queue}],
+            with: ['input', 'parent', 'parent-input', 'queues', 'events', 'children'],
+            uid: Array.from({length: 20}, (_, i) => `uid${i}`), text: Array.from({length: 20}, (_, i) => `text${i}`),
+            sort: 'seenAt', order: 'asc', limit: 10, offset: 0,
+        } satisfies QueryPlaysOptsJson);
+        expect(parsed.text).to.have.length(20);
+        expect(parsed.queues).to.have.length(2);
+    });
+
+    it('throws instead of dropping params over the limit', function () {
+        expect(() => parseQueryString({text: Array.from({length: 21}, (_, i) => `text${i}`)})).to.throw();
+        expect(() => qs.parse(Array.from({length: 101}, (_, i) => `p${i}=1`).join('&'), qsOptions)).to.throw();
+    });
+
     it('rejects an invalid date', function () {
         expect(() => parseQueryString({seenAt: {type: 'gte', date: 'yesterday'}})).to.throw();
     });

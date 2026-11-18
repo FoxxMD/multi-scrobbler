@@ -35,6 +35,29 @@ The endpoints documented here, other than those in Ingress categories, are **sub
 
 `
 
+type OpenApiSchema = {type?: string, oneOf?: OpenApiSchema[], anyOf?: OpenApiSchema[]};
+const isObjectSchema = (schema: OpenApiSchema = {}): boolean => schema.type === 'object'
+    || [...(schema.oneOf ?? []), ...(schema.anyOf ?? [])].some((x) => isObjectSchema(x));
+
+/**
+ * The server parses query strings with qs, which reads objects as bracket syntax (seenAt[type]=gte), so document object query params as deepObject.
+ * The default (form) style would flatten their properties into top-level params.
+ *
+ * deepObject is only defined one level deep so nested values (playedAt[range][0], arrays of objects) are still not described exactly.
+ */
+const useDeepObjectQueryParams = (spec: Awaited<ReturnType<typeof generateOpenApiSpec>>) => {
+    for (const operations of Object.values(spec.paths)) {
+        for (const operation of Object.values(operations as Record<string, {parameters?: {in: string, schema?: OpenApiSchema, style?: string, explode?: boolean}[]}>)) {
+            for (const param of operation.parameters ?? []) {
+                if (param.in === 'query' && isObjectSchema(param.schema)) {
+                    param.style = 'deepObject';
+                    param.explode = true;
+                }
+            }
+        }
+    }
+}
+
 export const getOpenApiDoc = async () => {
     // server setup (auth) needs a database, an in-memory one is enough to build the spec
     getRoot({logger: loggerTest, db: async () => (await getMigratedDb(MEMORY_DB_NAME))[0]});
@@ -49,6 +72,7 @@ export const getOpenApiDoc = async () => {
         description: description,
         securitySchemes: SECURITY_SCHEMES,
     });
+    useDeepObjectQueryParams(spec);
     return spec;
 }
 
