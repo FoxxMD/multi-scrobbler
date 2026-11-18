@@ -4,7 +4,8 @@ import type { CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket';
 import { WS } from 'iso-websocket'
 import { randomUUID } from "node:crypto";
 import pEvent from 'p-event';
-import type {ComponentAuthType, PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
+import type { ComponentAuthType, URLData } from "../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal } from "../../core/PlaySchema.ts";
 import { UpstreamError } from "../common/errors/UpstreamError.ts";
 import type {
     FormatPlayObjectOptions,

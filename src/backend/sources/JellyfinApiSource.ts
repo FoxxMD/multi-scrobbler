@@ -26,7 +26,8 @@ import {
 import dayjs from "dayjs";
 import type EventEmitter from "events";
 import { FixedSizeList } from "fixed-size-list";
-import type {Credit, ComponentAuthType, PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import type { Credit, ComponentAuthType } from "../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal } from "../../core/PlaySchema.ts";
 import { genGroupIdStr } from '../../core/PlayUtils.ts';
 import { combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
 import { buildTrackString, creditsToNames } from "../../core/MusicMetadata.ts";

@@ -1,5 +1,6 @@
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
-import type {AmbPlayObject, DateLike, PlayObject, PlayObjectMinimal, PlayPlatformId} from "./Atomic.ts";
+import type { DateLike, PlayPlatformId } from "./Atomic.ts";
+import type { AmbPlayObject, PlayObject, PlayObjectMinimal } from "./PlaySchema.ts";
 import dayjs from "dayjs";
 
 export const sortByNewestDate = (aPlayDate: DateLike | null | undefined, bPlayDate: DateLike | null | undefined) => {

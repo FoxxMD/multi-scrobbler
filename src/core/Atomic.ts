@@ -1,16 +1,12 @@
 import type { Dayjs } from "dayjs";
 import type { AdditionalTrackInfoResponse } from "./vendor/listenbrainz/interfaces.ts";
-import type { Merge, RequiredKeys, StrictOmit } from "ts-essentials";
+import type { StrictOmit } from "ts-essentials";
 import type {ErrorObject} from "serialize-error";
 import type { FlowControlTerm, TransformHook } from "./Transform.ts";
 import type {Changeset} from "json-diff-ts";
 import type {IParseBaseOptions} from 'qs';
 import * as z from "zod";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
-import type { listenRangeSchema, playDataSchema as playDataFullSchema, playMetaSchema as playMetaFullSchema, playObjectSchema, playProgressSchema, sourcePlayerSchema } from "./PlaySchema.ts";
-
-/** Selects the JSON (`z.input`, string dates) or backend (`z.output`, Dayjs dates) side of a codec schema. Distributes over DateLike. */
-type DateSide<D extends DateLike, S extends z.ZodType> = D extends string ? z.input<S> : z.output<S>;
 
 export const musicServiceName = z.enum(['spotify', 'musicbrainz', 'youtube', 'jellyfin', 'plex', 'listenbrainz', 'rocksky', 'isrc']);
 export type MusicServiceName = z.infer<typeof musicServiceName>;
@@ -119,22 +115,6 @@ export const COMPONENT_TYPES: ComponentType[] = [COMPONENT_TYPE_SOURCE, COMPONEN
 export const isComponentTypeSource = (type: string): type is ComponentTypeSource => type === COMPONENT_TYPE_SOURCE;
 export const isComponentTypeClient = (type: string): type is ComponentTypeClient => type === COMPONENT_TYPE_CLIENT;
 export const isComponentType = (type: string): type is ComponentType => isComponentTypeClient(type) || isComponentTypeSource(type);
-export interface SourceStatusData {
-    status: string;
-    type: SourceType;
-    display: string;
-    tracksDiscovered: number;
-    name: string;
-    canPoll: boolean;
-    hasAuth: boolean;
-    hasAuthInteraction: boolean;
-    authed: boolean;
-    players: Record<string, SourcePlayerJson>
-    sot: SOURCE_SOT_TYPES
-    supportsUpstreamRecentlyPlayed: boolean;
-    manualListening?: boolean
-    systemListeningBehavior?: boolean
-}
 
 export interface ClientStatusData {
     status: string;
@@ -155,37 +135,6 @@ export interface ClientStatusData {
 
 export type PlayObjectIncludeTypes = 'album' | 'time' | 'artist' | 'track' | 'timeFromNow' | 'trackId' | 'comment' | 'platform' | 'session';
 export const recentIncludes: PlayObjectIncludeTypes[] = ['time', 'timeFromNow', 'track', 'album', 'artist', 'comment'];
-
-export interface TrackStringOptions<T = string> {
-    include?: PlayObjectIncludeTypes[]
-    transformers?: {
-        artists?: (a: string[]) => T | string
-        album?: (t: string | undefined, data: AmbPlayObject, hasExistingParts?: boolean) => T | string | undefined
-        track?: (t: string | undefined, data: AmbPlayObject, hasExistingParts?: boolean) => T | string
-        time?: (t: Dayjs | undefined, i?: ScrobbleTsSOC) => T | string
-        timeFromNow?: (t: Dayjs | undefined) => T | string | undefined
-        comment?: (c: string | undefined) => T | string | undefined
-        platform?: (d: string | undefined, u: string | undefined, s: string | undefined) => T | string | undefined
-        reducer?: (arr: (T | string | undefined)[]) => T //(acc: T, curr: T | string) => T
-    }
-}
-
-export type PlayProgressAmb<D extends DateLike = Dayjs> = DateSide<D, typeof playProgressSchema>;
-
-export interface PlayProgress extends z.output<typeof playProgressSchema> {
-    timestamp: Dayjs
-}
-
-export interface PlayProgressPositional extends PlayProgress {
-    position: number
-}
-
-export type ListenRangeDataAmb<D extends DateLike = Dayjs> = DateSide<D, typeof listenRangeSchema>;
-
-export interface ListenRangeData extends z.output<typeof listenRangeSchema> {
-    start: PlayProgress
-    end: PlayProgress
-}
 
 export const mbidSchema = z.stringFormat('mbid',/[a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12}/);
 
@@ -264,14 +213,11 @@ export const playTrackStrictDataSchema = z.object({
     albumArtists: z.object({...creditSchema.shape, name: z.string().nonempty()}).array().optional()
 })
 
-export type PlayData<D extends DateLike = Dayjs> = DateSide<D, typeof playDataFullSchema>;
-
 export const playDataStrictSchema = z.object({
     ...playTrackStrictDataSchema.shape,
     playDate: z.string().optional(),
     listenedFor: z.number().nonnegative().optional()
 });
-
 
 export const playMetaUrlSchema = z.looseObject({
     web: z.string().optional(),
@@ -281,10 +227,6 @@ export const playMetaUrlSchema = z.looseObject({
 export const parsedFromSchema = z.enum(['backlog','now playing','player','history','ingress'])
 export type PARSED_FROM_TYPE = z.infer<typeof parsedFromSchema>;// 'backlog' | 'now playing' | 'player' | 'history' | 'ingress';
 export const PARSED_FROM = parsedFromSchema.enum;
-
-export type PlayMeta<D extends DateLike = Dayjs, T = {}> = Merge<PlayMetaBase<D>, T>;
-
-export type PlayMetaBase<D extends DateLike = Dayjs> = DateSide<D, typeof playMetaFullSchema>;
 
 export const playMetaSchema = z.looseObject({
     source: z.string().optional(),
@@ -299,24 +241,6 @@ export interface LifecycleInput {
 }
 
 export type ErrorLike = Error | ErrorObject;
-
-/** scrobble action plus the match result before scrobbling */
-export interface ScrobbleResult<D extends DateLike = Dayjs> {
-    match?: PlayMatchResult<D>
-    payload?: ScrobblePayload
-    warnings?: string[]
-    error?: Error | ErrorObject
-    response?: ScrobbleResponse
-    mergedScrobble?: AmbPlayObjectMinimal<D>
-    createdAt?: D
-}
-
-export interface PlayLifecycle<D extends DateLike = Dayjs> {
-    input?: object
-    original?: PlayObjectMinimal<D>
-    steps: LifecycleStep[]
-    scrobble?: ScrobbleResult<D>
-}
 
 export interface LifecycleStep {
     stageName: string
@@ -337,70 +261,12 @@ export interface LifecycleStep {
 export type ScrobblePayload = object | string;
 export type ScrobbleResponse = object | string;
 
-export interface ScrobbleActionResult<D extends DateLike = Dayjs> {
-    payload: ScrobblePayload, 
-    response?: ScrobbleResponse, 
-    mergedScrobble?: AmbPlayObject<D>
-    warnings?: string[]
-    createdAt: string
-}
-
-export interface PlayMatchResult<D extends DateLike = Dayjs> {
-    match: boolean
-    score: number
-    breakdowns: string[]
-    reason?: string
-    closestMatchedPlay?: AmbPlayObjectMinimal<D>
-    transformedPlay?: PlayObjectMinimal
-    summary?: string
-    createdAt: string
-}
-
 export type ScrobbleTsSOC = 1 | 2;
 
 export const SCROBBLE_TS_SOC_START: ScrobbleTsSOC = 1;
 export const SCROBBLE_TS_SOC_END: ScrobbleTsSOC = 2;
 
 export type DateLike = Dayjs | string
-
-export interface PlayOriginal<D extends DateLike = Dayjs> {
-    data?: object
-    play?: PlayObjectMinimal<D>
-}
-
-/** Free-form parts of a Play that are not (yet) described by playObjectSchema */
-interface PlayBlobs<D extends DateLike> {
-    original?: PlayOriginal<D>
-    scrobble?: ScrobbleResult<D>
-    lifecycle?: LifecycleStep[]
-}
-
-export type AmbPlayObject<D extends DateLike = Dayjs, T = {}> = D extends string
-    ? Merge<z.input<typeof playObjectSchema>, PlayBlobs<string> & {meta: PlayMeta<string, T>}>
-    : Merge<z.output<typeof playObjectSchema>, PlayBlobs<Dayjs> & {meta: PlayMeta<Dayjs, T>}>;
-
-export type AmbPlayObjectMinimal<D extends DateLike = Dayjs, T = {}> = Pick<AmbPlayObject<D,T>, RequiredKeys<AmbPlayObject<D>>> & Pick<AmbPlayObject<D,T>, 'id' | 'uid'>;
-
-export const isPlayObject = (obj: object): obj is PlayObject => {
-   return obj !== undefined && obj !== null &&  'data' in obj && typeof obj.data === 'object' && 'meta' in obj && typeof obj.meta === 'object';
-}
-
-export type PlayObject<T = {}> = AmbPlayObject<Dayjs,T>;
-/** PlayObject that is known to have a playDate */
-export type DatedPlayObject<T = {}> = PlayObject<T> & { data: { playDate: Dayjs } };
-export type PlayObjectMinimal<D extends DateLike = Dayjs, T = {}> = AmbPlayObjectMinimal<D,T>;
-export interface PlayActivity {
-  play: JsonPlayObject
-  status: string
-  error?: ErrorLike
-}
-export type JsonPlayObject = AmbPlayObject<string>;
-
-export interface ObjectPlayData extends PlayData {
-    playDate?: Dayjs
-    playDateCompleted?: Dayjs
-}
-
 
 export const playEditStrictCreateSchema = z.object({
     data: playDataStrictSchema,
@@ -424,13 +290,6 @@ export interface LogEvent {
 
 export type PlayPlatformIdStr = string;
 
-export type SourcePlayerObj<D extends DateLike = Dayjs> = Merge<DateSide<D, typeof sourcePlayerSchema>, {
-    /** full play/scrobble object information */
-    play?: AmbPlayObject<D>
-}>;
-
-export type SourcePlayerJson = SourcePlayerObj<string>;
-
 export interface SourceScrobble<PlayType> {
     source: string
     play: PlayType
@@ -439,8 +298,6 @@ export interface SourceScrobble<PlayType> {
 export interface QueuedScrobble<PlayType> extends SourceScrobble<PlayType> {
     id: string
 }
-
-export type NowPlayingUpdateThreshold = (play?: PlayObject) => number;
 
 export interface DeadLetterScrobble<PlayType, RetryType = Dayjs> extends QueuedScrobble<PlayType> {
     id: string
@@ -547,12 +404,6 @@ export type MissingMbidType = 'artists' | 'title' | 'album' | 'duration';
 export const DEFAULT_MISSING_TYPES: MissingMbidType[] = ['artists','title','album', 'duration'];
 export const DEFAULT_MISSING_MBIDS_TYPES: MissingMbidType[] = ['artists','title','album'];
 
-export interface TransformResult {
-    type: string,
-    name: string,
-    play: PlayData
-}
-
 export const KNOWN_MEDIA_PROVIDER_URLS = [
 'spotify.com',
 // spotify cdn
@@ -630,7 +481,6 @@ export const PLAY_CLIENT_STATE = [...PLAY_STATE_COMMON, 'scrobbled'];
 export type PlayState = PlaySourceState | PlayClientState;
 export const PLAY_STATES = Array.from(new Set([...PLAY_CLIENT_STATE, ...PLAY_SOURCE_STATE]));
 export const isPlayState = (val: string): val is PlayState => PLAY_STATES.includes(val);
-
 
 export type QueueStatus = 'queued' | 'completed' | 'failed';
 export const QUEUE_STATUS_QUEUED: QueueStatus = 'queued';

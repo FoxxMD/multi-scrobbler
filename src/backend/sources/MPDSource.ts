@@ -3,7 +3,8 @@ import dayjs from "dayjs";
 import type { EventEmitter } from "events";
 import path from 'path';
 import {MPC, type Status, type Song, type PlaylistItem} from 'mpc-js';
-import type {ComponentAuthType, PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import type { ComponentAuthType } from "../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal } from "../../core/PlaySchema.ts";
 import type {
     FormatPlayObjectOptions,
     InternalConfig,

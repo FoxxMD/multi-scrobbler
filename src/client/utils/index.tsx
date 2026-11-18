@@ -1,4 +1,4 @@
-import type {TrackStringOptions} from "../../core/Atomic";
+import type { TrackStringOptions } from "../../core/PlaySchema";
 import React, {type ReactElement, Fragment} from "react";
 import {defaultBuildTrackStringTransformers} from "../../core/StringUtils";
 import dayjs, {type Dayjs} from 'dayjs';

@@ -4,7 +4,8 @@ import { playEvents, playInputs, plays as drizzlePlays, playsHistorical } from '
 import { asc, eq, getColumns, sql } from 'drizzle-orm';
 import { asLegacyPlay } from '../../../../core/PlayMarshalUtils.ts';
 import { PLAY_EVENT_TYPE } from '../../../../core/PlayEvent.ts';
-import type { Credit, LifecycleStep, PlayObject } from '../../../../core/Atomic.ts';
+import type { Credit, LifecycleStep } from '../../../../core/Atomic.ts';
+import type { PlayObject } from '../../../../core/PlaySchema.ts';
 import { creditsWithIds, isrcMeta, mbMeta, spotifyMeta, withAlbumArt, withImage, withMetadata } from '../../../../core/MusicMetadata.ts';
 import { nameToCredit } from "../../../../core/MusicMetadata.ts";
 import { diffObjects, patchObject } from '../../../../core/DataUtils.ts';

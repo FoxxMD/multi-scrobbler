@@ -1,7 +1,8 @@
 import { mbMeta } from "../../core/MusicMetadata.ts";
 import dayjs, { type Dayjs } from "dayjs";
 import type EventEmitter from "events";
-import { PARSED_FROM, type PlayObjectMinimal, SOURCE_SOT } from "../../core/Atomic.ts";
+import { PARSED_FROM, SOURCE_SOT } from "../../core/Atomic.ts";
+import type { PlayObjectMinimal } from "../../core/PlaySchema.ts";
 import type {
     FormatPlayObjectOptions,
     InternalConfig,

@@ -11,7 +11,7 @@ import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import { playStateToActivityData } from "./DiscordUtils.ts";
 import { DiscordAbstractClient } from "./DiscordAbstractClient.ts";
 import dayjs from "dayjs";
-import { isPlayObject, type SourcePlayerObj } from "../../../../core/Atomic.ts";
+import { isPlayObject, type SourcePlayerObj } from "../../../../core/PlaySchema.ts";
 import { mergeSimpleError, SimpleError } from "../../errors/MSErrors.ts";
 import { UpstreamError } from "../../errors/UpstreamError.ts";
 

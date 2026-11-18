@@ -2,7 +2,7 @@ import { loggerTest } from "@foxxmd/logging";
 import { expect } from 'chai';
 import EventEmitter from "events";
 import { describe, it } from 'mocha';
-import type {PlayMeta} from "../../../core/Atomic.ts";
+import type { PlayMeta } from "../../../core/PlaySchema.ts";
 
 import validSessionResponse from './validSession.json' with { type: "json" };
 import { generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";

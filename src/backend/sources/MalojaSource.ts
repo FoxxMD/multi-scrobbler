@@ -1,5 +1,6 @@
 import type EventEmitter from "events";
-import { COMPONENT_AUTH_TYPE, type ComponentAuthType, PARSED_FROM, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, type ComponentAuthType, PARSED_FROM, SOURCE_SOT } from "../../core/Atomic.ts";
+import type { PlayObject } from "../../core/PlaySchema.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import type {InternalConfig} from "../common/infrastructure/Atomic.ts";
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";

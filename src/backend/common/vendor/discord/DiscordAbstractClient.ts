@@ -1,5 +1,5 @@
 import { creditMbid } from "../../../../core/MusicMetadata.ts";
-import { isPlayObject } from "../../../../core/Atomic.ts";
+import { isPlayObject } from "../../../../core/PlaySchema.ts";
 import { getRoot } from "../../../ioc.ts";
 import { isDebugMode } from "../../../utils.ts";
 import { urlContainsKnownMediaDomain } from "../../../utils/RequestUtils.ts";

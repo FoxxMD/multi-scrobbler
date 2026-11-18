@@ -1,6 +1,7 @@
 import { creditId, creditIsrc, creditMbid, creditsToNames, isrcMeta, mbMeta, playImage, withAlbumArt } from "../../../core/MusicMetadata.ts";
 import dayjs from "dayjs";
-import {rockskyRequiredFields, type Credit, type LifecycleInput, type PlayObject, type PlayObjectMinimal, type RockskyConfidenceField, type RockskyMissingField, type ScrobbleActionResult, type URLData} from "../../../core/Atomic.ts";
+import { rockskyRequiredFields, type Credit, type LifecycleInput, type RockskyConfidenceField, type RockskyMissingField, type URLData } from "../../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal, ScrobbleActionResult } from "../../../core/PlaySchema.ts";
 import { nonEmptyStringOrDefault } from "../../../core/StringUtils.ts";
 import { creditToName } from "../../../core/MusicMetadata.ts";
 import { nameToCredit } from "../../../core/MusicMetadata.ts";

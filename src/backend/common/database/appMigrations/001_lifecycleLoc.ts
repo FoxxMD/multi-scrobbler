@@ -3,8 +3,8 @@ import type {MigrateBaseContext} from '../appMigrator.ts';
 import { plays as drizzlePlays } from '../drizzle/schema/schema.ts';
 import clone from 'clone';
 import { eq, getColumns, sql } from 'drizzle-orm';
-import type {PlayLifecycle, PlayObject} from '../../../../core/Atomic.ts';
 import { asLegacyPlay } from '../../../../core/PlayMarshalUtils.ts';
+import type { PlayLifecycle, PlayObject } from '../../../../core/PlaySchema.ts';
 
 
 export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase, ctx: MigrateBaseContext | undefined): Promise<void> => {

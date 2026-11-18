@@ -7,10 +7,8 @@ import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
 // deep import so the browser bundle does not pull in the package entrypoint, which requires node crypto
 import { objectSorter } from "node-object-hash/dist/objectSorter.js";
-import {
-    type AmbPlayObject,
-    SCROBBLE_TS_SOC_START,
-    type ScrobbleTsSOC} from "./Atomic.ts";
+import { SCROBBLE_TS_SOC_START, type ScrobbleTsSOC } from "./Atomic.ts";
+import type { AmbPlayObject } from "./PlaySchema.ts";
 import { DELIMETERS_REGEX, DELIMITERS } from './Atomic.ts';
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { nanoid } from "nanoid";

@@ -1,5 +1,6 @@
 import type { Dayjs } from "dayjs";
-import type { DateLike, ErrorLike, LifecycleStep, PlayMatchResult, PlayObject, PlayState, QueueContext, QueueStatus, ScrobbleResult } from "./Atomic.ts";
+import type { DateLike, ErrorLike, LifecycleStep, PlayState, QueueContext, QueueStatus } from "./Atomic.ts";
+import type { PlayMatchResult, PlayObject, ScrobbleResult } from "./PlaySchema.ts";
 import type { Changeset } from "json-diff-ts";
 
 export type PlayEventType = 'transform' | 'queueStateChange' | 'playStateChange' | 'dupeCheck' | 'scrobbleResult' | 'updatePlay';

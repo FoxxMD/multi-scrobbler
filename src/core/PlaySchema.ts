@@ -1,5 +1,7 @@
 /**
- * Zod schemas for PlayObject and SourcePlayerObj, the source of truth for their types (see Atomic.ts).
+ * Zod schemas for PlayObject and SourcePlayerObj, and the Play types derived from them.
+ *
+ * Only depends on Atomic.ts, which must never import from this module.
  *
  * Date fields use the `zDayjs` codec so one schema describes both shapes:
  *
@@ -13,13 +15,19 @@
  * * `public*Schema` = subset of full shape that is safe to expose to users (docs, payloads). Use `toPublicPlay`/`toPublicPlayer` to redact objects to this shape.
  * */
 import dayjs, { type Dayjs } from "dayjs";
+import type { ErrorObject } from "serialize-error";
+import type { Merge, RequiredKeys } from "ts-essentials";
 import * as z from "zod";
 import {
     creditSchema,
     parsedFromSchema,
+    type DateLike,
     type LifecycleInput,
-    type PlayObject,
-    type SourcePlayerObj,
+    type LifecycleStep,
+    type PlayObjectIncludeTypes,
+    type ScrobblePayload,
+    type ScrobbleResponse,
+    type ScrobbleTsSOC,
     type TrackMeta,
 } from "./Atomic.ts";
 
@@ -189,6 +197,132 @@ export const sourcePlayerSchema = z.object({
         orphaned: z.boolean().meta({description: 'When player has not reported any new updates for N * 2 seconds'}),
     }).meta({description: 'status of player'}),
 });
+
+// Types
+//
+// Play types are derived from the schemas above. The free-form blobs (original, scrobble, lifecycle) are still plain interfaces.
+
+/** Selects the JSON (`z.input`, string dates) or backend (`z.output`, Dayjs dates) side of a codec schema. Distributes over DateLike. */
+type DateSide<D extends DateLike, S extends z.ZodType> = D extends string ? z.input<S> : z.output<S>;
+
+export interface TrackStringOptions<T = string> {
+    include?: PlayObjectIncludeTypes[]
+    transformers?: {
+        artists?: (a: string[]) => T | string
+        album?: (t: string | undefined, data: AmbPlayObject, hasExistingParts?: boolean) => T | string | undefined
+        track?: (t: string | undefined, data: AmbPlayObject, hasExistingParts?: boolean) => T | string
+        time?: (t: Dayjs | undefined, i?: ScrobbleTsSOC) => T | string
+        timeFromNow?: (t: Dayjs | undefined) => T | string | undefined
+        comment?: (c: string | undefined) => T | string | undefined
+        platform?: (d: string | undefined, u: string | undefined, s: string | undefined) => T | string | undefined
+        reducer?: (arr: (T | string | undefined)[]) => T //(acc: T, curr: T | string) => T
+    }
+}
+
+export type PlayProgressAmb<D extends DateLike = Dayjs> = DateSide<D, typeof playProgressSchema>;
+
+export interface PlayProgress extends z.output<typeof playProgressSchema> {
+    timestamp: Dayjs
+}
+
+export interface PlayProgressPositional extends PlayProgress {
+    position: number
+}
+
+export type ListenRangeDataAmb<D extends DateLike = Dayjs> = DateSide<D, typeof listenRangeSchema>;
+
+export interface ListenRangeData extends z.output<typeof listenRangeSchema> {
+    start: PlayProgress
+    end: PlayProgress
+}
+
+export type PlayData<D extends DateLike = Dayjs> = DateSide<D, typeof playDataSchema>;
+
+export type PlayMeta<D extends DateLike = Dayjs, T = {}> = Merge<PlayMetaBase<D>, T>;
+
+export type PlayMetaBase<D extends DateLike = Dayjs> = DateSide<D, typeof playMetaSchema>;
+
+/** scrobble action plus the match result before scrobbling */
+export interface ScrobbleResult<D extends DateLike = Dayjs> {
+    match?: PlayMatchResult<D>
+    payload?: ScrobblePayload
+    warnings?: string[]
+    error?: Error | ErrorObject
+    response?: ScrobbleResponse
+    mergedScrobble?: AmbPlayObjectMinimal<D>
+    createdAt?: D
+}
+
+export interface PlayLifecycle<D extends DateLike = Dayjs> {
+    input?: object
+    original?: PlayObjectMinimal<D>
+    steps: LifecycleStep[]
+    scrobble?: ScrobbleResult<D>
+}
+
+export interface ScrobbleActionResult<D extends DateLike = Dayjs> {
+    payload: ScrobblePayload, 
+    response?: ScrobbleResponse, 
+    mergedScrobble?: AmbPlayObject<D>
+    warnings?: string[]
+    createdAt: string
+}
+
+export interface PlayMatchResult<D extends DateLike = Dayjs> {
+    match: boolean
+    score: number
+    breakdowns: string[]
+    reason?: string
+    closestMatchedPlay?: AmbPlayObjectMinimal<D>
+    transformedPlay?: PlayObjectMinimal
+    summary?: string
+    createdAt: string
+}
+
+export interface PlayOriginal<D extends DateLike = Dayjs> {
+    data?: object
+    play?: PlayObjectMinimal<D>
+}
+
+/** Free-form parts of a Play that are not (yet) described by playObjectSchema */
+interface PlayBlobs<D extends DateLike> {
+    original?: PlayOriginal<D>
+    scrobble?: ScrobbleResult<D>
+    lifecycle?: LifecycleStep[]
+}
+
+export type AmbPlayObject<D extends DateLike = Dayjs, T = {}> = D extends string
+    ? Merge<z.input<typeof playObjectSchema>, PlayBlobs<string> & {meta: PlayMeta<string, T>}>
+    : Merge<z.output<typeof playObjectSchema>, PlayBlobs<Dayjs> & {meta: PlayMeta<Dayjs, T>}>;
+
+export type AmbPlayObjectMinimal<D extends DateLike = Dayjs, T = {}> = Pick<AmbPlayObject<D,T>, RequiredKeys<AmbPlayObject<D>>> & Pick<AmbPlayObject<D,T>, 'id' | 'uid'>;
+
+export const isPlayObject = (obj: object): obj is PlayObject => {
+   return obj !== undefined && obj !== null &&  'data' in obj && typeof obj.data === 'object' && 'meta' in obj && typeof obj.meta === 'object';
+}
+
+export type PlayObject<T = {}> = AmbPlayObject<Dayjs,T>;
+
+/** PlayObject that is known to have a playDate */
+export type DatedPlayObject<T = {}> = PlayObject<T> & { data: { playDate: Dayjs } };
+
+export type PlayObjectMinimal<D extends DateLike = Dayjs, T = {}> = AmbPlayObjectMinimal<D,T>;
+
+export type JsonPlayObject = AmbPlayObject<string>;
+
+export interface ObjectPlayData extends PlayData {
+    playDate?: Dayjs
+    playDateCompleted?: Dayjs
+}
+
+export type SourcePlayerObj<D extends DateLike = Dayjs> = Merge<DateSide<D, typeof sourcePlayerSchema>, {
+    /** full play/scrobble object information */
+    play?: AmbPlayObject<D>
+}>;
+
+export type SourcePlayerJson = SourcePlayerObj<string>;
+
+export type NowPlayingUpdateThreshold = (play?: PlayObject) => number;
 
 // Public subsets
 //

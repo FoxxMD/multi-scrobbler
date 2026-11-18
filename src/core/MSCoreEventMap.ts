@@ -1,6 +1,7 @@
 import type { MarkRequired } from "ts-essentials"
 import type { PlayApiCommonDetailed } from "./Api.ts"
-import type { EmittedMSEvent, JsonPlayObject, SourcePlayerObj } from "./Atomic.ts"
+import type { EmittedMSEvent } from "./Atomic.ts"
+import type { JsonPlayObject, SourcePlayerObj } from "./PlaySchema.ts"
 
 export interface MSCoreEvents {
     playInsert: [EmittedMSEvent<PlayApiCommonDetailed>]

@@ -1,7 +1,8 @@
 import dayjs from "dayjs";
 import type EventEmitter from "events";
 import request from 'superagent';
-import { COMPONENT_AUTH_TYPE, PARSED_FROM, type PlayObject, type PlayObjectMinimal } from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, PARSED_FROM } from "../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal } from "../../core/PlaySchema.ts";
 import type { ComponentAuthType } from "../../core/Atomic.ts";
 import { AuthError, SimpleError } from "../common/errors/MSErrors.ts";
 import type { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.ts";

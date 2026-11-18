@@ -1,7 +1,7 @@
 import React, { useCallback, useState, type ComponentProps, type PropsWithChildren } from 'react';
 import { EmptyState, DataList, HStack, Tabs, Box, Badge, Stack, Text, Separator, IconButton, Container, Float, Link, Span, Menu, Group, Portal, type MenuItemProps, type MenuSelectionDetails } from "@chakra-ui/react"
 import { LuCode, LuText } from "react-icons/lu"
-import type { JsonPlayObject, PlayObjectMinimal } from '../../../core/Atomic.js';
+import type { JsonPlayObject, PlayObjectMinimal } from '../../../core/PlaySchema.js';
 import { timeToHumanTimestamp } from '../../../core/TimeUtils.js';
 import { shortTodayAwareFormat } from '../../utils/index.js';
 import dayjs from 'dayjs';

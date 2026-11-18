@@ -6,7 +6,8 @@ import { PlayEditable, PlayEditableMutable } from "../../client/components/play/
 import {Provider} from "../../client/components/Provider.js";
 import { Container } from '@chakra-ui/react';
 import { generateArtistCredits, generateJsonPlay, withBrainz } from "../../core/tests/utils/PlayTestUtils.js"
-import type {Credit, PlayObjectMinimal} from "../../core/Atomic.js";
+import type { Credit } from "../../core/Atomic.js";
+import type { PlayObjectMinimal } from "../../core/PlaySchema.js";
 import { http, HttpResponse, delay } from 'msw';
 import { generateAlbumSearchResults, generateArtistSearchResults, generateMusicService, generateTrackSearchResults } from "../../core/tests/utils/apiFixtures.js";
 import { CreditInput } from "../../client/components/play/CreditInput.js";

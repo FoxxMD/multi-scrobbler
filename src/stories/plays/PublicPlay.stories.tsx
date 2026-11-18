@@ -6,7 +6,7 @@ import { Container } from '@chakra-ui/react';
 import { generateArtistCredits, generateJsonPlay, generatePlay, withBrainz } from "../../core/tests/utils/PlayTestUtils.js"
 import clone from "clone";
 import { asJsonPlayObject } from '../../core/PlayMarshalUtils.js';
-import type {JsonPlayObject} from "../../core/Atomic.js";
+import type { JsonPlayObject } from "../../core/PlaySchema.js";
 import { PublicPlayData } from "../../client/components/PublicDashboard.js";
 
 type PropsAndCustomArgs = React.ComponentProps<typeof PublicPlayData> & {

@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker';
-import { type LifecycleInput, type LifecycleStep, type ObjectPlayData, PLAY_STATES, type PlayMatchResult, type PlayMeta, type PlayObject, type PlayOriginal, type PlayState, type ScrobbleResult } from '../../Atomic.ts';
+import { type LifecycleInput, type LifecycleStep, PLAY_STATES, type PlayState } from '../../Atomic.ts';
+import type { ObjectPlayData, PlayMatchResult, PlayMeta, PlayObject, PlayOriginal, ScrobbleResult } from '../../PlaySchema.ts';
 import { generatePlay, type GeneratePlayOpts, generatePlays, withBrainz } from './PlayTestUtils.ts';
 import { statefulInvariantTransform } from '../../PlayUtils.ts';
 import clone from 'clone';

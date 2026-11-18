@@ -1,4 +1,5 @@
-import {NO_DEVICE, type PlayObject} from "../../../../core/Atomic.ts";
+import { NO_DEVICE } from "../../../../core/Atomic.ts";
+import type { PlayObject } from "../../../../core/PlaySchema.ts";
 import { isEmptyArrayOrUndefined } from "../../../utils.ts";
 import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import { getScrobbleTsSOCDate } from "../../../utils/TimeUtils.ts";

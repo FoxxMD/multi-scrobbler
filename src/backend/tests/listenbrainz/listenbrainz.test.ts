@@ -3,7 +3,8 @@ import { assert, expect } from 'chai';
 import dayjs from "dayjs";
 import { describe, it } from 'mocha';
 import { http, HttpResponse } from "msw";
-import {NO_DEVICE, type PlayObject} from "../../../core/Atomic.ts";
+import { NO_DEVICE } from "../../../core/Atomic.ts";
+import type { PlayObject } from "../../../core/PlaySchema.ts";
 import { UpstreamError } from "../../common/errors/UpstreamError.ts";
 
 import { ListenbrainzApiClient, listenResponseToPlay, listenPayloadToPlay } from "../../common/vendor/ListenbrainzApiClient.ts";

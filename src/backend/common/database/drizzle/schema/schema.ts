@@ -1,7 +1,8 @@
 import { integer, sqliteTable, text, index, uniqueIndex, customType, type AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import { defineRelations } from 'drizzle-orm';
 import dayjs, { type Dayjs } from "dayjs";
-import { COMPONENT_TYPE_CLIENT, COMPONENT_TYPE_SOURCE, type ErrorLike, type PlayObject, type QueueContext } from "../../../../../core/Atomic.ts";
+import { COMPONENT_TYPE_CLIENT, COMPONENT_TYPE_SOURCE, type ErrorLike, type QueueContext } from "../../../../../core/Atomic.ts";
+import type { PlayObject } from "../../../../../core/PlaySchema.ts";
 import { asPlayCheap } from "../../../../../core/PlayMarshalUtils.ts";
 import type {ExternalMetadataTerm, PlayTransformPartsConfig, SearchAndReplaceTerm} from "../../../../../core/Transform.ts";
 import type {JobRangeCount, JobRangeTime} from "../../../infrastructure/Job.ts";

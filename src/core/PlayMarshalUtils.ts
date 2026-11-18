@@ -1,7 +1,8 @@
 import clone from 'clone';
 import dayjs from 'dayjs';
 import { Traverse, type TraverseContext } from 'neotraverse/modern';
-import { type JsonPlayObject, type PlayObject, REGEX_ISO8601_LOOSE } from './Atomic.ts';
+import { REGEX_ISO8601_LOOSE } from './Atomic.ts';
+import type { JsonPlayObject, PlayObject } from './PlaySchema.ts';
 import { playObjectInternalSchema } from './PlaySchema.ts';
 
 interface BlockPath { key: string, parent: string };

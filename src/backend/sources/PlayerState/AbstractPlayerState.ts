@@ -1,6 +1,7 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
-import { type PlayObject, type PlayProgress, type Second, SOURCE_SOT, type SOURCE_SOT_TYPES, type SourcePlayerObj } from "../../../core/Atomic.ts";
+import { type Second, SOURCE_SOT, type SOURCE_SOT_TYPES } from "../../../core/Atomic.ts";
+import type { PlayObject, PlayProgress, SourcePlayerObj } from "../../../core/PlaySchema.ts";
 import { buildTrackString } from "../../../core/MusicMetadata.ts";
 import {
     asPlayerStateData,

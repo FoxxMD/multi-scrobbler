@@ -2,7 +2,8 @@ import type {Logger} from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
 import type { EventEmitter } from "events";
 import { AsyncTask, SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
-import { PARSED_FROM, type PlayObject, SOURCE_SOT, type SOURCE_SOT_TYPES, type SourcePlayerJson, type SourcePlayerObj } from "../../core/Atomic.ts";
+import { PARSED_FROM, SOURCE_SOT, type SOURCE_SOT_TYPES } from "../../core/Atomic.ts";
+import type { PlayObject, SourcePlayerJson, SourcePlayerObj } from "../../core/PlaySchema.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
 import {
     asPlayerStateDataMaybePlay,

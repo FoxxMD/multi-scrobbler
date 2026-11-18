@@ -1,6 +1,7 @@
 import { mbMeta } from "../../../../core/MusicMetadata.ts";
 import dayjs from "dayjs";
-import type {PlayObject, PlayObjectMinimal, ScrobbleActionResult, URLData} from "../../../../core/Atomic.ts";
+import type { URLData } from "../../../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal, ScrobbleActionResult } from "../../../../core/PlaySchema.ts";
 import type {AbstractApiOptions, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens, PaginatedTimeRangeListensResult} from "../../infrastructure/Atomic.ts";
 import type {GetListensOptions, KoitoData, ListenObjectResponse, ListensResponse} from "../../infrastructure/config/client/koito.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";

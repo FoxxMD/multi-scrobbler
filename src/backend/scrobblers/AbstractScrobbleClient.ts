@@ -3,18 +3,8 @@ import dayjs, { type Dayjs } from "dayjs";
 import type {Duration} from "dayjs/plugin/duration.js";
 import type EventEmitter from "events";
 import type { MarkOptional } from "ts-essentials";
-import {
-    type NowPlayingUpdateThreshold,
-    type PlayObject,
-    type ScrobbleActionResult, type PlayMatchResult, type SourcePlayerObj,
-    INGRESS_QUEUE,
-    DEAD_QUEUE,
-    type SourcePlayerJson,
-    QUEUE_STATUS_COMPLETED,
-    SOURCE_SOT,
-    QUEUE_STATUS_FAILED,
-    PARSED_FROM
-} from "../../core/Atomic.ts";
+import { INGRESS_QUEUE, DEAD_QUEUE, QUEUE_STATUS_COMPLETED, SOURCE_SOT, QUEUE_STATUS_FAILED, PARSED_FROM } from "../../core/Atomic.ts";
+import type { NowPlayingUpdateThreshold, PlayObject, ScrobbleActionResult, PlayMatchResult, SourcePlayerObj, SourcePlayerJson } from "../../core/PlaySchema.ts";
 import { truncateStringToLength } from "../../core/StringUtils.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
 import AbstractComponent from "../common/AbstractComponent.ts";
@@ -30,7 +20,8 @@ import {
     type TimeRangeListensFetcher,
 } from "../common/infrastructure/Atomic.ts";
 import { CALCULATED_PLAYER_STATUSES } from '../../core/Atomic.ts';
-import type {QueueContext, ReportedPlayerStatus, ScrobbleResult} from '../../core/Atomic.ts';
+import type { QueueContext, ReportedPlayerStatus } from '../../core/Atomic.ts';
+import type { ScrobbleResult } from '../../core/PlaySchema.ts';
 import type {ClientType} from "../../core/Atomic.ts";
 import type {CommonClientConfig, NowPlayingOptions, UpstreamRefreshOptions} from "../common/infrastructure/config/client/index.ts";
 import { TRANSFORM_HOOK } from "../../core/Transform.ts";

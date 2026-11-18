@@ -1,13 +1,8 @@
 import { childLogger } from "@foxxmd/logging";
 import type { Cacheable } from "cacheable";
 import type { WebhookPayload } from "../infrastructure/config/health/webhooks.ts";
-import {
-    type Credit,
-    type LifecycleInput,
-    type MusicServicesBase,
-    musicServicesBaseSchema,
-    type OptionalCacheUsage,
-    type PlayObject, type TrackMetaIsrc } from "../../../core/Atomic.ts";
+import { type Credit, type LifecycleInput, type MusicServicesBase, musicServicesBaseSchema, type OptionalCacheUsage, type TrackMetaIsrc } from "../../../core/Atomic.ts";
+import type { PlayObject } from "../../../core/PlaySchema.ts";
 import { ARTIST_WEIGHT, TITLE_WEIGHT } from "../infrastructure/Atomic.ts";
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
 import type { ExternalMetadataTerm, PlayTransformMetadataStage } from "../../../core/Transform.ts";

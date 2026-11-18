@@ -2,7 +2,7 @@ import type { Logger } from "@foxxmd/logging";
 import type EventEmitter from "events";
 import request from 'superagent';
 import dayjs from "dayjs";
-import type { PlayObject, SourcePlayerObj } from "../../core/Atomic.ts";
+import type { PlayObject, SourcePlayerObj } from "../../core/PlaySchema.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
 import type { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.ts";
 import type { BlackboxClientConfig, BlackboxNowPlayingPayload, BlackboxScrobblePayload } from "../common/infrastructure/config/client/blackbox.ts";

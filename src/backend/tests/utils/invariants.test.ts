@@ -1,7 +1,7 @@
 import { describe, it } from 'mocha';
 import { expect } from 'chai';
 import clone from 'clone';
-import type { PlayObject } from '../../../core/Atomic.ts';
+import type { PlayObject } from '../../../core/PlaySchema.ts';
 import { generateArtistCredits, generatePlay, withBrainz } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { dedupAlbumArtists, spotifyMeta, stripCredits, withImage, withMetadata } from '../../../core/MusicMetadata.ts';
 import { trackDataToResult } from '../../common/metadataProviders/MetadataProviderUtils.ts';

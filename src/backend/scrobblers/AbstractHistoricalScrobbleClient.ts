@@ -8,7 +8,7 @@ import { spawn, isAbortError } from 'abort-controller-x';
 import { generateLoggableAbortReason } from "../common/errors/MSErrors.ts";
 import type {Logger} from "@foxxmd/logging";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
-import type {PlayObject} from "../../core/Atomic.ts";
+import type { PlayObject } from "../../core/PlaySchema.ts";
 import { todayAwareFormat } from "../../core/TimeUtils.ts";
 import type { ComponentClientApiJson } from "../../core/Api.ts";
 

@@ -1,7 +1,7 @@
  
 import { childLogger, type Logger } from '@foxxmd/logging';
 import dayjs, { type Dayjs } from "dayjs";
-import type {PlayObject, SourcePlayerObj} from "../../core/Atomic.ts";
+import type { PlayObject, SourcePlayerObj } from "../../core/PlaySchema.ts";
 import type {InternalConfig, InternalConfigOptional, SourceIdentifier} from "../common/infrastructure/Atomic.ts";
 import { isClientType } from '../../core/Atomic.ts';
 import { clientTypes } from "../../core/Atomic.ts";

@@ -1,7 +1,8 @@
 import React, { type ComponentProps, useMemo, useState, useEffect } from "react"
 import { Em, Span, Stack, Spacer, Text, Image, Box, Heading, HStack, Flex, Center, Container, Status } from '@chakra-ui/react';
 import { TextMuted } from "../TextMuted";
-import { SOURCE_SOT, type SOURCE_SOT_TYPES, type SourcePlayerJson } from "../../../core/Atomic";
+import { SOURCE_SOT, type SOURCE_SOT_TYPES } from "../../../core/Atomic";
+import type { SourcePlayerJson } from "../../../core/PlaySchema";
 import { timeToHumanTimestamp } from "../../../core/TimeUtils";
 import { capitalize } from "../../../core/StringUtils";
 import { playImage, creditsToNames } from "../../../core/MusicMetadata";

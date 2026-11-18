@@ -10,7 +10,7 @@ import EventEmitter from "events";
 import { randomInt } from "crypto";
 import request from 'superagent';
 import type {AbstractApiOptions} from "../../infrastructure/Atomic.ts";
-import { isPlayObject, type SourcePlayerObj } from "../../../../core/Atomic.ts";
+import { isPlayObject, type SourcePlayerObj } from "../../../../core/PlaySchema.ts";
 import dayjs, { type Dayjs } from "dayjs";
 import { getRoot } from "../../../ioc.ts";
 import { formatWebsocketClose, isCloseEvent, isErrorEvent, wsReadyStateToStr } from "../../../utils/NetworkUtils.ts";

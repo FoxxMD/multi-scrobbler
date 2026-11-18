@@ -1,7 +1,7 @@
 import type {Logger} from "@foxxmd/logging";
 import type { searchAndReplace as searchAndReplaceFunc} from "@foxxmd/regex-buddy-core";
 import { testMaybeRegex as testMaybeRegexFunc } from "@foxxmd/regex-buddy-core";
-import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal } from "../../core/PlaySchema.ts";
 
 import {
     type ConditionalSearchAndReplaceRegExp,

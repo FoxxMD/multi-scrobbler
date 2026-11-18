@@ -1,6 +1,7 @@
 import EventEmitter from "events";
 import request from "superagent";
-import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject} from "../../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, type ComponentAuthType } from "../../../core/Atomic.ts";
+import type { PlayObject } from "../../../core/PlaySchema.ts";
 import AbstractScrobbleClient from "../../scrobblers/AbstractScrobbleClient.ts";
 import type {CommonClientConfig, CommonClientOptions, NowPlayingOptions} from "../../common/infrastructure/config/client/index.ts";
 import clone from "clone";
