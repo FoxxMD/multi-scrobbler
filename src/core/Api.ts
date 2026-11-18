@@ -1,7 +1,7 @@
 import { creditSchema, playTrackDataSchema, COMPONENT_AUTH_TYPE, componentTypeSchema, MONITORING_ORIGIN_SYSTEM, MONITORING_ORIGIN_USER, sourceSotTypes, PLAY_STATES, QUEUE_NAMES, QUEUE_STATUSES, queueContextSchema, type QueueStatus, type ClientType, creditBaseSchema, trackSearchHash, albumSearchHash, artistSearchHash } from "./Atomic.ts"
 import type { LogEvent, SourceType } from "./Atomic.ts"
-import type { ComponentType, DateLike, ErrorLike, PlayState, QueueName } from "./Atomic.ts"
-import type { SourcePlayerJson, DateSide } from "./PlaySchema.ts"
+import type { DateLike, ErrorLike, PlayState, QueueName } from "./Atomic.ts"
+import type { DateSide } from "./PlaySchema.ts"
 import { playObjectInternalSchema, publicPlayDataSchema, publicPlayMetaSchema, sourcePlayerSchema, zDayjs, zDayjsStrict } from "./PlaySchema.ts"
 import type { Dayjs } from "dayjs"
 import type { ErrorIsh } from "./ErrorUtils.ts"
@@ -186,25 +186,54 @@ export const isComponentClientApiJson = (data: ComponentCommonApiJson): data is 
     return data.mode === 'client';
 }
 
-export type MsSseEventPayload<T extends object = Record<string, any>> = {
-    type: SourceType | ClientType
-    name: string
-    componentId: number
-    from: ComponentType
-    data: T
-    event: string
-}
+/** Partial Component data sent when some of its API data changed */
+export const componentUpdateDataSchema = componentSourceApiSchema.omit({mode: true})
+    .extend(componentClientApiSchema.omit({mode: true}).shape)
+    .partial()
+    .meta({title: 'Component Update'});
 
-export type MsSseEvent = {
-    playerUpdate: MsSseEventPayload<SourcePlayerJson>
-    discovered: MsSseEventPayload
-    scrobbleQueued: MsSseEventPayload
-    scrobbleDequeued: MsSseEventPayload
-    componentUpdate: MsSseEventPayload<ComponentCommonApiJson>
-    playInsert: MsSseEventPayload<PlayApiCommonDetailed>
-    playUpdate: MsSseEventPayload<Partial<PlayApiCommonDetailed>>
-    log: LogEvent
-}
+/** Sent with every SSE event, identifies the Source/Client it came from */
+const sseEventBaseSchema = z.object({
+    type: z.custom<SourceType | ClientType>(),
+    name: z.string(),
+    componentId: z.int(),
+    from: componentTypeSchema,
+});
+const countEvent = <K extends string>(event: K, title: string, description: string) =>
+    sseEventBaseSchema.extend({event: z.literal(event), data: z.object({})}).meta({title, description});
+
+/**
+ * Events sent to /api/events, as the SSE event's data. The SSE event name is the same as `event`.
+ *
+ * Log events (opted in with PUT /api/events/:tab/logs) are sent separately, see LogEvent.
+ * */
+export const sseEventSchema = z.discriminatedUnion('event', [
+    sseEventBaseSchema.extend({event: z.literal('playInsert'), data: playApiCommonDetailedSchema}).meta({title: 'Play Insert', description: 'A Play was created'}),
+    sseEventBaseSchema.extend({event: z.literal('playUpdate'), data: playApiCommonDetailedSchema.partial().required({uid: true})}).meta({title: 'Play Update', description: 'Some of a Play\'s data changed'}),
+    sseEventBaseSchema.extend({event: z.literal('playDelete'), data: z.object({uid: z.string()})}).meta({title: 'Play Delete', description: 'A Play was deleted'}),
+    sseEventBaseSchema.extend({event: z.literal('playerUpdate'), data: componentClientApiSchema.shape.players.valueType}).meta({title: 'Player Update', description: 'A Player was created or changed'}),
+    sseEventBaseSchema.extend({event: z.literal('playerDelete'), data: z.object({platformId: z.string()})}).meta({title: 'Player Delete', description: 'A Player was removed'}),
+    sseEventBaseSchema.extend({event: z.literal('componentUpdate'), data: componentUpdateDataSchema}).meta({title: 'Component Update', description: 'Some of a Source/Client\'s data changed'}),
+    countEvent('scrobble', 'Scrobbled', 'A Client scrobbled a Play'),
+    countEvent('discovered', 'Discovered', 'A Source discovered a Play'),
+    countEvent('playQueued', 'Play Queued', 'A Play was added to the queue'),
+    countEvent('playDequeued', 'Play Dequeued', 'A Play was removed from the queue'),
+    countEvent('deadLetter', 'Play Failed', 'A Play failed processing'),
+    countEvent('deadLetterRemoved', 'Failed Play Removed', 'A failed Play was removed (discarded or no longer failed)'),
+    countEvent('deadQueued', 'Failed Play Queued', 'A failed Play was queued to be retried'),
+    countEvent('deadLetterDequeued', 'Failed Play Dequeued', 'A failed Play was removed from the retry queue'),
+]).meta({id: 'SseEvent'});
+
+export type SseEvent = z.input<typeof sseEventSchema>;
+export type SseEventName = SseEvent['event'];
+export type SseEventData<K extends SseEventName> = Extract<SseEvent, {event: K}>['data'];
+
+/** SSE event name to event data, for the SSE client */
+export type MsSseEvent = {[K in SseEventName]: Extract<SseEvent, {event: K}>} & {log: LogEvent};
+
+/** Narrow the data of any received SSE event. Log events have no componentId/event */
+export const asSseEvent = (data: unknown): SseEvent | undefined =>
+    data !== null && typeof data === 'object' && 'event' in data && 'componentId' in data ? data as SseEvent : undefined;
 
 export type SortPlaysBy = 'played' | 'seen';
 export interface SortPlaysByProps {

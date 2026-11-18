@@ -1,3 +1,4 @@
+import { generateSseMessage } from '../../core/tests/utils/apiFixtures.js';
 import preview from "../../../.storybook/preview.js";
 import React from 'react';
 import { sse } from 'msw';
@@ -18,7 +19,7 @@ const meta = preview.meta({
     layout: 'padded',
       msw: {
         handlers: [
-          sse('/api/events?next=true', async ({ params, client }) => {
+          sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
           }),
         ],
       },
@@ -62,8 +63,8 @@ export const StatsCountLive = meta.story({
       msw: {
         handlers: [
           // <{event: 'scrobble', data: {componentId: number}}>
-          sse('/api/events?next=true', async ({ params, client }) => {
-            setInterval(() => client.send({event: 'scrobble', data: {componentId: 1}}), 2000);
+          sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
+            setInterval(() => client.send(generateSseMessage('scrobble', {})), 2000);
           }),
         ],
       },
@@ -84,8 +85,8 @@ export const StatsCountLiveReset = meta.story({
       msw: {
         handlers: [
           // <{event: 'scrobble', data: {componentId: number}}>
-          sse('/api/events?next=true', async ({ params, client }) => {
-            setInterval(() => client.send({event: 'scrobble', data: {componentId: 1}}), 3000);
+          sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
+            setInterval(() => client.send(generateSseMessage('scrobble', {})), 3000);
           }),
         ],
       },

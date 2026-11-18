@@ -13,7 +13,7 @@ import {
   useSSEContext,
   useSSEEvent,
 } from "@flamefrontend/sse-runtime-react";
-import type {ComponentCommonApiJson, MsSseEvent, MsSseEventPayload} from "../../../core/Api";
+import {asSseEvent, type ComponentCommonApiJson, type MsSseEvent} from "../../../core/Api";
 import LinearProgress from '@mui/material/LinearProgress';
 import { InfoTip } from "../ToggleTip";
 import { tanQueries } from "../../queries";
@@ -340,10 +340,11 @@ const usePlayersQuery = (componentId: number, players?: ComponentCommonApiJson['
 
     const client = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(client, (payload) => {
-        if('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === componentId) {
-            switch(payload.type) {
+        const event = asSseEvent(payload.data);
+        if(event?.componentId === componentId) {
+            switch(event.event) {
                 case 'playerUpdate': {
-                    const playerPayload = payload.data as MsSseEventPayload<SourcePlayerJson>;
+                    const playerPayload = event;
                     queryClient.setQueryData(tanQueries.players.list(componentId).queryKey, (old: Record<string, SourcePlayerJson> | undefined) => {
                         if(old === undefined || old[playerPayload.data.platformId] === undefined || 'expiration' in playerPayload.data) {
                             const newData: Record<string, SourcePlayerJson> = {...(old ?? {})};
@@ -354,7 +355,7 @@ const usePlayersQuery = (componentId: number, players?: ComponentCommonApiJson['
                 }
                     break;
                 case 'playerDelete':{
-                    const playerPayload = payload.data as MsSseEventPayload<{platformId: string}>;
+                    const playerPayload = event;
                     queryClient.setQueryData(tanQueries.players.list(componentId).queryKey, (old: Record<string, SourcePlayerJson> | undefined) => {
                         if(old !== undefined && old[playerPayload.data.platformId] !== undefined) {
                             const newData: Record<string, SourcePlayerJson> = {...old};

@@ -1,3 +1,4 @@
+import type { MSCoreEvents } from "../../core/MSCoreEventMap.ts";
 import {loggerTest, type LogDataPretty, type Logger, type LogLevel} from "@foxxmd/logging";
 import type {Express, Request, RequestHandler, Response} from 'express';
 import { createChannel, createSession, type DefaultChannelState } from 'better-sse';
@@ -24,7 +25,7 @@ import { findAuthIssue, SimpleError } from "../common/errors/MSErrors.ts";
 import { DrizzlePlayRepository, type QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.ts";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.ts";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
-import {componentStateBodySchema, playStateBodySchema, queryPlaysRequestSchema, componentsApiSchema, componentClientApiSchema, paginatedResponseSchema, playApiCommonDetailedSchema, publicDashboardDataSchema, nowPlayingOptionSchema, type ComponentClientApiJson, type ComponentSourceApiJson, asSerializablePlaySelect, trackDataCreditBaseSchema, type TrackDataCreditBase, NDJSON_MEDIA_TYPE, trackSearchSimpleRequestQuerySchema, albumSearchSimpleRequestQuerySchema, artistSearchSimpleRequestQuerySchema } from "../../core/Api.ts";
+import {componentStateBodySchema, playStateBodySchema, type SseEvent, type SseEventData, type SseEventName, sseEventSchema, queryPlaysRequestSchema, componentsApiSchema, componentClientApiSchema, paginatedResponseSchema, playApiCommonDetailedSchema, publicDashboardDataSchema, nowPlayingOptionSchema, type ComponentClientApiJson, type ComponentSourceApiJson, asSerializablePlaySelect, trackDataCreditBaseSchema, type TrackDataCreditBase, NDJSON_MEDIA_TYPE, trackSearchSimpleRequestQuerySchema, albumSearchSimpleRequestQuerySchema, artistSearchSimpleRequestQuerySchema } from "../../core/Api.ts";
 import { serializeError } from "serialize-error";
 import { z } from 'zod';
 import type { createTypedRouter, TypedMiddleware } from "@minisylar/express-typed-router";
@@ -45,6 +46,26 @@ const noopMiddleware: RequestHandler = (req, res, next) => next();
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
 
 const jsonParser = bodyParser.json({ type: ['text/*', 'application/json'] });
+
+
+/** Converts the data of each Component event SSE clients use to the JSON they receive. Events not listed are not forwarded */
+const sseEventData: {[K in SseEventName]: (data: MSCoreEvents[K][0]['data']) => SseEventData<K>} = {
+    playInsert: (data) => playApiCommonDetailedSchema.encode(asSerializablePlaySelect(data)),
+    playUpdate: (data) => playApiCommonDetailedSchema.partial().required({uid: true}).encode(asSerializablePlaySelect(data)),
+    playDelete: ({uid}) => ({uid}),
+    playerUpdate: ({expiration, ...player}) => ({...asJsonPlayer(player), expiration: expiration?.toISOString()}),
+    playerDelete: ({platformId}) => ({platformId}),
+    componentUpdate: (data) => data,
+    // only the event itself is used, as a count
+    scrobble: () => ({}),
+    discovered: () => ({}),
+    playQueued: () => ({}),
+    playDequeued: () => ({}),
+    deadLetter: () => ({}),
+    deadLetterRemoved: () => ({}),
+    deadQueued: () => ({}),
+    deadLetterDequeued: () => ({}),
+};
 
 export const HIDDEN_FROM_WEB = '[setup token hidden: see the server console/log file]';
 
@@ -143,12 +164,16 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
 
     // runs synchronously inside source/client emit() calls so it must never throw back into them
     const forwardEvent = (eventName: string, payload: any) => {
-        if(payload !== undefined && payload.from !== undefined) {
-            try {
-                eventsChannel.broadcast({event: eventName, ...payload}, eventName);
-            } catch (e) {
-                logger.warn(new Error(`Failed to forward '${eventName}' event to SSE clients`, {cause: e}));
-            }
+        const toData = sseEventData[eventName as SseEventName];
+        if(toData === undefined || payload?.from === undefined) {
+            // not an event SSE clients use
+            return;
+        }
+        try {
+            const {type, name, componentId, from, data} = payload as MSCoreEvents[SseEventName][0];
+            eventsChannel.broadcast({event: eventName, type, name, componentId, from, data: toData(data as never)} as SseEvent, eventName);
+        } catch (e) {
+            logger.warn(new Error(`Failed to forward '${eventName}' event to SSE clients`, {cause: e}));
         }
     };
     scrobbleSources.emitter.onAny(forwardEvent);
@@ -216,7 +241,9 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
 
     router.get('/events', {docs: {operationId: 'sse-events'}, querySchema: z.object({
         tab: z.string().optional().meta({description: 'Client-generated connection id. Required to opt in to log events via PUT /api/events/:tab/logs'})
-    }), middleware: [setLogWebSettings], tags: ['Events'], summary: 'SSE Events'}, async (req, res) => {
+    }), middleware: [setLogWebSettings], tags: ['Events'], summary: 'SSE Events',
+    description: 'Server-sent events for Plays, Players and Sources/Clients. The SSE event name is the same as `event` in its data.',
+    responses: {200: {description: 'An event stream. Each event\'s data is one of these, as JSON', contentType: 'text/event-stream', schema: sseEventSchema}}}, async (req, res) => {
         const session = await createSession(req, res, {state: {tab: req.query.tab, logs: false}});
         eventsChannel.register(session);
     });

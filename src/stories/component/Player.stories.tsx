@@ -5,7 +5,7 @@ import { http, HttpResponse, sse } from 'msw';
 import { Container } from '@chakra-ui/react';
 import { ChakraPlayer, ChakraPlayerFetchable } from "../../client/components/chakraPlayer/Player.js";
 import {Provider} from "../../client/components/Provider.js";
-import { generateSourcePlayerJson } from "../../core/tests/utils/apiFixtures.js";
+import { generateSourcePlayerJson, generateSseMessage } from "../../core/tests/utils/apiFixtures.js";
 import type {MsSseEvent} from "../../core/Api.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import { sseProviderOptions } from "../../client/App.js";
@@ -92,23 +92,20 @@ export const PlayerLive = meta.story({
           http.get<{componentId: string, platformId: string}>(`/api/sources/:componentId/players/:platformId`, async ({ params }) => {
             return HttpResponse.json(generateSourcePlayerJson({platformId: params.platformId, position: 10}, {art: true}));
           }),
-          sse('/api/events?next=true', async ({ params, client }) => {
+          sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
           const data = generateSourcePlayerJson({platformId: 'test'}, {art: true});
           let position = 10;
           let listenedDur = 10;
           setInterval(() => {
             position += 10;
             listenedDur += 10;
-            client.send({
-            //@ts-expect-error
-            event: 'playerUpdate', 
-            data: {componentId: 1, data: {
+            client.send(generateSseMessage('playerUpdate', {
               ...data,
               playLastUpdatedAt: dayjs().toISOString(),
               playerLastUpdatedAt: dayjs().toISOString(),
               position,
               listenedDuration: listenedDur
-            }}});
+            }));
           }, 10000);
           })
         ],

@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import type {AlbumSearchResult, ArtistSearchResult, ComponentClientApiJson, ComponentCommonApiJson, ComponentHistoricalApiJson, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi, TrackSearchResult} from "../../Api.ts";
+import type {MsSseEvent, SseEventData, SseEventName, AlbumSearchResult, ArtistSearchResult, ComponentClientApiJson, ComponentCommonApiJson, ComponentHistoricalApiJson, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi, TrackSearchResult} from "../../Api.ts";
 import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ErrorLike, type ComponentType, QUEUE_STATUSES, sourceSotTypes, type MBID, type Credit, type MusicServices, musicServiceName } from "../../Atomic.ts";
 import type { JsonPlayObject, PlayObject, SourcePlayerJson } from "../../PlaySchema.ts";
 import { generateISRC, generateMbid, generatePlay, normalizePlays } from "./PlayTestUtils.ts";
@@ -651,3 +651,9 @@ const placeholderImage = (size: [number, number?], foregroundColor?: string, bac
     return stripIndents`
 https://placehold.co/${size[0]}${size[1] !== undefined ? `x${size[1]}` : ''}/${fore}/${back}`
 }
+/** An SSE message as sent by /api/events, for msw's sse client.send() */
+export const generateSseMessage = <K extends SseEventName>(event: K, data: SseEventData<K>, componentId: number = 1) => ({
+    event,
+    data: {event, data, componentId, type: 'spotify', name: 'test', from: 'source'},
+// distributes over K so a union of event names gives a union of messages
+}) as {[E in K]: {event: E, data: MsSseEvent[E]}}[K];

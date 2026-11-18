@@ -18,6 +18,8 @@ export interface MSBackendEventMap extends Omit<MSCoreEvents, 'playerUpdate'> {
         }
     }>]
     playerUpdate: [EmittedMSEvent<SourcePlayerObj<Dayjs> & { options: { scrobbleTo: string[], wasMonitored?: boolean } },{},SourceType>]
+    statusChange: [EmittedMSEvent<{status: string}>]
+    error: [unknown]
     configError: [Error | string]
     instantiateError: [Error]
     log: [LogEvent]
