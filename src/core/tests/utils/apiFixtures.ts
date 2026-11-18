@@ -56,14 +56,7 @@ export const generatePlayApiCommon = (commonData: Partial<PlayApiCommon> & {play
 
 export const generatePlayInputApi = (inputData: Partial<PlayInputApi> = {}, ...args: Parameters<typeof generatePlayInput>): PlayInputApi => {
     const res = generatePlayInput(...args);
-    let createdAt: string = dayjs().toISOString();
-    if(res.play?.data?.playDate !== undefined) {
-        if(typeof res.play?.data?.playDate === 'string') {
-            createdAt = res.play?.data?.playDate;
-        } else {
-            createdAt = res.play?.data?.playDate.toISOString();
-        }
-    }
+    const createdAt: string = (res.play?.data?.playDate ?? dayjs()).toISOString();
     return {
         id: faker.number.int({min: 1, max: 100}),
         createdAt,

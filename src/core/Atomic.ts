@@ -7,6 +7,10 @@ import type {Changeset} from "json-diff-ts";
 import type {IParseBaseOptions} from 'qs';
 import * as z from "zod";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
+import type { listenRangeSchema, playDataSchema as playDataFullSchema, playMetaSchema as playMetaFullSchema, playObjectSchema, playProgressSchema, sourcePlayerSchema } from "./PlaySchema.ts";
+
+/** Selects the JSON (`z.input`, string dates) or backend (`z.output`, Dayjs dates) side of a codec schema. Distributes over DateLike. */
+type DateSide<D extends DateLike, S extends z.ZodType> = D extends string ? z.input<S> : z.output<S>;
 
 export const musicServiceName = z.enum(['spotify', 'musicbrainz', 'youtube', 'jellyfin', 'plex', 'listenbrainz', 'rocksky', 'isrc']);
 export type MusicServiceName = z.infer<typeof musicServiceName>;
@@ -166,13 +170,9 @@ export interface TrackStringOptions<T = string> {
     }
 }
 
-export interface PlayProgressAmb<D extends DateLike = Dayjs> {
-    timestamp: D
-    position?: number
-    positionPercent?: number
-}
+export type PlayProgressAmb<D extends DateLike = Dayjs> = DateSide<D, typeof playProgressSchema>;
 
-export interface PlayProgress extends PlayProgressAmb {
+export interface PlayProgress extends z.output<typeof playProgressSchema> {
     timestamp: Dayjs
 }
 
@@ -180,12 +180,9 @@ export interface PlayProgressPositional extends PlayProgress {
     position: number
 }
 
-export interface ListenRangeDataAmb<D extends DateLike = Dayjs> {
-    start: PlayProgressAmb<D>
-    end: PlayProgressAmb<D>
-}
+export type ListenRangeDataAmb<D extends DateLike = Dayjs> = DateSide<D, typeof listenRangeSchema>;
 
-export interface ListenRangeData extends ListenRangeDataAmb {
+export interface ListenRangeData extends z.output<typeof listenRangeSchema> {
     start: PlayProgress
     end: PlayProgress
 }
@@ -267,25 +264,7 @@ export const playTrackStrictDataSchema = z.object({
     albumArtists: z.object({...creditSchema.shape, name: z.string().nonempty()}).array().optional()
 })
 
-export interface PlayData<D extends DateLike = Dayjs> extends TrackData {
-    /**
-     * The date the track was played at
-     * */
-    playDate?: D
-    /** Number of seconds the track was listened to */
-    listenedFor?: number
-    listenRanges?: ListenRangeDataAmb<D>[]
-    playDateCompleted?: D
-    repeat?: boolean
-}
-
-export const playDataSchema = z.object({
-    ...playTrackDataSchema.shape,
-    playDate: z.string().optional(),
-    playDateCompleted: z.string().optional(),
-    listenedFor: z.number().nonnegative().optional(),
-    repeat: z.boolean().optional()
-});
+export type PlayData<D extends DateLike = Dayjs> = DateSide<D, typeof playDataFullSchema>;
 
 export const playDataStrictSchema = z.object({
     ...playTrackStrictDataSchema.shape,
@@ -305,90 +284,7 @@ export const PARSED_FROM = parsedFromSchema.enum;
 
 export type PlayMeta<D extends DateLike = Dayjs, T = {}> = Merge<PlayMetaBase<D>, T>;
 
-export interface PlayMetaBase<D extends DateLike = Dayjs> {
-    source?: string
-    sourceSOT?: SOURCE_SOT_TYPES
-
-    seenAt?: D
-
-    //dbUid?: string
-    //dbId?: number
-
-    /*
-    * If applicable, the name of the Service providing the track (Spotify, Tidal, etc...)
-    */
-    musicService?: string
-
-    /**
-     * Specifies from what facet/data from the source this play was parsed from IE player, backlog, now playing, etc...
-     * */
-    parsedFrom?: PARSED_FROM_TYPE
-    /**
-     * Unique ID for this track, given by the Source
-     * */
-    trackId?: string
-
-    /**
-     * Atomic ID for this instance of played tracked IE a unique ID for "this track played at this time"
-     * */
-    playId?: string
-    newFromSource?: boolean
-    url?: {
-        /**
-         * The URL where this track can be found for the serice it was created from
-         * 
-         * IE
-         * 
-         * * Spotify Source <-- url to spotify track
-         * * Maloja Client <--- url to specific scrobble
-         */
-        web?: string
-        /**
-         * The URL where this play was originally played
-         * 
-         * IE Frank Sinatra - My way FROM youtube.com <-- URL pointing to specific video
-         */
-        origin?: string
-    }
-    user?: string
-    mediaType?: string
-    server?: string
-    library?: string
-    /**
-     * The position the "player" is at in the track at the time the play was reported, in seconds
-     * */
-    trackProgressPosition?: number
-
-    /*
-    * Name of the media player (program)
-    */
-    mediaPlayerName?: string
-
-   /*
-    * Version of the media player (program)
-    */
-    mediaPlayerVersion?: string
-    /**
-     * A unique identifier for the device playing this track
-     * */
-    deviceId?: string
-    /** The ID/Key for individual sessions on a device/platform */
-    sessionId?: string
-
-    nowPlaying?: boolean
-
-    scrobbleTsSOC?: ScrobbleTsSOC
-
-    comment?: string
-
-    /** Was the component activitely monitoring when this Play was created? */
-    wasMonitored?: boolean
-
-    //lifecycle: PlayLifecycle<D>
-    lifecycleInputs?: LifecycleInput[]
-
-    //[key: string]: any
-}
+export type PlayMetaBase<D extends DateLike = Dayjs> = DateSide<D, typeof playMetaFullSchema>;
 
 export const playMetaSchema = z.looseObject({
     source: z.string().optional(),
@@ -472,15 +368,16 @@ export interface PlayOriginal<D extends DateLike = Dayjs> {
     play?: PlayObjectMinimal<D>
 }
 
-export interface AmbPlayObject<D extends DateLike = Dayjs, T = {}> {
-    id?: number
-    uid?: string
-    data: PlayData<D>,
-    meta: PlayMeta<D,T>
+/** Free-form parts of a Play that are not (yet) described by playObjectSchema */
+interface PlayBlobs<D extends DateLike> {
     original?: PlayOriginal<D>
     scrobble?: ScrobbleResult<D>
     lifecycle?: LifecycleStep[]
 }
+
+export type AmbPlayObject<D extends DateLike = Dayjs, T = {}> = D extends string
+    ? Merge<z.input<typeof playObjectSchema>, PlayBlobs<string> & {meta: PlayMeta<string, T>}>
+    : Merge<z.output<typeof playObjectSchema>, PlayBlobs<Dayjs> & {meta: PlayMeta<Dayjs, T>}>;
 
 export type AmbPlayObjectMinimal<D extends DateLike = Dayjs, T = {}> = Pick<AmbPlayObject<D,T>, RequiredKeys<AmbPlayObject<D>>> & Pick<AmbPlayObject<D,T>, 'id' | 'uid'>;
 
@@ -505,11 +402,6 @@ export interface ObjectPlayData extends PlayData {
 }
 
 
-export const playEditCreateSchema = z.object({
-    data: playDataSchema,
-    meta: playMetaSchema
-});
-
 export const playEditStrictCreateSchema = z.object({
     data: playDataStrictSchema,
     meta: playMetaSchema
@@ -532,35 +424,10 @@ export interface LogEvent {
 
 export type PlayPlatformIdStr = string;
 
-export interface SourcePlayerObj<D extends DateLike = Dayjs> {
-    /** unique tuple identifying user and device */
-    platformId: PlayPlatformIdStr,
+export type SourcePlayerObj<D extends DateLike = Dayjs> = Merge<DateSide<D, typeof sourcePlayerSchema>, {
     /** full play/scrobble object information */
-    play?: AmbPlayObject<D>,
-    playFirstSeenAt?: string,
-    /** last time play was updated in MS */
-    playLastUpdatedAt?: string,
-    /** last time player self-reported it was updated at */
-    playerLastUpdatedAt: string
-    /** when this specific play/player was created */
-    createdAt?: number
-    /** player poisition */
-    position?: Second
-    listenedDuration: Second
-    /** if player is mirroring generic now-playing (from upstream LZ/LFM client) */
-    nowPlayingMode?: boolean
-    /** status of player */
-    status: {
-        /** what player reported: paused, playing, stopped, unknown  */
-        reported: string
-        /** what MS has derived from watching player behavior: paused, playing, stopped, unknown  */
-        calculated: string
-        /** When player has not reported any new updates for N seconds */
-        stale: boolean
-        /** When player has not reported any new updates for N * 2 seconds */
-        orphaned: boolean
-    }
-}
+    play?: AmbPlayObject<D>
+}>;
 
 export type SourcePlayerJson = SourcePlayerObj<string>;
 

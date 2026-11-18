@@ -10,7 +10,7 @@ import { playToSubmitPayload } from "../common/vendor/listenbrainz/lzUtils.ts";
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.ts";
 import {redactString} from "@foxxmd/redact-string";
 import { SimpleError } from "../common/errors/MSErrors.ts";
-import { toPublicPlay, toPublicPlayer } from "../../core/PlayJsonSchema.ts";
+import { toPublicPlay, toPublicPlayer } from "../../core/PlaySchema.ts";
 import type { SubmitPayload } from "../../core/vendor/listenbrainz/interfaces.ts";
 
 /**

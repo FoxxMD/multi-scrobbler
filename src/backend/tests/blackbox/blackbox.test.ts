@@ -1,4 +1,5 @@
 import { expect } from 'chai';
+import * as z from 'zod';
 import { describe, it } from 'mocha';
 import EventEmitter from 'events';
 import { readFile } from 'node:fs/promises';
@@ -8,34 +9,35 @@ import { projectRootDir } from '../../common/infrastructure/Atomic.ts';
 import { blackboxNowPlayingPayloadSchema, blackboxScrobblePayloadSchema } from '../../common/infrastructure/config/client/blackbox.ts';
 import BlackboxScrobbler from '../../scrobblers/BlackboxScrobbler.ts';
 import { generatePlay, generateSourcePlayerObj } from '../../../core/tests/utils/PlayTestUtils.ts';
-import { toPublicPlay, toPublicPlayer } from '../../../core/PlayJsonSchema.ts';
+import { toPublicPlay, toPublicPlayer } from '../../../core/PlaySchema.ts';
 
 const examplesDir = resolve(projectRootDir, 'docsite/src/content/docs/configuration/clients/_blackbox');
 const readExample = async (name: string) => JSON.parse(await readFile(resolve(examplesDir, name), 'utf8'));
 // zod objects strip unknown keys, so output only equals input when every key is known to the schema
+const schemaRoundTrip = <S extends z.ZodType>(schema: S, data: unknown) => z.encode(schema, schema.parse(data));
 const jsonRoundTrip = (data: unknown) => JSON.parse(JSON.stringify(data));
 
 describe('Blackbox Payloads', function () {
 
     it('docs scrobble example matches schema', async function () {
         const example = await readExample('scrobble.json');
-        expect(blackboxScrobblePayloadSchema.parse(example)).to.deep.eq(example);
+        expect(schemaRoundTrip(blackboxScrobblePayloadSchema, example)).to.deep.eq(example);
     });
 
     it('docs now playing example matches schema', async function () {
         const example = await readExample('nowPlaying.json');
-        expect(blackboxNowPlayingPayloadSchema.parse(example)).to.deep.eq(example);
+        expect(schemaRoundTrip(blackboxNowPlayingPayloadSchema, example)).to.deep.eq(example);
     });
 
     it('scrobble payload sent by client matches schema', async function () {
         const client = new BlackboxScrobbler('test', {name: 'test', id: 'test', data: {endpoint: 'http://localhost'}}, {}, new EventEmitter(), loggerNoop);
         const payload = jsonRoundTrip(client.playToClientPayload(generatePlay({}, {}, {listenRanges: true, playDateCompleted: true})));
-        expect(blackboxScrobblePayloadSchema.parse(payload)).to.deep.eq(payload);
+        expect(schemaRoundTrip(blackboxScrobblePayloadSchema, payload)).to.deep.eq(payload);
     });
 
     it('now playing payload sent by client matches schema', async function () {
         const payload = jsonRoundTrip({type: 'nowPlaying', play: generateSourcePlayerObj({playOpts: {}})});
-        expect(blackboxNowPlayingPayloadSchema.parse(payload)).to.deep.eq(payload);
+        expect(schemaRoundTrip(blackboxNowPlayingPayloadSchema, payload)).to.deep.eq(payload);
     });
 
     it('redacts internal properties from Play and Player', async function () {
