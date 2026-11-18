@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import type {AlbumSearchResult, ArtistSearchResult, ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentHistoricalApi, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi, TrackSearchResult} from "../../Api.ts";
+import type {AlbumSearchResult, ArtistSearchResult, ComponentClientApiJson, ComponentCommonApiJson, ComponentHistoricalApiJson, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi, TrackSearchResult} from "../../Api.ts";
 import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ErrorLike, type ComponentType, QUEUE_STATUSES, sourceSotTypes, type MBID, type Credit, type MusicServices, musicServiceName } from "../../Atomic.ts";
 import type { JsonPlayObject, PlayObject, SourcePlayerJson } from "../../PlaySchema.ts";
 import { generateISRC, generateMbid, generatePlay, normalizePlays } from "./PlayTestUtils.ts";
@@ -111,12 +111,12 @@ export const generatePlayApiCommonDetailed = (opts: {
 
 const statusSamples = ['Sleeping 💤', 'Processing Queue', '⚠️ Authentication Failed', 'Updating Now Playing', 'Monitoring Players', '⚠️  Upstream error'];
 
-export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi> = {}): ComponentCommonApiJson => {
+export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApiJson> = {}): ComponentCommonApiJson => {
     const {
         type = faker.helpers.arrayElement([...sourceTypes, ...clientTypes]),
-        createdAt = dayjs(),
-        lastActiveAt = dayjs(),
-        lastReadyAt = dayjs(),
+        createdAt = dayjs().toISOString(),
+        lastActiveAt = dayjs().toISOString(),
+        lastReadyAt = dayjs().toISOString(),
         state = faker.number.int({min: 1, max: 7}) as ComponentState,
         monitoringStatus = { monitoring: faker.datatype.boolean({probability: 0.1}), origin: 'system' },
         players = {},
@@ -140,9 +140,9 @@ export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi>
         id: faker.number.int({min: 1, max: 100}),
         uid: generatePlayUid(),
         name: `${faker.word.adjective()} ${faker.word.noun()}`,
-        createdAt: createdAt!.toISOString(),
-        lastActiveAt: lastActiveAt!.toISOString(),
-        lastReadyAt: lastReadyAt!.toISOString(),
+        createdAt,
+        lastActiveAt,
+        lastReadyAt,
         type,
         mode,
         countLive: faker.number.int({min: 0, max: 2000}),
@@ -160,14 +160,14 @@ export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi>
     }
 }
 
-export const generateHistoricalPlayApi = (data: Partial<ComponentHistoricalApi> = {}): ComponentHistoricalApi => {
+export const generateHistoricalPlayApi = (data: Partial<ComponentHistoricalApiJson> = {}): ComponentHistoricalApiJson => {
     let isSynced;
     if(data.synced !== undefined) {
         isSynced = data.synced;
     } else if(data.syncedReason !== undefined || data.syncError !== undefined) {
         isSynced = false;
     }
-    const importDate = dayjs(faker.date.recent().toISOString());
+    const importDate = faker.date.recent().toISOString();
     if(isSynced) {
         return {
             synced: true,
@@ -188,7 +188,7 @@ export const generateHistoricalPlayApi = (data: Partial<ComponentHistoricalApi> 
     }
 }
 
-export const generateSourceApiJson = (data: Partial<ComponentSourceApi> = {}): ComponentSourceApiJson => {
+export const generateSourceApiJson = (data: Partial<ComponentSourceApiJson> = {}): ComponentSourceApiJson => {
     const {
         mode,
         type = faker.helpers.arrayElement(sourceTypes),
@@ -222,7 +222,7 @@ export const generateSourceApiJson = (data: Partial<ComponentSourceApi> = {}): C
     }
 }
 
-export const generateClientApiJson = (data: Partial<ComponentClientApi> = {}): ComponentClientApiJson => {
+export const generateClientApiJson = (data: Partial<ComponentClientApiJson> = {}): ComponentClientApiJson => {
     const {
         mode,
         type = faker.helpers.arrayElement(clientTypes),
@@ -250,14 +250,14 @@ export const generateClientApiJson = (data: Partial<ComponentClientApi> = {}): C
     }
 }
 
-export const generateComponentApiJson = (data: Partial<ComponentCommonApi> = {}): ComponentClientApiJson | ComponentSourceApiJson => {
+export const generateComponentApiJson = (data: Partial<ComponentCommonApiJson> = {}): ComponentClientApiJson | ComponentSourceApiJson => {
     const {
         mode: modeData,
         type: typeData
     } = data;
 
-    let mode!: ComponentCommonApi['mode'],
-    type!: ComponentCommonApi['type'];
+    let mode!: ComponentCommonApiJson['mode'],
+    type!: ComponentCommonApiJson['type'];
 
     if(modeData === undefined && typeData === undefined) {
         mode = faker.helpers.arrayElement(['source', 'client']);

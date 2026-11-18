@@ -1,9 +1,8 @@
-import type { ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
-import { creditSchema, playTrackDataSchema, PLAY_STATES, QUEUE_NAMES, QUEUE_STATUSES, queueContextSchema, type QueueStatus, type ClientType, type ComponentAuthType, type MonitoringStatus, creditBaseSchema, trackSearchHash, albumSearchHash, artistSearchHash } from "./Atomic.ts"
+import { creditSchema, playTrackDataSchema, COMPONENT_AUTH_TYPE, componentTypeSchema, MONITORING_ORIGIN_SYSTEM, MONITORING_ORIGIN_USER, sourceSotTypes, PLAY_STATES, QUEUE_NAMES, QUEUE_STATUSES, queueContextSchema, type QueueStatus, type ClientType, creditBaseSchema, trackSearchHash, albumSearchHash, artistSearchHash } from "./Atomic.ts"
 import type { LogEvent, SourceType, TrackData } from "./Atomic.ts"
-import type { ComponentType, DateLike, ErrorLike, PlayState, QueueName, SOURCE_SOT_TYPES } from "./Atomic.ts"
+import type { ComponentType, DateLike, ErrorLike, PlayState, QueueName } from "./Atomic.ts"
 import type { JsonPlayObject, SourcePlayerJson, DateSide } from "./PlaySchema.ts"
-import { playObjectSchema, zDayjs, zDayjsStrict } from "./PlaySchema.ts"
+import { playObjectSchema, sourcePlayerSchema, zDayjs, zDayjsStrict } from "./PlaySchema.ts"
 import type { Dayjs } from "dayjs"
 import type { ErrorIsh } from "./ErrorUtils.ts"
 import { playEventSchema } from "./PlayEvent.ts"
@@ -102,64 +101,75 @@ export const componentStateToFriendly = (state: ComponentState) => {
     }
 }
 
-export type ComponentCommonApi = {
-    type: SourceType | ClientType
-    name: string
+const errorIshSchema = z.custom<ErrorIsh>();
+
+export const componentCommonApiSchema = z.object({
+    id: z.int(),
+    uid: z.string(),
+    mode: componentTypeSchema,
+    type: z.custom<SourceType | ClientType>(),
+    name: z.string(),
     /** General state of the component like Idle, Stopped, Running, Error */
-    state: ComponentState
+    state: z.literal([1, 2, 3, 4, 5, 6, 7]).meta({description: 'General state of the component like Idle, Stopped, Running, Error'}),
     /** More specific, live activity state like "sleeping", "hydrating historical scrobbles", "processing dead scrobbles", etc... */
-    status?: string
-    players: Record<string, SourcePlayerJson>
-    errors?: ErrorIsh[]
-    warnings?: ErrorIsh[]
-    monitoringStatus?: MonitoringStatus
-    deadLetterPlays: number
-    deadLetterPlaysTotal: number
-    queued: number
-} & Omit<ComponentMinimalSelect, 'type' | 'userId'>
+    status: z.string().optional().meta({description: 'More specific, live activity state like "sleeping", "hydrating historical scrobbles", "processing dead scrobbles", etc...'}),
+    players: z.record(z.string(), sourcePlayerSchema),
+    errors: errorIshSchema.array().optional(),
+    warnings: errorIshSchema.array().optional(),
+    monitoringStatus: z.object({
+        monitoring: z.boolean(),
+        origin: z.enum([MONITORING_ORIGIN_USER, MONITORING_ORIGIN_SYSTEM]),
+    }).optional(),
+    deadLetterPlays: z.int(),
+    deadLetterPlaysTotal: z.int(),
+    queued: z.int(),
+    /** number of discovered/scrobbled plays found in real time */
+    countLive: z.int().meta({description: 'number of discovered/scrobbled plays found in real time'}),
+    /** number of discovered/scrobbled plays from backlog/jobs */
+    countNonLive: z.int().meta({description: 'number of discovered/scrobbled plays from backlog/jobs'}),
+    /** seconds of discovered plays (sources only) */
+    listenedLive: z.int().meta({description: 'seconds of discovered plays (sources only)'}),
+    createdAt: zDayjsStrict.optional(),
+    lastReadyAt: zDayjsStrict.optional(),
+    lastActiveAt: zDayjsStrict.optional(),
+});
+export type ComponentCommonApiJson = z.input<typeof componentCommonApiSchema>;
 
-/** Maps Dayjs (including nullable/optional Dayjs) properties to string, preserving optionality */
-// nullable Dayjs fields are emitted as undefined (key omitted) when missing, so allow undefined as well as null
-type DayjsJsonVal<V> = Dayjs extends V ? Exclude<V, Dayjs> | string | (null extends V ? undefined : never) : V;
-type DayjsToJson<T> = { [K in keyof T]: DayjsJsonVal<T[K]> };
+export const componentHistoricalApiSchema = z.object({
+    synced: z.boolean(),
+    syncedReason: z.string().nullable().optional(),
+    syncError: errorIshSchema.nullable().optional(),
+    lastImport: zDayjsStrict.optional(),
+    lastImportSuccess: zDayjsStrict.optional(),
+});
+export type ComponentHistoricalApiJson = z.input<typeof componentHistoricalApiSchema>;
 
-export type ComponentCommonApiJson = DayjsToJson<ComponentCommonApi>;
+const componentDetailedApiSchema = componentCommonApiSchema.extend({
+    hasAuth: z.boolean(),
+    hasAuthInteraction: z.boolean(),
+    authed: z.boolean(),
+    authType: z.enum(Object.values(COMPONENT_AUTH_TYPE)),
+    initialized: z.boolean(),
+}).extend(componentHistoricalApiSchema.partial().shape);
 
-export type ComponentHistoricalApi = {
-    synced: boolean
-    syncedReason: string | null | undefined
-    syncError: ErrorIsh | null | undefined
-    lastImport: Dayjs | undefined
-    lastImportSuccess: Dayjs | undefined
-}
+export const componentClientApiSchema = componentDetailedApiSchema.extend({
+    tracksScrobbled: z.int(),
+    supportsNowPlaying: z.boolean(),
+    players: z.record(z.string(), sourcePlayerSchema.extend({
+        /** when a now playing that is not realtime is cleared */
+        expiration: zDayjsStrict.optional().meta({description: 'when a now playing that is not realtime is cleared'}),
+    })),
+});
+export type ComponentClientApiJson = z.input<typeof componentClientApiSchema>;
 
-export type ComponentDetailedApi = ComponentCommonApi & {
-    hasAuth: boolean;
-    hasAuthInteraction: boolean;
-    authed: boolean
-    authType: ComponentAuthType
-    initialized: boolean
-}
-
-export type ComponentCientApiBase = {
-    tracksScrobbled: number
-    supportsNowPlaying: boolean
-    players: Record<string, SourcePlayerJson & {expiration?: string}>
-}
-
-export type ComponentClientApi = ComponentDetailedApi & ComponentCientApiBase & Partial<ComponentHistoricalApi>;
-export type ComponentClientApiJson = DayjsToJson<ComponentClientApi>;
-
-export type ComponentSourceApiBase = {
-    sot: SOURCE_SOT_TYPES
-    supportsUpstreamRecentlyPlayed: boolean;
-    tracksDiscovered: number;
-    wakeAt?: string
-    sleeping: boolean
-}
-
-export type ComponentSourceApi = ComponentDetailedApi & ComponentSourceApiBase & Partial<ComponentHistoricalApi>;
-export type ComponentSourceApiJson = DayjsToJson<ComponentSourceApi>;
+export const componentSourceApiSchema = componentDetailedApiSchema.extend({
+    sot: z.enum(sourceSotTypes),
+    supportsUpstreamRecentlyPlayed: z.boolean(),
+    tracksDiscovered: z.int(),
+    wakeAt: zDayjsStrict.optional(),
+    sleeping: z.boolean(),
+});
+export type ComponentSourceApiJson = z.input<typeof componentSourceApiSchema>;
 
 export type SubsonicSourceApiJson = ComponentSourceApiJson & { playbackReporting?: boolean }
 
