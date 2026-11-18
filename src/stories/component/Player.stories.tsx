@@ -86,30 +86,28 @@ export const PlayerLive = meta.story({
     componentId: 1,
     data: generateSourcePlayerJson({platformId: 'test'}, {art: true})
   },
-  parameters: {
-      msw: {
-        handlers: [
-          http.get<{componentId: string, platformId: string}>(`/api/sources/:componentId/players/:platformId`, async ({ params }) => {
-            return HttpResponse.json(generateSourcePlayerJson({platformId: params.platformId, position: 10}, {art: true}));
-          }),
-          sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
-          const data = generateSourcePlayerJson({platformId: 'test'}, {art: true});
-          let position = 10;
-          let listenedDur = 10;
-          setInterval(() => {
-            position += 10;
-            listenedDur += 10;
-            client.send(generateSseMessage('playerUpdate', {
-              ...data,
-              playLastUpdatedAt: dayjs().toISOString(),
-              playerLastUpdatedAt: dayjs().toISOString(),
-              position,
-              listenedDuration: listenedDur
-            }));
-          }, 10000);
-          })
-        ],
-      },
+  beforeEach({ msw }) {
+    msw.use(
+      http.get<{componentId: string, platformId: string}>(`/api/sources/:componentId/players/:platformId`, async ({ params }) => {
+        return HttpResponse.json(generateSourcePlayerJson({platformId: params.platformId, position: 10}, {art: true}));
+      }),
+      sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
+      const data = generateSourcePlayerJson({platformId: 'test'}, {art: true});
+      let position = 10;
+      let listenedDur = 10;
+      setInterval(() => {
+        position += 10;
+        listenedDur += 10;
+        client.send(generateSseMessage('playerUpdate', {
+          ...data,
+          playLastUpdatedAt: dayjs().toISOString(),
+          playerLastUpdatedAt: dayjs().toISOString(),
+          position,
+          listenedDuration: listenedDur
+        }));
+      }, 10000);
+      })
+    );
   },
   render: function Render(args) {
     // @ts-expect-error

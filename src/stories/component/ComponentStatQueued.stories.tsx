@@ -15,15 +15,15 @@ import { faker } from "@faker-js/faker";
 const meta = preview.meta({
   title: 'Component/Details/Stat Queued',
   component: QueuedIndicatorStreamable,
+  beforeEach({ msw }) {
+    msw.use(
+      sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
+      })
+    );
+  },
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
-      msw: {
-        handlers: [
-          sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
-          }),
-        ],
-      },
   },
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
@@ -49,13 +49,11 @@ export const StatsQueued = meta.story({
       id: 1,
     },
   },
-  parameters: {
-      msw: {
-        handlers: [
-          sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
-          setInterval(() => client.send(generateSseMessage(randomQueue(), {})), 2000);
-          }),
-        ],
-      },
-  }
+  beforeEach({ msw }) {
+    msw.use(
+      sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
+      setInterval(() => client.send(generateSseMessage(randomQueue(), {})), 2000);
+      })
+    );
+  },
 });

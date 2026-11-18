@@ -231,7 +231,7 @@
     "mocha": "^10.3.0",
     "mockdate": "^3.0.5",
     "msw": "^2.14.6",
-    "msw-storybook-addon": "^2.0.7",
+    "msw-storybook-addon": "^3.0.3",
     "next-themes": "^0.4.6",
     "oxlint": "^1.94.0",
     "react": "^19.2.6",

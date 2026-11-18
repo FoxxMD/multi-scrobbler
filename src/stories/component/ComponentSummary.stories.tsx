@@ -17,15 +17,15 @@ import dayjs from "dayjs";
 const meta = preview.meta({
   title: 'Component/Summary',
   component: MSComponentSummary,
+  beforeEach({ msw }) {
+    msw.use(
+      sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
+      })
+    );
+  },
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
-    msw: {
-      handlers: [
-        sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
-        }),
-      ],
-    },
   },
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
@@ -62,15 +62,13 @@ export const SourceSummaryFetchable = meta.story({
       fetchable: true,
       componentId: 1,
     },
-    parameters: {
-        msw: {
-          handlers: [
-            sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
-            setInterval(() => client.send(generateSseMessage('discovered', {})), 2000);
-            }),
-          ],
-        },
-    }
+    beforeEach({ msw }) {
+      msw.use(
+        sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
+        setInterval(() => client.send(generateSseMessage('discovered', {})), 2000);
+        })
+      );
+    },
 });
 
 export const SourceSleeping = meta.story({
@@ -105,15 +103,13 @@ export const ClientSummaryFetchable = meta.story({
       fetchable: true,
       componentId: 1,
     },
-    parameters: {
-        msw: {
-          handlers: [
-            sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
-            setInterval(() => client.send(generateSseMessage(randomQueue(), {})), 2000);
-            setInterval(() => client.send(generateSseMessage('deadLetter', {})), 3000);
-            setInterval(() => client.send(generateSseMessage('scrobble', {})), 2500);
-            })
-          ],
-        },
-    }
+    beforeEach({ msw }) {
+      msw.use(
+        sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
+        setInterval(() => client.send(generateSseMessage(randomQueue(), {})), 2000);
+        setInterval(() => client.send(generateSseMessage('deadLetter', {})), 3000);
+        setInterval(() => client.send(generateSseMessage('scrobble', {})), 2500);
+        })
+      );
+    },
 });

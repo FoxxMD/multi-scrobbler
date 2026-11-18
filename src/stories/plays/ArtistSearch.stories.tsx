@@ -11,16 +11,16 @@ import { generateArtistSearchResults } from "../../core/tests/utils/apiFixtures.
 const meta = preview.meta({
   title: 'Plays/Search/Artist Search',
   component: ArtistSearch,
+  beforeEach({ msw }) {
+    msw.use(
+      http.get<{ query: string }>('/api/artists', async ({ params }) => {
+        return HttpResponse.json({data: generateArtistSearchResults()});
+      })
+    );
+  },
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
-    msw: {
-      handlers: [
-        http.get<{ query: string }>('/api/artists', async ({ params }) => {
-          return HttpResponse.json({data: generateArtistSearchResults()});
-        }),
-      ],
-    },
   },
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],

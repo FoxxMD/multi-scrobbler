@@ -14,15 +14,15 @@ import type {MsSseEvent} from "../../core/Api.js";
 const meta = preview.meta({
   title: 'Component/Details/Stats Count',
   component: CountIndicatorStreamable,
+  beforeEach({ msw }) {
+    msw.use(
+      sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
+      })
+    );
+  },
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
-      msw: {
-        handlers: [
-          sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
-          }),
-        ],
-      },
   },
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
@@ -59,16 +59,14 @@ export const StatsCountLive = meta.story({
       id: 1
     },
   },
-  parameters: {
-      msw: {
-        handlers: [
-          // <{event: 'scrobble', data: {componentId: number}}>
-          sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
-            setInterval(() => client.send(generateSseMessage('scrobble', {})), 2000);
-          }),
-        ],
-      },
-  }
+  beforeEach({ msw }) {
+    msw.use(
+      // <{event: 'scrobble', data: {componentId: number}}>
+      sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
+        setInterval(() => client.send(generateSseMessage('scrobble', {})), 2000);
+      })
+    );
+  },
 });
 
 export const StatsCountLiveReset = meta.story({
@@ -81,14 +79,12 @@ export const StatsCountLiveReset = meta.story({
     },
     recentTimeout: 2000
   },
-  parameters: {
-      msw: {
-        handlers: [
-          // <{event: 'scrobble', data: {componentId: number}}>
-          sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
-            setInterval(() => client.send(generateSseMessage('scrobble', {})), 3000);
-          }),
-        ],
-      },
-  }
+  beforeEach({ msw }) {
+    msw.use(
+      // <{event: 'scrobble', data: {componentId: number}}>
+      sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
+        setInterval(() => client.send(generateSseMessage('scrobble', {})), 3000);
+      })
+    );
+  },
 });
