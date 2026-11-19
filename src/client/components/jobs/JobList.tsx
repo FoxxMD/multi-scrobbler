@@ -26,8 +26,10 @@ export const JobSummary = (props: { job: JobApiJson }) => {
                 </Card.Header>
                 <Card.Body px="6" py="3">
                     <Stack gap="2">
-                        <ImportProgressBar job={job}/>
-                        <Text textStyle="sm">{job.imported.toLocaleString()} new of {job.importFetched.toLocaleString()} fetched{job.importTotal !== null ? ` (${job.importTotal.toLocaleString()} total)` : ''}</Text>
+                        {job.importFrom.kind !== 'mirror' ? <>
+                            <ImportProgressBar job={job}/>
+                            <Text textStyle="sm">{job.imported.toLocaleString()} new of {job.importFetched.toLocaleString()} fetched{job.importTotal !== null ? ` (${job.importTotal.toLocaleString()} total)` : ''}</Text>
+                        </> : undefined}
                         {waiting !== undefined ? <Text textStyle="sm" color="fg.warning">Waiting: {waiting}</Text> : undefined}
                         {job.targets.length > 0 ? <Wrap gap="2" alignItems="center">
                             <TextMuted textStyle="sm">Export:</TextMuted>

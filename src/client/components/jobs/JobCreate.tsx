@@ -18,14 +18,16 @@ import { JobBackButton } from "./JobList";
 import { apiErrorMessage, useSetJob } from "./jobUtils";
 
 type CreatedJob = JobApiJson & { startError?: string };
-type Source = 'component' | 'upload' | 'existing';
+type Source = 'component' | 'upload' | 'existing' | 'mirror';
 type TransformsKind = 'none' | 'preset' | 'component';
 
 export const TRANSFER_DOCS = 'docs/transfer/overview/';
 
 const formSchema = z.object({
     name: z.string().trim().min(1, 'Name is required').max(100),
-    source: z.enum(['component', 'upload', 'existing']),
+    source: z.enum(['component', 'upload', 'existing', 'mirror']),
+    /** mirror to export from, for source 'mirror' */
+    exportMirror: z.string(),
     componentId: z.string(),
     file: z.instanceof(File).nullable(),
     existingFile: z.string(),
@@ -58,7 +60,13 @@ const formSchema = z.object({
     if (v.source === 'existing' && v.existingFile === '') {
         ctx.addIssue({code: 'custom', path: ['existingFile'], message: 'Choose a file'});
     }
-    if (v.source !== 'component' && v.mirror === 'new' && v.mirrorName.trim() === '') {
+    if (v.source === 'mirror' && v.exportMirror === '') {
+        ctx.addIssue({code: 'custom', path: ['exportMirror'], message: 'Choose a mirror'});
+    }
+    if (v.source === 'mirror' && v.targets.length === 0) {
+        ctx.addIssue({code: 'custom', path: ['targets'], message: 'Choose at least one Client to export to'});
+    }
+    if ((v.source === 'upload' || v.source === 'existing') && v.mirror === 'new' && v.mirrorName.trim() === '') {
         ctx.addIssue({code: 'custom', path: ['mirrorName'], message: 'Name the new mirror'});
     }
     if (v.range === 'custom' && v.from !== '' && v.to !== '' && !dayjs(v.from).isBefore(dayjs(v.to))) {
@@ -71,11 +79,22 @@ const formSchema = z.object({
         ctx.addIssue({code: 'custom', path: ['transformComponent'], message: 'Choose transforms to copy'});
     }
 }).transform((v): { payload: JobCreate, file?: File } => {
-    const importFrom: JobCreate['importFrom'] = v.source === 'component'
-        ? {componentId: Number.parseInt(v.componentId)}
-        : v.source === 'upload' ? {upload: true} : {existingFile: v.existingFile};
+    let importFrom: JobCreate['importFrom'];
+    switch (v.source) {
+        case 'component':
+            importFrom = {componentId: Number.parseInt(v.componentId)};
+            break;
+        case 'upload':
+            importFrom = {upload: true};
+            break;
+        case 'existing':
+            importFrom = {existingFile: v.existingFile};
+            break;
+        default:
+            importFrom = {mirrorId: Number.parseInt(v.exportMirror)};
+    }
     let mirror: JobCreate['mirror'];
-    if (v.source !== 'component') {
+    if (v.source === 'upload' || v.source === 'existing') {
         mirror = v.mirror === 'new'
             ? {new: {name: v.mirrorName.trim(), account: v.mirrorAccount.trim() === '' ? undefined : v.mirrorAccount.trim()}}
             : {id: Number.parseInt(v.mirror)};
@@ -97,7 +116,7 @@ const formSchema = z.object({
                 // datetime-local has minute precision, include the whole minute
                 to: v.to === '' ? undefined : dayjs(v.to).endOf('minute').toISOString(),
             },
-            persistInputs: v.persistInputs ?? undefined,
+            persistInputs: v.source === 'mirror' ? undefined : v.persistInputs ?? undefined,
             targets: v.targets,
             exportOrder: v.exportOrder,
             exportQueueLimit: v.exportQueueLimit,
@@ -179,6 +198,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                 componentId: firstComponent?.componentId.toString() ?? '',
                 file: null as File | null,
                 existingFile: options.importFiles[0]?.name ?? '',
+                exportMirror: options.mirrors[0]?.id.toString() ?? '',
                 mirror: 'new',
                 mirrorName: 'Last.fm',
                 mirrorAccount: '',
@@ -206,12 +226,17 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
         {value: 'component', label: 'Last.fm Source/Client'},
         {value: 'upload', label: 'Upload a file'},
         {value: 'existing', label: 'File in imports folder'},
+        ...(options.mirrors.length > 0 ? [{value: 'mirror' as const, label: 'Existing mirror'}] : []),
     ];
     const componentGroups: SelectFormGroup[] = [{items: options.importComponents.map(x => ({
         value: x.componentId.toString(),
         label: `${x.name} (${x.mode}${x.account !== null ? `, ${x.account}` : ''})${x.ready ? '' : ' - not ready'}`
     }))}];
     const fileGroups: SelectFormGroup[] = [{items: options.importFiles.map(x => ({value: x.name, label: `${x.name} (${formatSize(x.size)})`}))}];
+    const exportMirrorGroups: SelectFormGroup[] = [{items: options.mirrors.map(x => ({
+        value: x.id.toString(),
+        label: `${x.name}${x.account !== null ? ` (${x.account})` : ''} - ${x.playCount.toLocaleString()} scrobbles`
+    }))}];
     const presetGroups: SelectFormGroup[] = [{items: options.presets.map(x => ({value: x.name, label: x.name}))}];
     const transformComponentGroups: SelectFormGroup[] = [{items: options.componentTransforms.flatMap(x => (['preCompare', 'postCompare'] as const)
         .filter(hook => x[hook] !== undefined)
@@ -280,7 +305,11 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                                 ? <Field.Root invalid={field.errors.length > 0}><Text color="fg.warning">No unused files are in the imports folder (<code>imports</code> in the data directory).</Text><FormFieldErrors field={field}/></Field.Root>
                                 : <FormNativeSelect field={field} label="File" groups={fileGroups} helperText="Files in the imports folder of the data directory. They are kept when the job is deleted."/>}
                         /> : undefined}
-                        {source !== 'component' ? <Stack gap="3">
+                        {source === 'mirror' ? <form.Field
+                            name="exportMirror"
+                            children={(field) => <FormNativeSelect field={field} label="Mirror" groups={exportMirrorGroups} helperText="Nothing is imported. The job exports scrobbles already in this mirror."/>}
+                        /> : undefined}
+                        {source === 'upload' || source === 'existing' ? <Stack gap="3">
                             <form.Field
                                 name="mirror"
                                 children={(field) => <FormNativeSelect field={field} label="Mirror" groups={mirrorGroups} helperText="Where imported scrobbles are stored. Scrobbles already in the mirror are skipped. benjaminbenben files always get a new mirror of their own because their timestamps have no seconds."/>}
@@ -307,7 +336,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                                 </Flex> : undefined}
                             />
                         </Stack> : undefined}
-                        <form.Field
+                        {source !== 'mirror' ? <form.Field
                             name="persistInputs"
                             children={(field) => <Field.Root>
                                 <Checkbox.Root
@@ -322,7 +351,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                                 </Checkbox.Root>
                                 <Field.HelperText>Keeps the original data of every imported scrobble. Uses more disk space.</Field.HelperText>
                             </Field.Root>}
-                        />
+                        /> : undefined}
                     </Stack>}
                 />
                 <form.Field
@@ -357,7 +386,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                     <form.Field
                         name="targets"
                         // a Fieldset, not a Field: checkboxes in one Field share its input id so every label toggles the first
-                        children={(field) => <Fieldset.Root>
+                        children={(field) => <Fieldset.Root invalid={field.errors.length > 0}>
                             <Fieldset.Legend>Export To</Fieldset.Legend>
                             <Fieldset.HelperText>Clients that get the imported scrobbles. Leave empty to only import. See the <ChakraLink textDecoration="underline" href={`${TRANSFER_DOCS}#how-to-export`} target="_blank">export docs</ChakraLink>.</Fieldset.HelperText>
                             {options.targets.length === 0 ? <Text color="fg.muted" textStyle="sm">No Clients are configured.</Text> : <Fieldset.Content gap="2" mt="1">
@@ -371,6 +400,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                                     <Checkbox.Label>{t.name} ({t.type}){t.ready ? '' : ' - not ready'}</Checkbox.Label>
                                 </Checkbox.Root>)}
                             </Fieldset.Content>}
+                            {field.errors.length > 0 ? <Fieldset.ErrorText>{field.errors.map(e => typeof e === 'string' ? e : (e as {message?: string})?.message).join(', ')}</Fieldset.ErrorText> : undefined}
                         </Fieldset.Root>}
                     />
                     <form.Subscribe

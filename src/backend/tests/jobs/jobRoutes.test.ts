@@ -364,6 +364,27 @@ describe('Job API', function () {
             expect(listed[0].targets.map(x => x.componentId)).eql([7]);
         });
 
+        it('creates a job that only exports an existing mirror', async function () {
+            await using tmp = await createTmpDir('jobExportMirrorOnly');
+            const {app} = await exportApp(tmp.path);
+            const imported = (await createWithTargets(app, {start: true})).body as JobApiJson;
+            const done = await waitForImport(app, imported.id);
+
+            const res = await request(app).post('/api/jobs').send({name: 'again', importFrom: {mirrorId: imported.mirror.id}, targets: [7], persistInputs: true});
+            expect(res.status, JSON.stringify(res.body)).eq(201);
+            const job = res.body as JobApiJson;
+            expect(job.importFrom).eql({kind: 'mirror'});
+            expect(job.mirror.id).eq(imported.mirror.id);
+            expect(job.persistInputs).is.false;
+            expect(job.mirrorPlaysInRange).eq(done.imported);
+
+            const started = await request(app).post(`/api/jobs/${job.id}/start`);
+            expect(started.body.importStatus).eq('completed');
+            expect(started.body.imported).eq(0);
+
+            expect((await request(app).post('/api/jobs').send({name: 'missing', importFrom: {mirrorId: 9999}})).status).eq(404);
+        });
+
         it('rejects unknown clients and bad limits without creating a job', async function () {
             await using tmp = await createTmpDir('jobExportInvalid');
             const {app} = await exportApp(tmp.path);

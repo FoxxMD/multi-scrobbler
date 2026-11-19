@@ -36,7 +36,7 @@ export const importOriginText = (origin: JobImportOriginJson): string => {
         case 'file':
             return `File: ${origin.originalName}`;
         default:
-            return 'Mirror';
+            return 'Existing mirror';
     }
 }
 

@@ -263,7 +263,13 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                 return mirrorRepo.findOrCreate({userId, service: 'lastfm', account: payload.mirror.new.account ?? null, name: payload.mirror.new.name});
             }
 
-            if ('componentId' in payload.importFrom) {
+            if ('mirrorId' in payload.importFrom) {
+                const existing = await mirrorRepo.getById(payload.importFrom.mirrorId);
+                if (existing === undefined || existing.userId !== userId) {
+                    throw new JobRequestError('Mirror not found', 404);
+                }
+                resolveMirror = async () => existing;
+            } else if ('componentId' in payload.importFrom) {
                 const component = jobs.resolveComponent(payload.importFrom.componentId);
                 if (!isLastfmImportSource(component)) {
                     throw new JobRequestError('Component is not a configured Last.fm Source or Client');
@@ -332,7 +338,8 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                     importFile,
                     rangeFrom,
                     rangeTo,
-                    persistInputs: payload.persistInputs ?? importFile === undefined,
+                    // a mirror-only job imports nothing
+                    persistInputs: 'mirrorId' in payload.importFrom ? false : payload.persistInputs ?? importFile === undefined,
                     exportOrder: payload.exportOrder,
                     exportQueueLimit: payload.exportQueueLimit,
                     ...transforms,

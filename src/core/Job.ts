@@ -138,11 +138,12 @@ export const jobCreateSchema = z.object({
         z.object({componentId: z.int().positive()}).meta({description: 'Import from a Last.fm Source or Client through its API'}),
         z.object({upload: z.literal(true)}).meta({description: 'Import from the export file uploaded in the `file` multipart field'}),
         z.object({existingFile: z.string().min(1)}).meta({description: "Import from a file already in the data directory's imports folder (file name only)"}),
+        z.object({mirrorId: z.int().positive()}).meta({description: 'Import nothing, only export scrobbles already in this mirror'}),
     ]),
     mirror: z.union([
         z.object({id: z.int().positive()}),
         z.object({new: z.object({name: z.string().trim().min(1).max(200), account: z.string().trim().min(1).max(200).optional()})}),
-    ]).optional().meta({description: 'Mirror to import a file into. Ignored for Last.fm components (their account decides the mirror) and benjaminbenben files (always a new mirror)'}),
+    ]).optional().meta({description: 'Mirror to import a file into. Ignored for Last.fm components (their account decides the mirror), benjaminbenben files (always a new mirror) and importFrom.mirrorId'}),
     range: z.union([
         z.literal('all'),
         z.object({from: z.iso.datetime({offset: true}).optional(), to: z.iso.datetime({offset: true}).optional()}),

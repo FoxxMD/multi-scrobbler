@@ -158,14 +158,14 @@ export const ImportPanel = (props: { job: JobApiJson }) => {
             </Card.Header>
             <Card.Body>
                 <Stack gap="4">
-                    <Stack gap="1">
+                    {job.importFrom.kind === 'mirror' ? <Text textStyle="sm">Nothing to import. Exports use the {job.mirrorPlaysInRange.toLocaleString()} scrobbles already in the mirror.</Text> : <Stack gap="1">
                         <ImportProgressBar job={job}/>
                         <Text textStyle="sm">
                             {job.imported.toLocaleString()} new of {job.importFetched.toLocaleString()} fetched
                             {job.importTotal !== null ? ` (${job.importTotal.toLocaleString()} total)` : ''}
                             {progress !== undefined ? ` - ${Math.floor(progress * 100)}%` : ''}
                         </Text>
-                    </Stack>
+                    </Stack>}
                     {runtime.waiting !== undefined ? <Text textStyle="sm" color="fg.warning">
                         {runtime.waiting}
                         {runtime.retryAttempt !== undefined ? ` (attempt ${runtime.retryAttempt}${runtime.nextRetryAt !== undefined ? `, next try ${formatJobDate(runtime.nextRetryAt)}` : ''})` : ''}
@@ -182,9 +182,9 @@ export const ImportPanel = (props: { job: JobApiJson }) => {
                         </DataItem>
                         <DataItem label="Range">{job.rangeFrom === null ? 'Beginning' : formatJobDate(job.rangeFrom)} to {formatJobDate(job.rangeTo)}</DataItem>
                         {position !== undefined ? <DataItem label="Position">{position}</DataItem> : undefined}
-                        <DataItem label="Started">{formatJobDate(job.importStartedAt)}</DataItem>
+                        {job.importFrom.kind !== 'mirror' ? <DataItem label="Started">{formatJobDate(job.importStartedAt)}</DataItem> : undefined}
                         <DataItem label="Completed">{formatJobDate(job.importCompletedAt)}</DataItem>
-                        <DataItem label="Raw data saved">{job.persistInputs ? 'Yes' : 'No'}</DataItem>
+                        {job.importFrom.kind !== 'mirror' ? <DataItem label="Raw data saved">{job.persistInputs ? 'Yes' : 'No'}</DataItem> : undefined}
                     </DataList.Root>
                 </Stack>
             </Card.Body>
@@ -226,6 +226,7 @@ export const ExportTarget = (props: { job: JobApiJson, target: JobTargetApiJson 
                 {target.cursor !== null && target.status !== 'completed' ? `, up to ${formatJobDate(new Date(target.cursor.playedAt).toISOString())}` : ''}
             </Text>
             {stats !== undefined ? <Text textStyle="sm" color="fg.muted">In the Client: {stats}</Text> : undefined}
+            {target.exported > target.queued ? <Text textStyle="sm" color="fg.muted">{(target.exported - target.queued).toLocaleString()} were already in the Client and were skipped.</Text> : undefined}
             {runtime?.waiting !== undefined ? <Text textStyle="sm" color="fg.warning">{runtime.waiting}</Text> : undefined}
             {target.status !== 'running' && target.status !== 'completed' && queuedLeft > 0 ? <Text textStyle="sm" color="fg.muted">{queuedLeft.toLocaleString()} queued scrobbles will still be sent to the Client.</Text> : undefined}
             {target.status === 'running' && target.breaker.failedInARow > 0 ? <Text textStyle="sm" color="fg.warning">{target.breaker.failedInARow} failed in a row, the export stops at {Math.max(job.exportQueueLimit, 10)}.</Text> : undefined}

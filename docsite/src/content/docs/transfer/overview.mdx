@@ -150,6 +150,8 @@ After **starting** the job you can monitor it from it's details page and see rea
 
 Choose Clients under **Export To** when creating a job. Leave it empty to only import.
 
+To export scrobbles you already imported, without importing anything, choose **Existing mirror** under **Import From** and pick the mirror. The job's **Range** still decides which scrobbles are exported.
+
 **Options** for export:
 
 * **Order**
@@ -177,7 +179,7 @@ If many scrobbles fail in a row (10, or the queue limit if it is higher) the exp
 Failed scrobbles from a job are not retried automatically. To retry them, either:
 
 * retry them from the Client's page: in the **Scrobbles** filters turn on **Show scrobbles from Import/Export jobs** and set **Played Between** to cover the job's range, then choose **Retry All Unsuccessful** from the menu next to **Scrobbles**, or
-* create a new job for the same mirror and export it to the Client again. Failed scrobbles are sent again, scrobbles the Client already has are skipped.
+* create a new job from the **Existing mirror** and export it to the Client again. Failed scrobbles are sent again, scrobbles the Client already has are skipped.
 
 ### Scrobbles in the Client
 
