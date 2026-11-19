@@ -113,7 +113,7 @@ describe('Job API', function () {
             .attach('file', bad);
         expect(res.status).eq(400);
         expect(res.body.error).to.include('not a supported');
-        expect(await readdir(importsDir)).length(0);
+        expect(await readdir(path.join(importsDir, 'uploads'))).length(0);
     });
 
     it('puts benjaminbenben files in their own mirror', async function () {
@@ -167,7 +167,8 @@ describe('Job API', function () {
             .field('payload', JSON.stringify({name: 'ctl', importFrom: {upload: true}, mirror: {new: {name: 'ctl'}}}))
             .attach('file', fixture('ghan.csv'));
         const id = created.body.id;
-        const uploadedName = (await readdir(tmp.path))[0];
+        const uploadedName = (await readdir(path.join(tmp.path, 'uploads')))[0];
+        expect(uploadedName).to.match(/\.csv$/);
 
         expect((await request(app).post(`/api/jobs/${id}/pause`)).body.importStatus).eq('idle');
         expect((await request(app).post(`/api/jobs/${id}/import/start`)).status).eq(200);
@@ -182,7 +183,81 @@ describe('Job API', function () {
         expect((await request(app).delete(`/api/jobs/${id}`)).status).eq(204);
         expect((await request(app).get(`/api/jobs/${id}`)).status).eq(404);
         // uploaded file is removed with the job
-        expect(await readdir(tmp.path)).to.not.include(uploadedName);
+        expect(await readdir(path.join(tmp.path, 'uploads'))).to.not.include(uploadedName);
+    });
+
+    it('removes uploads that are not used by the job', async function () {
+        await using tmp = await createTmpDir('jobUnusedUpload');
+        await copyFile(fixture('ghan.json'), path.join(tmp.path, 'placed.json'));
+        const {app} = await buildApp(tmp.path);
+        const res = await request(app).post('/api/jobs')
+            .field('payload', JSON.stringify({name: 'x', importFrom: {existingFile: 'placed.json'}, mirror: {new: {name: 'x'}}}))
+            .attach('file', fixture('ghan.csv'));
+        expect(res.status, JSON.stringify(res.body)).eq(201);
+        expect(await readdir(path.join(tmp.path, 'uploads'))).length(0);
+
+        const other = await request(app).post('/api/jobs')
+            .field('payload', JSON.stringify({name: 'x', importFrom: {upload: true}, mirror: {new: {name: 'x'}}}))
+            .attach('notfile', fixture('ghan.csv'));
+        expect(other.status).eq(400);
+        expect(await readdir(path.join(tmp.path, 'uploads'))).length(0);
+    });
+
+    it('rejects more than one file and removes them', async function () {
+        await using tmp = await createTmpDir('jobTwoFiles');
+        const {app} = await buildApp(tmp.path);
+        const res = await request(app).post('/api/jobs')
+            .field('payload', JSON.stringify({name: 'x', importFrom: {upload: true}, mirror: {new: {name: 'x'}}}))
+            .attach('file', fixture('ghan.csv'))
+            .attach('file', fixture('benjamin.csv'));
+        expect(res.status).gte(400).lt(500);
+        expect(await readdir(path.join(tmp.path, 'uploads'))).length(0);
+    });
+
+    it('never lists uploads as existing files', async function () {
+        await using tmp = await createTmpDir('jobUploadsHidden');
+        const {app} = await buildApp(tmp.path);
+        await request(app).post('/api/jobs')
+            .field('payload', JSON.stringify({name: 'x', importFrom: {upload: true}, mirror: {new: {name: 'x'}}}))
+            .attach('file', fixture('ghan.csv'));
+        const options = await request(app).get('/api/jobs/options');
+        expect(options.body.importFiles).length(0);
+        const [upload] = await readdir(path.join(tmp.path, 'uploads'));
+        const res = await request(app).post('/api/jobs').send({name: 'y', importFrom: {existingFile: `uploads/${upload}`}, mirror: {new: {name: 'y'}}});
+        expect(res.status).eq(400);
+    });
+
+    it('validates the range and clamps a future end to now', async function () {
+        await using tmp = await createTmpDir('jobRange');
+        await copyFile(fixture('ghan.csv'), path.join(tmp.path, 'placed.csv'));
+        const {app} = await buildApp(tmp.path);
+        const bad = await request(app).post('/api/jobs').send({name: 'x', importFrom: {existingFile: 'placed.csv'}, mirror: {new: {name: 'orphan?'}}, range: {from: '2015-01-01T00:00:00Z', to: '2014-01-01T00:00:00Z'}});
+        expect(bad.status).eq(400);
+        expect((await request(app).get('/api/jobs/options')).body.mirrors.map((x: {name: string}) => x.name)).to.not.include('orphan?');
+
+        const future = await request(app).post('/api/jobs').send({name: 'x', importFrom: {existingFile: 'placed.csv'}, mirror: {new: {name: 'future'}}, range: {to: dayjs().add(1, 'year').toISOString()}});
+        expect(future.status).eq(201);
+        expect(dayjs(future.body.rangeTo).isAfter(dayjs())).is.false;
+    });
+
+    it('resolves a new mirror with a known account to the existing mirror', async function () {
+        await using tmp = await createTmpDir('jobMirrorResolve');
+        await copyFile(fixture('ghan.csv'), path.join(tmp.path, 'placed.csv'));
+        const {app} = await buildApp(tmp.path);
+        const a = await request(app).post('/api/jobs').send({name: 'a', importFrom: {existingFile: 'placed.csv'}, mirror: {new: {name: 'first', account: 'resolveme'}}});
+        const b = await request(app).post('/api/jobs').send({name: 'b', importFrom: {existingFile: 'placed.csv'}, mirror: {new: {name: 'second', account: 'resolveme'}}});
+        expect(b.body.mirror.id).eq(a.body.mirror.id);
+    });
+
+    it('returns 201 with startError when the import cannot start', async function () {
+        await using tmp = await createTmpDir('jobStartConflict');
+        await copyFile(fixture('ghan.csv'), path.join(tmp.path, 'placed.csv'));
+        const {app, jobs} = await buildApp(tmp.path);
+        const first = await request(app).post('/api/jobs').send({name: 'a', importFrom: {existingFile: 'placed.csv'}, mirror: {new: {name: 'm', account: 'conflict'}}});
+        jobs.locks.tryAcquire(`mirror-import:${first.body.mirror.id}`, 'someone');
+        const second = await request(app).post('/api/jobs').send({name: 'b', importFrom: {existingFile: 'placed.csv'}, mirror: {id: first.body.mirror.id}, start: true});
+        expect(second.status).eq(201);
+        expect(second.body.startError).to.include('already running');
     });
 
     it("hides other users' jobs", async function () {
@@ -196,5 +271,10 @@ describe('Job API', function () {
         expect((await request(app).post(`/api/jobs/${job.id}/start`)).status).eq(404);
         expect((await request(app).delete(`/api/jobs/${job.id}`)).status).eq(404);
         expect((await request(app).get('/api/jobs')).body.map((x: JobApiJson) => x.id)).to.not.include(job.id);
+
+        // their mirrors can't be used or seen either
+        await copyFile(fixture('ghan.csv'), path.join(tmp.path, 'placed.csv'));
+        expect((await request(app).post('/api/jobs').send({name: 'x', importFrom: {existingFile: 'placed.csv'}, mirror: {id: mirror.id}})).status).eq(404);
+        expect((await request(app).get('/api/jobs/options')).body.mirrors.map((x: {id: number}) => x.id)).to.not.include(mirror.id);
     });
 });

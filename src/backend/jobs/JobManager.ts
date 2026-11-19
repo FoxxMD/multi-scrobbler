@@ -27,6 +27,14 @@ export interface JobManagerOpts {
     pacer?: ImportPacer
 }
 
+/** A job's configuration can't be used (IE its Last.fm component is gone). The user has to fix something, retrying won't help */
+export class JobConfigError extends Error {
+    name = 'JobConfigError';
+}
+
+/** Uploaded files live here, separate from files users place in the imports folder themselves */
+export const jobUploadsDir = (jobs: {importsDir: string}) => path.join(jobs.importsDir, 'uploads');
+
 /** Anything that can resolve a live Source/Client instance by its db component id */
 export type ComponentResolver = (componentId: number) => object | undefined;
 
@@ -42,10 +50,10 @@ export const createDefaultProvider = (job: JobSelect, resolveComponent: Componen
     }
     const component = resolveComponent(job.componentFromId);
     if(component === undefined) {
-        throw new Error(`The Source/Client to import from (component ${job.componentFromId}) is not configured`);
+        throw new JobConfigError(`The Source/Client to import from (component ${job.componentFromId}) is not configured`);
     }
     if(!isLastfmImportSource(component)) {
-        throw new Error(`Component ${job.componentFromId} is not a Last.fm Source or Client`);
+        throw new JobConfigError(`Component ${job.componentFromId} is not a Last.fm Source or Client`);
     }
     return new LastfmApiImportProvider(component);
 }

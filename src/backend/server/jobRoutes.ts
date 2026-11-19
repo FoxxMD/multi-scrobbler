@@ -4,17 +4,18 @@ import bodyParser from "body-parser";
 import dayjs from "dayjs";
 import formidable, { type File } from "formidable";
 import { randomUUID } from "node:crypto";
-import { mkdir, readdir, rm, stat } from "node:fs/promises";
+import { lstat, mkdir, readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import * as z from "zod";
 import { jobCreateSchema, jobUpdateSchema, type JobApiJson, type JobOptionsApiJson } from "../../core/Job.ts";
 import { JobRepository, type JobSelect } from "../common/database/drizzle/repositories/JobRepository.ts";
+import { runTransaction } from "../common/database/drizzle/drizzleUtils.ts";
 import { MirrorRepository, type PlayMirrorSelect } from "../common/database/drizzle/repositories/MirrorRepository.ts";
 import type { JobImportFile } from "../common/infrastructure/Job.ts";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import { toJobApiJson } from "../jobs/jobApi.ts";
-import { isLastfmImportSource, type JobManager } from "../jobs/JobManager.ts";
+import { isLastfmImportSource, JobConfigError, jobUploadsDir, type JobManager } from "../jobs/JobManager.ts";
 import { JobConflictError } from "../jobs/JobRunner.ts";
 import { detectLastfmFileFormat, UnsupportedFileError } from "../jobs/lastfm/lastfmFiles.ts";
 
@@ -65,6 +66,8 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
     const respondError = (res: {status: (n: number) => {json: (b: unknown) => unknown}}, e: unknown): void => {
         if (e instanceof JobConflictError) {
             res.status(409).json({error: e.message});
+        } else if (e instanceof JobConfigError) {
+            res.status(400).json({error: e.message});
         } else if (e instanceof JobRequestError) {
             res.status(e.status).json({error: e.message});
         } else if (e instanceof UnsupportedFileError) {
@@ -140,20 +143,37 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
         try {
             let rawPayload: unknown = req.body;
             if (req.is('multipart/form-data')) {
-                await mkdir(jobs.importsDir, {recursive: true});
+                // a subfolder, so in-progress and owned uploads are never listed or importable as an existing file by other users
+                const uploadsDir = jobUploadsDir(jobs);
+                await mkdir(uploadsDir, {recursive: true});
                 const form = formidable({
-                    uploadDir: jobs.importsDir,
+                    uploadDir: uploadsDir,
                     maxFiles: 1,
                     maxFileSize: MAX_UPLOAD_BYTES,
                     allowEmptyFiles: false,
-                    filename: (_name, ext) => `${randomUUID()}${ext}`,
+                    keepExtensions: true,
+                    // anything not in the `file` field is never written to disk
+                    filter: ({name}) => name === 'file',
+                    // ext comes from the client, only keep a plain one
+                    filename: (_name, ext) => `${randomUUID()}${/^\.[a-z0-9]{1,8}$/i.test(ext) ? ext : ''}`,
+                });
+                const started: string[] = [];
+                form.on('fileBegin', (_name, file) => {
+                    started.push(file.filepath);
                 });
                 let fields: formidable.Fields;
                 let files: formidable.Files;
                 try {
                     [fields, files] = await form.parse(req);
                 } catch (e) {
-                    throw new JobRequestError(`Upload failed: ${(e as Error).message}`, (e as {httpCode?: number}).httpCode ?? 400);
+                    // formidable does not always remove what it already wrote (IE too many files)
+                    await Promise.all(started.map(f => rm(f, {force: true})));
+                    const httpCode = (e as {httpCode?: number}).httpCode;
+                    if (httpCode === undefined) {
+                        // storage errors (disk full, permissions) are not the client's fault
+                        throw new Error('Failed to store upload', {cause: e});
+                    }
+                    throw new JobRequestError(`Upload failed: ${(e as Error).message}`, httpCode);
                 }
                 uploaded = files.file?.[0];
                 try {
@@ -167,8 +187,28 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                 throw new JobRequestError(`Invalid job: ${z.prettifyError(parsed.error)}`);
             }
             const payload = parsed.data;
+            if (uploaded !== undefined && !('upload' in payload.importFrom)) {
+                await rm(uploaded.filepath, {force: true});
+                uploaded = undefined;
+            }
 
-            let mirror: PlayMirrorSelect;
+            let rangeFrom: dayjs.Dayjs | undefined;
+            let rangeTo = dayjs();
+            if (payload.range !== 'all') {
+                if (payload.range.from !== undefined) {
+                    rangeFrom = dayjs(payload.range.from);
+                }
+                // range end is frozen at creation and never in the future
+                if (payload.range.to !== undefined && dayjs(payload.range.to).isBefore(rangeTo)) {
+                    rangeTo = dayjs(payload.range.to);
+                }
+                if (rangeFrom !== undefined && !rangeFrom.isBefore(rangeTo)) {
+                    throw new JobRequestError('range.from must be before range.to');
+                }
+            }
+
+            // resolved inside the job insert transaction so a failed insert never leaves a new mirror behind
+            let resolveMirror: () => Promise<PlayMirrorSelect>;
             let componentFromId: number | undefined;
             let importFile: JobImportFile | undefined;
 
@@ -198,7 +238,8 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                     throw new JobRequestError('Last.fm component must be authenticated before importing from it');
                 }
                 componentFromId = payload.importFrom.componentId;
-                mirror = await mirrorRepo.findOrCreate({userId, service: 'lastfm', account: component.api.user, name: `Last.fm ${component.api.user}`});
+                const account = component.api.user;
+                resolveMirror = () => mirrorRepo.findOrCreate({userId, service: 'lastfm', account, name: `Last.fm ${account}`});
             } else {
                 let filePath: string;
                 let originalName: string;
@@ -218,7 +259,8 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                     }
                     filePath = path.join(jobs.importsDir, name);
                     try {
-                        if (!(await stat(filePath)).isFile()) {
+                        // lstat: symlinks are not listed in options so they aren't importable either
+                        if (!(await lstat(filePath)).isFile()) {
                             throw new Error('not a file');
                         }
                     } catch {
@@ -229,33 +271,25 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                 }
                 const format = await detectLastfmFileFormat(filePath);
                 importFile = {path: filePath, originalName, format, size: (await stat(filePath)).size, managed};
-                mirror = await fileMirror(format === 'lastfm-benjamin-csv');
-            }
-
-            let rangeFrom: dayjs.Dayjs | undefined;
-            let rangeTo = dayjs();
-            if (payload.range !== 'all') {
-                if (payload.range.from !== undefined) {
-                    rangeFrom = dayjs(payload.range.from);
-                }
-                if (payload.range.to !== undefined && dayjs(payload.range.to).isBefore(rangeTo)) {
-                    rangeTo = dayjs(payload.range.to);
-                }
-                if (rangeFrom !== undefined && !rangeFrom.isBefore(rangeTo)) {
-                    throw new JobRequestError('range.from must be before range.to');
+                // validate an existing mirror now so a bad id is a 404 before anything is created
+                if (format !== 'lastfm-benjamin-csv' && payload.mirror !== undefined && 'id' in payload.mirror) {
+                    const existing = await fileMirror(false);
+                    resolveMirror = async () => existing;
+                } else {
+                    resolveMirror = () => fileMirror(format === 'lastfm-benjamin-csv');
                 }
             }
 
-            const job = await jobRepo.create({
+            const job = await runTransaction(jobs.db, async () => jobRepo.create({
                 userId,
                 name: payload.name,
-                mirrorId: mirror.id,
+                mirrorId: (await resolveMirror()).id,
                 componentFromId,
                 importFile,
                 rangeFrom,
                 rangeTo,
                 persistInputs: payload.persistInputs ?? importFile === undefined,
-            });
+            }));
             // the uploaded file now belongs to the job
             uploaded = undefined;
 
@@ -311,8 +345,15 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                 await jobs.stopImport(job.id, action === 'pause' ? 'paused' : 'stopped');
             }
         } catch (e) {
-            res.status(e instanceof JobConflictError ? 409 : 400).json({error: (e as Error).message});
-            return;
+            if (e instanceof JobConflictError) {
+                res.status(409).json({error: e.message});
+                return;
+            }
+            if (e instanceof JobConfigError) {
+                res.status(400).json({error: e.message});
+                return;
+            }
+            throw e;
         }
         const {jobRepo, mirrorRepo} = repos(req);
         res.json(await asApi((await jobRepo.getById(job.id))!, mirrorRepo));
