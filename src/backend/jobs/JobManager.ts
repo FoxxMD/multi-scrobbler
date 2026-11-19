@@ -7,7 +7,8 @@ import type { WebhookPayload } from "../common/infrastructure/config/health/webh
 import { WildcardEmitter } from "../common/WildcardEmitter.ts";
 import type { JobTimings } from "./constants.ts";
 import type { ImportPacer, ImportProvider } from "./ImportProvider.ts";
-import { type HaltStatus, JobRunner, type JobRuntime } from "./JobRunner.ts";
+import { type ExportClient, type HaltStatus, JobRunner, type JobRuntime } from "./JobRunner.ts";
+import { JobTargetRepository } from "../common/database/drizzle/repositories/JobTargetRepository.ts";
 import { LockRegistry } from "./LockRegistry.ts";
 import { LastfmFileImportProvider } from "./lastfm/LastfmFileImportProvider.ts";
 import { LastfmApiImportProvider, type LastfmImportSource } from "./lastfm/LastfmApiImportProvider.ts";
@@ -26,6 +27,8 @@ export interface JobManagerOpts {
     createProvider?: (job: JobSelect) => ImportProvider | undefined
     /** used by the default provider factory to find a job's Last.fm Source/Client */
     resolveComponent?: ComponentResolver
+    /** finds the running Client a job exports to */
+    resolveClient?: (componentId: number) => ExportClient | undefined
     /** where uploaded export files are stored and where users can place their own. Defaults to {dataDir}/imports */
     importsDir?: string
     notify?: (payload: WebhookPayload) => Promise<void>
@@ -108,6 +111,14 @@ export class JobManager {
         return new JobRepository(this.db, {logger: this.logger});
     }
 
+    protected get targetRepo() {
+        return new JobTargetRepository(this.db, {logger: this.logger});
+    }
+
+    protected get transformerManager(): TransformerManager {
+        return this.opts.transformerManager ?? getRoot().items.transformerManager;
+    }
+
     getRunner(jobId: number): JobRunner {
         let runner = this.runners.get(jobId);
         if(runner === undefined) {
@@ -120,6 +131,14 @@ export class JobManager {
                 notify: this.opts.notify !== undefined ? (p) => this.opts.notify!({...p, identifier: 'Jobs'}) : undefined,
                 timings: this.opts.timings,
                 pacer: this.opts.pacer,
+                resolveClient: this.opts.resolveClient,
+                parseStages: async (raw) => {
+                    try {
+                        return await pMap(raw, async (x) => this.transformerManager.parseTransformerConfig(x));
+                    } catch (e) {
+                        throw new JobConfigError(`Invalid transform stage: ${(e as Error).message}`, {cause: e});
+                    }
+                },
             });
             this.runners.set(jobId, runner);
         }
@@ -159,7 +178,7 @@ export class JobManager {
         if (stages.length === 0) {
             throw new JobConfigError('Transforms must have at least one stage');
         }
-        const tm = this.opts.transformerManager ?? getRoot().items.transformerManager;
+        const tm = this.transformerManager;
         try {
             await pMap(stages, async (x) => tm.parseTransformerConfig(x));
         } catch (e) {
@@ -181,6 +200,37 @@ export class JobManager {
 
     stopImport = async (jobId: number, status: HaltStatus) => this.getRunner(jobId).stopImport(status);
 
+    startExport = async (jobId: number, targetId: number) => {
+        if(this.shuttingDown) {
+            return;
+        }
+        return this.getRunner(jobId).startExport(targetId);
+    }
+
+    stopExport = async (jobId: number, targetId: number, status: HaltStatus) => this.getRunner(jobId).stopExport(targetId, status);
+
+    /** Start the import and every export. Throws the first error after trying them all */
+    startJob = async (jobId: number) => {
+        const errors: unknown[] = [];
+        for(const start of [() => this.startImport(jobId), ...(await this.targetRepo.findByJob(jobId)).map(t => () => this.startExport(jobId, t.id))]) {
+            try {
+                await start();
+            } catch (e) {
+                errors.push(e);
+            }
+        }
+        if(errors.length > 0) {
+            throw errors[0];
+        }
+    }
+
+    stopJob = async (jobId: number, status: HaltStatus) => {
+        await this.stopImport(jobId, status);
+        for(const t of await this.targetRepo.findByJob(jobId)) {
+            await this.stopExport(jobId, t.id, status);
+        }
+    }
+
     /** Restart every process that was running when the app last stopped */
     resumeAll = async () => {
         const running = await this.jobRepo.findRunningImports();
@@ -193,6 +243,18 @@ export class JobManager {
             } catch (e) {
                 this.logger.warn(new Error(`Could not resume import for Job ${job.id}`, {cause: e}));
                 await this.jobRepo.update(job.id, {importStatus: 'failed', importError: e as Error});
+            }
+        }
+        const targets = await this.targetRepo.findRunning();
+        if(targets.length > 0) {
+            this.logger.info(`Resuming ${targets.length} job exports`);
+        }
+        for(const t of targets) {
+            try {
+                await this.startExport(t.jobId, t.id);
+            } catch (e) {
+                this.logger.warn(new Error(`Could not resume export ${t.id} for Job ${t.jobId}`, {cause: e}));
+                await this.targetRepo.update(t.id, {status: 'failed', error: e as Error});
             }
         }
     }

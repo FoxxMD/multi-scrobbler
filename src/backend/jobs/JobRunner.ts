@@ -2,21 +2,41 @@ import { childLogger, type Logger } from "@foxxmd/logging";
 import { delay, isAbortError } from "abort-controller-x";
 import dayjs from "dayjs";
 import pRetry from "p-retry";
+import pMap from "p-map";
 import { randomUUID } from "node:crypto";
+import type { EventEmitter } from "node:events";
+import { COMPONENT_STATE, type ComponentState } from "../../core/Api.ts";
+import type { QueueContext } from "../../core/Atomic.ts";
 import type { JobProcessStatus } from "../../core/Job.ts";
+import type { PlayObject } from "../../core/PlaySchema.ts";
+import type { StageConfig } from "../../core/Transform.ts";
 import type { WebhookPayload } from "../common/infrastructure/config/health/webhooks.ts";
 import { type DbConcrete, runTransaction } from "../common/database/drizzle/drizzleUtils.ts";
 import { JobRepository, type JobSelect } from "../common/database/drizzle/repositories/JobRepository.ts";
 import { MirrorRepository } from "../common/database/drizzle/repositories/MirrorRepository.ts";
 import { DrizzlePlayHistoricalRepository, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
-import type { JobImportCursor, JobImportCursorApi, JobImportCursorFile } from "../common/infrastructure/Job.ts";
+import { JobTargetRepository, type JobTargetNew, type JobTargetSelect } from "../common/database/drizzle/repositories/JobTargetRepository.ts";
+import type { JobImportCursor, JobImportCursorApi, JobImportCursorFile, JobTargetBreaker, JobTargetCursor } from "../common/infrastructure/Job.ts";
 import type { WildcardEmitter } from "../common/WildcardEmitter.ts";
-import type { TimeRange } from "../utils/RangeUtils.ts";
+import { contiguousCoveredFrom, type TimeRange } from "../utils/RangeUtils.ts";
 import { DEFAULT_JOB_TIMINGS, type JobTimings } from "./constants.ts";
 import { fullImportPacer, type ImportBatch, type ImportPacer, type ImportProvider, isApiCursor } from "./ImportProvider.ts";
 import type { LockRegistry } from "./LockRegistry.ts";
 
 export type HaltStatus = Extract<JobProcessStatus, 'paused' | 'stopped'>;
+
+/** The parts of a Client an export uses */
+export interface ExportClient {
+    componentId: number
+    name: string
+    /** shared by all clients, events carry the emitting client's componentId */
+    emitter: EventEmitter
+    /** plays waiting in the client's queue (not retries) */
+    queuedLength: number
+    getRunningState(): ComponentState
+    queuePlay(data: PlayObject[], context?: QueueContext, opts?: {jobId?: number}): Promise<unknown[]>
+    transformPlay(play: PlayObject, hookType: 'postCompare', opts: {stages?: StageConfig[]}): Promise<PlayObject>
+}
 
 export interface JobRunnerDeps {
     db: DbConcrete
@@ -28,6 +48,10 @@ export interface JobRunnerDeps {
     notify?: (payload: Omit<WebhookPayload, 'identifier'>) => Promise<void>
     timings?: Partial<JobTimings>
     pacer?: ImportPacer
+    /** the running Client for a target, undefined if it is not configured */
+    resolveClient?: (componentId: number) => ExportClient | undefined
+    /** parse a job's raw transform stages. Throws if any is invalid */
+    parseStages?: (raw: unknown[]) => Promise<StageConfig[]>
 }
 
 /** Not persisted. Explains what a running process is doing right now */
@@ -41,6 +65,8 @@ export interface JobProcessRuntime {
 
 export interface JobRuntime {
     import: JobProcessRuntime
+    /** by target id */
+    exports: Record<number, JobProcessRuntime>
 }
 
 export class JobConflictError extends Error {
@@ -55,6 +81,16 @@ interface ProcessTask {
 }
 
 export const mirrorImportLockKey = (mirrorId: number) => `mirror-import:${mirrorId}`;
+/** held while plays of a component are cleaned up */
+export const componentLockKey = (componentId: number) => `component:${componentId}`;
+/** held while a mirror's plays are cleaned up */
+export const mirrorLockKey = (mirrorId: number) => `mirror:${mirrorId}`;
+
+/** Failed scrobbles in a row that stop an export. At least the queue limit, so one bad batch doesn't trip it on its own */
+export const breakerThreshold = (exportQueueLimit: number) => Math.max(exportQueueLimit, 10);
+
+/** Fields of a target sent in jobUpdate events */
+export type TargetUpdate = Partial<Omit<JobTargetSelect, 'id' | 'jobId' | 'componentId' | 'createdAt'>>;
 
 export class JobRunner {
 
@@ -65,8 +101,13 @@ export class JobRunner {
     protected jobRepo: JobRepository;
     protected mirrorRepo: MirrorRepository;
     protected historicalRepo: DrizzlePlayHistoricalRepository;
+    protected targetRepo: JobTargetRepository;
     protected importTask?: ProcessTask;
-    runtime: JobRuntime = {import: {}};
+    /** by target id */
+    protected exportTasks = new Map<number, ProcessTask>();
+    /** resolves every sleeping export loop, so it re-checks now */
+    protected wakers = new Set<() => void>();
+    runtime: JobRuntime = {import: {}, exports: {}};
     /** owner, so events only reach their sessions. Known once the job has been loaded */
     userId?: string | null;
 
@@ -82,6 +123,7 @@ export class JobRunner {
         this.jobRepo = new JobRepository(deps.db, {logger: this.logger});
         this.mirrorRepo = new MirrorRepository(deps.db, {logger: this.logger});
         this.historicalRepo = new DrizzlePlayHistoricalRepository(deps.db, {logger: this.logger});
+        this.targetRepo = new JobTargetRepository(deps.db, {logger: this.logger});
     }
 
     get importRunning() {
@@ -173,6 +215,7 @@ export class JobRunner {
             this.importTask = undefined;
             this.runtime.import = {};
             this.emitUpdate({runtime: this.runtime}, true);
+            this.wake();
         }
 
         if(completed) {
@@ -205,14 +248,15 @@ export class JobRunner {
         await this.importTask.promise;
     }
 
-    /** Abort without changing persisted status so the import resumes on next boot */
+    /** Abort without changing persisted status so running processes resume on next boot */
     async shutdown(): Promise<void> {
-        if(this.importTask !== undefined) {
+        const tasks = [this.importTask, ...this.exportTasks.values()].filter(x => x !== undefined);
+        for(const task of tasks) {
             // a user halt already in progress wins so paused/stopped is still persisted
-            this.importTask.halt ??= 'shutdown';
-            this.importTask.abort.abort(new Error('Shutting down'));
-            await this.importTask.promise;
+            task.halt ??= 'shutdown';
+            task.abort.abort(new Error('Shutting down'));
         }
+        await Promise.allSettled(tasks.map(x => x.promise));
         clearTimeout(this.emitTimer);
     }
 
@@ -301,6 +345,9 @@ export class JobRunner {
 
         this.runtime.import = {...this.runtime.import, waiting: undefined, retryAttempt: undefined, nextRetryAt: undefined, progress: batch.progress};
         this.emitUpdate({importFetched: next.importFetched, imported: next.imported, importTotal, importCursor: batch.cursor, runtime: this.runtime});
+        if(batch.covered !== undefined) {
+            this.wake();
+        }
         return next;
     }
 
@@ -347,9 +394,266 @@ export class JobRunner {
         return updated;
     }
 
+    get exportsRunning(): number[] {
+        return Array.from(this.exportTasks.keys());
+    }
+
+    /**
+     * Start exporting to a target. Throws if the job's transforms can't be used.
+     * No-op if already running/starting or completed.
+     * */
+    async startExport(targetId: number): Promise<void> {
+        if(this.exportTasks.has(targetId)) {
+            return;
+        }
+        const task: ProcessTask = {abort: new AbortController(), promise: Promise.resolve()};
+        this.exportTasks.set(targetId, task);
+        let reportStart!: (err?: unknown) => void;
+        const started = new Promise<unknown>(resolve => { reportStart = resolve; });
+        task.promise = this.runExportTask(targetId, task, reportStart);
+        const startErr = await started;
+        if(startErr !== undefined) {
+            throw startErr;
+        }
+    }
+
+    /** Halts the export and keeps its cursor. Plays already queued in the client still get scrobbled. Start resumes */
+    async stopExport(targetId: number, status: HaltStatus): Promise<void> {
+        const task = this.exportTasks.get(targetId);
+        if(task === undefined) {
+            const target = await this.targetRepo.getById(targetId);
+            if(target?.status === 'running') {
+                await this.setTarget(targetId, {status});
+            }
+            return;
+        }
+        task.halt = status;
+        task.abort.abort(new Error(`Export ${status} by user`));
+        await task.promise;
+    }
+
+    protected async runExportTask(targetId: number, task: ProcessTask, reportStart: (err?: unknown) => void): Promise<void> {
+        const {signal} = task.abort;
+        const logger = childLogger(this.logger, `Export ${targetId}`);
+        let isStarted = false;
+        let completed: JobTargetSelect | undefined;
+        let job: JobSelect | undefined;
+        let clientName: string | undefined;
+        const cleanup: (() => void)[] = [];
+        try {
+            job = await this.getJob();
+            const target = await this.targetRepo.getById(targetId);
+            if(target === undefined || target.jobId !== this.jobId) {
+                throw new Error(`Target ${targetId} does not belong to Job ${this.jobId}`);
+            }
+            if(target.status === 'completed') {
+                return;
+            }
+            clientName = this.deps.resolveClient?.(target.componentId)?.name;
+            const stages = job.transformOptions !== null && job.transformOptions.length > 0
+                ? await (this.deps.parseStages ?? (() => { throw new Error('No stage parser to use job transforms with'); }))(job.transformOptions)
+                : undefined;
+            signal.throwIfAborted();
+            // starting again (IE after fixing the client) gives the breaker a fresh count
+            await this.setTarget(targetId, {status: 'running', startedAt: target.startedAt ?? dayjs(), error: null, breaker: {failedInARow: 0}}, true);
+            isStarted = true;
+            reportStart();
+            logger.info('Export started');
+            completed = await this.runExport(target, stages, signal, logger, cleanup);
+        } catch (e) {
+            if(signal.aborted) {
+                if(task.halt !== undefined && task.halt !== 'shutdown') {
+                    await this.safely(() => this.setTarget(targetId, {status: task.halt as HaltStatus}, true), 'persist halted export status');
+                }
+                logger.info(`Export halted (${task.halt ?? 'aborted'})`);
+            } else if(!isStarted) {
+                reportStart(e);
+            } else {
+                logger.error(new Error('Export failed', {cause: e}));
+                await this.safely(() => this.setTarget(targetId, {status: 'failed', error: e as Error}, true), 'persist failed export status');
+                await this.safely(() => this.deps.notify?.({title: `Job ${job?.name ?? this.jobId} - Export to ${clientName ?? targetId} Failed`, message: (e as Error).message, priority: 'error'}), 'send notification');
+            }
+        } finally {
+            for(const fn of cleanup) {
+                fn();
+            }
+            reportStart();
+            this.exportTasks.delete(targetId);
+            delete this.runtime.exports[targetId];
+            this.emitUpdate({runtime: this.runtime}, true);
+        }
+
+        if(completed !== undefined) {
+            const s = completed.stats ?? {};
+            const summary = `${completed.exported} exported: ${s.scrobbled ?? 0} scrobbled, ${s.duped ?? 0} already scrobbled, ${s.failed ?? 0} failed`;
+            logger.info(`Export complete. ${summary}`);
+            await this.safely(() => this.deps.notify?.({title: `Job ${job?.name ?? this.jobId} - Export to ${clientName ?? targetId} Complete`, message: summary, priority: 'info'}), 'send notification');
+        }
+    }
+
+    /** Returns the completed target */
+    protected async runExport(initial: JobTargetSelect, stages: StageConfig[] | undefined, signal: AbortSignal, logger: Logger, cleanup: (() => void)[]): Promise<JobTargetSelect> {
+        const targetId = initial.id;
+        const {componentId} = initial;
+        let {cursor, exported, queued} = initial;
+        const breaker: JobTargetBreaker = {failedInARow: 0};
+        let lastFailure: string | undefined;
+        let listening: EventEmitter | undefined;
+
+        const onClientEvent = (eventName: string) => (payload: {componentId?: number, data?: {jobId?: number | null, state?: string, error?: unknown, queueStates?: {error?: unknown}[]}}) => {
+            if(payload?.componentId !== componentId) {
+                return;
+            }
+            if(eventName === 'playUpdate') {
+                if(payload.data?.jobId !== this.jobId) {
+                    return;
+                }
+                if(payload.data.state === 'failed') {
+                    breaker.failedInARow++;
+                    // the play's error, else its failed queue state's
+                    const err = payload.data.error ?? payload.data.queueStates?.find(x => x.error !== undefined && x.error !== null)?.error;
+                    lastFailure = (err as {message?: string} | null | undefined)?.message ?? lastFailure;
+                } else if(payload.data.state === 'scrobbled' || payload.data.state === 'duped') {
+                    breaker.failedInARow = 0;
+                }
+            }
+            this.wake();
+        }
+        const listen = (emitter: EventEmitter) => {
+            listening = emitter;
+            for(const name of ['playDequeued', 'queueEmptied', 'playUpdate']) {
+                const fn = onClientEvent(name);
+                emitter.on(name, fn);
+                cleanup.push(() => emitter.off(name, fn));
+            }
+        }
+        const wait = async (reason: string) => {
+            if(this.runtime.exports[targetId]?.waiting !== reason) {
+                this.runtime.exports[targetId] = {waiting: reason};
+                this.emitUpdate({runtime: this.runtime});
+            }
+            await this.sleep(signal, this.timings.exportPoll);
+        }
+
+        while(true) {
+            signal.throwIfAborted();
+            // reloaded each pass: import progress and the queue limit can change while exporting
+            const job = await this.getJob();
+
+            const client = this.deps.resolveClient?.(componentId);
+            if(client === undefined) {
+                await wait('Client is not configured');
+                continue;
+            }
+            if(listening !== client.emitter) {
+                listen(client.emitter);
+            }
+            if(breaker.failedInARow >= breakerThreshold(job.exportQueueLimit)) {
+                await this.targetRepo.update(targetId, {breaker: {...breaker, trippedAt: Date.now()}});
+                throw new Error(`Stopped after ${breaker.failedInARow} failed scrobbles in a row${lastFailure !== undefined ? `. Last error: ${lastFailure}` : ''}`);
+            }
+            if(client.getRunningState() !== COMPONENT_STATE.RUNNING) {
+                await wait('Client is not running');
+                continue;
+            }
+            if(this.deps.locks.holder(componentLockKey(componentId)) !== undefined || this.deps.locks.holder(mirrorLockKey(job.mirrorId)) !== undefined) {
+                await wait('Waiting for a cleanup to finish');
+                continue;
+            }
+            const room = job.exportQueueLimit - client.queuedLength;
+            if(room <= 0) {
+                await wait('Client queue is full');
+                continue;
+            }
+
+            const range: TimeRange = [job.rangeFrom?.valueOf() ?? 0, job.rangeTo.valueOf()];
+            const importDone = job.importStatus === 'completed' || (job.componentFromId === null && job.importFile === null);
+            let frontier: TimeRange | undefined = range;
+            if(!importDone) {
+                // only export what is already mirrored without a gap from the starting edge, so nothing is skipped
+                const mirror = await this.mirrorRepo.getById(job.mirrorId);
+                const covered = contiguousCoveredFrom(job.exportOrder === 'desc' ? range[1] : range[0], job.exportOrder, mirror?.coverage ?? []);
+                frontier = covered === undefined ? undefined : [Math.max(covered[0], range[0]), Math.min(covered[1], range[1])];
+            }
+            const rows = frontier === undefined ? [] : await this.historicalRepo.findPageForExport({mirrorId: job.mirrorId, range: frontier, order: job.exportOrder, after: cursor ?? undefined, limit: room});
+
+            if(rows.length === 0) {
+                if(!importDone) {
+                    await wait('Waiting for the import to mirror more scrobbles');
+                    continue;
+                }
+                const stats = (await this.targetRepo.playStats(this.jobId, componentId)).get(componentId) ?? {};
+                const left = stats.queued ?? 0;
+                if(left > 0) {
+                    await this.setTarget(targetId, {stats, breaker});
+                    await wait(`${left} exported scrobbles are still queued in the client`);
+                    continue;
+                }
+                return (await this.setTarget(targetId, {status: 'completed', completedAt: dayjs(), stats, breaker}, true))!;
+            }
+
+            let plays: PlayObject[] = rows.map(r => ({...r.play, original: {play: r.play}}));
+            if(stages !== undefined) {
+                plays = await pMap(plays, async (p) => {
+                    const {lifecycle: _, ...transformed} = await client.transformPlay(p, 'postCompare', {stages});
+                    return transformed;
+                }, {concurrency: 5});
+            }
+            signal.throwIfAborted();
+            const created = await client.queuePlay(plays, undefined, {jobId: this.jobId});
+            const last = rows[rows.length - 1];
+            cursor = {playedAt: last.playedAt, id: last.id} satisfies JobTargetCursor;
+            exported += rows.length;
+            queued += created.length;
+            const stats = (await this.targetRepo.playStats(this.jobId, componentId)).get(componentId) ?? {};
+            this.runtime.exports[targetId] = {};
+            await this.setTarget(targetId, {cursor, exported, queued, stats, breaker});
+            logger.verbose(`Exported ${rows.length} scrobbles, ${created.length} new to the client`);
+        }
+    }
+
+    /** Wake every export loop so it re-checks now (new coverage, import finished) */
+    protected wake() {
+        for(const fn of Array.from(this.wakers)) {
+            fn();
+        }
+    }
+
+    /** Sleep until woken, `ms` passes, or aborted */
+    protected async sleep(signal: AbortSignal, ms: number): Promise<void> {
+        await new Promise<void>((resolve) => {
+            const done = () => {
+                clearTimeout(timer);
+                this.wakers.delete(done);
+                signal.removeEventListener('abort', done);
+                resolve();
+            };
+            const timer = setTimeout(done, ms);
+            this.wakers.add(done);
+            signal.addEventListener('abort', done, {once: true});
+        });
+        signal.throwIfAborted();
+    }
+
+    protected async setTarget(targetId: number, data: Partial<JobTargetNew>, force = false) {
+        const updated = await this.targetRepo.update(targetId, data);
+        const {jobId: _j, componentId: _c, id: _i, ...fields} = data;
+        this.emitUpdate({targetUpdates: {[targetId]: {...fields, updatedAt: updated?.updatedAt}}, runtime: this.runtime}, force);
+        return updated;
+    }
+
     /** Throttled per job so a fast import doesn't flood SSE. `force` sends immediately (status changes) */
     protected emitUpdate(data: Record<string, unknown>, force = false) {
+        const targetUpdates = this.pendingEmit.targetUpdates as Record<number, TargetUpdate> | undefined;
         this.pendingEmit = {...this.pendingEmit, ...data};
+        if(targetUpdates !== undefined && data.targetUpdates !== undefined) {
+            // keep pending changes of other targets, and earlier fields of the same target
+            const merged = {...targetUpdates};
+            for(const [id, update] of Object.entries(data.targetUpdates as Record<number, TargetUpdate>)) {
+                merged[Number(id)] = {...merged[Number(id)], ...update};
+            }
+            this.pendingEmit.targetUpdates = merged;
+        }
         const send = () => {
             clearTimeout(this.emitTimer);
             this.emitTimer = undefined;

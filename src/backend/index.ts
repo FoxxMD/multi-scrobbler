@@ -256,7 +256,8 @@ const dataDir = getDataDir();
             db,
             logger,
             notify: async (p) => notifiers?.notify(p),
-            resolveComponent: (id) => scrobbleSources?.sources.find(x => x.componentId === id) ?? scrobbleClients?.clients.find(x => x.componentId === id)
+            resolveComponent: (id) => scrobbleSources?.sources.find(x => x.componentId === id) ?? scrobbleClients?.clients.find(x => x.componentId === id),
+            resolveClient: (id) => scrobbleClients?.clients.find(x => x.componentId === id),
         });
         [, , server] = await initServer({sources: scrobbleSources, clients: scrobbleClients, jobs: jobManager},{logger, appLoggerStream, initialOutput: output, webFault});
 

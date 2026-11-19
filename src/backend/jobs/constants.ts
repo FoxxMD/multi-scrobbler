@@ -10,6 +10,8 @@ export interface JobTimings {
     readyPoll: number
     /** min time between jobUpdate events for one job */
     emitThrottle: number
+    /** export fallback poll, when no client or import event wakes it sooner */
+    exportPoll: number
 }
 
 export const DEFAULT_JOB_TIMINGS: JobTimings = {
@@ -19,4 +21,5 @@ export const DEFAULT_JOB_TIMINGS: JobTimings = {
     readyTimeout: 120000,
     readyPoll: 5000,
     emitThrottle: 1000,
+    exportPoll: 5000,
 };

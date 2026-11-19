@@ -6,7 +6,8 @@ import { historicalPlayInputs, playsHistorical } from "../schema/schema.ts";
 import type {FindWhere, FindMany, WhereClause, PlayHistoricalSelect, PlayHistoricalNew, HistoricalPlayInputNew, HistoricalPlayInputSelect} from "../drizzleTypes.ts";
 import type { MarkOptional } from "ts-essentials";
 import { removeUndefinedKeys } from '../../../../../core/DataUtils.ts';
-import { inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, lt, lte, or, sql } from "drizzle-orm";
+import dayjs from "dayjs";
 import { EmptyFilter } from "drizzle-orm/relations";
 import { buildDateCompare, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
 import type { CompareDateOp } from "../../../../../core/Api.ts";
@@ -203,6 +204,23 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         }
         const results = await this.db.query.playsHistorical.findMany(query) as PlayHistoricalSelectMaybeInput[];
         return results.map((x) => ({...x, play: hydratePlaySelect(x, hydrate)}));
+    }
+
+    /**
+     * A page of a mirror's plays in `range` (inclusive, ms), in export order, after the keyset `after` (the last row of the previous page).
+     * Plays are hydrated without id/uid.
+     * */
+    findPageForExport = async (args: {mirrorId: number, range: [number, number], order: 'asc' | 'desc', after?: {playedAt: number, id: number}, limit: number}): Promise<{id: number, playedAt: number, play: PlayObject}[]> => {
+        const {mirrorId, range, order, after, limit} = args;
+        const t = playsHistorical;
+        const conditions = [eq(t.mirrorId, mirrorId), gte(t.playedAt, dayjs(range[0])), lte(t.playedAt, dayjs(range[1]))];
+        if (after !== undefined) {
+            const beyond = order === 'desc' ? lt : gt;
+            conditions.push(or(beyond(t.playedAt, dayjs(after.playedAt)), and(eq(t.playedAt, dayjs(after.playedAt)), beyond(t.id, after.id)))!);
+        }
+        const dir = order === 'desc' ? desc : asc;
+        const rows = await this.db.select().from(t).where(and(...conditions)).orderBy(dir(t.playedAt), dir(t.id)).limit(limit);
+        return rows.map(x => ({id: x.id, playedAt: x.playedAt!.valueOf(), play: hydratePlaySelect(x, [])}));
     }
 
     findPlayIds = async (args: QueryPlaysOpts, opts: ComponentConstrainedRepoOpts = {}): Promise<number[]> => {
