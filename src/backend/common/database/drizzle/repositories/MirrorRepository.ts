@@ -22,13 +22,12 @@ export class MirrorRepository extends DrizzleBaseRepository<'playMirrors'> {
 
     findOrCreate = async (opts: FindOrCreateMirrorOpts): Promise<PlayMirrorSelect> => {
         const {userId, service, account, name} = opts;
-        if(account !== null) {
-            const existing = await this.db.select().from(playMirrors).where(and(eq(playMirrors.userId, userId), eq(playMirrors.service, service), eq(playMirrors.account, account)));
-            if(existing.length > 0) {
-                return existing[0];
-            }
+        if(account === null) {
+            return (await this.db.insert(playMirrors).values({userId, service, account, name}).returning())[0];
         }
-        return (await this.db.insert(playMirrors).values({userId, service, account, name}).returning())[0];
+        // conflict => created concurrently or already exists, either way select it
+        await this.db.insert(playMirrors).values({userId, service, account, name}).onConflictDoNothing();
+        return (await this.db.select().from(playMirrors).where(and(eq(playMirrors.userId, userId), eq(playMirrors.service, service), eq(playMirrors.account, account))))[0];
     }
 
     getById = async (id: number): Promise<PlayMirrorSelect | undefined> => {

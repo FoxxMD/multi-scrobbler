@@ -139,11 +139,18 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         if(entitiesOpts.length === 0) {
             return 0;
         }
-        const entitiesData = entitiesOpts.map(({play, input, ...rest}) => generatePlayHistoricalEntity(play, { componentId: this.componentId, ...rest }));
+        // raw data only belongs in historical_play_inputs
+        const entitiesData = entitiesOpts.map(({play: {original, ...play}, input, ...rest}) => generatePlayHistoricalEntity(play, { componentId: this.componentId, ...rest }));
         const inserted = await this.db.insert(playsHistorical).values(entitiesData).onConflictDoNothing().returning({id: playsHistorical.id, uid: playsHistorical.uid});
 
         if(persistInputs && inserted.length > 0) {
-            const byUid = new Map(entitiesOpts.map(x => [x.uid, x]));
+            // first wins, matching which duplicate SQLite actually inserted
+            const byUid = new Map<string, typeof entitiesOpts[number]>();
+            for(const x of entitiesOpts) {
+                if(!byUid.has(x.uid)) {
+                    byUid.set(x.uid, x);
+                }
+            }
             const inputDatas = inserted.flatMap((x) => {
                 const entity = byUid.get(x.uid as string);
                 if(entity?.input === undefined) {

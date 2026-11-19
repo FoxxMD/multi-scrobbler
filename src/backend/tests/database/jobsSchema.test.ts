@@ -69,6 +69,7 @@ describe('Jobs Schema', function () {
             err = e;
         }
         expect(err).to.not.be.undefined;
+        expect(String((err as Error).cause ?? err)).to.match(/FOREIGN KEY/);
         expect(await db.select().from(playMirrors)).length(1);
     });
 

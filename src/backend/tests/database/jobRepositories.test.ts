@@ -77,6 +77,17 @@ describe('Play Historical Repository - mirror inserts', function () {
         expect(byUid).to.deep.eq({x: {n: 'x'}, y: {n: 'y'}});
     });
 
+    it('attaches the first duplicate input when a batch repeats a uid', async function () {
+        const {db, mirror, repo} = await setup();
+        await repo.insertIgnoreDuplicates([
+            {uid: 'x', mirrorId: mirror.id, play: generatePlay(), input: {data: {n: 'first'}}},
+            {uid: 'x', mirrorId: mirror.id, play: generatePlay(), input: {data: {n: 'second'}}},
+        ]);
+        const rows = await db.query.playsHistorical.findMany({with: {input: true}});
+        expect(rows).length(1);
+        expect(rows[0].input?.data).to.deep.eq({n: 'first'});
+    });
+
     it('creates no inputs when persistInputs is false', async function () {
         const {db, mirror, repo} = await setup();
         await repo.insertIgnoreDuplicates([{uid: 'x', mirrorId: mirror.id, play: generatePlay(), input: {data: {n: 'x'}}}], {persistInputs: false});

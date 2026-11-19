@@ -12,7 +12,7 @@ import { projectRootDir } from '../../common/infrastructure/Atomic.ts';
  * These tables are referenced by user data that must never be wiped by a migration.
  * Changes to them must be ADD COLUMN / CREATE INDEX only.
  * */
-const PROTECTED_TABLES = ['plays', 'plays_historical', 'users', 'components'];
+const PROTECTED_TABLES = ['plays', 'plays_historical', 'users', 'components', 'play_mirrors', 'jobs'];
 
 describe('Migration Safety', function () {
     it('never rebuilds a referenced table', async function () {
@@ -20,7 +20,8 @@ describe('Migration Safety', function () {
         const dirs = await readdir(folder, { withFileTypes: true });
         const offenders: string[] = [];
         for (const d of dirs.filter(x => x.isDirectory())) {
-            const sql = await readFile(path.join(folder, d.name, 'migration.sql'), 'utf-8');
+            // ignore comment lines so explanations can mention __new_x
+            const sql = (await readFile(path.join(folder, d.name, 'migration.sql'), 'utf-8')).split('\n').filter(x => !x.trim().startsWith('--')).join('\n');
             for (const t of PROTECTED_TABLES) {
                 if (new RegExp(`__new_${t}\\b`).test(sql)) {
                     offenders.push(`${d.name} rebuilds ${t}`);
