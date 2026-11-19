@@ -120,6 +120,7 @@ config/*.json
 config/mscache
 config/yti-*
 config/*.cache
+config/imports
 *.txt
 !robots.txt
 .idea/
