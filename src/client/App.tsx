@@ -15,6 +15,7 @@ import { MSComponentListFetchable } from './components/msComponent/MSComponentLi
 import { Provider } from './components/Provider';
 import { SettingsContainer } from './components/settings/settings';
 import { JobListFetchable } from './components/jobs/JobList';
+import { JobDetailRoutable } from './components/jobs/JobDetail';
 import { Toaster } from './components/Toaster';
 import { AuthGate, LoginForm, LogOut, SetPasswordForm } from './components/auth/Auth';
 import { useHasAccess } from './auth/authClient';
@@ -86,6 +87,10 @@ const routesNested: RouteObject[] = [
         {
             path: "jobs",
             element: <MSErrorBoundary><JobListFetchable/></MSErrorBoundary>
+        },
+        {
+            path: "jobs/:jobId",
+            element: <MSErrorBoundary><JobDetailRoutable/></MSErrorBoundary>
         },
         {
             path: "login",
