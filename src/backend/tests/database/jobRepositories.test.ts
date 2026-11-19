@@ -12,6 +12,9 @@ import { ensureOwner } from '../../common/auth/owner.ts';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { fixtureCreateComponent, fixtureCreatePlay } from '../utils/databaseFixtures.ts';
 import { createTmpDir } from '../utils/tmpDir.ts';
+import { queryPlaysRequestSchema } from '../../../core/Api.ts';
+import qs from 'qs';
+import { DrizzlePlayRepository } from '../../common/database/drizzle/repositories/PlayRepository.ts';
 
 describe('Mirror Repository', function () {
 
@@ -135,6 +138,21 @@ describe('Job Repository', function () {
         const remaining = await db.select().from(plays);
         expect(remaining).length(1);
         expect(remaining[0].jobId).to.be.null;
+    });
+
+    it('filters plays by job from a query string', async function () {
+        const {db, owner, mirror, repo} = await setup();
+        const job = await repo.create({userId: owner.id, name: 'job', mirrorId: mirror.id, rangeTo: dayjs()});
+        const component = await db.insert(components).values(fixtureCreateComponent({mode: 'client', type: 'listenbrainz'})).returning();
+        await db.insert(plays).values([fixtureCreatePlay({componentId: component[0].id, jobId: job.id}), fixtureCreatePlay({componentId: component[0].id})]);
+        const playRepo = new DrizzlePlayRepository(db);
+
+        for (const [jobId, expected] of [['null', null], [job.id, job.id]] as const) {
+            const query = queryPlaysRequestSchema.parse(qs.parse(qs.stringify({jobId})));
+            expect(query.jobId).eq(expected);
+            const found = await playRepo.findPlays({...query, componentId: component[0].id});
+            expect(found.map(x => x.jobId)).eql([expected]);
+        }
     });
 
     it('deletes a managed import file but never an unmanaged one', async function () {

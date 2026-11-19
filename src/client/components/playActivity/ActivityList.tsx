@@ -206,6 +206,13 @@ const insertInfinitePlay = (data: PlayApiCommonDetailed, queryData: InfiniteData
 }
 
 const playInWindow = (data: PlayApiCommonDetailed, query: QueryPlaysOptsJson): boolean => {
+  if (query.jobId === 'null' || query.jobId === null) {
+    const jobId = (data as {jobId?: number | null}).jobId ?? (data.play.meta as {jobId?: number}).jobId;
+    if (jobId !== undefined && jobId !== null) {
+      console.debug(`[Insert Check ${data.uid}] Play is from an import/export job, which are hidden`);
+      return false;
+    }
+  }
   if (query.state !== undefined && !query.state.includes(data.state)) {
     console.debug(`[Insert Check ${data.uid}] Play is in state ${data.state} not included in current filters of ${query.state.join(',')}`);
     return false;
@@ -343,7 +350,9 @@ const defaultFilter = (): QueryPlaysOptsJsonRefreshable => ({
       inclusive: true
     },
     order: 'desc',
-    sort: 'playedAt'
+    sort: 'playedAt',
+    // scrobbles from import/export jobs can flood a client's list, hidden until asked for
+    jobId: 'null'
 });
 
 export const ListContainerFilterable = (props: { componentId: number, componentType: ComponentType }) => {

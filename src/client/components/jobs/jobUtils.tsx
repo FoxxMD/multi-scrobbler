@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { HTTPError } from 'ky';
 import { asJobSseEvent, type MsSseEvent } from "../../../core/Api";
-import { deriveJobStatus, type JobApiJson, type JobImportOriginJson, type JobProcessStatus, type LastfmFileFormat } from "../../../core/Job";
+import { deriveJobStatus, type JobApiJson, type JobImportOriginJson, type JobProcessStatus, type JobTargetApiJson, type LastfmFileFormat } from "../../../core/Job";
 import { capitalize } from "../../../core/StringUtils";
 import { tanQueries } from "../../queries";
 import { shortTodayAwareFormat } from "../../utils";
@@ -79,11 +79,43 @@ export const apiErrorMessage = (e: unknown): string => {
     return e instanceof Error ? e.message : String(e);
 }
 
+/** Overall status from the import and every export */
+export const jobStatus = (job: Pick<JobApiJson, 'importStatus' | 'targets'>) => deriveJobStatus([job.importStatus, ...job.targets.map(x => x.status)]);
+
 /** Merge SSE job data into a cached job. Status is derived from the process statuses, which updates may change */
 export const mergeJobUpdate = (old: JobApiJson, data: Record<string, unknown>): JobApiJson => {
-    const next = {...old, ...data} as JobApiJson;
-    next.status = deriveJobStatus([next.importStatus]);
+    const {targetUpdates, ...rest} = data as {targetUpdates?: Record<string, Partial<JobTargetApiJson>>};
+    const next = {...old, ...rest} as JobApiJson;
+    if (targetUpdates !== undefined) {
+        next.targets = old.targets.map(t => targetUpdates[t.id] !== undefined ? {...t, ...targetUpdates[t.id]} : t);
+    }
+    next.status = jobStatus(next);
     return next;
+}
+
+/** Export progress from 0 to 1, undefined when it can't be known yet */
+export const exportProgress = (job: Pick<JobApiJson, 'importStatus' | 'mirrorPlaysInRange'>, target: Pick<JobTargetApiJson, 'status' | 'exported'>): number | undefined => {
+    if (target.status === 'completed') {
+        return 1;
+    }
+    // the number of mirror plays to export is only final once the import is done
+    if (job.importStatus !== 'completed' || job.mirrorPlaysInRange === 0) {
+        return undefined;
+    }
+    return Math.min(1, target.exported / job.mirrorPlaysInRange);
+}
+
+export const ExportProgressBar = (props: { job: JobApiJson, target: JobTargetApiJson } & Omit<Progress.RootProps, 'value'>) => {
+    const {job, target, ...rest} = props;
+    const progress = exportProgress(job, target);
+    const value = progress === undefined ? (target.status === 'running' ? null : 0) : Math.round(progress * 1000) / 10;
+    return (
+        <Progress.Root size="sm" value={value} colorPalette={statusPalette[target.status]} {...rest}>
+            <Progress.Track>
+                <Progress.Range/>
+            </Progress.Track>
+        </Progress.Root>
+    );
 }
 
 /** Keeps cached job list and details up to date from SSE events */

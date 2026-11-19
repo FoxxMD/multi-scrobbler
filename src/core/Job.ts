@@ -75,6 +75,8 @@ export interface JobApiJson {
     /** max plays from this job waiting in each target client's queue */
     exportQueueLimit: number
     targets: JobTargetApiJson[]
+    /** mirror plays in the job's range, what an export will go through */
+    mirrorPlaysInRange: number
     importStatus: JobProcessStatus
     importCursor: unknown
     importTotal: number | null

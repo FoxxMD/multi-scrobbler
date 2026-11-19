@@ -74,6 +74,7 @@ describe('Job API', function () {
 
         const done = await waitForImport(app, res.body.id);
         expect(done.imported).eq(6);
+        expect(done.mirrorPlaysInRange).eq(6);
         expect(done.status).eq('completed');
     });
 

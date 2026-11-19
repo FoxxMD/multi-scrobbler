@@ -1,4 +1,4 @@
-import { Box, Button, Card, Container, Flex, Heading, HStack, LinkBox, LinkOverlay, SkeletonText, Stack, Text } from '@chakra-ui/react';
+import { Box, Button, Card, Container, Flex, Heading, HStack, LinkBox, LinkOverlay, SkeletonText, Stack, Text, Wrap } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from "react-router";
 import type { JobApiJson } from "../../../core/Job";
@@ -15,7 +15,7 @@ export const JobSummary = (props: { job: JobApiJson }) => {
         <Card.Root variant="subtle">
             <LinkBox>
                 <Card.Header>
-                    <Flex justify="space-between" gap="2">
+                    <Flex justify="space-between" alignItems="flex-start" gap="2">
                         <LinkOverlay asChild>
                             <Link to={`/jobs/${job.id}`}><Heading truncate>{job.name}</Heading></Link>
                         </LinkOverlay>
@@ -29,6 +29,13 @@ export const JobSummary = (props: { job: JobApiJson }) => {
                         <ImportProgressBar job={job}/>
                         <Text textStyle="sm">{job.imported.toLocaleString()} new of {job.importFetched.toLocaleString()} fetched{job.importTotal !== null ? ` (${job.importTotal.toLocaleString()} total)` : ''}</Text>
                         {waiting !== undefined ? <Text textStyle="sm" color="fg.warning">Waiting: {waiting}</Text> : undefined}
+                        {job.targets.length > 0 ? <Wrap gap="2" alignItems="center">
+                            <TextMuted textStyle="sm">Export:</TextMuted>
+                            {job.targets.map(t => <HStack key={t.id} gap="1">
+                                <Text textStyle="sm">{t.name ?? `Client ${t.componentId}`}</Text>
+                                <JobStatusBadge status={t.status} size="sm"/>
+                            </HStack>)}
+                        </Wrap> : undefined}
                     </Stack>
                 </Card.Body>
             </LinkBox>
@@ -40,12 +47,12 @@ export const JobList = (props: { jobs: JobApiJson[] }) => (
         <Container boxSize="full" p="0" maxWidth="8xl">
             <Stack gap="3">
                 <Flex justify="space-between" alignItems="center">
-                    <Heading size="2xl">Import Jobs</Heading>
+                    <Heading size="2xl">Jobs</Heading>
                     <Button asChild size="sm" variant="subtle" colorPalette="blue">
-                        <Link to="/jobs/new">New Import</Link>
+                        <Link to="/jobs/new">New Job</Link>
                     </Button>
                 </Flex>
-                {props.jobs.length === 0 ? <TextMuted>No jobs yet. Create one to import your Last.fm history.</TextMuted> : undefined}
+                {props.jobs.length === 0 ? <TextMuted>No jobs yet. Create one to import your Last.fm history and export it to your Clients.</TextMuted> : undefined}
                 <Box gridColumnGap="2" gridRowGap="2" display="grid" gridTemplateColumns={{mdDown: "repeat(1, minmax(295px, 1fr))", base: "repeat(auto-fill, minmax(295px, 1fr))"}}>
                     {props.jobs.map(x => <MSErrorBoundary key={x.id}><JobSummary job={x}/></MSErrorBoundary>)}
                 </Box>

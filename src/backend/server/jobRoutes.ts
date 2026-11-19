@@ -57,8 +57,13 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
 
     const asApi = async (job: JobSelect, mirrorRepo: MirrorRepository, preloaded: {mirrors?: Map<number, PlayMirrorSelect>, targets?: JobTargetSelect[]} = {}): Promise<JobApiJson> => {
         const mirror = preloaded.mirrors?.get(job.mirrorId) ?? await mirrorRepo.getById(job.mirrorId);
-        const targets = preloaded.targets ?? await repos().targetRepo.findByJob(job.id);
-        return toJobApiJson(job, mirror!, {componentName: componentName(job.componentFromId), runtime: jobs.getRuntime(job.id), targets, resolveClient: exportClient});
+        const {targetRepo} = repos();
+        const stored = preloaded.targets ?? await targetRepo.findByJob(job.id);
+        // a completed target keeps its snapshot, others show what the client has now (IE queued plays draining while paused)
+        const live = stored.some(x => x.status !== 'completed') ? await targetRepo.playStats(job.id) : new Map();
+        const targets = stored.map(t => t.status === 'completed' ? t : {...t, stats: live.get(t.componentId) ?? {}});
+        const mirrorPlaysInRange = await mirrorRepo.countInRange(job.mirrorId, [job.rangeFrom?.valueOf() ?? 0, job.rangeTo.valueOf()]);
+        return toJobApiJson(job, mirror!, {componentName: componentName(job.componentFromId), runtime: jobs.getRuntime(job.id), targets, resolveClient: exportClient, mirrorPlaysInRange});
     }
 
     /** the job if it exists and belongs to the requester, otherwise responds 404 */

@@ -50,7 +50,7 @@ export const toJobTargetApiJson = (target: JobTargetSelect, client?: {name: stri
     updatedAt: target.updatedAt.toISOString(),
 });
 
-export const toJobApiJson = (job: JobSelect, mirror: PlayMirrorSelect, opts: {componentName?: string, runtime?: JobRuntime, targets?: JobTargetSelect[], resolveClient?: (componentId: number) => {name: string, type: string} | undefined} = {}): JobApiJson => ({
+export const toJobApiJson = (job: JobSelect, mirror: PlayMirrorSelect, opts: {componentName?: string, runtime?: JobRuntime, targets?: JobTargetSelect[], resolveClient?: (componentId: number) => {name: string, type: string} | undefined, mirrorPlaysInRange?: number} = {}): JobApiJson => ({
     id: job.id,
     name: job.name,
     status: deriveJobStatus([job.importStatus, ...(opts.targets ?? []).map(x => x.status)]),
@@ -64,6 +64,7 @@ export const toJobApiJson = (job: JobSelect, mirror: PlayMirrorSelect, opts: {co
     exportOrder: job.exportOrder,
     exportQueueLimit: job.exportQueueLimit,
     targets: (opts.targets ?? []).map(x => toJobTargetApiJson(x, opts.resolveClient?.(x.componentId))),
+    mirrorPlaysInRange: opts.mirrorPlaysInRange ?? 0,
     importStatus: job.importStatus,
     importCursor: job.importCursor,
     importTotal: job.importTotal,

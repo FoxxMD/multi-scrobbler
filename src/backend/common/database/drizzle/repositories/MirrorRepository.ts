@@ -1,4 +1,5 @@
-import { and, count, eq, inArray } from "drizzle-orm";
+import { and, count, eq, gte, inArray, lte } from "drizzle-orm";
+import dayjs from "dayjs";
 import type { DbConcrete } from "../drizzleUtils.ts";
 import { playMirrors, playsHistorical } from "../schema/schema.ts";
 import { DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
@@ -45,6 +46,12 @@ export class MirrorRepository extends DrizzleBaseRepository<'playMirrors'> {
         }
         const rows = await this.db.select({mirrorId: playsHistorical.mirrorId, count: count()}).from(playsHistorical).where(inArray(playsHistorical.mirrorId, ids)).groupBy(playsHistorical.mirrorId);
         return new Map(rows.map(x => [x.mirrorId as number, x.count]));
+    }
+
+    /** Number of a mirror's plays in an inclusive ms range */
+    countInRange = async (id: number, range: TimeRange): Promise<number> => {
+        const [row] = await this.db.select({count: count()}).from(playsHistorical).where(and(eq(playsHistorical.mirrorId, id), gte(playsHistorical.playedAt, dayjs(range[0])), lte(playsHistorical.playedAt, dayjs(range[1]))));
+        return row?.count ?? 0;
     }
 
     /** Merge range into coverage. Does not open a transaction, call inside one when paired with play inserts */

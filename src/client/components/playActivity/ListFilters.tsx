@@ -1,4 +1,4 @@
-import { Button, Card, createListCollection, DatePicker, Flex, Portal, Select, Span, TagsInput, useSelectContext, VStack, Wrap } from '@chakra-ui/react';
+import { Button, Card, createListCollection, DatePicker, Flex, Portal, Select, Span, Switch, TagsInput, useSelectContext, VStack, Wrap } from '@chakra-ui/react';
 import type {
     ZonedDateTime
 } from "@internationalized/date";
@@ -299,6 +299,13 @@ export const ListFilters = (props: {
             }
         })
     }, [onChange, filters]);
+    const setJobPlays = useCallback((show: boolean) => {
+        const {
+            jobId,
+            ...rest
+        } = filters;
+        onChange(show ? rest : {...rest, jobId: 'null'});
+    }, [onChange, filters]);
     const setPhrases = useCallback((val: string[]) => {
         const {
             text,
@@ -314,6 +321,11 @@ export const ListFilters = (props: {
                     <PhraseFilter value={filters.text} onChange={setPhrases} />
                     <PlayStateFilter value={filters.state} onChange={setState} mode={props.componentType} />
                     <PlayDateRangeFilter values={(filters.playedAt as CompareDateBetween<string>)?.range} onChange={setDateRange} containerProps={{ mt: "2" }} />
+                    {props.componentType === 'client' ? <Switch.Root mt="2" alignSelf="center" checked={filters.jobId === undefined} onCheckedChange={(d) => setJobPlays(d.checked)}>
+                        <Switch.HiddenInput/>
+                        <Switch.Control/>
+                        <Switch.Label>Show scrobbles from Import/Export jobs</Switch.Label>
+                    </Switch.Root> : undefined}
                 </Wrap>
             </Card.Body>
         </Card.Root>

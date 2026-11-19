@@ -1,16 +1,16 @@
-import { Button, Card, Container, DataList, Editable, Flex, Heading, HStack, IconButton, SkeletonText, Stack, Text } from '@chakra-ui/react';
+import { Box, Button, Card, Code, Collapsible, Container, DataList, Editable, Flex, Heading, HStack, IconButton, NumberInput, Separator, SkeletonText, Stack, Text } from '@chakra-ui/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import ky from 'ky';
 import { useState, type ReactNode } from 'react';
 import { LuCheck, LuPencil, LuX } from 'react-icons/lu';
 import { useNavigate, useParams } from "react-router";
-import type { JobApiJson } from "../../../core/Job";
+import { EXPORT_QUEUE_LIMIT_MAX, type JobApiJson, type JobTargetApiJson } from "../../../core/Job";
 import { tanQueries } from "../../queries";
 import { baseUrl } from "../../utils";
 import { ErrorAlert } from "../ErrorAlert";
 import { toaster } from "../Toaster";
 import { JobBackButton } from "./JobList";
-import { apiErrorMessage, FILE_FORMAT_NAMES, formatJobDate, ImportProgressBar, importOriginText, importProgress, JobStatusBadge, useJobEvents, useSetJob } from "./jobUtils";
+import { apiErrorMessage, exportProgress, ExportProgressBar, FILE_FORMAT_NAMES, formatJobDate, ImportProgressBar, importOriginText, importProgress, JobStatusBadge, useJobEvents, useSetJob } from "./jobUtils";
 
 type ControlAction = 'start' | 'pause' | 'stop';
 
@@ -104,7 +104,7 @@ export const JobDelete = (props: { job: JobApiJson }) => {
     }
     return (
         <Stack gap="1" alignItems="flex-end">
-            <Text textStyle="sm">Delete this job? Scrobbles already imported into the mirror are kept.{job.importFrom.kind === 'file' ? ' An uploaded file is deleted.' : ''}</Text>
+            <Text textStyle="sm">Delete this job? Scrobbles already imported into the mirror, and scrobbles already sent to Clients, are kept.{job.importFrom.kind === 'file' ? ' An uploaded file is deleted.' : ''}</Text>
             <HStack>
                 <Button size="sm" variant="subtle" disabled={isPending} onClick={() => setConfirming(false)}>Cancel</Button>
                 <Button size="sm" colorPalette="red" loading={isPending} onClick={() => mutate()}>Delete</Button>
@@ -113,29 +113,35 @@ export const JobDelete = (props: { job: JobApiJson }) => {
     );
 }
 
-export const ImportControls = (props: { job: JobApiJson }) => {
-    const {job} = props;
+/**
+ * Start/Pause/Stop for one process.
+ * @param path under the job, IE `import` or `targets/3`. Empty for the whole job
+ * */
+export const ProcessControls = (props: { job: JobApiJson, path: string, label: string, status: JobApiJson['status'], started: boolean, size?: 'xs' | 'sm' }) => {
+    const {job, path, label, status, started, size = 'sm'} = props;
     const setJob = useSetJob();
     const queryClient = useQueryClient();
     const {mutate, isPending, variables} = useMutation({
-        mutationFn: (action: ControlAction) => ky.post(`jobs/${job.id}/import/${action}`, {baseUrl}).json<JobApiJson>(),
+        mutationFn: (action: ControlAction) => ky.post(`jobs/${job.id}/${path === '' ? '' : `${path}/`}${action}`, {baseUrl}).json<JobApiJson>(),
         onSuccess: setJob,
         // an SSE event sent before the action can arrive after this response, refetch so a stale status can't stick
         onSettled: () => Promise.all([
             queryClient.invalidateQueries({queryKey: tanQueries.jobs.detail(job.id).queryKey}),
             queryClient.invalidateQueries({queryKey: tanQueries.jobs.list().queryKey}),
         ]),
-        onError: (e, action) => toaster.create({type: 'error', title: `Could not ${action} import`, description: apiErrorMessage(e)}),
+        onError: (e, action) => toaster.create({type: 'error', title: `Could not ${action} ${label}`, description: apiErrorMessage(e)}),
     });
-    const running = job.importStatus === 'running';
+    const running = status === 'running';
     return (
         <HStack>
-            {!running && job.importStatus !== 'completed' ? <Button size="sm" variant="subtle" colorPalette="green" loading={isPending && variables === 'start'} disabled={isPending} onClick={() => mutate('start')}>{job.importStartedAt === null ? 'Start' : 'Resume'}</Button> : undefined}
-            {running ? <Button size="sm" variant="subtle" colorPalette="orange" loading={isPending && variables === 'pause'} disabled={isPending} onClick={() => mutate('pause')}>Pause</Button> : undefined}
-            {running ? <Button size="sm" variant="subtle" loading={isPending && variables === 'stop'} disabled={isPending} onClick={() => mutate('stop')}>Stop</Button> : undefined}
+            {!running && status !== 'completed' ? <Button size={size} variant="subtle" colorPalette="green" loading={isPending && variables === 'start'} disabled={isPending} onClick={() => mutate('start')}>{started ? 'Resume' : 'Start'}</Button> : undefined}
+            {running ? <Button size={size} variant="subtle" colorPalette="orange" loading={isPending && variables === 'pause'} disabled={isPending} onClick={() => mutate('pause')}>Pause</Button> : undefined}
+            {running ? <Button size={size} variant="subtle" loading={isPending && variables === 'stop'} disabled={isPending} onClick={() => mutate('stop')}>Stop</Button> : undefined}
         </HStack>
     );
 }
+
+export const ImportControls = (props: { job: JobApiJson }) => <ProcessControls job={props.job} path="import" label="import" status={props.job.importStatus} started={props.job.importStartedAt !== null}/>;
 
 export const ImportPanel = (props: { job: JobApiJson }) => {
     const {job} = props;
@@ -186,6 +192,109 @@ export const ImportPanel = (props: { job: JobApiJson }) => {
     );
 }
 
+
+const STAT_LABELS: [string, string][] = [['scrobbled', 'scrobbled'], ['duped', 'already scrobbled'], ['failed', 'failed'], ['queued', 'queued'], ['discarded', 'discarded']];
+
+const statsText = (stats: JobTargetApiJson['stats']): string | undefined => {
+    if (stats === null) {
+        return undefined;
+    }
+    const parts = STAT_LABELS.filter(([key]) => (stats[key] ?? 0) > 0).map(([key, label]) => `${stats[key]!.toLocaleString()} ${label}`);
+    return parts.length > 0 ? parts.join(', ') : undefined;
+}
+
+export const ExportTarget = (props: { job: JobApiJson, target: JobTargetApiJson }) => {
+    const {job, target} = props;
+    const runtime = job.runtime.exports[target.id];
+    const progress = exportProgress(job, target);
+    const queuedLeft = target.stats?.queued ?? 0;
+    const stats = statsText(target.stats);
+    return (
+        <Stack gap="2">
+            <Flex justify="space-between" alignItems="center" gap="2" wrap="wrap">
+                <HStack minWidth="0">
+                    <Text fontWeight="semibold" truncate>{target.name ?? `Client ${target.componentId} (not configured)`}</Text>
+                    {target.type !== undefined ? <Text color="fg.muted" textStyle="sm">{target.type}</Text> : undefined}
+                    <JobStatusBadge status={target.status}/>
+                </HStack>
+                <ProcessControls job={job} path={`targets/${target.id}`} label="export" status={target.status} started={target.startedAt !== null} size="xs"/>
+            </Flex>
+            <ExportProgressBar job={job} target={target}/>
+            <Text textStyle="sm">
+                {target.exported.toLocaleString()} exported{job.importStatus === 'completed' ? ` of ${job.mirrorPlaysInRange.toLocaleString()}` : ''}
+                {progress !== undefined ? ` - ${Math.floor(progress * 100)}%` : ''}
+                {target.cursor !== null && target.status !== 'completed' ? `, up to ${formatJobDate(new Date(target.cursor.playedAt).toISOString())}` : ''}
+            </Text>
+            {stats !== undefined ? <Text textStyle="sm" color="fg.muted">In the Client: {stats}</Text> : undefined}
+            {runtime?.waiting !== undefined ? <Text textStyle="sm" color="fg.warning">{runtime.waiting}</Text> : undefined}
+            {target.status !== 'running' && target.status !== 'completed' && queuedLeft > 0 ? <Text textStyle="sm" color="fg.muted">{queuedLeft.toLocaleString()} queued scrobbles will still be sent to the Client.</Text> : undefined}
+            {target.status === 'running' && target.breaker.failedInARow > 0 ? <Text textStyle="sm" color="fg.warning">{target.breaker.failedInARow} failed in a row, the export stops at {Math.max(job.exportQueueLimit, 10)}.</Text> : undefined}
+            {target.error !== null && target.status === 'failed' ? <ErrorAlert error={target.error}/> : undefined}
+        </Stack>
+    );
+}
+
+export const QueueLimit = (props: { job: JobApiJson }) => {
+    const {job} = props;
+    const setJob = useSetJob();
+    const [value, setValue] = useState(job.exportQueueLimit);
+    const {mutate, isPending} = useMutation({
+        mutationFn: (exportQueueLimit: number) => ky.patch(`jobs/${job.id}`, {baseUrl, json: {exportQueueLimit}}).json<JobApiJson>(),
+        onSuccess: setJob,
+        onError: (e) => toaster.create({type: 'error', title: 'Could not change the queue limit', description: apiErrorMessage(e)}),
+    });
+    const valid = Number.isInteger(value) && value >= 1 && value <= EXPORT_QUEUE_LIMIT_MAX;
+    return (
+        <HStack>
+            <NumberInput.Root size="xs" width="6rem" min={1} max={EXPORT_QUEUE_LIMIT_MAX} value={String(value)} onValueChange={(d) => setValue(d.valueAsNumber)}>
+                <NumberInput.Control/>
+                <NumberInput.Input aria-label="Queue limit"/>
+            </NumberInput.Root>
+            {value !== job.exportQueueLimit ? <Button size="xs" variant="subtle" disabled={!valid} loading={isPending} onClick={() => mutate(value)}>Save</Button> : undefined}
+        </HStack>
+    );
+}
+
+const transformSourceText = (job: JobApiJson): string => {
+    const src = job.transformSource;
+    if (src === null) {
+        return 'None';
+    }
+    return src.kind === 'preset' ? `Preset: ${src.name}` : `Copied from ${src.componentName} (${src.hook})`;
+}
+
+export const ExportPanel = (props: { job: JobApiJson }) => {
+    const {job} = props;
+    return (
+        <Card.Root variant="subtle">
+            <Card.Header>
+                <Heading size="lg">Export</Heading>
+            </Card.Header>
+            <Card.Body>
+                <Stack gap="4">
+                    <DataList.Root orientation="horizontal" size="sm">
+                        <DataItem label="Order">{job.exportOrder === 'desc' ? 'Newest first' : 'Oldest first'}</DataItem>
+                        <DataItem label="Queue limit"><QueueLimit key={job.exportQueueLimit} job={job}/></DataItem>
+                        <DataItem label="Transforms">
+                            <Stack gap="1">
+                                <Text>{transformSourceText(job)}</Text>
+                                {job.transformOptions !== null ? <Collapsible.Root>
+                                    <Collapsible.Trigger asChild><Button size="xs" variant="ghost" alignSelf="flex-start" px="0">Show stages</Button></Collapsible.Trigger>
+                                    <Collapsible.Content><Code as="pre" display="block" whiteSpace="pre-wrap" p="2" textStyle="xs">{JSON.stringify(job.transformOptions, null, 2)}</Code></Collapsible.Content>
+                                </Collapsible.Root> : undefined}
+                            </Stack>
+                        </DataItem>
+                    </DataList.Root>
+                    {job.targets.map((t, i) => <Box key={t.id}>
+                        {i > 0 ? <Separator mb="4"/> : undefined}
+                        <ExportTarget job={job} target={t}/>
+                    </Box>)}
+                </Stack>
+            </Card.Body>
+        </Card.Root>
+    );
+}
+
 export const JobDetail = (props: { job: JobApiJson }) => {
     const {job} = props;
     return (
@@ -196,10 +305,13 @@ export const JobDetail = (props: { job: JobApiJson }) => {
                     <JobName job={job}/>
                     <JobStatusBadge status={job.status}/>
                 </HStack>
-                <JobDelete job={job}/>
+                <HStack alignItems="flex-start">
+                    {job.targets.length > 0 ? <ProcessControls job={job} path="" label="job" status={job.status} started={job.importStartedAt !== null || job.targets.some(x => x.startedAt !== null)}/> : undefined}
+                    <JobDelete job={job}/>
+                </HStack>
             </Flex>
-            {/* export targets and the job's plays are added below in later phases */}
             <ImportPanel job={job}/>
+            {job.targets.length > 0 ? <ExportPanel job={job}/> : undefined}
         </Stack>
     );
 }

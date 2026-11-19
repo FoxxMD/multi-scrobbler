@@ -1,4 +1,4 @@
-import { Box, Button, Card, Checkbox, Container, Field, FileUpload, Flex, Heading, Input, Link as ChakraLink, Progress, SkeletonText, Stack, Text } from '@chakra-ui/react';
+import { Alert, Box, Button, Card, Checkbox, Code, Collapsible, Container, Field, Fieldset, FileUpload, Flex, Heading, Input, Link as ChakraLink, Progress, SkeletonText, Stack, Text } from '@chakra-ui/react';
 import { formOptions, useForm } from "@tanstack/react-form";
 import { useMutation, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -7,11 +7,11 @@ import { useEffect, useRef, useState } from 'react';
 import { LuUpload } from 'react-icons/lu';
 import { useNavigate } from "react-router";
 import * as z from "zod";
-import type { JobApiJson, JobCreate, JobOptionsApiJson } from "../../../core/Job";
+import { EXPORT_QUEUE_LIMIT_DEFAULT, EXPORT_QUEUE_LIMIT_MAX, type JobApiJson, type JobCreate, type JobExportOrder, type JobOptionsApiJson } from "../../../core/Job";
 import { tanQueries } from "../../queries";
 import { baseUrl } from "../../utils";
 import { ErrorAlert } from "../ErrorAlert";
-import { FormCheckbox, FormFieldErrors, FormNativeSelect, FormRadio, type RadioFormItem, type SelectFormGroup } from "../form/formComponents";
+import { FormCheckbox, FormFieldErrors, FormNativeSelect, FormNumberInput, FormRadio, type RadioFormItem, type SelectFormGroup } from "../form/formComponents";
 import { TextMuted } from "../TextMuted";
 import { toaster } from "../Toaster";
 import { JobBackButton } from "./JobList";
@@ -19,6 +19,9 @@ import { apiErrorMessage, useSetJob } from "./jobUtils";
 
 type CreatedJob = JobApiJson & { startError?: string };
 type Source = 'component' | 'upload' | 'existing';
+type TransformsKind = 'none' | 'preset' | 'component';
+
+export const TRANSFER_DOCS = 'docs/transfer/overview/';
 
 const formSchema = z.object({
     name: z.string().trim().min(1, 'Name is required').max(100),
@@ -36,6 +39,14 @@ const formSchema = z.object({
     to: z.string(),
     /** null = the server default for the source */
     persistInputs: z.boolean().nullable(),
+    /** component ids */
+    targets: z.array(z.number()),
+    exportOrder: z.enum(['asc', 'desc']),
+    exportQueueLimit: z.number().int().min(1, 'At least 1').max(EXPORT_QUEUE_LIMIT_MAX, `At most ${EXPORT_QUEUE_LIMIT_MAX}`),
+    transforms: z.enum(['none', 'preset', 'component']),
+    preset: z.string(),
+    /** `componentId:hook` */
+    transformComponent: z.string(),
     start: z.boolean(),
 }).superRefine((v, ctx) => {
     if (v.source === 'component' && v.componentId === '') {
@@ -53,6 +64,12 @@ const formSchema = z.object({
     if (v.range === 'custom' && v.from !== '' && v.to !== '' && !dayjs(v.from).isBefore(dayjs(v.to))) {
         ctx.addIssue({code: 'custom', path: ['to'], message: 'Must be after From'});
     }
+    if (v.targets.length > 0 && v.transforms === 'preset' && v.preset === '') {
+        ctx.addIssue({code: 'custom', path: ['preset'], message: 'Choose a preset'});
+    }
+    if (v.targets.length > 0 && v.transforms === 'component' && v.transformComponent === '') {
+        ctx.addIssue({code: 'custom', path: ['transformComponent'], message: 'Choose transforms to copy'});
+    }
 }).transform((v): { payload: JobCreate, file?: File } => {
     const importFrom: JobCreate['importFrom'] = v.source === 'component'
         ? {componentId: Number.parseInt(v.componentId)}
@@ -62,6 +79,13 @@ const formSchema = z.object({
         mirror = v.mirror === 'new'
             ? {new: {name: v.mirrorName.trim(), account: v.mirrorAccount.trim() === '' ? undefined : v.mirrorAccount.trim()}}
             : {id: Number.parseInt(v.mirror)};
+    }
+    let transforms: JobCreate['transforms'];
+    if (v.targets.length > 0 && v.transforms === 'preset') {
+        transforms = {preset: v.preset};
+    } else if (v.targets.length > 0 && v.transforms === 'component') {
+        const [componentId, hook] = v.transformComponent.split(':');
+        transforms = {componentId: Number.parseInt(componentId), hook: hook as 'preCompare' | 'postCompare'};
     }
     return {
         payload: {
@@ -74,6 +98,10 @@ const formSchema = z.object({
                 to: v.to === '' ? undefined : dayjs(v.to).endOf('minute').toISOString(),
             },
             persistInputs: v.persistInputs ?? undefined,
+            targets: v.targets,
+            exportOrder: v.exportOrder,
+            exportQueueLimit: v.exportQueueLimit,
+            transforms,
             start: v.start,
         },
         file: v.source === 'upload' && v.file !== null ? v.file : undefined,
@@ -118,6 +146,18 @@ const uploadJob = (payload: JobCreate, file: File, onProgress: (fraction: number
     xhr.send(data);
 });
 
+/** Stages the transforms choice would copy, undefined when nothing is chosen */
+const chosenStages = (options: JobOptionsApiJson, kind: TransformsKind, preset: string, transformComponent: string): unknown[] | undefined => {
+    if (kind === 'preset') {
+        return options.presets.find(x => x.name === preset)?.stages;
+    }
+    if (kind === 'component') {
+        const [id, hook] = transformComponent.split(':');
+        return options.componentTransforms.find(x => x.componentId.toString() === id)?.[hook as 'preCompare' | 'postCompare'];
+    }
+    return undefined;
+}
+
 const formatSize = (bytes: number) => bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.ceil(bytes / 1024)} KB`;
 
 export interface JobCreateFormProps {
@@ -146,6 +186,12 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                 from: '',
                 to: '',
                 persistInputs: null as boolean | null,
+                targets: [] as number[],
+                exportOrder: 'desc' as JobExportOrder,
+                exportQueueLimit: EXPORT_QUEUE_LIMIT_DEFAULT,
+                transforms: 'none' as TransformsKind,
+                preset: options.presets[0]?.name ?? '',
+                transformComponent: options.componentTransforms[0] !== undefined ? `${options.componentTransforms[0].componentId}:${options.componentTransforms[0].preCompare !== undefined ? 'preCompare' : 'postCompare'}` : '',
                 start: true,
             },
             validators: [{
@@ -166,6 +212,15 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
         label: `${x.name} (${x.mode}${x.account !== null ? `, ${x.account}` : ''})${x.ready ? '' : ' - not ready'}`
     }))}];
     const fileGroups: SelectFormGroup[] = [{items: options.importFiles.map(x => ({value: x.name, label: `${x.name} (${formatSize(x.size)})`}))}];
+    const presetGroups: SelectFormGroup[] = [{items: options.presets.map(x => ({value: x.name, label: x.name}))}];
+    const transformComponentGroups: SelectFormGroup[] = [{items: options.componentTransforms.flatMap(x => (['preCompare', 'postCompare'] as const)
+        .filter(hook => x[hook] !== undefined)
+        .map(hook => ({value: `${x.componentId}:${hook}`, label: `${x.name} (${x.mode}) - ${hook}`})))}];
+    const transformItems: RadioFormItem<TransformsKind>[] = [
+        {value: 'none', label: 'None'},
+        ...(options.presets.length > 0 ? [{value: 'preset' as const, label: 'Preset'}] : []),
+        ...(options.componentTransforms.length > 0 ? [{value: 'component' as const, label: 'Copy from a Source/Client'}] : []),
+    ];
     const mirrorGroups: SelectFormGroup[] = [
         {items: [{value: 'new', label: 'New mirror'}]},
         ...(options.mirrors.length > 0 ? [{label: 'Existing', items: options.mirrors.map(x => ({
@@ -214,7 +269,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                                     <FileUpload.List showSize/>
                                 </FileUpload.Root>
                                 <Field.HelperText>
-                                    A CSV or JSON export from lastfm.ghan.nl, or a CSV from benjaminbenben. Very large files may be refused by a reverse proxy, place those in the imports folder instead. See the <ChakraLink textDecoration="underline" href="docs/import-lastfm/" target="_blank">import docs</ChakraLink>.
+                                    A CSV or JSON export from lastfm.ghan.nl, or a CSV from benjaminbenben. Very large files may be refused by a reverse proxy, place those in the imports folder instead. See the <ChakraLink textDecoration="underline" href={TRANSFER_DOCS} target="_blank">import docs</ChakraLink>.
                                 </Field.HelperText>
                                 <FormFieldErrors field={field}/>
                             </Field.Root>}
@@ -297,6 +352,74 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                         />
                     </Flex> : undefined}
                 />
+                <Stack gap="4">
+                    <Heading size="md">Export</Heading>
+                    <form.Field
+                        name="targets"
+                        // a Fieldset, not a Field: checkboxes in one Field share its input id so every label toggles the first
+                        children={(field) => <Fieldset.Root>
+                            <Fieldset.Legend>Export To</Fieldset.Legend>
+                            <Fieldset.HelperText>Clients that get the imported scrobbles. Leave empty to only import.</Fieldset.HelperText>
+                            {options.targets.length === 0 ? <Text color="fg.muted" textStyle="sm">No Clients are configured.</Text> : <Fieldset.Content gap="2" mt="1">
+                                {options.targets.map(t => <Checkbox.Root
+                                    key={t.componentId}
+                                    checked={field.value.includes(t.componentId)}
+                                    onCheckedChange={(details) => field.handleChange(details.checked === true ? [...field.value, t.componentId] : field.value.filter(x => x !== t.componentId))}
+                                >
+                                    <Checkbox.HiddenInput/>
+                                    <Checkbox.Control/>
+                                    <Checkbox.Label>{t.name} ({t.type}){t.ready ? '' : ' - not ready'}</Checkbox.Label>
+                                </Checkbox.Root>)}
+                            </Fieldset.Content>}
+                        </Fieldset.Root>}
+                    />
+                    <form.Subscribe
+                        selector={(state) => state.values}
+                        children={(values) => {
+                            if (values.targets.length === 0) {
+                                return undefined;
+                            }
+                            const rejecting = options.targets.filter(t => t.rejectsOldScrobbles && values.targets.includes(t.componentId));
+                            const stages = chosenStages(options, values.transforms, values.preset, values.transformComponent);
+                            return <Stack gap="4">
+                                {rejecting.length > 0 ? <Alert.Root status="warning">
+                                    <Alert.Indicator/>
+                                    <Alert.Content>
+                                        <Alert.Description>{rejecting.map(x => x.name).join(', ')}: Last.fm and Libre.fm refuse scrobbles older than about 14 days, so most imported scrobbles will fail to export there.</Alert.Description>
+                                    </Alert.Content>
+                                </Alert.Root> : undefined}
+                                <form.Field
+                                    name="exportOrder"
+                                    children={(field) => <FormRadio field={field} label="Order" items={[{value: 'desc', label: 'Newest first'}, {value: 'asc', label: 'Oldest first'}]}
+                                        helperText={values.exportOrder === 'desc' ? 'Starts exporting while the import is still running.' : 'Starts exporting once the oldest scrobbles are imported.'}/>}
+                                />
+                                <form.Field
+                                    name="transforms"
+                                    children={(field) => <FormRadio field={field} label="Transforms" items={transformItems} helperText="Change scrobbles before they are sent to each Client. Applied before the Client's own transforms."/>}
+                                />
+                                {values.transforms === 'preset' ? <form.Field
+                                    name="preset"
+                                    children={(field) => <FormNativeSelect field={field} label="Preset" groups={presetGroups} helperText="From transformersPresets in the config"/>}
+                                /> : undefined}
+                                {values.transforms === 'component' ? <form.Field
+                                    name="transformComponent"
+                                    children={(field) => <FormNativeSelect field={field} label="Copy From" groups={transformComponentGroups} helperText="A copy is saved with the job. Later changes to the config don't affect it."/>}
+                                /> : undefined}
+                                {stages !== undefined ? <Code as="pre" display="block" whiteSpace="pre-wrap" p="2" textStyle="xs">{JSON.stringify(stages, null, 2)}</Code> : undefined}
+                                <Collapsible.Root>
+                                    <Collapsible.Trigger asChild><Button size="xs" variant="ghost" alignSelf="flex-start">Advanced</Button></Collapsible.Trigger>
+                                    <Collapsible.Content>
+                                        <form.Field
+                                            name="exportQueueLimit"
+                                            children={(field) => <FormNumberInput field={field} label="Queue Limit" min={1} max={EXPORT_QUEUE_LIMIT_MAX} empty={1} maxWidth="10rem"
+                                                helperText="Most scrobbles from this job waiting in each Client's queue at once. Lower keeps room for live scrobbles. Can be changed later."/>}
+                                        />
+                                    </Collapsible.Content>
+                                </Collapsible.Root>
+                            </Stack>;
+                        }}
+                    />
+                </Stack>
                 <form.Field
                     name="start"
                     children={(field) => <FormCheckbox field={field} label="Start now"/>}
@@ -363,7 +486,7 @@ export const JobCreateFetchable = () => {
         <Container boxSize="full" p="0" maxWidth="4xl">
             <Stack gap="4">
                 <JobBackButton/>
-                <Heading size="2xl">New Import</Heading>
+                <Heading size="2xl">New Job</Heading>
                 {error !== null ? <ErrorAlert error={{name: 'Could not create job', message: apiErrorMessage(error)}}/> : undefined}
                 <Card.Root variant="subtle"><Card.Body>{body}</Card.Body></Card.Root>
             </Stack>
