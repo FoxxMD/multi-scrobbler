@@ -453,7 +453,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
             const shouldLog = log ?? this.config.options?.playTransform?.log ?? isDebugMode();
 
-            const transformHash = `playTransform-${hashObject(hook)}-${playContentCacheHash(play)}`;
+            // hookType is part of the key so cached steps from the same stages run on another hook keep their own hook in the lifecycle
+            const transformHash = `playTransform-${hookType}-${hashObject(hook)}-${playContentCacheHash(play)}`;
             const cachedSteps = useCachedResult ?  await this.cache.cacheTransform.get<LifecycleStep[]>(transformHash) : undefined;
             if(cachedSteps !== undefined) {
                 logger.trace(`Cache hit for Steps => ${transformHash}`);

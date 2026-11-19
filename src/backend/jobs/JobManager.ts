@@ -156,6 +156,9 @@ export class JobManager {
             stages = hookStages;
             transformSource = {kind: 'component', componentId: input.componentId, componentName: (component as {name?: string}).name ?? String(input.componentId), hook: input.hook};
         }
+        if (stages.length === 0) {
+            throw new JobConfigError('Transforms must have at least one stage');
+        }
         const tm = this.opts.transformerManager ?? getRoot().items.transformerManager;
         try {
             await pMap(stages, async (x) => tm.parseTransformerConfig(x));

@@ -285,7 +285,7 @@ describe('Job API', function () {
 
     describe('Transforms', function () {
 
-        const presets = {clean: [{type: 'user', title: ['(Remastered)']}], bad: {type: 'nope'}} as unknown as Record<string, PlayTransformPartsConfigOptions>;
+        const presets = {clean: [{type: 'user', title: ['(Remastered)']}], bad: {type: 'nope'}, unknownName: {type: 'musicbrainz', name: 'doesNotExist'}, empty: []} as unknown as Record<string, PlayTransformPartsConfigOptions>;
 
         const transformApp = async (tmpPath: string) => {
             await copyFile(fixture('ghan.json'), path.join(tmpPath, 'export.json'));
@@ -302,7 +302,7 @@ describe('Job API', function () {
                 {componentId: 7, name: 'client 7', type: 'maloja', ready: true, rejectsOldScrobbles: false},
                 {componentId: 8, name: 'client 8', type: 'lastfm', ready: true, rejectsOldScrobbles: true},
             ]);
-            expect(body.presets).eql([{name: 'clean', stages: [{type: 'user', title: ['(Remastered)']}]}, {name: 'bad', stages: [{type: 'nope'}]}]);
+            expect(body.presets).eql([{name: 'clean', stages: [{type: 'user', title: ['(Remastered)']}]}, {name: 'bad', stages: [{type: 'nope'}]}, {name: 'unknownName', stages: [{type: 'musicbrainz', name: 'doesNotExist'}]}, {name: 'empty', stages: []}]);
             expect(body.componentTransforms).eql([{componentId: 7, name: 'client 7', mode: 'client', preCompare: [{type: 'user', artists: ['feat']}]}]);
         });
 
@@ -328,7 +328,7 @@ describe('Job API', function () {
         it('rejects missing or invalid transforms', async function () {
             await using tmp = await createTmpDir('jobTransformInvalid');
             const {app} = await transformApp(tmp.path);
-            for (const transforms of [{preset: 'missing'}, {preset: 'bad'}, {componentId: 7, hook: 'postCompare'}, {componentId: 99, hook: 'preCompare'}]) {
+            for (const transforms of [{preset: 'missing'}, {preset: 'bad'}, {preset: 'unknownName'}, {preset: 'empty'}, {componentId: 7, hook: 'postCompare'}, {componentId: 99, hook: 'preCompare'}]) {
                 const res = await create(app, transforms);
                 expect(res.status, JSON.stringify(transforms)).eq(400);
             }

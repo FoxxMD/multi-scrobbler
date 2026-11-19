@@ -11,6 +11,7 @@ describe('Transformers Presets', function () {
             list: [{type: 'user', title: ['(Remastered)']}, {type: 'musicbrainz'}],
             noType: {title: ['x']},
             badType: [{type: 'nope'}],
+            empty: [],
         }, loggerTest);
         expect(Object.keys(presets)).eql(['single', 'list']);
         expect(presets.list).eql([{type: 'user', title: ['(Remastered)']}, {type: 'musicbrainz'}]);

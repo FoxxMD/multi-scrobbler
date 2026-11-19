@@ -363,8 +363,9 @@ describe('Play Transforms', function () {
                     const track = await component.transformPlay(play, TRANSFORM_HOOK.postCompare, {stages: trackStages});
                     expect(track.data.track?.name).equal('My coolsomething');
                     // a hook without rules on the component still runs given stages
-                    const pre = await component.transformPlay(play, TRANSFORM_HOOK.preCompare, {stages: coolStages});
-                    expect(pre.data.track?.name).equal('My something track');
+                    const somethingStages = [await tm.parseTransformerConfig({type: 'user', title: ['something']})];
+                    const pre = await component.transformPlay(play, TRANSFORM_HOOK.preCompare, {stages: somethingStages});
+                    expect(pre.data.track?.name).equal('My cool track');
                 });
 
                 it('Transforms consecutively when hook is present with multiple values', async function () {

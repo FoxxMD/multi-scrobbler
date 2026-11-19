@@ -81,7 +81,9 @@ export const parseTransformersPresets = (raw: unknown, logger: Logger): Record<s
     }
     for(const [name, value] of Object.entries(raw)) {
         const res = playTransformPartsConfigOptionsSchema.safeParse(value);
-        if(res.success) {
+        if(res.success && Array.isArray(value) && value.length === 0) {
+            logger.error(`Transformers preset '${name}' has no stages and will not be available`);
+        } else if(res.success) {
             // the original, the schema may not model every field a transformer accepts
             presets[name] = value as PlayTransformPartsConfigOptions;
         } else {
