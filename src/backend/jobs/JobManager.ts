@@ -1,0 +1,103 @@
+import { childLogger, type Logger } from "@foxxmd/logging";
+import type { DbConcrete } from "../common/database/drizzle/drizzleUtils.ts";
+import { JobRepository, type JobSelect } from "../common/database/drizzle/repositories/JobRepository.ts";
+import type { WebhookPayload } from "../common/infrastructure/config/health/webhooks.ts";
+import { WildcardEmitter } from "../common/WildcardEmitter.ts";
+import type { JobTimings } from "./constants.ts";
+import type { ImportPacer, ImportProvider } from "./ImportProvider.ts";
+import { type HaltStatus, JobRunner, type JobRuntime } from "./JobRunner.ts";
+import { LockRegistry } from "./LockRegistry.ts";
+
+export interface JobManagerOpts {
+    db: DbConcrete
+    logger: Logger
+    /** returns undefined for mirror-only jobs, throws if the job's import origin can't be used */
+    createProvider?: (job: JobSelect) => ImportProvider | undefined
+    notify?: (payload: WebhookPayload) => Promise<void>
+    timings?: Partial<JobTimings>
+    pacer?: ImportPacer
+}
+
+export const defaultCreateProvider = (job: JobSelect): ImportProvider | undefined => {
+    if(job.componentFromId === null && job.importFile === null) {
+        return undefined;
+    }
+    throw new Error('No import provider is available for this job');
+}
+
+/**
+ * Owns a JobRunner per job, shared locks, and the emitter the API forwards to SSE as `jobUpdate`.
+ * */
+export class JobManager {
+
+    readonly emitter = new WildcardEmitter();
+    readonly locks = new LockRegistry();
+    protected runners = new Map<number, JobRunner>();
+    protected opts: JobManagerOpts;
+    protected logger: Logger;
+    protected jobRepo: JobRepository;
+
+    constructor(opts: JobManagerOpts) {
+        this.opts = opts;
+        this.logger = childLogger(opts.logger, 'Jobs');
+        this.jobRepo = new JobRepository(opts.db, {logger: this.logger});
+    }
+
+    getRunner(jobId: number): JobRunner {
+        let runner = this.runners.get(jobId);
+        if(runner === undefined) {
+            runner = new JobRunner(jobId, {
+                db: this.opts.db,
+                logger: this.logger,
+                locks: this.locks,
+                emitter: this.emitter,
+                createProvider: this.opts.createProvider ?? defaultCreateProvider,
+                notify: this.opts.notify !== undefined ? (p) => this.opts.notify!({...p, identifier: 'Jobs'}) : undefined,
+                timings: this.opts.timings,
+                pacer: this.opts.pacer,
+            });
+            this.runners.set(jobId, runner);
+        }
+        return runner;
+    }
+
+    getRuntime(jobId: number): JobRuntime | undefined {
+        return this.runners.get(jobId)?.runtime;
+    }
+
+    startImport = async (jobId: number) => this.getRunner(jobId).startImport();
+
+    stopImport = async (jobId: number, status: HaltStatus) => this.getRunner(jobId).stopImport(status);
+
+    /** Restart every process that was running when the app last stopped */
+    resumeAll = async () => {
+        const running = await this.jobRepo.findRunningImports();
+        if(running.length > 0) {
+            this.logger.info(`Resuming ${running.length} job imports`);
+        }
+        for(const job of running) {
+            try {
+                await this.startImport(job.id);
+            } catch (e) {
+                this.logger.warn(new Error(`Could not resume import for Job ${job.id}`, {cause: e}));
+                await this.jobRepo.update(job.id, {importStatus: 'failed', importError: e as Error});
+            }
+        }
+    }
+
+    /** Halts everything without changing persisted status, so running processes resume on next boot */
+    shutdown = async () => {
+        await Promise.allSettled(Array.from(this.runners.values()).map(x => x.shutdown()));
+    }
+
+    deleteJob = async (jobId: number) => {
+        const runner = this.runners.get(jobId);
+        if(runner !== undefined) {
+            await runner.stopImport('stopped');
+            await runner.shutdown();
+            this.runners.delete(jobId);
+        }
+        await this.jobRepo.deleteJob(jobId);
+        this.emitter.emit('jobDeleted', {jobId});
+    }
+}

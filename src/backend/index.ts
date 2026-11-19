@@ -33,6 +33,7 @@ import { getMigratedDb } from "./common/database/appMigrator.ts";
 import type { Server } from 'node:http';
 import { stripIndents } from 'common-tags';
 import type { InternalConfigOptional } from './common/infrastructure/Atomic.ts';
+import { JobManager } from './jobs/JobManager.ts';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -64,6 +65,7 @@ let server: Server | undefined;
 let scrobbleSources: ScrobbleSources | undefined;
 let scrobbleClients: ScrobbleClients | undefined;
 let notifiers: Notifiers | undefined;
+let jobManager: JobManager | undefined;
 let webFault: WebFault | undefined;
 
 // synchronous so it is safe to call from uncaughtExceptionMonitor
@@ -110,6 +112,8 @@ const shutdown = async (reason: string, exitCode: number = 0) => {
     // stop accepting new connections (ingress, UI) but let existing requests finish while components stop
     server?.close();
     scheduler.stop();
+    // jobs feed plays into clients so halt them before components. Persisted status stays 'running' so they resume next boot
+    await jobManager?.shutdown();
     // sources first so no new plays are discovered while clients are finishing up
     for(const [kind, components] of [['Source', scrobbleSources?.sources ?? []], ['Client', scrobbleClients?.clients ?? []]] as const) {
         const results = await Promise.allSettled(components.map(c => c.stop({reason})));
@@ -314,6 +318,9 @@ const dataDir = getDataDir();
                 logger.debug(`Not waiting for Source ${c.name} to finish init, moving on to the next Source...`);
             }
         }
+
+        jobManager = new JobManager({db, logger, notify: async (p) => notifiers?.notify(p)});
+        await jobManager.resumeAll();
 
         const runRetentionNow = parseBool(process.env.RETENTION_IMMEDIATE, false);
 
