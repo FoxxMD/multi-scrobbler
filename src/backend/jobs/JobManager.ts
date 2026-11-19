@@ -7,6 +7,7 @@ import type { JobTimings } from "./constants.ts";
 import type { ImportPacer, ImportProvider } from "./ImportProvider.ts";
 import { type HaltStatus, JobRunner, type JobRuntime } from "./JobRunner.ts";
 import { LockRegistry } from "./LockRegistry.ts";
+import { LastfmFileImportProvider } from "./lastfm/LastfmFileImportProvider.ts";
 
 export interface JobManagerOpts {
     db: DbConcrete
@@ -19,7 +20,10 @@ export interface JobManagerOpts {
 }
 
 export const defaultCreateProvider = (job: JobSelect): ImportProvider | undefined => {
-    if(job.componentFromId === null && job.importFile === null) {
+    if(job.importFile !== null) {
+        return new LastfmFileImportProvider(job.importFile, [job.rangeFrom?.valueOf() ?? 0, job.rangeTo.valueOf()]);
+    }
+    if(job.componentFromId === null) {
         return undefined;
     }
     throw new Error('No import provider is available for this job');

@@ -40,6 +40,8 @@ export interface ImportProvider {
     /** throws if upstream is not usable yet (IE component not authenticated) */
     ready(): Promise<void>
     fetch(args: ImportFetchArgs): Promise<ImportBatch>
+    /** release resources (open files) when the import stops for any reason */
+    close?(): void
 }
 
 /**

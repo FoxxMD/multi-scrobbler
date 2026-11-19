@@ -121,12 +121,13 @@ export class JobRunner {
         let isStarted = false;
         let job: JobSelect | undefined;
         let completed = false;
+        let provider: ImportProvider | undefined;
         try {
             job = await this.getJob();
             if(job.importStatus === 'completed') {
                 return;
             }
-            const provider = this.deps.createProvider(job);
+            provider = this.deps.createProvider(job);
             if(provider === undefined) {
                 // mirror-only job, nothing to import
                 await this.setImport({importStatus: 'completed', importCompletedAt: dayjs()});
@@ -160,6 +161,7 @@ export class JobRunner {
                 await this.safely(() => this.deps.notify?.({title: `Job ${job?.name ?? this.jobId} - Import Failed`, message: (e as Error).message, priority: 'error'}), 'send notification');
             }
         } finally {
+            provider?.close?.();
             // no-op if already reported
             reportStart();
             if(lockKey !== undefined) {

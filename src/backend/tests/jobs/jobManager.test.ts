@@ -133,7 +133,8 @@ describe('Job manager', function () {
     it('fails to start a job whose import origin has no provider', async function () {
         const {db, jobs, newJob} = await setup();
         const job = await newJob();
-        await jobs.update(job.id, {importStatus: 'idle', importFile: {path: '/nope', originalName: 'x.csv', format: 'lastfm-ghan-csv', size: 1, managed: false}});
+        const component = await db.insert(components).values(fixtureCreateComponent({mode: 'source', type: 'spotify'})).returning();
+        await jobs.update(job.id, {importStatus: 'idle', componentFromId: component[0].id});
         const m = new JobManager({db, logger: loggerTest, timings});
         let err: unknown;
         try {
