@@ -152,6 +152,10 @@ export const NAV_LINKS: SideNavProps[] = [
             {
                 title: 'Dashboard',
                 url: '/'
+            },
+            {
+                title: 'Import Jobs',
+                url: '/jobs'
             }
         ]
     },

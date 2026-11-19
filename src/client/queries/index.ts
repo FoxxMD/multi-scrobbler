@@ -8,6 +8,7 @@ import {type AlbumSearchResult, type ArtistSearchResult, type TrackSearchResult,
 import type { SourcePlayerJson } from "../../core/PlaySchema";
 import type { UserSettingKey, UserSettingResponse, UserSettingValue } from "../../core/UserSettings";
 import { queryPlayOptsRefreshableToJson } from "../utils/ComponentUtils";
+import type { JobApiJson, JobOptionsApiJson } from "../../core/Job";
 const components = createQueryKeys('components', {
     list: () => ({
         queryKey: ['components'],
@@ -181,7 +182,22 @@ const userSettings = createQueryKeys('userSettings', {
 export const putUserSetting = <K extends UserSettingKey>(key: K, value: UserSettingValue<K>) =>
   ky.put(`user/me/setting/${key}`, { baseUrl, json: { value } }).json<UserSettingResponse<K>>();
 
-export const tanQueries = mergeQueryKeys(components, activities, players, logs, metadata, dashboard, userSettings);
+const jobs = createQueryKeys('jobs', {
+  list: () => ({
+    queryKey: ['all'],
+    queryFn: () => ky.get('jobs', { baseUrl }).json<JobApiJson[]>()
+  }),
+  detail: (jobId: number) => ({
+    queryKey: [jobId],
+    queryFn: () => ky.get(`jobs/${jobId}`, { baseUrl }).json<JobApiJson>()
+  }),
+  options: () => ({
+    queryKey: ['options'],
+    queryFn: () => ky.get('jobs/options', { baseUrl }).json<JobOptionsApiJson>()
+  })
+});
+
+export const tanQueries = mergeQueryKeys(components, activities, players, logs, metadata, dashboard, userSettings, jobs);
 
 export const useQueryState = (queryKey: Readonly<unknown[]>) => {
   const queryClient = useQueryClient()
