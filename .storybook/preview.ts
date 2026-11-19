@@ -3,28 +3,14 @@ import addonA11y from "@storybook/addon-a11y";
 import { definePreview } from "@storybook/react-vite";
 
 import { themes } from 'storybook/theming';
-import { initialize, mswLoader, getWorker } from 'msw-storybook-addon';
+import addonMsw from 'msw-storybook-addon';
+import { setupWorker } from 'msw/browser';
 import { generatePlayDefaults } from '../src/core/tests/utils/PlayTestUtils.js';
 
 // stories render service indicators, so generated plays get random service ids (tests keep the default, no ids)
 generatePlayDefaults.serviceIds = true;
 
-// https://github.com/mswjs/msw-storybook-addon/issues/82#issuecomment-3894302575
-try {
-  getWorker();
-} catch (_) {
-  // only warn about unmocked API calls, not vite serving source/assets
-  initialize({
-    onUnhandledRequest(req, print) {
-      if (new URL(req.url).pathname.startsWith('/api/')) {
-        print.warning();
-      }
-    }
-  });
-}
-
 export default definePreview({
-  loaders: [mswLoader],
   parameters: {
     controls: {
       matchers: {
@@ -44,5 +30,21 @@ export default definePreview({
     },
   },
 
-  addons: [addonA11y(), addonDocs()]
+  addons: [
+    addonA11y(),
+    addonDocs(),
+    addonMsw(async () => {
+      const worker = setupWorker();
+      await worker.start({
+        quiet: true,
+        // only warn about unmocked API calls, not vite serving source/assets
+        onUnhandledRequest(req, print) {
+          if (new URL(req.url).pathname.startsWith('/api/')) {
+            print.warning();
+          }
+        }
+      });
+      return worker;
+    }),
+  ]
 });

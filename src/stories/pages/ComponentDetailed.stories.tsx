@@ -20,6 +20,35 @@ let livePlayData: PlayApiCommonDetailed[] = [];
 const meta = preview.meta({
   title: 'Pages/Component Detailed',
   component: ComponentDetailedDesktop,
+  beforeEach({ msw }) {
+    msw.use(
+      http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params }) => {
+        if(livePlayData.length === 0) {
+          livePlayData = await generatePlayApiCommonDetailedList();
+          livePlayData[0].error = serializeError(generateFakeError(3));
+        }
+        const res: PaginatedResponse<PlayApiCommonDetailed> = {
+          data: livePlayData,
+          meta: {
+            offset: 0,
+            limit: 100
+          }
+        }
+        return HttpResponse.json(res);
+      }),
+      http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
+        if(livePlayData.length === 0) {
+          livePlayData = await generatePlayApiCommonDetailedList();
+        }
+        const existing = livePlayData.find(x => x.uid === params.uid);
+        if (existing !== undefined) {
+          return HttpResponse.json(existing);
+        }
+        return HttpResponse.json(generatePlayApiCommonDetailed({}, serializeError(new Error('This is an error', {cause: new Error('this is a nested error', {cause: new Error('another error')})}))));
+      }),
+      sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {})
+    );
+  },
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
@@ -32,35 +61,6 @@ const meta = preview.meta({
         useStoryElement: true
       }
     }),
-    msw: {
-      handlers: [
-        http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params }) => {
-          if(livePlayData.length === 0) {
-            livePlayData = await generatePlayApiCommonDetailedList();
-            livePlayData[0].error = serializeError(generateFakeError(3));
-          }
-          const res: PaginatedResponse<PlayApiCommonDetailed> = {
-            data: livePlayData,
-            meta: {
-              offset: 0,
-              limit: 100
-            }
-          }
-          return HttpResponse.json(res);
-        }),
-        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
-          if(livePlayData.length === 0) {
-            livePlayData = await generatePlayApiCommonDetailedList();
-          }
-          const existing = livePlayData.find(x => x.uid === params.uid);
-          if (existing !== undefined) {
-            return HttpResponse.json(existing);
-          }
-          return HttpResponse.json(generatePlayApiCommonDetailed({}, serializeError(new Error('This is an error', {cause: new Error('this is a nested error', {cause: new Error('another error')})}))));
-        }),
-        sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {})
-      ],
-    },
   },
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
@@ -79,7 +79,7 @@ const meta = preview.meta({
     },
 decorators: [
   withRouter,
-    (Story) => (<Provider><Container maxWidth="4xl"><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Container></Provider>),
+    (Story: React.ComponentType) => (<Provider><Container maxWidth="4xl"><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Container></Provider>),
   ]
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
@@ -110,17 +110,15 @@ export const ClientDetailedFetchable = meta.story({
       live: true,
       componentId: 1,
     },
-    parameters: {
-        msw: {
-          handlers: [
-            sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
-            setInterval(() => client.send(generateSseMessage(randomQueue(), {})), 2000);
-            setInterval(() => client.send(generateSseMessage('deadLetter', {})), 3000);
-            setInterval(() => client.send(generateSseMessage('scrobble', {})), 2500);
-            })
-          ],
-        },
-    }
+    beforeEach({ msw }) {
+      msw.use(
+        sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
+        setInterval(() => client.send(generateSseMessage(randomQueue(), {})), 2000);
+        setInterval(() => client.send(generateSseMessage('deadLetter', {})), 3000);
+        setInterval(() => client.send(generateSseMessage('scrobble', {})), 2500);
+        })
+      );
+    },
 });
 
 export const SourceDetailed = meta.story({

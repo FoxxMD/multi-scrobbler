@@ -44,23 +44,23 @@ type PropsAndCustomArgs = React.ComponentProps<typeof PlayEdit> & {
 const meta = preview.type<{args: PropsAndCustomArgs}>().meta({
   title: 'Plays/Play Edit',
   component: PlayEdit,
+  beforeEach({ msw }) {
+    msw.use(
+      http.get<{ query: string }>('/api/metadata/search/artists', () => searchStreamResponse(generateArtistSearchResults)),
+      http.post<{ query: string }>('/api/metadata/search/artists', () => searchStreamResponse(generateArtistSearchResults)),
+      http.get<{ query: string }>('/api/metadata/search/albums', () => searchStreamResponse(generateAlbumSearchResults)),
+      http.post<{ query: string }>('/api/metadata/search/albums', () => searchStreamResponse(generateAlbumSearchResults)),
+      http.get<{ query: string }>('/api/metadata/search/tracks', () => searchStreamResponse(generateTrackSearchResults)),
+      http.post<{ query: string }>('/api/metadata/search/tracks', () => searchStreamResponse(generateTrackSearchResults)),
+      http.put('/api/components/1/plays/1234/play', async ({ request}) => {
+        await delay();
+        return HttpResponse.json(request.clone().json());
+      })
+    );
+  },
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
-        msw: {
-      handlers: [
-        http.get<{ query: string }>('/api/metadata/search/artists', () => searchStreamResponse(generateArtistSearchResults)),
-        http.post<{ query: string }>('/api/metadata/search/artists', () => searchStreamResponse(generateArtistSearchResults)),
-        http.get<{ query: string }>('/api/metadata/search/albums', () => searchStreamResponse(generateAlbumSearchResults)),
-        http.post<{ query: string }>('/api/metadata/search/albums', () => searchStreamResponse(generateAlbumSearchResults)),
-        http.get<{ query: string }>('/api/metadata/search/tracks', () => searchStreamResponse(generateTrackSearchResults)),
-        http.post<{ query: string }>('/api/metadata/search/tracks', () => searchStreamResponse(generateTrackSearchResults)),
-        http.put('/api/components/1/plays/1234/play', async ({ request}) => {
-          await delay();
-          return HttpResponse.json(request.clone().json());
-        }),
-      ],
-    },
   },
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
@@ -119,7 +119,7 @@ export const PlayEditableMutateStory = meta.story({
       args.initialPlay = withBrainz(args.initialPlay, {include: ['album','recording','track','artist']});
     }
     const {initialPlay, ...rest} = args;
-    return (<PlayEditableMutable componentId="1" uid="1234" editable play={initialPlay} {...rest}/>) 
+    return (<PlayEditableMutable componentId={1} uid="1234" editable play={initialPlay} {...rest}/>) 
   }
 });
 

@@ -8,12 +8,12 @@ const secured = {secured: true, passwordSet: true};
 const meta = preview.meta({
     title: 'Auth/Account Settings',
     component: AccountSettings,
+    beforeEach({ msw }) { msw.use(...mockAuth({status: secured, loggedIn: true, apiKeys: sampleApiKeys()})); },
     parameters: {
         layout: 'padded',
         // mocks and auth state are per page, so docs must render each story in its own iframe
         docs: {story: {inline: false, iframeHeight: '900px'}},
         reactRouter: reactRouterParameters({location: {path: '/settings'}, routing: {path: '/settings', useStoryElement: true}}),
-        msw: {handlers: mockAuth({status: secured, loggedIn: true, apiKeys: sampleApiKeys()})},
     },
     tags: ['autodocs'],
     loaders: [resetAuthState],
@@ -23,25 +23,25 @@ const meta = preview.meta({
 export const LoggedIn = meta.story({});
 
 export const NoApiKeys = meta.story({
-    parameters: {msw: {handlers: mockAuth({status: secured, loggedIn: true, sessions: 1})}},
+    beforeEach({ msw }) { msw.use(...mockAuth({status: secured, loggedIn: true, sessions: 1})); },
 });
 
 export const SessionsNeedRecentLogin = meta.story({
-    parameters: {msw: {handlers: mockAuth({status: secured, loggedIn: true, sessionsNotFresh: true, apiKeys: sampleApiKeys()})}},
+    beforeEach({ msw }) { msw.use(...mockAuth({status: secured, loggedIn: true, sessionsNotFresh: true, apiKeys: sampleApiKeys()})); },
 });
 
 export const WrongCurrentPassword = meta.story({
-    parameters: {msw: {handlers: mockAuth({status: secured, loggedIn: true, apiKeys: sampleApiKeys(), submitError: 'Invalid password'})}},
+    beforeEach({ msw }) { msw.use(...mockAuth({status: secured, loggedIn: true, apiKeys: sampleApiKeys(), submitError: 'Invalid password'})); },
 });
 
 export const NotLoggedIn = meta.story({
-    parameters: {msw: {handlers: mockAuth({status: secured})}},
+    beforeEach({ msw }) { msw.use(...mockAuth({status: secured})); },
 });
 
 export const NotSecured = meta.story({
-    parameters: {msw: {handlers: mockAuth()}},
+    beforeEach({ msw }) { msw.use(...mockAuth()); },
 });
 
 export const AuthDisabled = meta.story({
-    parameters: {msw: {handlers: mockAuth({status: {mode: 'disabled'}})}},
+    beforeEach({ msw }) { msw.use(...mockAuth({status: {mode: 'disabled'}})); },
 });
