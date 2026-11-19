@@ -232,6 +232,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         return this.dbComponent.countLive;
     }
 
+    /** Add to this component's lifetime backlog/job total, in the database and on the in-memory row */
+    protected async incrementCountNonLive(by: number = 1): Promise<number> {
+        this.dbComponent.countNonLive = await this.componentRepo.incrementCountNonLive(this.dbComponent.id, by);
+        return this.dbComponent.countNonLive;
+    }
+
     protected async doBuildDatabase(): Promise<true | string | undefined> {
         await super.doBuildDatabase();
 
@@ -863,7 +869,11 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         return this.config.options?.deadLetterRetries ?? DEAD_LETTER_RETRIES_DEFAULT;
     }
 
-    queuePlay = async (data: (PlayObject | PlayObject[]) | (PlaySelectWithQueueStates | PlaySelectWithQueueStates[]), context?: QueueContext) => {
+    /**
+     * @param opts.jobId plays are exported by this import job. They are linked to the job (not a parent Source play) and marked as job plays in meta
+     * */
+    queuePlay = async (data: (PlayObject | PlayObject[]) | (PlaySelectWithQueueStates | PlaySelectWithQueueStates[]), context?: QueueContext, opts: {jobId?: number} = {}) => {
+        const {jobId} = opts;
         const createdQueuedPlays: PlaySelect[] = [];
 
         const dataArray = Array.isArray(data) ? data : [data];
@@ -916,7 +926,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             // we add this state signal to the play meta data and queue it
             // this way we persist the play and dupe it in queue processing so the user has an audit trail
             const monitoring = this.getMonitoringStatus();
-            const playDatas = dataArray.map(x => ({ ...x, meta: { ...x.meta, wasMonitored: monitoring.monitoring, seenAt: dayjs() } }));
+            const jobMeta = jobId !== undefined ? {jobId, parsedFrom: 'job' as const, newFromSource: false} : {};
+            const playDatas = dataArray.map(x => ({ ...x, meta: { ...x.meta, ...jobMeta, wasMonitored: monitoring.monitoring, seenAt: dayjs() } }));
 
             await pMap(playDatas, async (queueablePlay) => {
                 try {
@@ -944,8 +955,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                     },
                     componentId: this.dbComponent.id,
                     state: 'queued',
-                    // only exists on plays from Source
-                    parentId: queueablePlay.id
+                    // only exists on plays from Source. A job play's id (if any) is a mirror row, not a play
+                    parentId: jobId === undefined ? queueablePlay.id : undefined,
+                    jobId,
                 });
 
                 const playRow = await this.playRepo.createPlays([createPlayData]);

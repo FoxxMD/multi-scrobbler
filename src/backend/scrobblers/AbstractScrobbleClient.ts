@@ -1,3 +1,4 @@
+import type { WebhookPayload } from "../common/infrastructure/config/health/webhooks.ts";
 import { asJsonPlayer } from "../../core/PlayMarshalUtils.ts";
 import { childLogger, type Logger, type LogLevel } from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
@@ -275,7 +276,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     'Dead',
                     (): Promise<any> => {
                         if(this.isReady()) {
-                            return this.processDeadLetterQueue(undefined, 'Reprocessing bulk dead Plays by system').then(() => null).catch((e) => {
+                            return this.processDeadLetterQueue(undefined, 'Reprocessing bulk dead Plays by system', false, {excludeJobPlays: true}).then(() => null).catch((e) => {
                                 this.warnings.push(e);
                                 this.logger.error(e);
                             })
@@ -727,10 +728,15 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return obj;
     }
 
-    addScrobbledTrack = async (playObj: PlayObject) => {
+    /** @param opts.nonLive the play came from an import job, count it separately from live scrobbles */
+    addScrobbledTrack = async (playObj: PlayObject, opts: {nonLive?: boolean} = {}) => {
         this.emitEvent('scrobble', { play: playObj });
         try {
-            await this.incrementCountLive();
+            if (opts.nonLive) {
+                await this.incrementCountNonLive();
+            } else {
+                await this.incrementCountLive();
+            }
         } catch (e) {
             this.logger.warn(new Error('Unable to update scrobble count', {cause: e}));
         }
@@ -739,6 +745,14 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         //this.lastScrobbledPlayDate = playObj.data.playDate;
         this.tracksScrobbled++;
         this.tracksScrobbledTotal++;
+    }
+
+    /** Notify about a play that failed to scrobble. Import job plays don't notify per play, the job reports failures itself */
+    protected notifyScrobbleFailure = async (playObj: PlayObject, payload: Omit<WebhookPayload, 'identifier'>) => {
+        if (playObj.meta?.jobId !== undefined) {
+            return;
+        }
+        await this.notify(payload);
     }
 
     findExistingSubmittedPlayObj = async (playObjPre: PlayObject): Promise<([undefined, undefined] | [undefined, ScrobbledPlayObject[]] | [ScrobbledPlayObject, ScrobbledPlayObject[]])> => {
@@ -1013,7 +1027,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
     }
 
-    processDeadLetterQueue = async (attemptWithRetries?: number, reason?: string, sync?: boolean) => {
+    /**
+     * @param opts.excludeJobPlays skip plays exported by import jobs, so a failing export can't flood the queue on every scheduled run. User-initiated retries include them
+     * */
+    processDeadLetterQueue = async (attemptWithRetries?: number, reason?: string, sync?: boolean, opts: {excludeJobPlays?: boolean} = {}) => {
 
         if (!(await this.isReady())) {
             this.deadLogger.warn('Cannot process dead letter scrobbles because client is not ready.');
@@ -1045,7 +1062,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             this.emitEvent('queueState', {queueName: 'dead', status: 'Running'});
 
             //const processable = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], [QUEUE_STATUS_FAILED], retries);
-            const processableArgs: QueryPlaysOpts  = {queues: [{queueName: INGRESS_QUEUE, queueStatus: QUEUE_STATUS_FAILED, retries}], with: ['queues']};
+            const processableArgs: QueryPlaysOpts  = {queues: [{queueName: INGRESS_QUEUE, queueStatus: QUEUE_STATUS_FAILED, retries}], with: ['queues'], ...(opts.excludeJobPlays ? {jobId: null} : {})};
             let processable = await this.playRepo.findPlaysPaginated<'queueStates'>(processableArgs);
             this.deadLetterQueued = processable.meta.total;
 
@@ -1186,7 +1203,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         events.push(scrobbleToPlayEvent(scrobble));
                     }
                     //currQueuedPlay.play = scrobbledPlay;
-                    await this.addScrobbledTrack(scrobbledPlay);
+                    await this.addScrobbledTrack(scrobbledPlay, {nonLive: playEntity.jobId !== null && playEntity.jobId !== undefined});
                     events.push(stateChangeToPlayEvent({state: 'scrobbled'}));
                     events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));
                     this.scrobbleRetries = 0;
@@ -1274,8 +1291,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         // we should be adding Plays to the queue without any transforms
         // so run on "raw" play input
         // if we have seen a play with close temporality with the exact input hash then skip it entirely
+        // import job plays are transformed by the job before queueing, so match on the untransformed mirror play they carry
+        const isJobPlay = queueablePlay.meta?.jobId !== undefined;
         const cheapInputExisting = await this.playRepo.checkExisting(queueablePlay, {
-                inputHash: queueablePlay,
+                inputHash: isJobPlay ? (queueablePlay.original?.play ?? queueablePlay) : queueablePlay,
                 // existing should have been created *before* this play
                 seenAt: {
                     type: 'lt',
@@ -1285,11 +1304,15 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 // then the playobject has the id of the source (parent) play
                 // and we can additionally check for frozen source play hash to bypass differences
                 // caused by lifecycle transforms
-                parentId: queueablePlay.id,
+                parentId: isJobPlay ? undefined : queueablePlay.id,
             });
         if (cheapInputExisting !== undefined) {
             this.logger.trace(`Not adding ${buildTrackString(queueablePlay)} to queue because it already exists in db as Play ${cheapInputExisting.uid}`);
             return cheapInputExisting;
+        }
+        if (isJobPlay) {
+            // the hash check is enough for job plays and a fuzzy scan of the whole queue per play would be too slow for bulk exports
+            return;
         }
 
         // may not be needed but if not existing cheap then

@@ -1036,6 +1036,9 @@ export const buildPlayWhere = (args: PlayWhereOpts): WhereClause<'plays'> => {
     if (args.playedAt !== undefined) {
         where.playedAt = buildDateCompare(args.playedAt);
     }
+    if (args.jobId !== undefined) {
+        where.jobId = args.jobId === null ? {isNull: true} : args.jobId;
+    }
     if(args.uid !== undefined) {
         where.uid = {
             in: args.uid

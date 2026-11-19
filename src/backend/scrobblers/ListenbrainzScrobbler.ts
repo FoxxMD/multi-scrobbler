@@ -93,7 +93,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
             }
             return result;
         } catch (e: any) {
-            await this.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
+            await this.notifyScrobbleFailure(playObj, {title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             throw e;
         }
     }

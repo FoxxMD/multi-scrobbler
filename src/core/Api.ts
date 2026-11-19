@@ -292,6 +292,8 @@ export const playWhereOptsSchema = z.object({
     state: playStateEnum.array().optional(),
     stateNot: playStateEnum.array().optional(),
     componentId: zQueryInt.optional(),
+    /** null => only plays not created by an import job */
+    jobId: z.union([z.null(), zQueryInt]).optional().meta({description: 'Import job that created the plays. null => only plays not created by a job'}),
     seenAt: compareDateSchema.optional(),
     playedAt: compareDateSchema.optional(),
     queues: queueCriteriaSchema.array().optional(),

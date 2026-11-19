@@ -27,6 +27,7 @@ import { transientCache } from '../utils/TransientTestUtils.ts';
 import { generateArray } from '../../../core/DataUtils.ts';
 import type {RepositoryCreatePlayOpts} from '../../common/database/drizzle/repositories/PlayRepository.ts';
 import { fixtureCreatePlay } from '../utils/databaseFixtures.ts';
+import { jobs, playMirrors } from '../../common/database/drizzle/schema/schema.ts';
 import { isAbortError } from 'abort-controller-x';
 import { nameToCredit } from "../../../core/MusicMetadata.ts";
 import { namesToCredits } from "../../../core/MusicMetadata.ts";
@@ -1421,4 +1422,96 @@ describe('Scrobble Clients Behavior', function() {
 
     });
 
+});
+describe('Import job plays', function() {
+
+    /** a job (and its mirror) in the scrobbler's db so plays can reference it */
+    const createJob = async (scrobbler: TestScrobbler): Promise<number> => {
+        const db = scrobbler.playRepoTest.db;
+        const [mirror] = await db.insert(playMirrors).values({service: 'lastfm', account: null, name: 'test'}).returning();
+        const [job] = await db.insert(jobs).values({name: 'job', mirrorId: mirror.id, rangeTo: dayjs()}).returning();
+        return job.id;
+    }
+
+    /** a job play as the export loop builds it: transformed data, untransformed mirror play as original */
+    const jobPlay = (mirrorPlay: PlayObject, title: string): PlayObject => {
+        const play = clone(mirrorPlay);
+        play.data.track = nameToCredit(title);
+        play.original = {play: mirrorPlay};
+        return play;
+    }
+
+    it('links the play to the job and persists job meta', async function() {
+        await using testScrobbler = await generateTestScrobbler();
+        const jobId = await createJob(testScrobbler);
+
+        const created = await testScrobbler.queuePlay(jobPlay(generatePlay({}, {parsedFrom: 'history', newFromSource: true}), 'A'), undefined, {jobId});
+        expect(created).length(1);
+        const [row] = await testScrobbler.playRepoTest.findPlays({uid: [created[0].uid]});
+        expect(row.jobId).eq(jobId);
+        expect(row.parentId).is.null;
+        expect(row.play.meta.jobId).eq(jobId);
+        expect(row.play.meta.parsedFrom).eq('job');
+        expect(row.play.meta.newFromSource).is.false;
+    });
+
+    it('skips re-queueing the same mirror play even when job transforms changed its data', async function() {
+        await using testScrobbler = await generateTestScrobbler();
+        const jobId = await createJob(testScrobbler);
+        const mirrorPlay = generatePlay();
+
+        expect(await testScrobbler.queuePlay(jobPlay(mirrorPlay, 'First transform'), undefined, {jobId})).length(1);
+        expect(await testScrobbler.queuePlay(jobPlay(mirrorPlay, 'Second transform'), undefined, {jobId})).length(0);
+        // a different mirror play is still queued
+        expect(await testScrobbler.queuePlay(jobPlay(generatePlay(), 'Second transform'), undefined, {jobId})).length(1);
+    });
+
+    it('counts scrobbled job plays as non-live', async function() {
+        await using testScrobbler = await normalizedMonitoringScrobbler();
+        const jobId = await createJob(testScrobbler);
+        const play = generatePlay({playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate!.add(3, 'seconds')});
+
+        // 'scrobble' is emitted before the count is updated, wait for processing to finish
+        const processed = pEvent(testScrobbler.emitter, 'queueEmptied', {timeout: 3000, filter: (e: {data: {processed: number}}) => e.data.processed > 0});
+        await testScrobbler.queuePlay(jobPlay(play, play.data.track!.name), undefined, {jobId});
+        await processed;
+        expect((await testScrobbler.playRepoTest.findPlays({jobId}))[0].state).eq('scrobbled');
+
+        const component = testScrobbler['dbComponent'];
+        expect(component.countNonLive).eq(1);
+        expect(component.countLive).eq(0);
+    });
+
+    it('does not notify per play for job plays', async function() {
+        await using testScrobbler = await generateTestScrobbler();
+        const notify = spy(testScrobbler, 'notify');
+        const payload = {title: 'Scrobble Error', message: 'failed', priority: 'error' as const};
+
+        await testScrobbler['notifyScrobbleFailure'](generatePlay({}, {jobId: 1}), payload);
+        expect(notify.called).is.false;
+        await testScrobbler['notifyScrobbleFailure'](generatePlay(), payload);
+        expect(notify.calledOnce).is.true;
+    });
+
+    it('scheduled dead letter processing skips job plays, user retries include them', async function() {
+        await using testScrobbler = await generateTestScrobbler();
+        testScrobbler.testRecentScrobbles = [];
+        const jobId = await createJob(testScrobbler);
+
+        const created = await testScrobbler.playRepoTest.createPlays([
+            {...fixtureCreatePlay(), state: 'failed', input: {}},
+            {...fixtureCreatePlay(), jobId, state: 'failed', input: {}},
+        ] as RepositoryCreatePlayOpts[]);
+        await testScrobbler.queueRepoTest.createMany(created.map(x => ({queueName: INGRESS_QUEUE, queueStatus: QUEUE_STATUS_FAILED, retries: 1, playId: x.id, componentId: testScrobbler.componentId})));
+
+        const queuedIds = async () => (await testScrobbler.playRepoTest.findPlays({queues: [{queueName: INGRESS_QUEUE, queueStatus: 'queued'}]})).map(x => x.id);
+
+        await testScrobbler.processDeadLetterQueue(undefined, 'system', false, {excludeJobPlays: true});
+        await testScrobbler['deadQueuePromise'];
+        expect(await queuedIds()).eql([created[0].id]);
+
+        await testScrobbler.processDeadLetterQueue(undefined, 'user');
+        await testScrobbler['deadQueuePromise'];
+        expect((await queuedIds()).sort()).eql(created.map(x => x.id).sort());
+    });
 });

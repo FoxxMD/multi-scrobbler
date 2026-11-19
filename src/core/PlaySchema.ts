@@ -133,6 +133,7 @@ export const playMetaSchema = z.object({
      * */
     playId: z.string().optional().meta({description: 'Atomic ID for this instance of played tracked IE a unique ID for "this track played at this time"'}),
     newFromSource: z.boolean().optional(),
+    jobId: z.int().optional().meta({description: 'Import job that exported this play to a Client'}),
     url: playMetaUrlStrictSchema.optional(),
     user: z.string().optional(),
     mediaType: z.string().optional(),
@@ -378,7 +379,7 @@ export const publicPlayDataSchema = playDataSchema.pick({
     playDate: true, playDateCompleted: true, listenedFor: true, listenRanges: true, repeat: true,
 });
 
-type PlayMetaInternalKeys = 'sourceSOT' | 'scrobbleTsSOC' | 'comment' | 'wasMonitored' | 'lifecycleInputs';
+type PlayMetaInternalKeys = 'sourceSOT' | 'scrobbleTsSOC' | 'comment' | 'wasMonitored' | 'lifecycleInputs' | 'jobId';
 export const publicPlayMetaSchema = playMetaSchema.pick({
     source: true, seenAt: true, musicService: true, parsedFrom: true, trackId: true, playId: true, newFromSource: true,
     user: true, mediaType: true, server: true, library: true, trackProgressPosition: true, mediaPlayerName: true,
