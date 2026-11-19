@@ -1,0 +1,129 @@
+---
+title: Overview
+description: Importing and Exporting Plays
+sidebar:
+  order: 1
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 4
+---
+
+Multi-Scrobbler has the ability to **bulk import** Plays/Scrobbles and (TBA) **re-export** those to existing [Clients](/configuration/clients) or file.
+
+You can use this feature to backup your data from one or more services into Mutli-Scrobbler's database. Then, you can re-export any slice of these backups to any number of Clients just like regular scrobbles.
+
+Multi-Scrobbler's approach to import/export is built so that:
+
+* data is deduplicated as much as possible
+* import and export are separate, pausable/resumable processes so that you can complete them at your own pace
+
+<Aside type="important">
+
+This granularity and deduplication comes with a slightly more complex mental model compared to "import X then export to Y" so make sure to read the sections below to understand how everything works **before** starting your first import.
+
+</Aside>
+
+## Concepts
+
+### Import Mirror
+
+Importing from a data source associates that data with an **Import Mirror** which acts as a "source of truth" for 1) that specific source 2) with a specific account/configuration. The mirror also keeps track of **what time ranges** have been imported into it.
+
+Mirrors are **independent** of individual import jobs and can be **appended to** by multiple jobs.
+
+In plain terms this means:
+
+* multiple import jobs can add data to the same "source of truth" (mirror)
+* a mirror can have multiple, non-overlapping time ranges of data
+  * so it doesn't need a "full" dataset to operate or be useful for exporting
+* time ranges that have already been "imported" into a mirror are skipped if a subsequent job has overlap (this deduplicates existing data)
+
+**You are responsible** for configuring initial mirrors, or using the correct mirror, when creating an import job.
+
+
+<details>
+
+<summary>Example</summary>
+
+If you have multiple data sources (like a Last.fm MS Client *and* a csv export of last.fm data) make sure that the mirror created has an account set and that you use that same mirror for the second job.
+
+</details>
+
+### Import Sources
+
+Currently, only **Last.fm** based data sources are available due to the [API Key deadline](/configuration/clients/lastfm), but more data sources will be available in the future.
+
+#### MS Client
+
+You can select any existing MS [Clients](/configuration/clients) (Last.fm only for now) that is fully authenticated and running. The **account** used for the [mirror](#import-mirror) is automatically set based on the authenticated account for that Client.
+
+#### File
+
+Some types of files from third-party data export tools are supported:
+
+| Exporter | Format | Notes |
+|---|---|---|
+| [lastfm.ghan.nl](https://lastfm.ghan.nl/export/) | JSON or CSV | **Recommended.** Timestamps to the second, and MusicBrainz ids are kept. |
+| [benjaminbenben](https://benjaminbenben.com/lastfm-to-csv/) | CSV | Timestamps only to the minute. See note below |
+
+<DetailsAdmo type="note" summary="benjaminbenben files">
+
+benjaminbenben exports have timestamps only to the minute. They cannot not be matched reliably against other data sources that include seconds, so:
+
+* A benjaminbenben file is always imported into **a new mirror of its own**, whatever mirror you choose.
+* Several scrobbles in the same minute are all kept.
+
+If you can, use a [lastfm.ghan.nl](https://lastfm.ghan.nl/export/) export or MS Client instead.
+
+</DetailsAdmo>
+
+<Tabs groupId="uploadFileMethod">
+<TabItem value="ui" label="UI">
+
+Files can be uploaded directly through the UI in the Import Job creation process.
+
+<DetailsAdmo type="note" summary="Max Upload Size">
+
+A reverse proxy in front of multi-scrobbler may refuse large uploads. For example, nginx refuses request bodies over 1 MB by default. Raise its limit for multi-scrobbler:
+
+```nginx
+client_max_body_size 2g;
+```
+
+Or place the file in the imports folder instead, see other tab **Imports Folder**
+
+</DetailsAdmo>
+
+</TabItem>
+<TabItem value="folder" label="Imports Folder">
+
+Place files directly in the `imports` folder of the [data directory](/installation#persistent-directories) if they are too large to upload or otherwise fail to upload.
+
+* files directly placed in `imports` are never deleted by multi-scrobbler
+* a file used by an import job cannot be re-used by another job
+
+<details>
+
+<summary>Import Job Location Example</summary>
+
+* For docker users who have not defined the `DATA_DIR` env => put files into a (newely created) folder in `CONFIG_DIR/imports`
+* For users who have defined `DATA_DIR` => put files in `DATA_DIR/imports`
+
+</details>
+
+</TabItem>
+</Tabs>
+
+## How To Import
+
+Import Jobs are under **Import Jobs** in the dashboard menu. Choose **New Import** to create one.
+
+**Options** for job creation:
+
+* **Mirror** (files only): where the scrobbles go. Pick an existing mirror to add a newer export to it, or create a new one. If you give a new mirror a Last.fm username that an existing mirror already has, that mirror is used.
+* **Range**: import everything, or only scrobbles between two dates.
+* **Save raw import data**: keeps the original Last.fm data for every scrobble. It is on by default for API imports and off for files. It uses more disk space.
+  * original data is not used for anything *now* but will be useful in the future for comparing raw data to what MS parsed
+* **Start now**: start the import as soon as the job is created. Otherwise start it from the job's page.
+
+After **starting** the job you can monitor it from it's details page and see real-time progress/percentage. Jobs can be paused and will continue from the last fetched/parsed scrobble position when resumed.
