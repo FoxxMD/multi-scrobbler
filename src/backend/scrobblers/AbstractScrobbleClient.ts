@@ -5,7 +5,7 @@ import dayjs, { type Dayjs } from "dayjs";
 import type {Duration} from "dayjs/plugin/duration.js";
 import type EventEmitter from "events";
 import type { MarkOptional } from "ts-essentials";
-import { INGRESS_QUEUE, DEAD_QUEUE, QUEUE_STATUS_COMPLETED, SOURCE_SOT, QUEUE_STATUS_FAILED, PARSED_FROM } from "../../core/Atomic.ts";
+import { INGRESS_QUEUE, DEAD_QUEUE, QUEUE_STATUS_COMPLETED, SOURCE_SOT, QUEUE_STATUS_FAILED, PARSED_FROM, PLAY_CLIENT_STATE } from "../../core/Atomic.ts";
 import type { NowPlayingUpdateThreshold, PlayObject, ScrobbleActionResult, PlayMatchResult, SourcePlayerObj, SourcePlayerJson } from "../../core/PlaySchema.ts";
 import { truncateStringToLength } from "../../core/StringUtils.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
@@ -24,7 +24,7 @@ import {
 import { CALCULATED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type { QueueContext, ReportedPlayerStatus } from '../../core/Atomic.ts';
 import type { ScrobbleResult } from '../../core/PlaySchema.ts';
-import type {ClientType} from "../../core/Atomic.ts";
+import type {ClientType, PlayClientState} from "../../core/Atomic.ts";
 import type {CommonClientConfig, NowPlayingOptions, UpstreamRefreshOptions} from "../common/infrastructure/config/client/index.ts";
 import { TRANSFORM_HOOK } from "../../core/Transform.ts";
 import type { Notifiers } from "../notifier/Notifiers.ts";
@@ -1311,6 +1311,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 // and we can additionally check for frozen source play hash to bypass differences
                 // caused by lifecycle transforms
                 parentId: isJobPlay ? undefined : queueablePlay.id,
+                // a job play that failed before (IE the client was misconfigured) is queued again when exported again
+                states: isJobPlay ? (PLAY_CLIENT_STATE as PlayClientState[]).filter(x => x !== 'failed') : undefined,
             });
         if (cheapInputExisting !== undefined) {
             this.logger.trace(`Not adding ${buildTrackString(queueablePlay)} to queue because it already exists in db as Play ${cheapInputExisting.uid}`);

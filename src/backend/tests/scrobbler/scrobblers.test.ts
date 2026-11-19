@@ -1468,6 +1468,18 @@ describe('Import job plays', function() {
         expect(await testScrobbler.queuePlay(jobPlay(generatePlay(), 'Second transform'), undefined, {jobId})).length(1);
     });
 
+    it('queues a job play again when the existing client play failed', async function() {
+        await using testScrobbler = await generateTestScrobbler();
+        const jobId = await createJob(testScrobbler);
+        const mirrorPlay = generatePlay();
+
+        const [first] = await testScrobbler.queuePlay(jobPlay(mirrorPlay, 'A'), undefined, {jobId});
+        await testScrobbler.playRepoTest.setStateById('failed', [first.id]);
+        expect(await testScrobbler.queuePlay(jobPlay(mirrorPlay, 'A'), undefined, {jobId})).length(1);
+        // the new play is not failed so it blocks another copy
+        expect(await testScrobbler.queuePlay(jobPlay(mirrorPlay, 'A'), undefined, {jobId})).length(0);
+    });
+
     it('counts scrobbled job plays as non-live', async function() {
         await using testScrobbler = await normalizedMonitoringScrobbler();
         const jobId = await createJob(testScrobbler);
