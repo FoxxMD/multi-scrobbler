@@ -319,7 +319,12 @@ const dataDir = getDataDir();
             }
         }
 
-        jobManager = new JobManager({db, logger, notify: async (p) => notifiers?.notify(p)});
+        jobManager = new JobManager({
+            db,
+            logger,
+            notify: async (p) => notifiers?.notify(p),
+            resolveComponent: (id) => scrobbleSources?.sources.find(x => x.componentId === id) ?? scrobbleClients?.clients.find(x => x.componentId === id)
+        });
         await jobManager.resumeAll();
 
         const runRetentionNow = parseBool(process.env.RETENTION_IMMEDIATE, false);

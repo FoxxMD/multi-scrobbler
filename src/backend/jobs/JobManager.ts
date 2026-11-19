@@ -8,25 +8,41 @@ import type { ImportPacer, ImportProvider } from "./ImportProvider.ts";
 import { type HaltStatus, JobRunner, type JobRuntime } from "./JobRunner.ts";
 import { LockRegistry } from "./LockRegistry.ts";
 import { LastfmFileImportProvider } from "./lastfm/LastfmFileImportProvider.ts";
+import { LastfmApiImportProvider, type LastfmImportSource } from "./lastfm/LastfmApiImportProvider.ts";
+import LastfmApiClient from "../common/vendor/LastfmApiClient.ts";
 
 export interface JobManagerOpts {
     db: DbConcrete
     logger: Logger
-    /** returns undefined for mirror-only jobs, throws if the job's import origin can't be used */
+    /** returns undefined for mirror-only jobs, throws if the job's import origin can't be used. Defaults to Last.fm file/API providers */
     createProvider?: (job: JobSelect) => ImportProvider | undefined
+    /** used by the default provider factory to find a job's Last.fm Source/Client */
+    resolveComponent?: ComponentResolver
     notify?: (payload: WebhookPayload) => Promise<void>
     timings?: Partial<JobTimings>
     pacer?: ImportPacer
 }
 
-export const defaultCreateProvider = (job: JobSelect): ImportProvider | undefined => {
+/** Anything that can resolve a live Source/Client instance by its db component id */
+export type ComponentResolver = (componentId: number) => object | undefined;
+
+export const isLastfmImportSource = (c: object | undefined): c is LastfmImportSource => c !== undefined && 'api' in c && c.api instanceof LastfmApiClient && 'isReady' in c;
+
+export const createDefaultProvider = (job: JobSelect, resolveComponent: ComponentResolver): ImportProvider | undefined => {
     if(job.importFile !== null) {
         return new LastfmFileImportProvider(job.importFile, [job.rangeFrom?.valueOf() ?? 0, job.rangeTo.valueOf()]);
     }
     if(job.componentFromId === null) {
         return undefined;
     }
-    throw new Error('No import provider is available for this job');
+    const component = resolveComponent(job.componentFromId);
+    if(component === undefined) {
+        throw new Error(`The Source/Client to import from (component ${job.componentFromId}) is not configured`);
+    }
+    if(!isLastfmImportSource(component)) {
+        throw new Error(`Component ${job.componentFromId} is not a Last.fm Source or Client`);
+    }
+    return new LastfmApiImportProvider(component);
 }
 
 /**
@@ -56,7 +72,7 @@ export class JobManager {
                 logger: this.logger,
                 locks: this.locks,
                 emitter: this.emitter,
-                createProvider: this.opts.createProvider ?? defaultCreateProvider,
+                createProvider: this.opts.createProvider ?? ((job) => createDefaultProvider(job, this.opts.resolveComponent ?? (() => undefined))),
                 notify: this.opts.notify !== undefined ? (p) => this.opts.notify!({...p, identifier: 'Jobs'}) : undefined,
                 timings: this.opts.timings,
                 pacer: this.opts.pacer,
