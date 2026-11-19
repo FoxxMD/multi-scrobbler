@@ -9,7 +9,8 @@ import { JobRepository } from '../../common/database/drizzle/repositories/JobRep
 import { components, plays, playsHistorical } from '../../common/database/drizzle/schema/schema.ts';
 import { mirrorImportLockKey } from '../../jobs/JobRunner.ts';
 import { MirrorRepository as Mirrors } from '../../common/database/drizzle/repositories/MirrorRepository.ts';
-import { JobManager } from '../../jobs/JobManager.ts';
+import { isLastfmImportSource, JobManager } from '../../jobs/JobManager.ts';
+import LastfmApiClient from '../../common/vendor/LastfmApiClient.ts';
 import type { ImportProvider } from '../../jobs/ImportProvider.ts';
 import { FakeTimeProvider } from './fakes.ts';
 import { fixtureCreateComponent, fixtureCreatePlay } from '../utils/databaseFixtures.ts';
@@ -32,6 +33,12 @@ const settle = async (manager: JobManager, jobId: number) => {
 }
 
 describe('Job manager', function () {
+
+    it('only accepts Last.fm components as import sources, not Libre.fm', function () {
+        const api = Object.create(LastfmApiClient.prototype);
+        expect(isLastfmImportSource({type: 'lastfm', api, isReady: () => true})).to.be.true;
+        expect(isLastfmImportSource({type: 'librefm', api, isReady: () => true})).to.be.false;
+    });
 
     it('resumes imports that were running at shutdown', async function () {
         const {jobs, newJob, manager} = await setup();

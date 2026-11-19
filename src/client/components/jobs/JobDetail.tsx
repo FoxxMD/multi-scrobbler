@@ -116,9 +116,15 @@ export const JobDelete = (props: { job: JobApiJson }) => {
 export const ImportControls = (props: { job: JobApiJson }) => {
     const {job} = props;
     const setJob = useSetJob();
+    const queryClient = useQueryClient();
     const {mutate, isPending, variables} = useMutation({
         mutationFn: (action: ControlAction) => ky.post(`jobs/${job.id}/import/${action}`, {baseUrl}).json<JobApiJson>(),
         onSuccess: setJob,
+        // an SSE event sent before the action can arrive after this response, refetch so a stale status can't stick
+        onSettled: () => Promise.all([
+            queryClient.invalidateQueries({queryKey: tanQueries.jobs.detail(job.id).queryKey}),
+            queryClient.invalidateQueries({queryKey: tanQueries.jobs.list().queryKey}),
+        ]),
         onError: (e, action) => toaster.create({type: 'error', title: `Could not ${action} import`, description: apiErrorMessage(e)}),
     });
     const running = job.importStatus === 'running';
@@ -164,7 +170,10 @@ export const ImportPanel = (props: { job: JobApiJson }) => {
                             {importOriginText(job.importFrom)}
                             {job.importFrom.kind === 'file' ? ` (${FILE_FORMAT_NAMES[job.importFrom.format]}, ${formatBytes(job.importFrom.size)})` : ''}
                         </DataItem>
-                        <DataItem label="Mirror">{job.mirror.name}{job.mirror.account !== null ? ` (${job.mirror.account})` : ''}</DataItem>
+                        <DataItem label="Mirror">
+                            {job.mirror.name}{job.mirror.account !== null ? ` (${job.mirror.account})` : ''}
+                            {job.importFrom.kind === 'file' && job.importFrom.format === 'lastfm-benjamin-csv' ? <Text as="span" color="fg.muted"> - benjaminbenben files always get a new mirror of their own</Text> : undefined}
+                        </DataItem>
                         <DataItem label="Range">{job.rangeFrom === null ? 'Beginning' : formatJobDate(job.rangeFrom)} to {formatJobDate(job.rangeTo)}</DataItem>
                         {position !== undefined ? <DataItem label="Position">{position}</DataItem> : undefined}
                         <DataItem label="Started">{formatJobDate(job.importStartedAt)}</DataItem>

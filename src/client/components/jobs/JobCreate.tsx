@@ -3,7 +3,7 @@ import { formOptions, useForm } from "@tanstack/react-form";
 import { useMutation, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import ky from 'ky';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { LuUpload } from 'react-icons/lu';
 import { useNavigate } from "react-router";
 import * as z from "zod";
@@ -70,7 +70,8 @@ const formSchema = z.object({
             mirror,
             range: v.range === 'all' ? 'all' : {
                 from: v.from === '' ? undefined : dayjs(v.from).toISOString(),
-                to: v.to === '' ? undefined : dayjs(v.to).toISOString(),
+                // datetime-local has minute precision, include the whole minute
+                to: v.to === '' ? undefined : dayjs(v.to).endOf('minute').toISOString(),
             },
             persistInputs: v.persistInputs ?? undefined,
             start: v.start,
@@ -81,8 +82,10 @@ const formSchema = z.object({
 type FormOutput = z.output<typeof formSchema>;
 
 /** XMLHttpRequest because fetch can't report upload progress in every browser */
-const uploadJob = (payload: JobCreate, file: File, onProgress: (fraction: number) => void): Promise<CreatedJob> => new Promise((resolve, reject) => {
+const uploadJob = (payload: JobCreate, file: File, onProgress: (fraction: number) => void, signal: AbortSignal): Promise<CreatedJob> => new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    signal.addEventListener('abort', () => xhr.abort());
+    xhr.onabort = () => reject(new Error('Upload cancelled'));
     // relative to <base href>, like ky's baseUrl
     xhr.open('POST', `${baseUrl}jobs`);
     xhr.upload.onprogress = (e) => {
@@ -196,14 +199,14 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                         {source === 'component' ? <form.Field
                             name="componentId"
                             children={(field) => options.importComponents.length === 0
-                                ? <Text color="fg.warning">No Last.fm Sources or Clients are configured. Import from an export file instead.</Text>
+                                ? <Field.Root invalid={field.errors.length > 0}><Text color="fg.warning">No Last.fm Sources or Clients are ready to import from. Import from an export file instead.</Text><FormFieldErrors field={field}/></Field.Root>
                                 : <FormNativeSelect field={field} label="Last.fm Source/Client" groups={componentGroups} helperText="Imports into the mirror for this component's Last.fm account"/>}
                         /> : undefined}
                         {source === 'upload' ? <form.Field
                             name="file"
                             children={(field) => <Field.Root invalid={field.errors.length > 0}>
                                 <Field.Label>Export File</Field.Label>
-                                <FileUpload.Root accept={['.csv', '.json', 'text/csv', 'application/json']} maxFiles={1} onFileAccept={(details) => field.handleChange(details.files[0] ?? null)}>
+                                <FileUpload.Root accept={['.csv', '.json', 'text/csv', 'application/json']} maxFiles={1} onFileAccept={(details) => field.handleChange(details.files[0] ?? null)} onFileReject={(details) => details.files.length > 0 && toaster.create({type: 'error', title: 'File not accepted', description: 'Choose a .csv or .json export file'})}>
                                     <FileUpload.HiddenInput/>
                                     <FileUpload.Trigger asChild>
                                         <Button variant="outline" size="sm"><LuUpload/> Choose file</Button>
@@ -219,7 +222,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                         {source === 'existing' ? <form.Field
                             name="existingFile"
                             children={(field) => options.importFiles.length === 0
-                                ? <Text color="fg.warning">No unused files are in the imports folder (<code>imports</code> in the data directory).</Text>
+                                ? <Field.Root invalid={field.errors.length > 0}><Text color="fg.warning">No unused files are in the imports folder (<code>imports</code> in the data directory).</Text><FormFieldErrors field={field}/></Field.Root>
                                 : <FormNativeSelect field={field} label="File" groups={fileGroups} helperText="Files in the imports folder of the data directory. They are kept when the job is deleted."/>}
                         /> : undefined}
                         {source !== 'component' ? <Stack gap="3">
@@ -288,7 +291,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                             children={(field) => <Field.Root invalid={field.errors.length > 0} flex="1" minWidth="12rem">
                                 <Field.Label>To</Field.Label>
                                 <Input type="datetime-local" value={field.value} onChange={(e) => field.handleChange(e.currentTarget.value)} onBlur={field.handleBlur}/>
-                                <Field.HelperText>Empty for now</Field.HelperText>
+                                <Field.HelperText>Empty for now. Includes the whole minute.</Field.HelperText>
                                 <FormFieldErrors field={field}/>
                             </Field.Root>}
                         />
@@ -312,6 +315,13 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
 
 export const JobCreateFetchable = () => {
     const navigate = useNavigate();
+    // cancel an upload in progress, and don't navigate, when the user leaves this page
+    const abort = useRef(new AbortController());
+    useEffect(() => {
+        const controller = new AbortController();
+        abort.current = controller;
+        return () => controller.abort();
+    }, []);
     const setJob = useSetJob();
     const [uploadProgress, setUploadProgress] = useState<number | undefined>();
     // always fresh: files and mirrors change outside this page
@@ -322,7 +332,7 @@ export const JobCreateFetchable = () => {
             if (vals.file !== undefined) {
                 setUploadProgress(0);
                 try {
-                    return await uploadJob(vals.payload, vals.file, setUploadProgress);
+                    return await uploadJob(vals.payload, vals.file, setUploadProgress, abort.current.signal);
                 } finally {
                     setUploadProgress(undefined);
                 }
@@ -334,7 +344,9 @@ export const JobCreateFetchable = () => {
             if (startError !== undefined) {
                 toaster.create({type: 'warning', title: 'Job created but not started', description: startError});
             }
-            navigate(`/jobs/${job.id}`);
+            if (!abort.current.signal.aborted) {
+                navigate(`/jobs/${job.id}`);
+            }
         },
     });
 

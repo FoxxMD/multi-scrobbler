@@ -99,7 +99,8 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                 importComponents.push({componentId: c.componentId, name: c.name, mode, ready: c.isReady(), account: c.api.user ?? null});
             }
         }
-        const userMirrors = await mirrorRepo.findForUser(req.auth!.userId);
+        // only Last.fm mirrors can be imported into
+        const userMirrors = (await mirrorRepo.findForUser(req.auth!.userId)).filter(x => x.service === 'lastfm');
         const counts = await mirrorRepo.playCounts(userMirrors.map(x => x.id));
         const mirrors: JobOptionsApiJson['mirrors'] = userMirrors.map(x => ({id: x.id, name: x.name, service: x.service, account: x.account, coverage: x.coverage, playCount: counts.get(x.id) ?? 0}));
 
