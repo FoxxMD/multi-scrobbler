@@ -20,6 +20,7 @@ import { getTemporallyCloseDateCompareOp } from "./PlayRepository.ts";
 
 export interface PlayWhereOpts {
     componentId?: number
+    mirrorId?: number
     seenAt?: CompareDateOp
     playedAt?: CompareDateOp
     uid?: string[]
@@ -124,6 +125,38 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         });
 
         return playRows.map(x => ({...x, play: hydratePlaySelect(x, hydrate)}));
+    }
+
+    /**
+     * Insert mirror plays, skipping any whose uid already exists. Returns the number of rows actually inserted.
+     *
+     * Every row must have a uid (dedupe key). Inputs are only created for inserted rows, matched by uid.
+     *
+     * Does not open a transaction so it can be paired with coverage/cursor updates in the caller's transaction.
+     * */
+    insertIgnoreDuplicates = async (entitiesOpts: (RepositoryCreatePlayHistoricalOpts & {uid: string})[], opts: {persistInputs?: boolean} = {}): Promise<number> => {
+        const {persistInputs = true} = opts;
+        if(entitiesOpts.length === 0) {
+            return 0;
+        }
+        const entitiesData = entitiesOpts.map(({play, input, ...rest}) => generatePlayHistoricalEntity(play, { componentId: this.componentId, ...rest }));
+        const inserted = await this.db.insert(playsHistorical).values(entitiesData).onConflictDoNothing().returning({id: playsHistorical.id, uid: playsHistorical.uid});
+
+        if(persistInputs && inserted.length > 0) {
+            const byUid = new Map(entitiesOpts.map(x => [x.uid, x]));
+            const inputDatas = inserted.flatMap((x) => {
+                const entity = byUid.get(x.uid as string);
+                if(entity?.input === undefined) {
+                    return [];
+                }
+                const {play: inputPlay = entity.play, ...restInput} = entity.input;
+                return [generateInputEntity({ play: inputPlay, playId: x.id, ...restInput }) as HistoricalPlayInputNew];
+            });
+            if(inputDatas.length > 0) {
+                await this.db.insert(historicalPlayInputs).values(inputDatas);
+            }
+        }
+        return inserted.length;
     }
 
     findPlays = async (args: QueryPlaysOpts, opts: HydrateOpts & WithInputOpts & ComponentConstrainedRepoOpts = {}): Promise<PlayHistoricalSelectMaybeInput[]> => {
@@ -325,7 +358,8 @@ export const buildPlayHistoricalWhere = (args: PlayWhereOpts): WhereClause<'play
     // let where: Parameters<(ReturnType<typeof getDb>)['query']['plays']['findMany']>[0]['where'] = {
     // };
     const where: FindWhere<'playsHistorical'> = {
-        componentId: args.componentId ?? EmptyFilter
+        componentId: args.componentId ?? EmptyFilter,
+        mirrorId: args.mirrorId ?? EmptyFilter
     };
     if (args.seenAt !== undefined) {
         where.seenAt = buildDateCompare(args.seenAt);
