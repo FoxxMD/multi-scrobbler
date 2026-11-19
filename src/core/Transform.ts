@@ -283,10 +283,12 @@ const playTransformTypedStageRulesSchema = z.discriminatedUnion('type', [
     playTransformUserStageRulesSchema,
 ]);
 
-const playTransformPartsConfigOptionsSchema = z.union([
+export const playTransformPartsConfigOptionsSchema = z.union([
     z.array(playTransformTypedStageOptionsSchema),
     playTransformTypedStageOptionsSchema,
 ]);
+
+export type PlayTransformPartsConfigOptions = z.infer<typeof playTransformPartsConfigOptionsSchema>;
 
 export const playTransformConfigSchema = z.object({
     /** Stages to be applied when a Play is first seen by this component */
