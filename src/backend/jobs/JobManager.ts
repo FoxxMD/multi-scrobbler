@@ -224,6 +224,9 @@ export class JobManager {
         }
     }
 
+    /** Make the job's exports re-check now, IE after its queue limit changed */
+    wake = (jobId: number) => this.runners.get(jobId)?.wake();
+
     stopJob = async (jobId: number, status: HaltStatus) => {
         await this.stopImport(jobId, status);
         for(const t of await this.targetRepo.findByJob(jobId)) {

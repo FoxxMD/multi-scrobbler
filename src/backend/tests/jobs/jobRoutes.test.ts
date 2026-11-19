@@ -336,4 +336,66 @@ describe('Job API', function () {
             expect(list.body).length(0);
         });
     });
+
+    describe('Exports', function () {
+
+        const exportApp = async (tmpPath: string) => {
+            await copyFile(fixture('ghan.json'), path.join(tmpPath, 'export.json'));
+            const maloja = fakeClient(7, 'maloja');
+            const built = await buildApp(tmpPath, {7: maloja}, {clients: [maloja]});
+            await built.db.insert(components).values({...fixtureCreateComponent({mode: 'client', type: 'maloja', uid: 'maloja'}), id: 7});
+            return built;
+        }
+        const createWithTargets = (app: Express, body: object) => request(app).post('/api/jobs').send({name: 'export', importFrom: {existingFile: 'export.json'}, mirror: {new: {name: 'm'}}, ...body});
+
+        it('creates targets with export options', async function () {
+            await using tmp = await createTmpDir('jobExportCreate');
+            const {app} = await exportApp(tmp.path);
+            const res = await createWithTargets(app, {targets: [7, 7], exportOrder: 'asc', exportQueueLimit: 5});
+            expect(res.status, JSON.stringify(res.body)).eq(201);
+            const job = res.body as JobApiJson;
+            expect(job.exportOrder).eq('asc');
+            expect(job.exportQueueLimit).eq(5);
+            expect(job.targets).length(1);
+            expect(job.targets[0]).to.deep.include({componentId: 7, name: 'client 7', type: 'maloja', status: 'idle', exported: 0, cursor: null});
+
+            const listed = (await request(app).get('/api/jobs')).body as JobApiJson[];
+            expect(listed[0].targets.map(x => x.componentId)).eql([7]);
+        });
+
+        it('rejects unknown clients and bad limits without creating a job', async function () {
+            await using tmp = await createTmpDir('jobExportInvalid');
+            const {app} = await exportApp(tmp.path);
+            for (const body of [{targets: [99]}, {exportQueueLimit: 0}, {exportQueueLimit: 1001}, {exportOrder: 'random'}]) {
+                const res = await createWithTargets(app, body);
+                expect(res.status, JSON.stringify(body)).eq(400);
+            }
+            expect((await request(app).get('/api/jobs')).body).length(0);
+        });
+
+        it('updates the queue limit and controls one target or the whole job', async function () {
+            await using tmp = await createTmpDir('jobExportControl');
+            const {app} = await exportApp(tmp.path);
+            const job = (await createWithTargets(app, {targets: [7]})).body as JobApiJson;
+            const targetId = job.targets[0].id;
+
+            const patched = await request(app).patch(`/api/jobs/${job.id}`).send({exportQueueLimit: 50});
+            expect(patched.body.exportQueueLimit).eq(50);
+
+            // the client isn't running in this app so the export keeps waiting
+            const started = await request(app).post(`/api/jobs/${job.id}/targets/${targetId}/start`);
+            expect(started.status, JSON.stringify(started.body)).eq(200);
+            expect(started.body.targets[0].status).eq('running');
+            expect(started.body.status).eq('running');
+
+            const paused = await request(app).post(`/api/jobs/${job.id}/targets/${targetId}/pause`);
+            expect(paused.body.targets[0].status).eq('paused');
+
+            expect((await request(app).post(`/api/jobs/${job.id}/targets/9999/start`)).status).eq(404);
+
+            await request(app).post(`/api/jobs/${job.id}/start`);
+            const stopped = await request(app).post(`/api/jobs/${job.id}/stop`);
+            expect(stopped.body.targets[0].status).eq('stopped');
+        });
+    });
 });

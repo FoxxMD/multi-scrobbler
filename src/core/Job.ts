@@ -25,6 +25,35 @@ export type JobImportOriginJson = { kind: 'component', componentId: number | nul
     | { kind: 'file', originalName: string, format: LastfmFileFormat, size: number }
     | { kind: 'mirror' };
 
+export const JOB_EXPORT_ORDERS = ['asc', 'desc'] as const;
+export type JobExportOrder = typeof JOB_EXPORT_ORDERS[number];
+
+export const EXPORT_QUEUE_LIMIT_DEFAULT = 20;
+export const EXPORT_QUEUE_LIMIT_MAX = 1000;
+
+/** Export of a job's mirror plays to one Client */
+export interface JobTargetApiJson {
+    id: number
+    componentId: number
+    /** undefined if the Client is no longer configured */
+    name?: string
+    type?: string
+    status: JobProcessStatus
+    /** last exported mirror play, playedAt is unix ms. null => nothing exported yet */
+    cursor: { playedAt: number, id: number } | null
+    /** mirror plays sent to the client */
+    exported: number
+    /** client plays created from them, the rest were already queued or scrobbled */
+    queued: number
+    /** the job's client plays by state */
+    stats: Partial<Record<string, number>> | null
+    error: ErrorObject | null
+    breaker: { failedInARow: number, trippedAt?: number }
+    startedAt: string | null
+    completedAt: string | null
+    updatedAt: string
+}
+
 /** Where a job's transforms were copied from. The stages themselves are a snapshot taken at creation */
 export type JobTransformSource = { kind: 'preset', name: string }
     | { kind: 'component', componentId: number, componentName: string, hook: 'preCompare' | 'postCompare' };
@@ -42,6 +71,10 @@ export interface JobApiJson {
     /** transform stages applied to exported plays, null => none */
     transformOptions: unknown[] | null
     transformSource: JobTransformSource | null
+    exportOrder: JobExportOrder
+    /** max plays from this job waiting in each target client's queue */
+    exportQueueLimit: number
+    targets: JobTargetApiJson[]
     importStatus: JobProcessStatus
     importCursor: unknown
     importTotal: number | null
@@ -52,7 +85,8 @@ export interface JobApiJson {
     importCompletedAt: string | null
     createdAt: string
     updatedAt: string
-    runtime: { import: JobProcessRuntimeJson }
+    /** exports are keyed by target id */
+    runtime: { import: JobProcessRuntimeJson, exports: Record<string, JobProcessRuntimeJson> }
 }
 
 export interface JobOptionsApiJson {
@@ -70,7 +104,7 @@ export interface JobOptionsApiJson {
 
 /**
  * Overall job status. Failed wins so a problem is never hidden, then running, then completed (all done), then halted, else idle.
- * Takes a list so export targets can be added later.
+ * Takes the import status followed by every export target's status.
  * */
 export const deriveJobStatus = (statuses: JobProcessStatus[]): JobProcessStatus => {
     if (statuses.includes('failed')) {
@@ -113,10 +147,14 @@ export const jobCreateSchema = z.object({
     ]).default('all'),
     persistInputs: z.boolean().optional().meta({description: 'Save raw upstream data for each imported scrobble. Defaults to true for Last.fm components, false for files'}),
     transforms: jobTransformsSchema.optional(),
-    start: z.boolean().default(false),
+    targets: z.array(z.int().positive()).default([]).meta({description: 'Component ids of the Clients to export the mirrored scrobbles to'}),
+    exportOrder: z.enum(JOB_EXPORT_ORDERS).default('desc').meta({description: 'desc exports newest first and can start while the import runs. asc exports oldest first, after the oldest scrobbles are imported'}),
+    exportQueueLimit: z.int().min(1).max(EXPORT_QUEUE_LIMIT_MAX).default(EXPORT_QUEUE_LIMIT_DEFAULT).meta({description: 'Max scrobbles from this job waiting in each Client queue'}),
+    start: z.boolean().default(false).meta({description: 'Start the import and all exports once created'}),
 }).meta({title: 'Create Job'});
 export type JobCreate = z.input<typeof jobCreateSchema>;
 
 export const jobUpdateSchema = z.object({
     name: z.string().trim().min(1).max(100).optional(),
+    exportQueueLimit: z.int().min(1).max(EXPORT_QUEUE_LIMIT_MAX).optional(),
 }).meta({title: 'Update Job'});

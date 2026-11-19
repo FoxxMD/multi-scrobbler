@@ -612,8 +612,8 @@ export class JobRunner {
         }
     }
 
-    /** Wake every export loop so it re-checks now (new coverage, import finished) */
-    protected wake() {
+    /** Wake every export loop so it re-checks now (new coverage, import finished, settings changed) */
+    wake() {
         for(const fn of Array.from(this.wakers)) {
             fn();
         }
@@ -621,6 +621,8 @@ export class JobRunner {
 
     /** Sleep until woken, `ms` passes, or aborted */
     protected async sleep(signal: AbortSignal, ms: number): Promise<void> {
+        // an abort listener added after the abort never fires
+        signal.throwIfAborted();
         await new Promise<void>((resolve) => {
             const done = () => {
                 clearTimeout(timer);

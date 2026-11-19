@@ -1,8 +1,9 @@
 import dayjs from "dayjs";
 import { serializeError } from "serialize-error";
-import { deriveJobStatus, type JobApiJson, type JobImportOriginJson } from "../../core/Job.ts";
+import { deriveJobStatus, type JobApiJson, type JobImportOriginJson, type JobTargetApiJson } from "../../core/Job.ts";
 import type { JobSelect } from "../common/database/drizzle/repositories/JobRepository.ts";
 import type { PlayMirrorSelect } from "../common/database/drizzle/repositories/MirrorRepository.ts";
+import type { JobTargetSelect } from "../common/database/drizzle/repositories/JobTargetRepository.ts";
 import type { JobRuntime } from "./JobRunner.ts";
 
 /** Recursively converts Dayjs to ISO strings and Errors to plain objects so job data can be sent as JSON */
@@ -32,10 +33,27 @@ export const jobImportOrigin = (job: JobSelect, componentName?: string): JobImpo
     return {kind: 'mirror'};
 }
 
-export const toJobApiJson = (job: JobSelect, mirror: PlayMirrorSelect, opts: {componentName?: string, runtime?: JobRuntime} = {}): JobApiJson => ({
+export const toJobTargetApiJson = (target: JobTargetSelect, client?: {name: string, type: string}): JobTargetApiJson => ({
+    id: target.id,
+    componentId: target.componentId,
+    name: client?.name,
+    type: client?.type,
+    status: target.status,
+    cursor: target.cursor,
+    exported: target.exported,
+    queued: target.queued,
+    stats: target.stats,
+    error: target.error !== null ? serializeError(target.error) : null,
+    breaker: target.breaker,
+    startedAt: target.startedAt?.toISOString() ?? null,
+    completedAt: target.completedAt?.toISOString() ?? null,
+    updatedAt: target.updatedAt.toISOString(),
+});
+
+export const toJobApiJson = (job: JobSelect, mirror: PlayMirrorSelect, opts: {componentName?: string, runtime?: JobRuntime, targets?: JobTargetSelect[], resolveClient?: (componentId: number) => {name: string, type: string} | undefined} = {}): JobApiJson => ({
     id: job.id,
     name: job.name,
-    status: deriveJobStatus([job.importStatus]),
+    status: deriveJobStatus([job.importStatus, ...(opts.targets ?? []).map(x => x.status)]),
     mirror: {id: mirror.id, name: mirror.name, service: mirror.service, account: mirror.account},
     importFrom: jobImportOrigin(job, opts.componentName),
     rangeFrom: job.rangeFrom?.toISOString() ?? null,
@@ -43,6 +61,9 @@ export const toJobApiJson = (job: JobSelect, mirror: PlayMirrorSelect, opts: {co
     persistInputs: job.persistInputs,
     transformOptions: job.transformOptions,
     transformSource: job.transformSource,
+    exportOrder: job.exportOrder,
+    exportQueueLimit: job.exportQueueLimit,
+    targets: (opts.targets ?? []).map(x => toJobTargetApiJson(x, opts.resolveClient?.(x.componentId))),
     importStatus: job.importStatus,
     importCursor: job.importCursor,
     importTotal: job.importTotal,
@@ -53,5 +74,5 @@ export const toJobApiJson = (job: JobSelect, mirror: PlayMirrorSelect, opts: {co
     importCompletedAt: job.importCompletedAt?.toISOString() ?? null,
     createdAt: job.createdAt.toISOString(),
     updatedAt: job.updatedAt.toISOString(),
-    runtime: {import: {...(opts.runtime?.import ?? {})}},
+    runtime: {import: {...(opts.runtime?.import ?? {})}, exports: {...(opts.runtime?.exports ?? {})}},
 });

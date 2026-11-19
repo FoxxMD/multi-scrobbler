@@ -11,6 +11,7 @@ import { jobCreateSchema, jobUpdateSchema, type JobApiJson, type JobOptionsApiJs
 import { JobRepository, type JobSelect } from "../common/database/drizzle/repositories/JobRepository.ts";
 import { runTransaction } from "../common/database/drizzle/drizzleUtils.ts";
 import { MirrorRepository, type PlayMirrorSelect } from "../common/database/drizzle/repositories/MirrorRepository.ts";
+import { JobTargetRepository, type JobTargetSelect } from "../common/database/drizzle/repositories/JobTargetRepository.ts";
 import type { JobImportFile } from "../common/infrastructure/Job.ts";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
@@ -29,6 +30,7 @@ const OLD_SCROBBLE_REJECTING_TYPES = ['lastfm', 'librefm'];
 const jsonParser = bodyParser.json({type: ['text/*', 'application/json']});
 
 const idParams = z.object({id: z.coerce.number().int().positive()});
+const targetParams = z.object({id: z.coerce.number().int().positive(), targetId: z.coerce.number().int().positive()});
 
 class JobRequestError extends Error {
     status: number;
@@ -41,7 +43,9 @@ class JobRequestError extends Error {
 export const setupJobRoutes = (router: Router, jobs: JobManager, sources: ScrobbleSources, clients: ScrobbleClients, logger: Logger) => {
 
     // the manager's db, so routes and job runners always see the same data
-    const repos = (_req?: unknown) => ({jobRepo: new JobRepository(jobs.db, {logger}), mirrorRepo: new MirrorRepository(jobs.db, {logger})});
+    const repos = (_req?: unknown) => ({jobRepo: new JobRepository(jobs.db, {logger}), mirrorRepo: new MirrorRepository(jobs.db, {logger}), targetRepo: new JobTargetRepository(jobs.db, {logger})});
+
+    const exportClient = (componentId: number) => clients.clients.find(c => c.componentId === componentId);
 
     const componentName = (id: number | null) => {
         if (id === null) {
@@ -51,9 +55,10 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
         return c?.name;
     }
 
-    const asApi = async (job: JobSelect, mirrorRepo: MirrorRepository, mirrors?: Map<number, PlayMirrorSelect>): Promise<JobApiJson> => {
-        const mirror = mirrors?.get(job.mirrorId) ?? await mirrorRepo.getById(job.mirrorId);
-        return toJobApiJson(job, mirror!, {componentName: componentName(job.componentFromId), runtime: jobs.getRuntime(job.id)});
+    const asApi = async (job: JobSelect, mirrorRepo: MirrorRepository, preloaded: {mirrors?: Map<number, PlayMirrorSelect>, targets?: JobTargetSelect[]} = {}): Promise<JobApiJson> => {
+        const mirror = preloaded.mirrors?.get(job.mirrorId) ?? await mirrorRepo.getById(job.mirrorId);
+        const targets = preloaded.targets ?? await repos().targetRepo.findByJob(job.id);
+        return toJobApiJson(job, mirror!, {componentName: componentName(job.componentFromId), runtime: jobs.getRuntime(job.id), targets, resolveClient: exportClient});
     }
 
     /** the job if it exists and belongs to the requester, otherwise responds 404 */
@@ -81,12 +86,13 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
     }
 
     router.get('/jobs', {docs: {operationId: 'get-jobs'}, tags: ['Jobs'], summary: 'Get Jobs', description: "The requester's import jobs"}, async (req, res) => {
-        const {jobRepo, mirrorRepo} = repos(req);
+        const {jobRepo, mirrorRepo, targetRepo} = repos(req);
         const list = await jobRepo.findForUser(req.auth!.userId);
         const mirrors = new Map((await mirrorRepo.findForUser(req.auth!.userId)).map(x => [x.id, x]));
+        const allTargets = await targetRepo.findByJobs(list.map(x => x.id));
         const data: JobApiJson[] = [];
         for (const job of list.sort((a, b) => b.createdAt.valueOf() - a.createdAt.valueOf())) {
-            data.push(await asApi(job, mirrorRepo, mirrors));
+            data.push(await asApi(job, mirrorRepo, {mirrors, targets: allTargets.filter(x => x.jobId === job.id)}));
         }
         return res.json(data);
     });
@@ -305,24 +311,37 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
 
             const transforms = payload.transforms !== undefined ? await jobs.resolveTransforms(payload.transforms) : undefined;
 
-            const job = await runTransaction(jobs.db, async () => jobRepo.create({
-                userId,
-                name: payload.name,
-                mirrorId: (await resolveMirror()).id,
-                componentFromId,
-                importFile,
-                rangeFrom,
-                rangeTo,
-                persistInputs: payload.persistInputs ?? importFile === undefined,
-                ...transforms,
-            }));
+            const targetIds = Array.from(new Set(payload.targets));
+            for (const id of targetIds) {
+                if (exportClient(id)?.databaseOK !== true) {
+                    throw new JobRequestError(`Component ${id} is not a configured Client`);
+                }
+            }
+
+            const job = await runTransaction(jobs.db, async () => {
+                const created = await jobRepo.create({
+                    userId,
+                    name: payload.name,
+                    mirrorId: (await resolveMirror()).id,
+                    componentFromId,
+                    importFile,
+                    rangeFrom,
+                    rangeTo,
+                    persistInputs: payload.persistInputs ?? importFile === undefined,
+                    exportOrder: payload.exportOrder,
+                    exportQueueLimit: payload.exportQueueLimit,
+                    ...transforms,
+                });
+                await repos().targetRepo.createForJob(created.id, targetIds);
+                return created;
+            });
             // the uploaded file now belongs to the job
             uploaded = undefined;
 
             let startError: string | undefined;
             if (payload.start) {
                 try {
-                    await jobs.startImport(job.id);
+                    await jobs.startJob(job.id);
                 } catch (e) {
                     startError = (e as Error).message;
                 }
@@ -344,7 +363,11 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
             return;
         }
         const {jobRepo, mirrorRepo} = repos(req);
-        const updated = req.body.name !== undefined ? (await jobRepo.update(job.id, {name: req.body.name}))! : job;
+        const {name, exportQueueLimit} = req.body;
+        const updated = name !== undefined || exportQueueLimit !== undefined ? (await jobRepo.update(job.id, {name, exportQueueLimit}))! : job;
+        if (exportQueueLimit !== undefined) {
+            jobs.wake(job.id);
+        }
         return res.json(await asApi(updated, mirrorRepo));
     });
 
@@ -357,18 +380,27 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
         return res.status(204).send();
     });
 
-    type ControlReq = {params: {id: number}, app: {locals: unknown}, auth?: {userId: string}};
+    type ControlReq = {params: {id: number, targetId?: number}, app: {locals: unknown}, auth?: {userId: string}};
     type ControlRes = {status: (n: number) => {json: (b: unknown) => unknown}, json: (b: unknown) => unknown};
-    const control = async (action: 'start' | 'pause' | 'stop', req: ControlReq, res: ControlRes) => {
+    /** process: the import, one export target, or (job) all of them */
+    const control = async (action: 'start' | 'pause' | 'stop', process: 'import' | 'target' | 'job', req: ControlReq, res: ControlRes) => {
         const job = await userJob(req, res, req.params.id);
         if (job === undefined) {
             return;
         }
+        const halt = action === 'pause' ? 'paused' : 'stopped';
         try {
-            if (action === 'start') {
-                await jobs.startImport(job.id);
+            if (process === 'target') {
+                const target = await repos(req).targetRepo.getById(req.params.targetId!);
+                if (target === undefined || target.jobId !== job.id) {
+                    res.status(404).json({error: 'Target not found'});
+                    return;
+                }
+                await (action === 'start' ? jobs.startExport(job.id, target.id) : jobs.stopExport(job.id, target.id, halt));
+            } else if (process === 'job') {
+                await (action === 'start' ? jobs.startJob(job.id) : jobs.stopJob(job.id, halt));
             } else {
-                await jobs.stopImport(job.id, action === 'pause' ? 'paused' : 'stopped');
+                await (action === 'start' ? jobs.startImport(job.id) : jobs.stopImport(job.id, halt));
             }
         } catch (e) {
             if (e instanceof JobConflictError) {
@@ -387,7 +419,8 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
 
     for (const action of ['start', 'pause', 'stop'] as const) {
         const summary = `${action[0].toUpperCase()}${action.slice(1)}`;
-        router.post(`/jobs/:id/import/${action}`, {docs: {operationId: `${action}-job-import`}, paramsSchema: idParams, tags: ['Jobs'], summary: `${summary} Job Import`}, async (req, res) => { await control(action, req, res); });
-        router.post(`/jobs/:id/${action}`, {docs: {operationId: `${action}-job`}, paramsSchema: idParams, tags: ['Jobs'], summary: `${summary} Job`, description: 'Applies to every process of the job (currently only the import)'}, async (req, res) => { await control(action, req, res); });
+        router.post(`/jobs/:id/import/${action}`, {docs: {operationId: `${action}-job-import`}, paramsSchema: idParams, tags: ['Jobs'], summary: `${summary} Job Import`}, async (req, res) => { await control(action, 'import', req, res); });
+        router.post(`/jobs/:id/targets/:targetId/${action}`, {docs: {operationId: `${action}-job-export`}, paramsSchema: targetParams, tags: ['Jobs'], summary: `${summary} Job Export`, description: action === 'start' ? 'Export to one Client' : 'Plays already queued in the Client are still scrobbled'}, async (req, res) => { await control(action, 'target', req, res); });
+        router.post(`/jobs/:id/${action}`, {docs: {operationId: `${action}-job`}, paramsSchema: idParams, tags: ['Jobs'], summary: `${summary} Job`, description: 'Applies to the import and every export'}, async (req, res) => { await control(action, 'job', req, res); });
     }
 }

@@ -178,13 +178,11 @@ describe('Job export runner', function () {
         expect(titles(client.queued)).to.deep.eq(['T700', 'T600', 'T500']);
 
         await mirrors.addCoverage(mirror.id, [200, 449]);
-        // @ts-expect-error protected
         runner.wake();
         await until(() => client.queued.length === 6);
         expect(titles(client.queued).slice(3)).to.deep.eq(['T400', 'T300', 'T200']);
 
         await jobRepo.update(job.id, {importStatus: 'completed'});
-        // @ts-expect-error protected
         runner.wake();
         await exportTask(runner, target.id);
         expect(titles(client.queued)).length(7);
@@ -198,7 +196,6 @@ describe('Job export runner', function () {
         expect(client.queued).length(0);
 
         await mirrors.addCoverage(mirror.id, [0, 449]);
-        // @ts-expect-error protected
         runner.wake();
         await until(() => client.queued.length === 7);
         expect(titles(client.queued)).to.deep.eq(['T100', 'T200', 'T300', 'T400', 'T500', 'T600', 'T700']);
