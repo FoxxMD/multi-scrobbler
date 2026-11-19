@@ -874,6 +874,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
      * */
     queuePlay = async (data: (PlayObject | PlayObject[]) | (PlaySelectWithQueueStates | PlaySelectWithQueueStates[]), context?: QueueContext, opts: {jobId?: number} = {}) => {
         const {jobId} = opts;
+        if (jobId !== undefined && (Array.isArray(data) ? data : [data]).some(x => entityIsPlayEntity(x))) {
+            throw new Error('jobId can only be given for new plays, existing plays keep their job');
+        }
         const createdQueuedPlays: PlaySelect[] = [];
 
         const dataArray = Array.isArray(data) ? data : [data];

@@ -743,8 +743,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         //this.scrobbledPlayObjs.add({play: playObj, scrobble: scrobbledPlay});
         this.scrobbledCounter.labels(this.getPrometheusLabels()).inc();
         //this.lastScrobbledPlayDate = playObj.data.playDate;
-        this.tracksScrobbled++;
-        this.tracksScrobbledTotal++;
+        // these are reported as live counts
+        if (!opts.nonLive) {
+            this.tracksScrobbled++;
+            this.tracksScrobbledTotal++;
+        }
     }
 
     /** Notify about a play that failed to scrobble. Import job plays don't notify per play, the job reports failures itself */
@@ -1064,7 +1067,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             //const processable = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], [QUEUE_STATUS_FAILED], retries);
             const processableArgs: QueryPlaysOpts  = {queues: [{queueName: INGRESS_QUEUE, queueStatus: QUEUE_STATUS_FAILED, retries}], with: ['queues'], ...(opts.excludeJobPlays ? {jobId: null} : {})};
             let processable = await this.playRepo.findPlaysPaginated<'queueStates'>(processableArgs);
-            this.deadLetterQueued = processable.meta.total;
+            if (!opts.excludeJobPlays) {
+                // every other place that tracks deadLetterQueued includes job plays, so an excluded total would undercount it
+                this.deadLetterQueued = processable.meta.total;
+            }
 
             const total = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], {queueStatus: [QUEUE_STATUS_FAILED], retries: 10000});
             this.deadLetterLength = total;

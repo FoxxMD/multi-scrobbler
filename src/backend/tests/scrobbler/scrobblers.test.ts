@@ -1453,6 +1453,8 @@ describe('Import job plays', function() {
         expect(row.play.meta.jobId).eq(jobId);
         expect(row.play.meta.parsedFrom).eq('job');
         expect(row.play.meta.newFromSource).is.false;
+        // existing plays keep their job
+        await expect(testScrobbler.queuePlay([{...row, queueStates: []}], undefined, {jobId})).to.be.rejectedWith(/jobId/);
     });
 
     it('skips re-queueing the same mirror play even when job transforms changed its data', async function() {
@@ -1480,6 +1482,8 @@ describe('Import job plays', function() {
         const component = testScrobbler['dbComponent'];
         expect(component.countNonLive).eq(1);
         expect(component.countLive).eq(0);
+        expect(testScrobbler.tracksScrobbledTotal).eq(0);
+        expect(testScrobbler.tracksScrobbled).eq(0);
     });
 
     it('does not notify per play for job plays', async function() {
@@ -1506,9 +1510,12 @@ describe('Import job plays', function() {
 
         const queuedIds = async () => (await testScrobbler.playRepoTest.findPlays({queues: [{queueName: INGRESS_QUEUE, queueStatus: 'queued'}]})).map(x => x.id);
 
+        testScrobbler.deadLetterQueued = 2;
         await testScrobbler.processDeadLetterQueue(undefined, 'system', false, {excludeJobPlays: true});
         await testScrobbler['deadQueuePromise'];
         expect(await queuedIds()).eql([created[0].id]);
+        // still counts the job play, like every other path that tracks it (one play was re-queued)
+        expect(testScrobbler.deadLetterQueued).eq(1);
 
         await testScrobbler.processDeadLetterQueue(undefined, 'user');
         await testScrobbler['deadQueuePromise'];
