@@ -33,3 +33,20 @@ export interface JobImportFile {
 
 export type JobTransformSource = { kind: 'preset', name: string }
     | { kind: 'component', componentId: number, componentName: string, hook: 'preCompare' | 'postCompare' };
+
+/** Export position in the mirror. The last exported row, compared as a (playedAt, id) keyset in the job's export order */
+export interface JobTargetCursor {
+    /** unix ms */
+    playedAt: number
+    id: number
+}
+
+/** Export circuit breaker state. Trips (fails the target) after too many failed scrobbles in a row */
+export interface JobTargetBreaker {
+    failedInARow: number
+    /** unix ms */
+    trippedAt?: number
+}
+
+/** Snapshot of the target client's play states for this job's plays, taken when the export completes. Keyed by play state */
+export type JobTargetStats = Partial<Record<string, number>>;

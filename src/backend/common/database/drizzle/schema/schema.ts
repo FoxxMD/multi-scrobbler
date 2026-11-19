@@ -5,7 +5,7 @@ import { COMPONENT_TYPE_CLIENT, COMPONENT_TYPE_SOURCE, type ErrorLike, type Queu
 import type { PlayObject } from "../../../../../core/PlaySchema.ts";
 import { asPlay } from "../../../../../core/PlayMarshalUtils.ts";
 import type {ExternalMetadataTerm, PlayTransformPartsConfig, SearchAndReplaceTerm} from "../../../../../core/Transform.ts";
-import type {JobImportCursor, JobImportFile, JobTransformSource} from "../../../infrastructure/Job.ts";
+import type {JobImportCursor, JobImportFile, JobTargetBreaker, JobTargetCursor, JobTargetStats, JobTransformSource} from "../../../infrastructure/Job.ts";
 import { JOB_PROCESS_STATUSES } from "../../../../../core/Job.ts";
 import { serializeError, deserializeError } from "serialize-error";
 import { generatePlayUid } from "../../../../../core/StringUtils.ts";
@@ -279,6 +279,31 @@ export const jobs = sqliteTable("jobs", {
   index('job_mirror_id_idx').on(table.mirrorId),
 ]);
 
+/** One export of a job to one Client */
+export const jobTargets = sqliteTable("job_targets", {
+  id: integer({ mode: 'number' }).primaryKey(),
+  jobId: integer().notNull().references(() => jobs.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
+  // the Client exported to
+  componentId: integer().notNull().references(() => components.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
+  status: text({enum: JOB_PROCESS_STATUSES}).notNull().default('idle'),
+  // null => nothing exported yet
+  cursor: text({ mode: 'json' }).$type<JobTargetCursor>(),
+  // mirror rows queued to the client
+  exported: integer().notNull().default(0),
+  // plays the client created from them (some may be skipped as already queued/scrobbled)
+  queued: integer().notNull().default(0),
+  stats: text({ mode: 'json' }).$type<JobTargetStats>(),
+  error: ErrorLikeJson('error'),
+  breaker: text({ mode: 'json' }).$type<JobTargetBreaker>().notNull().$defaultFn(() => ({failedInARow: 0})),
+  startedAt: DayjsTimestamp('startedAt'),
+  completedAt: DayjsTimestamp('completedAt'),
+  createdAt: DayjsTimestamp('createdAt').notNull().$defaultFn(() => dayjs()),
+  updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()).$onUpdate(() => dayjs()),
+}, (table) => [
+  uniqueIndex('job_target_job_component_idx').on(table.jobId, table.componentId),
+  index('job_target_component_id_idx').on(table.componentId),
+]);
+
 export const playEvents = sqliteTable("play_events", {
   id: integer({ mode: 'number' }).primaryKey(),
   playId: integer().notNull().references(() => plays.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
@@ -290,7 +315,7 @@ export const playEvents = sqliteTable("play_events", {
   index('play_event_id_idx').on(table.playId)
 ]);
 
-const playRelations = defineRelations({ plays, queueStates, playEvents, playInputs, components, jobs, componentMigrations, playsHistorical, historicalPlayInputs, playMirrors, users, sessions, accounts, verifications, appSettings, apikeys, userSettings }, (r) => ({
+const playRelations = defineRelations({ plays, queueStates, playEvents, playInputs, components, jobs, componentMigrations, playsHistorical, historicalPlayInputs, playMirrors, jobTargets, users, sessions, accounts, verifications, appSettings, apikeys, userSettings }, (r) => ({
   plays: {
     queueStates: r.many.queueStates(),
     input: r.one.playInputs({
@@ -366,6 +391,7 @@ const playRelations = defineRelations({ plays, queueStates, playEvents, playInpu
   },
   jobs: {
     plays: r.many.plays(),
+    targets: r.many.jobTargets(),
     mirror: r.one.playMirrors({
       from: r.jobs.mirrorId,
       to: r.playMirrors.id,
@@ -378,6 +404,16 @@ const playRelations = defineRelations({ plays, queueStates, playEvents, playInpu
     user: r.one.users({
       from: r.jobs.userId,
       to: r.users.id,
+    }),
+  },
+  jobTargets: {
+    job: r.one.jobs({
+      from: r.jobTargets.jobId,
+      to: r.jobs.id,
+    }),
+    component: r.one.components({
+      from: r.jobTargets.componentId,
+      to: r.components.id,
     }),
   },
   playEvents: {
@@ -444,6 +480,8 @@ export const getConfigByTableName = <T extends TableName>(name: T) => {
       return jobs;
     case 'playMirrors':
       return playMirrors;
+    case 'jobTargets':
+      return jobTargets;
     case 'historicalPlayInputs':
       return historicalPlayInputs;
   }

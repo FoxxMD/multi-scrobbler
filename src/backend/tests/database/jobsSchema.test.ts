@@ -5,7 +5,7 @@ import * as path from 'path';
 import dayjs from 'dayjs';
 import { eq } from 'drizzle-orm';
 import { getDb, migrateDb } from '../../common/database/drizzle/drizzleUtils.ts';
-import { components, jobs, playMirrors, plays } from '../../common/database/drizzle/schema/schema.ts';
+import { components, jobs, jobTargets, playMirrors, plays } from '../../common/database/drizzle/schema/schema.ts';
 import { users } from '../../common/database/drizzle/schema/auth.ts';
 import { projectRootDir } from '../../common/infrastructure/Atomic.ts';
 import { createTmpDir } from '../utils/tmpDir.ts';
@@ -85,5 +85,33 @@ describe('Jobs Schema', function () {
         const remaining = await db.select().from(jobs);
         expect(remaining).length(1);
         expect(remaining[0].componentFromId).to.be.null;
+    });
+
+    it('job targets are deleted with their job or client and are unique per job and client', async function () {
+        const db = await transientDb();
+        const owner = await ensureOwner(db);
+        const clientA = await db.insert(components).values(fixtureCreateComponent({ userId: owner.id, mode: 'client', type: 'maloja', uid: 'clientA', name: 'clientA' })).returning();
+        const clientB = await db.insert(components).values(fixtureCreateComponent({ userId: owner.id, mode: 'client', type: 'koito', uid: 'clientB', name: 'clientB' })).returning();
+        const mirror = await db.insert(playMirrors).values({ userId: owner.id, service: 'lastfm', account: 'test', name: 'test' }).returning();
+        const job = await db.insert(jobs).values({ userId: owner.id, name: 'job', mirrorId: mirror[0].id, rangeTo: dayjs() }).returning();
+        await db.insert(jobTargets).values([{ jobId: job[0].id, componentId: clientA[0].id }, { jobId: job[0].id, componentId: clientB[0].id }]);
+
+        const [target] = await db.select().from(jobTargets).where(eq(jobTargets.componentId, clientA[0].id));
+        expect(target.status).eq('idle');
+        expect(target.breaker).eql({ failedInARow: 0 });
+
+        let err: unknown;
+        try {
+            await db.insert(jobTargets).values({ jobId: job[0].id, componentId: clientA[0].id });
+        } catch (e) {
+            err = e;
+        }
+        expect(String((err as Error)?.cause ?? err)).to.match(/UNIQUE/);
+
+        await db.delete(components).where(eq(components.id, clientA[0].id));
+        expect(await db.select().from(jobTargets)).length(1);
+
+        await db.delete(jobs).where(eq(jobs.id, job[0].id));
+        expect(await db.select().from(jobTargets)).length(0);
     });
 });
