@@ -11,24 +11,26 @@ import { JobManager } from '../../jobs/JobManager.ts';
 import { LastfmApiImportProvider, type LastfmImportSource } from '../../jobs/lastfm/LastfmApiImportProvider.ts';
 import { fixtureCreateComponent } from '../utils/databaseFixtures.ts';
 
-/** Simulates user.getRecentTracks: newest first, from inclusive, `to` inclusive or exclusive */
+/** Simulates user.getRecentTracks: newest first, `from`/`to` each inclusive or exclusive */
 class FakeLastfmApi {
     user: string | undefined = 'foxx';
     calls: {from?: number, to?: number, page?: number}[] = [];
     scrobbles: {uts: number, n: number}[];
     inclusiveTo: boolean;
+    inclusiveFrom: boolean;
     onCall?: (n: number) => void;
 
-    constructor(uts: number[], inclusiveTo: boolean) {
+    constructor(uts: number[], inclusiveTo: boolean, inclusiveFrom = true) {
         this.scrobbles = uts.map((u, n) => ({uts: u, n})).sort((a, b) => b.uts - a.uts || b.n - a.n);
         this.inclusiveTo = inclusiveTo;
+        this.inclusiveFrom = inclusiveFrom;
     }
 
     getRecentTracksWithPagination = async (opts: {from?: number, to?: number, page?: number, limit?: number}) => {
         this.calls.push(opts);
         this.onCall?.(this.calls.length);
         const {from = 0, to = Number.MAX_SAFE_INTEGER, page = 1, limit = 200} = opts;
-        const matched = this.scrobbles.filter(x => x.uts >= from && (this.inclusiveTo ? x.uts <= to : x.uts < to));
+        const matched = this.scrobbles.filter(x => (this.inclusiveFrom ? x.uts >= from : x.uts > from) && (this.inclusiveTo ? x.uts <= to : x.uts < to));
         const slice = matched.slice((page - 1) * limit, page * limit);
         return {
             recenttracks: {
@@ -64,12 +66,12 @@ const runImport = async (api: FakeLastfmApi, opts: {rangeTo?: number, manager?: 
 
 const randomUts = (count: number) => Array.from({length: count}, (_, i) => 1_000_000 + Math.floor(i * 37.3));
 
-for (const inclusiveTo of [true, false]) {
-    describe(`Last.fm API import provider (to ${inclusiveTo ? 'inclusive' : 'exclusive'})`, function () {
+for (const [inclusiveFrom, inclusiveTo] of [[true, true], [true, false], [false, true], [false, false]]) {
+    describe(`Last.fm API import provider (from ${inclusiveFrom ? 'inclusive' : 'exclusive'}, to ${inclusiveTo ? 'inclusive' : 'exclusive'})`, function () {
 
         it('imports every scrobble exactly once across many pages', async function () {
             const uts = randomUts(950);
-            const api = new FakeLastfmApi(uts, inclusiveTo);
+            const api = new FakeLastfmApi(uts, inclusiveTo, inclusiveFrom);
             const {db, jobs, job, mirrors, mirror} = await runImport(api);
             const done = (await jobs.getById(job.id))!;
             expect(done.importStatus).eq('completed');
@@ -82,15 +84,18 @@ for (const inclusiveTo of [true, false]) {
 
         it('pages within a second that has more than one page of scrobbles', async function () {
             const uts = [...randomUts(100), ...Array(450).fill(1_002_000), ...Array(300).fill(1_005_000)];
-            const api = new FakeLastfmApi(uts, inclusiveTo);
-            const {db, jobs, job} = await runImport(api);
-            expect((await jobs.getById(job.id))!.importStatus).eq('completed');
+            const api = new FakeLastfmApi(uts, inclusiveTo, inclusiveFrom);
+            const {db, jobs, job, mirrors, mirror} = await runImport(api);
+            const done = (await jobs.getById(job.id))!;
+            expect(done.importStatus).eq('completed');
             expect(await db.select().from(playsHistorical)).length(850);
+            expect(done.importTotal).eq(850);
+            expect((await mirrors.getById(mirror.id))!.coverage).to.deep.eq([[0, 2_000_000_000]]);
         });
 
         it('resumes after shutdown without missing or duplicating scrobbles', async function () {
             const uts = [...randomUts(700), ...Array(250).fill(1_003_000)];
-            const api = new FakeLastfmApi(uts, inclusiveTo);
+            const api = new FakeLastfmApi(uts, inclusiveTo, inclusiveFrom);
             let first!: JobManager;
             const {db, jobs, job, newManager, settle} = await runImport(api, {manager: (m) => {
                 first = m;

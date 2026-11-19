@@ -26,7 +26,7 @@ const asNumber = (val: string | number | undefined): number | undefined => {
  *
  * Pages by time instead of page number: every request is page 1 with `to` moved to the oldest scrobble seen,
  * which avoids Last.fm's slow/erroring deep pagination and page shifts when scrobbles change mid-import.
- * Requests overlap the boundary second and rely on the mirror uid dedupe, so it is correct whether Last.fm's `to` is inclusive or exclusive.
+ * Requests overlap boundary seconds and rely on the mirror uid dedupe, so it is correct whether Last.fm's `from`/`to` are inclusive or exclusive.
  * If more than one page of scrobbles share a single second it pages within that second.
  * */
 export class LastfmApiImportProvider implements ImportProvider {
@@ -74,7 +74,8 @@ export class LastfmApiImportProvider implements ImportProvider {
         if (cursor.page !== undefined) {
             // paging inside one crowded second
             const s = sec(cursor.to);
-            const {records, more} = await this.request(s, s + 1, cursor.page);
+            // overlap one second on each side so this is correct whether `from`/`to` are inclusive or exclusive
+            const {records, more} = await this.request(Math.max(0, s - 1), s + 1, cursor.page);
             if (more && records.length > 0) {
                 return {records, cursor: {...cursor, page: cursor.page + 1}, done: false};
             }
@@ -86,7 +87,7 @@ export class LastfmApiImportProvider implements ImportProvider {
             return {records, covered: [s * 1000, cursor.to], cursor: {gapTo: cursor.gapTo, gapTotal: cursor.gapTotal, to: nextTo}, done: false};
         }
 
-        const {records, oldest, total, more} = await this.request(sec(gap[0]), sec(cursor.to) + 1, 1);
+        const {records, oldest, total, more} = await this.request(Math.max(0, sec(gap[0]) - 1), sec(cursor.to) + 1, 1);
         const gapTotal = cursor.gapTotal ?? total;
 
         if (!more || oldest === undefined) {

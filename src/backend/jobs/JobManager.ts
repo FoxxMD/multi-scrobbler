@@ -26,7 +26,8 @@ export interface JobManagerOpts {
 /** Anything that can resolve a live Source/Client instance by its db component id */
 export type ComponentResolver = (componentId: number) => object | undefined;
 
-export const isLastfmImportSource = (c: object | undefined): c is LastfmImportSource => c !== undefined && 'api' in c && c.api instanceof LastfmApiClient && 'isReady' in c;
+/** Last.fm only. Libre.fm uses the same api client but would need its own mirror service */
+export const isLastfmImportSource = (c: object | undefined): c is LastfmImportSource => c !== undefined && 'type' in c && c.type === 'lastfm' && 'api' in c && c.api instanceof LastfmApiClient && 'isReady' in c;
 
 export const createDefaultProvider = (job: JobSelect, resolveComponent: ComponentResolver): ImportProvider | undefined => {
     if(job.importFile !== null) {

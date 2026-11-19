@@ -119,6 +119,7 @@ describe('Last.fm export files', function () {
             const api = lastfmTrackToRecord(JSON.parse(await readFile(fixture('apiExtendedTrack.json'), 'utf-8')))!;
             const json = (await readAll(fixture('ghan.json'), 'lastfm-ghan-json')).map(lastfmTrackToRecord).filter(x => x !== undefined)[0]!;
             const csv = lastfmTrackToRecord((await readAll(fixture('ghan.csv'), 'lastfm-ghan-csv'))[0])!;
+            expect(api.play.data.artists!.map(x => x.name)).to.deep.eq(['Jon Hopkins']);
             expect(api.key).eq(json.key);
             expect(csv.key).eq(json.key);
         });
@@ -149,6 +150,56 @@ describe('Last.fm export files', function () {
             const batches = await drain(provider);
             expect(batches.flatMap(b => b.records).map(r => r.play.data.playDate!.unix())).to.deep.eq([1388723271, 1388722976, 1388722794]);
             expect(batches[batches.length - 1].covered).to.deep.eq(range);
+        });
+
+        it('reopens the file on retry after a parse error instead of reporting done', async function () {
+            await using tmp = await createTmpDir('lfmRetry');
+            const f = path.join(tmp.path, 'bad.json');
+            const good = await readFile(fixture('ghan.json'), 'utf-8');
+            await writeFile(f, good.slice(0, Math.floor(good.length * 0.75)));
+            const provider = new LastfmFileImportProvider({path: f, originalName: 'bad.json', format: 'lastfm-ghan-json', size: 100, managed: false}, [0, dayjs().valueOf()]);
+            for (let attempt = 0; attempt < 2; attempt++) {
+                let err: unknown;
+                try {
+                    await provider.fetch({signal: new AbortController().signal});
+                } catch (e) {
+                    err = e;
+                }
+                expect(err, `attempt ${attempt}`).to.not.be.undefined;
+            }
+        });
+
+        it('reads a bare array of tracks', async function () {
+            await using tmp = await createTmpDir('lfmBare');
+            const f = path.join(tmp.path, 'bare.json');
+            const pages = JSON.parse(await readFile(fixture('ghan.json'), 'utf-8')) as {track: object[]}[];
+            await writeFile(f, JSON.stringify(pages.flatMap(p => p.track)));
+            const records = (await readAll(f, 'lastfm-ghan-json')).map(lastfmTrackToRecord).filter(x => x !== undefined);
+            expect(records).length(6);
+        });
+
+        it('fails when a file has no scrobbles', async function () {
+            await using tmp = await createTmpDir('lfmEmpty');
+            const f = path.join(tmp.path, 'empty.json');
+            await writeFile(f, '[{"track": []}]');
+            const provider = new LastfmFileImportProvider({path: f, originalName: 'empty.json', format: 'lastfm-ghan-json', size: 15, managed: false}, [0, dayjs().valueOf()]);
+            let err: unknown;
+            try {
+                await drain(provider);
+            } catch (e) {
+                err = e;
+            }
+            expect((err as Error).message).to.include('No scrobbles');
+        });
+
+        it('keeps repeats of a track within the same minute in benjaminbenben files', async function () {
+            await using tmp = await createTmpDir('lfmRepeat');
+            const f = path.join(tmp.path, 'repeat.csv');
+            await writeFile(f, 'A,B,Short Song,"03 Jan 2014, 04:36"\nA,B,Short Song,"03 Jan 2014, 04:36"\n');
+            const provider = new LastfmFileImportProvider({path: f, originalName: 'repeat.csv', format: 'lastfm-benjamin-csv', size: 80, managed: false}, [0, dayjs().valueOf()]);
+            const keys = (await drain(provider)).flatMap(b => b.records).map(r => r.key);
+            expect(keys).length(2);
+            expect(new Set(keys).size).eq(2);
         });
 
         it('imports a file through a job', async function () {

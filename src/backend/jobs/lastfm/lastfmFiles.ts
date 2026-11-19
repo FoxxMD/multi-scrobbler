@@ -1,5 +1,4 @@
-import { createReadStream } from "node:fs";
-import { open } from "node:fs/promises";
+import { closeSync, createReadStream, openSync, readSync } from "node:fs";
 import { pipeline } from "node:stream";
 import { parse as parseCsv } from "csv-parse";
 import dayjs from "dayjs";
@@ -21,17 +20,20 @@ export class UnsupportedFileError extends Error {
     name = 'UnsupportedFileError';
 }
 
-/** Sniff the start of a file. Throws UnsupportedFileError when no known export format matches */
-export const detectLastfmFileFormat = async (path: string): Promise<LastfmFileFormat> => {
-    const handle = await open(path, 'r');
-    let head: string;
+const readHead = (path: string): string => {
+    const fd = openSync(path, 'r');
     try {
         const buf = Buffer.alloc(4096);
-        const {bytesRead} = await handle.read(buf, 0, buf.length, 0);
-        head = buf.subarray(0, bytesRead).toString('utf-8').replace(/^\uFEFF/, '');
+        const bytesRead = readSync(fd, buf, 0, buf.length, 0);
+        return buf.subarray(0, bytesRead).toString('utf-8').replace(/^\uFEFF/, '');
     } finally {
-        await handle.close();
+        closeSync(fd);
     }
+}
+
+/** Sniff the start of a file. Throws UnsupportedFileError when no known export format matches */
+export const detectLastfmFileFormat = async (path: string): Promise<LastfmFileFormat> => {
+    const head = readHead(path);
     const trimmed = head.trimStart();
     if (trimmed.startsWith('[')) {
         return 'lastfm-ghan-json';
@@ -96,10 +98,12 @@ export const benjaminRowToTrack = (row: Record<string, string>): LastfmTrackLike
 
 /** ghan JSON is an array of pages, each with a `track` array (or `recenttracks.track`). Only the track items are assembled in memory */
 const ghanJsonStream = (path: string): FileTrackStream => {
+    // pages => [{"track": [...]}] or [{"recenttracks": {"track": [...]}}], otherwise a bare array of tracks
+    const paged = /^\s*\[\s*\{\s*"(track|recenttracks)"/.test(readHead(path));
     const file = createReadStream(path);
-    const isTrackItem = (stack: (string | number | null)[]) =>
-        (stack.length === 3 && stack[1] === 'track')
-        || (stack.length === 4 && stack[1] === 'recenttracks' && stack[2] === 'track');
+    const isTrackItem = (stack: (string | number | null)[]) => paged
+        ? (stack.length === 3 && stack[1] === 'track') || (stack.length === 4 && stack[1] === 'recenttracks' && stack[2] === 'track')
+        : stack.length === 1;
     const piped = pipeline(file, parser.asStream(), pick.asStream({filter: isTrackItem}), streamValues.asStream(), () => undefined);
     return {
         tracks: (async function* () {
