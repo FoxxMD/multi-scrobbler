@@ -33,6 +33,7 @@
     "react-dom": "^19.3.1",
     "react-markdown": "^10.1.0",
     "sass": "^1.106.1",
+    "starlight-announcement": "^2.0.0",
     "starlight-auto-sidebar": "^0.4.1",
     "starlight-changelogs": "^0.7.1",
     "starlight-codeblocks": "^1.2.0",
