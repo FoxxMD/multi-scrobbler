@@ -12,6 +12,12 @@ import { LockRegistry } from "./LockRegistry.ts";
 import { LastfmFileImportProvider } from "./lastfm/LastfmFileImportProvider.ts";
 import { LastfmApiImportProvider, type LastfmImportSource } from "./lastfm/LastfmApiImportProvider.ts";
 import LastfmApiClient from "../common/vendor/LastfmApiClient.ts";
+import pMap from "p-map";
+import type * as z from "zod";
+import type { JobTransformSource, jobTransformsSchema } from "../../core/Job.ts";
+import type { PlayTransformPartsConfigOptions } from "../../core/Transform.ts";
+import type TransformerManager from "../common/transforms/TransformerManager.ts";
+import { getRoot } from "../ioc.ts";
 
 export interface JobManagerOpts {
     db: DbConcrete
@@ -25,6 +31,10 @@ export interface JobManagerOpts {
     notify?: (payload: WebhookPayload) => Promise<void>
     timings?: Partial<JobTimings>
     pacer?: ImportPacer
+    /** validated transformersPresets from the config. Defaults to the root container's */
+    transformersPresets?: Record<string, PlayTransformPartsConfigOptions>
+    /** validates job transform stages. Defaults to the root container's */
+    transformerManager?: TransformerManager
 }
 
 /** A job's configuration can't be used (IE its Last.fm component is gone). The user has to fix something, retrying won't help */
@@ -40,6 +50,16 @@ export type ComponentResolver = (componentId: number) => object | undefined;
 
 /** Last.fm only. Libre.fm uses the same api client but would need its own mirror service */
 export const isLastfmImportSource = (c: object | undefined): c is LastfmImportSource => c !== undefined && 'type' in c && c.type === 'lastfm' && 'api' in c && c.api instanceof LastfmApiClient && 'isReady' in c;
+
+/** A component's raw playTransform stages for a hook, always as a list. undefined if it has none */
+export const componentHookStages = (component: object | undefined, hook: 'preCompare' | 'postCompare'): unknown[] | undefined => {
+    const raw = (component as {config?: {options?: {playTransform?: Record<string, unknown>}}} | undefined)?.config?.options?.playTransform?.[hook];
+    if (raw === undefined || raw === null) {
+        return undefined;
+    }
+    const list = Array.isArray(raw) ? raw : [raw];
+    return list.length > 0 ? list : undefined;
+}
 
 export const createDefaultProvider = (job: JobSelect, resolveComponent: ComponentResolver): ImportProvider | undefined => {
     if(job.importFile !== null) {
@@ -104,6 +124,45 @@ export class JobManager {
             this.runners.set(jobId, runner);
         }
         return runner;
+    }
+
+    get transformersPresets(): Record<string, PlayTransformPartsConfigOptions> {
+        return this.opts.transformersPresets ?? getRoot().items.transformersPresets;
+    }
+
+    /**
+     * Copies a job's transform stages from a preset or a component's hook and checks every stage is usable.
+     * Throws JobConfigError if the source doesn't exist or a stage is invalid.
+     * */
+    resolveTransforms = async (input: z.infer<typeof jobTransformsSchema>): Promise<{transformOptions: unknown[], transformSource: JobTransformSource}> => {
+        let stages: unknown[];
+        let transformSource: JobTransformSource;
+        if ('preset' in input) {
+            const preset = this.transformersPresets[input.preset];
+            if (preset === undefined) {
+                throw new JobConfigError(`Transformers preset '${input.preset}' does not exist`);
+            }
+            stages = Array.isArray(preset) ? preset : [preset];
+            transformSource = {kind: 'preset', name: input.preset};
+        } else {
+            const component = this.resolveComponent(input.componentId);
+            if (component === undefined) {
+                throw new JobConfigError(`Source/Client ${input.componentId} is not configured`);
+            }
+            const hookStages = componentHookStages(component, input.hook);
+            if (hookStages === undefined) {
+                throw new JobConfigError(`Source/Client ${input.componentId} has no ${input.hook} transforms`);
+            }
+            stages = hookStages;
+            transformSource = {kind: 'component', componentId: input.componentId, componentName: (component as {name?: string}).name ?? String(input.componentId), hook: input.hook};
+        }
+        const tm = this.opts.transformerManager ?? getRoot().items.transformerManager;
+        try {
+            await pMap(stages, async (x) => tm.parseTransformerConfig(x));
+        } catch (e) {
+            throw new JobConfigError(`Invalid transform stage: ${(e as Error).message}`, {cause: e});
+        }
+        return {transformOptions: stages, transformSource};
     }
 
     getRuntime(jobId: number): JobRuntime | undefined {

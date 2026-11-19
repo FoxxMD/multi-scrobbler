@@ -21,7 +21,8 @@ import { MirrorRepository } from '../../common/database/drizzle/repositories/Mir
 import { users } from '../../common/database/drizzle/schema/auth.ts';
 import { components } from '../../common/database/drizzle/schema/schema.ts';
 import { fixtureCreateComponent } from '../utils/databaseFixtures.ts';
-import type { JobApiJson } from '../../../core/Job.ts';
+import type { JobApiJson, JobOptionsApiJson } from '../../../core/Job.ts';
+import type { PlayTransformPartsConfigOptions } from '../../../core/Transform.ts';
 
 const fixture = (name: string) => path.resolve(projectRootDir, 'src/backend/tests/jobs/fixtures', name);
 const internalConfig = { localUrl: new URL('http://localhost:9078'), configDir: 'fake', dataDir: 'fake', logger: loggerTest, version: 'test' };
@@ -32,11 +33,12 @@ const fakeLastfmComponent = (user: string | undefined) => {
     return {type: 'lastfm', name: 'My Last.fm', api, isReady: () => true};
 }
 
-const buildApp = async (importsDir: string, components: Record<number, object> = {}) => {
+const buildApp = async (importsDir: string, components: Record<number, object> = {}, opts: {transformersPresets?: Record<string, PlayTransformPartsConfigOptions>, clients?: object[]} = {}) => {
     const sources = new ScrobbleSources(new WildcardEmitter(), internalConfig, loggerTest);
     const clients = new ScrobbleClients(new WildcardEmitter(), new WildcardEmitter(), internalConfig, loggerTest);
+    clients.clients.push(...(opts.clients ?? []) as typeof clients.clients);
     const db = await getRoot().items.db();
-    const jobs = new JobManager({db, logger: loggerTest, importsDir, resolveComponent: (id) => components[id], timings: {importPageDelay: 0, emitThrottle: 0}});
+    const jobs = new JobManager({db, logger: loggerTest, importsDir, resolveComponent: (id) => components[id], timings: {importPageDelay: 0, emitThrottle: 0}, transformersPresets: opts.transformersPresets ?? {}});
     const [app] = await initServer({sources, clients, jobs}, {testMode: true, passwordHasher: fastPasswordHasher});
     // the test root creates a new in-memory db per call, so point the manager at the server's
     jobs.db = (app.locals as ServerLocals).db;
@@ -53,6 +55,9 @@ const waitForImport = async (app: Express, id: number, status = 'completed') => 
     }
     throw new Error(`Job ${id} never reached ${status}`);
 }
+
+const fakeClient = (componentId: number, type: string, playTransform?: object) => ({componentId, name: `client ${componentId}`, type, databaseOK: true, isReady: () => true, config: {options: {playTransform}}});
+const create = (app: Express, transforms: unknown) => request(app).post('/api/jobs').send({name: 'transforms', importFrom: {existingFile: 'export.json'}, mirror: {new: {name: 'm'}}, transforms});
 
 describe('Job API', function () {
 
@@ -276,5 +281,59 @@ describe('Job API', function () {
         await copyFile(fixture('ghan.csv'), path.join(tmp.path, 'placed.csv'));
         expect((await request(app).post('/api/jobs').send({name: 'x', importFrom: {existingFile: 'placed.csv'}, mirror: {id: mirror.id}})).status).eq(404);
         expect((await request(app).get('/api/jobs/options')).body.mirrors.map((x: {id: number}) => x.id)).to.not.include(mirror.id);
+    });
+
+    describe('Transforms', function () {
+
+        const presets = {clean: [{type: 'user', title: ['(Remastered)']}], bad: {type: 'nope'}} as unknown as Record<string, PlayTransformPartsConfigOptions>;
+
+        const transformApp = async (tmpPath: string) => {
+            await copyFile(fixture('ghan.json'), path.join(tmpPath, 'export.json'));
+            const withHooks = fakeClient(7, 'maloja', {preCompare: {type: 'user', artists: ['feat']}});
+            const lastfm = fakeClient(8, 'lastfm');
+            return buildApp(tmpPath, {7: withHooks, 8: lastfm}, {transformersPresets: presets, clients: [withHooks, lastfm]});
+        }
+
+        it('lists targets, presets and component transforms in options', async function () {
+            await using tmp = await createTmpDir('jobTransformOptions');
+            const {app} = await transformApp(tmp.path);
+            const body = (await request(app).get('/api/jobs/options')).body as JobOptionsApiJson;
+            expect(body.targets).eql([
+                {componentId: 7, name: 'client 7', type: 'maloja', ready: true, rejectsOldScrobbles: false},
+                {componentId: 8, name: 'client 8', type: 'lastfm', ready: true, rejectsOldScrobbles: true},
+            ]);
+            expect(body.presets).eql([{name: 'clean', stages: [{type: 'user', title: ['(Remastered)']}]}, {name: 'bad', stages: [{type: 'nope'}]}]);
+            expect(body.componentTransforms).eql([{componentId: 7, name: 'client 7', mode: 'client', preCompare: [{type: 'user', artists: ['feat']}]}]);
+        });
+
+        it('snapshots stages from a preset or a component hook', async function () {
+            await using tmp = await createTmpDir('jobTransformCreate');
+            const {app} = await transformApp(tmp.path);
+
+            const fromPreset = await create(app, {preset: 'clean'});
+            expect(fromPreset.status, JSON.stringify(fromPreset.body)).eq(201);
+            expect(fromPreset.body.transformSource).eql({kind: 'preset', name: 'clean'});
+            expect(fromPreset.body.transformOptions).eql([{type: 'user', title: ['(Remastered)']}]);
+
+            const fromComponent = await create(app, {componentId: 7, hook: 'preCompare'});
+            expect(fromComponent.status, JSON.stringify(fromComponent.body)).eq(201);
+            expect(fromComponent.body.transformSource).eql({kind: 'component', componentId: 7, componentName: 'client 7', hook: 'preCompare'});
+            expect(fromComponent.body.transformOptions).eql([{type: 'user', artists: ['feat']}]);
+
+            const none = await create(app, undefined);
+            expect(none.body.transformSource).is.null;
+            expect(none.body.transformOptions).is.null;
+        });
+
+        it('rejects missing or invalid transforms', async function () {
+            await using tmp = await createTmpDir('jobTransformInvalid');
+            const {app} = await transformApp(tmp.path);
+            for (const transforms of [{preset: 'missing'}, {preset: 'bad'}, {componentId: 7, hook: 'postCompare'}, {componentId: 99, hook: 'preCompare'}]) {
+                const res = await create(app, transforms);
+                expect(res.status, JSON.stringify(transforms)).eq(400);
+            }
+            const list = await request(app).get('/api/jobs');
+            expect(list.body).length(0);
+        });
     });
 });

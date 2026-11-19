@@ -15,13 +15,16 @@ import type { JobImportFile } from "../common/infrastructure/Job.ts";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import { toJobApiJson } from "../jobs/jobApi.ts";
-import { isLastfmImportSource, JobConfigError, jobUploadsDir, type JobManager } from "../jobs/JobManager.ts";
+import { componentHookStages, isLastfmImportSource, JobConfigError, jobUploadsDir, type JobManager } from "../jobs/JobManager.ts";
 import { JobConflictError } from "../jobs/JobRunner.ts";
 import { detectLastfmFileFormat, UnsupportedFileError } from "../jobs/lastfm/lastfmFiles.ts";
 
 type Router = ReturnType<typeof createTypedRouter>;
 
 const MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024;
+
+/** services that refuse scrobbles older than about 14 days */
+const OLD_SCROBBLE_REJECTING_TYPES = ['lastfm', 'librefm'];
 
 const jsonParser = bodyParser.json({type: ['text/*', 'application/json']});
 
@@ -120,7 +123,26 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                 throw e;
             }
         }
-        return res.json({importComponents, mirrors, importFiles} satisfies JobOptionsApiJson);
+
+        const targets: JobOptionsApiJson['targets'] = clients.clients
+            .filter(c => c.databaseOK)
+            .map(c => ({componentId: c.componentId, name: c.name, type: c.type, ready: c.isReady(), rejectsOldScrobbles: OLD_SCROBBLE_REJECTING_TYPES.includes(c.type)}));
+        const presets: JobOptionsApiJson['presets'] = Object.entries(jobs.transformersPresets).map(([name, stages]) => ({name, stages: Array.isArray(stages) ? stages : [stages]}));
+        // stage config is search/replace terms, conditions and provider names, never credentials
+        const componentTransforms: JobOptionsApiJson['componentTransforms'] = [];
+        for (const [mode, list] of [['source', sources.sources], ['client', clients.clients]] as const) {
+            for (const c of list) {
+                if (!c.databaseOK) {
+                    continue;
+                }
+                const preCompare = componentHookStages(c, 'preCompare');
+                const postCompare = componentHookStages(c, 'postCompare');
+                if (preCompare !== undefined || postCompare !== undefined) {
+                    componentTransforms.push({componentId: c.componentId, name: c.name, mode, preCompare, postCompare});
+                }
+            }
+        }
+        return res.json({importComponents, mirrors, importFiles, targets, presets, componentTransforms} satisfies JobOptionsApiJson);
     });
 
     router.get('/jobs/:id', {docs: {operationId: 'get-job'}, paramsSchema: idParams, tags: ['Jobs'], summary: 'Get Job'}, async (req, res) => {
@@ -281,6 +303,8 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                 }
             }
 
+            const transforms = payload.transforms !== undefined ? await jobs.resolveTransforms(payload.transforms) : undefined;
+
             const job = await runTransaction(jobs.db, async () => jobRepo.create({
                 userId,
                 name: payload.name,
@@ -290,6 +314,7 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                 rangeFrom,
                 rangeTo,
                 persistInputs: payload.persistInputs ?? importFile === undefined,
+                ...transforms,
             }));
             // the uploaded file now belongs to the job
             uploaded = undefined;

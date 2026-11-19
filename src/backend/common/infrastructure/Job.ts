@@ -31,8 +31,7 @@ export interface JobImportFile {
     managed: boolean
 }
 
-export type JobTransformSource = { kind: 'preset', name: string }
-    | { kind: 'component', componentId: number, componentName: string, hook: 'preCompare' | 'postCompare' };
+export type { JobTransformSource } from "../../../core/Job.ts";
 
 /** Export position in the mirror. The last exported row, compared as a (playedAt, id) keyset in the job's export order */
 export interface JobTargetCursor {

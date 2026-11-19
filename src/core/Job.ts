@@ -25,6 +25,10 @@ export type JobImportOriginJson = { kind: 'component', componentId: number | nul
     | { kind: 'file', originalName: string, format: LastfmFileFormat, size: number }
     | { kind: 'mirror' };
 
+/** Where a job's transforms were copied from. The stages themselves are a snapshot taken at creation */
+export type JobTransformSource = { kind: 'preset', name: string }
+    | { kind: 'component', componentId: number, componentName: string, hook: 'preCompare' | 'postCompare' };
+
 export interface JobApiJson {
     id: number
     name: string
@@ -35,6 +39,9 @@ export interface JobApiJson {
     rangeFrom: string | null
     rangeTo: string
     persistInputs: boolean
+    /** transform stages applied to exported plays, null => none */
+    transformOptions: unknown[] | null
+    transformSource: JobTransformSource | null
     importStatus: JobProcessStatus
     importCursor: unknown
     importTotal: number | null
@@ -53,6 +60,12 @@ export interface JobOptionsApiJson {
     mirrors: { id: number, name: string, service: string, account: string | null, coverage: [number, number][], playCount: number }[]
     /** files placed in the data directory's imports folder that no job uses yet */
     importFiles: { name: string, size: number, modifiedAt: string }[]
+    /** Clients a job can export to. rejectsOldScrobbles => the service refuses scrobbles older than ~14 days (Last.fm-type) */
+    targets: { componentId: number, name: string, type: string, ready: boolean, rejectsOldScrobbles: boolean }[]
+    /** transformersPresets from the config, by name */
+    presets: { name: string, stages: unknown[] }[]
+    /** Sources/Clients whose playTransform stages can be copied into a job */
+    componentTransforms: { componentId: number, name: string, mode: 'source' | 'client', preCompare?: unknown[], postCompare?: unknown[] }[]
 }
 
 /**
@@ -78,6 +91,11 @@ export const deriveJobStatus = (statuses: JobProcessStatus[]): JobProcessStatus 
     return 'idle';
 }
 
+export const jobTransformsSchema = z.union([
+    z.object({preset: z.string().min(1)}).meta({description: 'Use a preset from transformersPresets in the config'}),
+    z.object({componentId: z.int().positive(), hook: z.enum(['preCompare', 'postCompare'])}).meta({description: "Copy a Source or Client's playTransform stages for this hook"}),
+]).meta({description: 'Transform stages applied to plays when they are exported. A snapshot is taken when the job is created'});
+
 export const jobCreateSchema = z.object({
     name: z.string().trim().min(1).max(100),
     importFrom: z.union([
@@ -94,6 +112,7 @@ export const jobCreateSchema = z.object({
         z.object({from: z.iso.datetime({offset: true}).optional(), to: z.iso.datetime({offset: true}).optional()}),
     ]).default('all'),
     persistInputs: z.boolean().optional().meta({description: 'Save raw upstream data for each imported scrobble. Defaults to true for Last.fm components, false for files'}),
+    transforms: jobTransformsSchema.optional(),
     start: z.boolean().default(false),
 }).meta({title: 'Create Job'});
 export type JobCreate = z.input<typeof jobCreateSchema>;

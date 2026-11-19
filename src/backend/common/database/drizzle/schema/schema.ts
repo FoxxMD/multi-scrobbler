@@ -4,7 +4,6 @@ import dayjs, { type Dayjs } from "dayjs";
 import { COMPONENT_TYPE_CLIENT, COMPONENT_TYPE_SOURCE, type ErrorLike, type QueueContext } from "../../../../../core/Atomic.ts";
 import type { PlayObject } from "../../../../../core/PlaySchema.ts";
 import { asPlay } from "../../../../../core/PlayMarshalUtils.ts";
-import type {ExternalMetadataTerm, PlayTransformPartsConfig, SearchAndReplaceTerm} from "../../../../../core/Transform.ts";
 import type {JobImportCursor, JobImportFile, JobTargetBreaker, JobTargetCursor, JobTargetStats, JobTransformSource} from "../../../infrastructure/Job.ts";
 import { JOB_PROCESS_STATUSES } from "../../../../../core/Job.ts";
 import { serializeError, deserializeError } from "serialize-error";
@@ -260,7 +259,8 @@ export const jobs = sqliteTable("jobs", {
   exportOrder: text({enum: ['asc','desc']}).notNull().default('desc'),
   // max plays from this job waiting in each target client's queue
   exportQueueLimit: integer().notNull().default(20),
-  transformOptions: text({ mode: 'json' }).$type<PlayTransformPartsConfig<SearchAndReplaceTerm[] | ExternalMetadataTerm>>(),
+  // raw stage config snapshot (always a list), parsed again when exporting
+  transformOptions: text({ mode: 'json' }).$type<unknown[]>(),
   transformSource: text({ mode: 'json' }).$type<JobTransformSource>(),
   importStatus: text({enum: JOB_PROCESS_STATUSES}).notNull().default('idle'),
   importCursor: text({ mode: 'json' }).$type<JobImportCursor>(),

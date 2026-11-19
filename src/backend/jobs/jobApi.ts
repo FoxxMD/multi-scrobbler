@@ -41,6 +41,8 @@ export const toJobApiJson = (job: JobSelect, mirror: PlayMirrorSelect, opts: {co
     rangeFrom: job.rangeFrom?.toISOString() ?? null,
     rangeTo: job.rangeTo.toISOString(),
     persistInputs: job.persistInputs,
+    transformOptions: job.transformOptions,
+    transformSource: job.transformSource,
     importStatus: job.importStatus,
     importCursor: job.importCursor,
     importTotal: job.importTotal,
