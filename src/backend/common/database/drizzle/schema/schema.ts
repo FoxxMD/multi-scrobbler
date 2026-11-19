@@ -5,7 +5,8 @@ import { COMPONENT_TYPE_CLIENT, COMPONENT_TYPE_SOURCE, type ErrorLike, type Queu
 import type { PlayObject } from "../../../../../core/PlaySchema.ts";
 import { asPlay } from "../../../../../core/PlayMarshalUtils.ts";
 import type {ExternalMetadataTerm, PlayTransformPartsConfig, SearchAndReplaceTerm} from "../../../../../core/Transform.ts";
-import type {JobRangeCount, JobRangeTime} from "../../../infrastructure/Job.ts";
+import type {JobImportCursor, JobImportFile, JobTransformSource} from "../../../infrastructure/Job.ts";
+import { JOB_PROCESS_STATUSES } from "../../../../../core/Job.ts";
 import { serializeError, deserializeError } from "serialize-error";
 import { generatePlayUid } from "../../../../../core/StringUtils.ts";
 import { users, sessions, accounts, verifications, appSettings, apikeys, userSettings } from "./auth.ts";
@@ -89,7 +90,8 @@ export const plays = sqliteTable("plays", {
   index("play_component_id_idx").on(table.componentId),
   uniqueIndex("play_uid_idx").on(table.uid),
   index("play_playedAt_idx").on(table.playedAt),
-  index("play_seenAt_idx").on(table.seenAt)
+  index("play_seenAt_idx").on(table.seenAt),
+  index("play_job_id_idx").on(table.jobId)
 ]);
 
 export const playInputs = sqliteTable("play_inputs", {
@@ -239,25 +241,42 @@ export const componentMigrations = sqliteTable("component_migrations", {
 
 export const jobs = sqliteTable("jobs", {
   id: integer({ mode: 'number' }).primaryKey(),
-  componentFromId: integer().notNull().references(() => components.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
-  componentToId: integer().notNull().references(() => components.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
-  name: text({length: 50}).notNull(),
-  status: text({enum: ['idle','completed','failed','processing']}).notNull().default('idle'),
-  retries: integer().notNull().default(0),
-  error: ErrorLikeJson('error'),
-  transformOptions: text({ mode: 'json' }).$type<PlayTransformPartsConfig<SearchAndReplaceTerm[] | ExternalMetadataTerm>>(),
-  initialParameters: text({ mode: 'json' }).$type<JobRangeCount | JobRangeTime>(),
-  cursor: text({ mode: 'json' }),
-  total: integer(),
-  imported: integer().notNull().default(0),
-  scrobbled: integer().notNull().default(0),
-  createdAt: DayjsTimestamp('createdAt').notNull().$defaultFn(() => dayjs()),
-  updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()).$onUpdate(() => dayjs()),
-  completedAt: DayjsTimestamp('completedAt'),
   // owner. Nullable at the SQL level only so the column could be added to existing databases, app always sets it.
   userId: text().references(() => users.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
+  name: text({length: 100}).notNull(),
+  // default NO ACTION (checked at end of statement) so a user delete can cascade through mirrors and jobs
+  // while a direct mirror delete with referencing jobs still fails
+  mirrorId: integer().notNull().references(() => playMirrors.id),
+  // import origin. componentFromId and importFile both null => export from existing mirror data only
+  // set null so deleting a component never deletes the job (and through plays.jobId, client history)
+  componentFromId: integer().references(() => components.id, {onDelete: 'set null', onUpdate: 'cascade'}),
+  importFile: text({ mode: 'json' }).$type<JobImportFile>(),
+  // null => beginning of time
+  rangeFrom: DayjsTimestamp('rangeFrom'),
+  // frozen at creation
+  rangeTo: DayjsTimestamp('rangeTo').notNull(),
+  // create historical_play_inputs for mirror rows this job inserts
+  persistInputs: integer({mode: 'boolean'}).notNull().default(true),
+  exportOrder: text({enum: ['asc','desc']}).notNull().default('desc'),
+  // max plays from this job waiting in each target client's queue
+  exportQueueLimit: integer().notNull().default(20),
+  transformOptions: text({ mode: 'json' }).$type<PlayTransformPartsConfig<SearchAndReplaceTerm[] | ExternalMetadataTerm>>(),
+  transformSource: text({ mode: 'json' }).$type<JobTransformSource>(),
+  importStatus: text({enum: JOB_PROCESS_STATUSES}).notNull().default('idle'),
+  importCursor: text({ mode: 'json' }).$type<JobImportCursor>(),
+  importTotal: integer(),
+  // records received from the import provider
+  importFetched: integer().notNull().default(0),
+  // records newly inserted into the mirror
+  imported: integer().notNull().default(0),
+  importError: ErrorLikeJson('importError'),
+  importStartedAt: DayjsTimestamp('importStartedAt'),
+  importCompletedAt: DayjsTimestamp('importCompletedAt'),
+  createdAt: DayjsTimestamp('createdAt').notNull().$defaultFn(() => dayjs()),
+  updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()).$onUpdate(() => dayjs()),
 }, (table) => [
-  index('job_user_id_idx').on(table.userId)
+  index('job_user_id_idx').on(table.userId),
+  index('job_mirror_id_idx').on(table.mirrorId),
 ]);
 
 export const playEvents = sqliteTable("play_events", {
@@ -313,6 +332,7 @@ const playRelations = defineRelations({ plays, queueStates, playEvents, playInpu
   },
   playMirrors: {
     plays: r.many.playsHistorical(),
+    jobs: r.many.jobs(),
     user: r.one.users({
       from: r.playMirrors.userId,
       to: r.users.id,
@@ -346,6 +366,15 @@ const playRelations = defineRelations({ plays, queueStates, playEvents, playInpu
   },
   jobs: {
     plays: r.many.plays(),
+    mirror: r.one.playMirrors({
+      from: r.jobs.mirrorId,
+      to: r.playMirrors.id,
+    }),
+    componentFrom: r.one.components({
+      from: r.jobs.componentFromId,
+      to: r.components.id,
+      optional: true,
+    }),
     user: r.one.users({
       from: r.jobs.userId,
       to: r.users.id,
