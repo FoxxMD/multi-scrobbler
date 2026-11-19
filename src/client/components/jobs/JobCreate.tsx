@@ -412,7 +412,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                                         <form.Field
                                             name="exportQueueLimit"
                                             children={(field) => <FormNumberInput field={field} label="Queue Limit" min={1} max={EXPORT_QUEUE_LIMIT_MAX} empty={1} maxWidth="10rem"
-                                                helperText="Most scrobbles from this job waiting in each Client's queue at once. Lower keeps room for live scrobbles. Can be changed later."/>}
+                                                helperText="More scrobbles are only sent while a Client's queue, live scrobbles included, holds fewer than this. Can be changed later."/>}
                                         />
                                     </Collapsible.Content>
                                 </Collapsible.Root>

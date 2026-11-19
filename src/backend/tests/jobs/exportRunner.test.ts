@@ -76,10 +76,10 @@ const setup = async (opts: {db?: DbConcrete, timestamps?: number[], limit?: numb
         await mirrors.addCoverage(mirror.id, c);
     }
     const historical = new DrizzlePlayHistoricalRepository(db);
-    await historical.insertIgnoreDuplicates((opts.timestamps ?? [100, 200, 300, 400, 500, 600, 700]).map(ts => ({
-        uid: `m${mirror.id}:${ts}`,
+    await historical.insertIgnoreDuplicates((opts.timestamps ?? [100, 200, 300, 400, 500, 600, 700]).map((ts, i) => ({
+        uid: `m${mirror.id}:${ts}:${i}`,
         mirrorId: mirror.id,
-        play: generatePlay({playDate: dayjs(ts), track: nameToCredit(`T${ts}`)}),
+        play: generatePlay({playDate: dayjs(ts), track: nameToCredit(`T${ts}${opts.timestamps !== undefined && opts.timestamps.indexOf(ts) !== i ? `-${i}` : ''}`)}),
     })));
     const jobRepo = new JobRepository(db);
     const job = await jobRepo.create({
@@ -199,6 +199,39 @@ describe('Job export runner', function () {
         runner.wake();
         await until(() => client.queued.length === 7);
         expect(titles(client.queued)).to.deep.eq(['T100', 'T200', 'T300', 'T400', 'T500', 'T600', 'T700']);
+        await runner.stopExport(target.id, 'stopped');
+    });
+
+    it('pages through plays with the same timestamp without skipping or repeating any', async function () {
+        for (const order of ['desc', 'asc'] as const) {
+            const {runner, target, client} = await setup({order, limit: 2, timestamps: [100, 200, 200, 200, 200, 300]});
+            await runner.startExport(target.id);
+            while (client.queued.length < 6) {
+                await until(() => client.queuedLength === 2 || client.queued.length === 6);
+                client.process();
+            }
+            await exportTask(runner, target.id);
+            const names = titles(client.queued);
+            expect(new Set(names).size, order).eq(6);
+            expect(names[0], order).eq(order === 'desc' ? 'T300' : 'T100');
+        }
+    });
+
+    it('keeps a running export running on shutdown so it resumes on boot', async function () {
+        const {runner, target, targetRepo, client} = await setup();
+        client.running = false;
+        await runner.startExport(target.id);
+        await until(() => runner.runtime.exports[target.id]?.waiting === 'Client is not running');
+        await runner.shutdown();
+        expect(runner.exportsRunning).length(0);
+        expect((await targetRepo.getById(target.id))!.status).eq('running');
+    });
+
+    it('says when it is waiting on a halted import', async function () {
+        const {runner, target, jobRepo, job} = await setup({importing: true, coverage: [[450, 1000]]});
+        await jobRepo.update(job.id, {importStatus: 'paused'});
+        await runner.startExport(target.id);
+        await until(() => runner.runtime.exports[target.id]?.waiting === 'Waiting for the import, which is paused');
         await runner.stopExport(target.id, 'stopped');
     });
 

@@ -72,7 +72,7 @@ export interface JobApiJson {
     transformOptions: unknown[] | null
     transformSource: JobTransformSource | null
     exportOrder: JobExportOrder
-    /** max plays from this job waiting in each target client's queue */
+    /** the export only sends more plays while a target client's queue (live plays included) holds fewer than this */
     exportQueueLimit: number
     targets: JobTargetApiJson[]
     /** mirror plays in the job's range, what an export will go through */
@@ -151,7 +151,7 @@ export const jobCreateSchema = z.object({
     transforms: jobTransformsSchema.optional(),
     targets: z.array(z.int().positive()).default([]).meta({description: 'Component ids of the Clients to export the mirrored scrobbles to'}),
     exportOrder: z.enum(JOB_EXPORT_ORDERS).default('desc').meta({description: 'desc exports newest first and can start while the import runs. asc exports oldest first, after the oldest scrobbles are imported'}),
-    exportQueueLimit: z.int().min(1).max(EXPORT_QUEUE_LIMIT_MAX).default(EXPORT_QUEUE_LIMIT_DEFAULT).meta({description: 'Max scrobbles from this job waiting in each Client queue'}),
+    exportQueueLimit: z.int().min(1).max(EXPORT_QUEUE_LIMIT_MAX).default(EXPORT_QUEUE_LIMIT_DEFAULT).meta({description: "The export only sends more scrobbles while a Client's queue (live scrobbles included) holds fewer than this"}),
     start: z.boolean().default(false).meta({description: 'Start the import and all exports once created'}),
 }).meta({title: 'Create Job'});
 export type JobCreate = z.input<typeof jobCreateSchema>;

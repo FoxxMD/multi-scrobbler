@@ -160,7 +160,7 @@ Choose Clients under **Export To** when creating a job. Leave it empty to only i
   * **Preset**: a preset from [`transformersPresets`](/configuration/transforms#presets) in your config.
   * **Copy from a Source/Client**: the `preCompare` or `postCompare` transforms of one of your Sources/Clients.
   * A copy of the transforms is saved with the job. Changing your config later does not change an existing job.
-* **Queue Limit** (under **Advanced**): how many of the job's scrobbles may wait in each Client's queue at once. The default of 20 leaves room for live scrobbles. You can change it on the job's page while the export runs.
+* **Queue Limit** (under **Advanced**): the job only sends more scrobbles to a Client while that Client's queue holds fewer than this many. The queue includes live scrobbles and other jobs' scrobbles. The default is 20. You can change it on the job's page while the export runs.
 
 On the job's page, the **Export** section shows each Client's progress and what happened to the scrobbles sent to it (scrobbled, already scrobbled, failed). Each Client has its own **Start**/**Pause**/**Stop** buttons. The buttons next to the job's name control the import and every export at once.
 

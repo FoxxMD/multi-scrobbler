@@ -107,6 +107,8 @@ export class JobRunner {
     protected exportTasks = new Map<number, ProcessTask>();
     /** resolves every sleeping export loop, so it re-checks now */
     protected wakers = new Set<() => void>();
+    /** a wake that came while a loop was busy, so its next sleep returns at once */
+    protected pendingWake = false;
     runtime: JobRuntime = {import: {}, exports: {}};
     /** owner, so events only reach their sessions. Known once the job has been loaded */
     userId?: string | null;
@@ -579,7 +581,8 @@ export class JobRunner {
 
             if(rows.length === 0) {
                 if(!importDone) {
-                    await wait('Waiting for the import to mirror more scrobbles');
+                    const halted = job.importStatus === 'idle' || job.importStatus === 'running' ? undefined : job.importStatus;
+                    await wait(halted === undefined ? 'Waiting for the import to mirror more scrobbles' : `Waiting for the import, which is ${halted}`);
                     continue;
                 }
                 const stats = (await this.targetRepo.playStats(this.jobId, componentId)).get(componentId) ?? {};
@@ -614,6 +617,8 @@ export class JobRunner {
 
     /** Wake every export loop so it re-checks now (new coverage, import finished, settings changed) */
     wake() {
+        // also kept for loops that are busy (IE querying) right now, at worst a sleeping loop makes one extra pass
+        this.pendingWake = true;
         for(const fn of Array.from(this.wakers)) {
             fn();
         }
@@ -623,6 +628,10 @@ export class JobRunner {
     protected async sleep(signal: AbortSignal, ms: number): Promise<void> {
         // an abort listener added after the abort never fires
         signal.throwIfAborted();
+        if(this.pendingWake) {
+            this.pendingWake = false;
+            return;
+        }
         await new Promise<void>((resolve) => {
             const done = () => {
                 clearTimeout(timer);
