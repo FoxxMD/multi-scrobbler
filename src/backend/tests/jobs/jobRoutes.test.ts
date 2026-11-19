@@ -1,0 +1,200 @@
+import { expect } from 'chai';
+import { describe, it } from 'mocha';
+import request from 'supertest';
+import * as path from 'path';
+import { copyFile, readdir, writeFile } from 'fs/promises';
+import dayjs from 'dayjs';
+import { loggerTest } from '@foxxmd/logging';
+import type { Express } from 'express';
+import ScrobbleSources from '../../sources/ScrobbleSources.ts';
+import ScrobbleClients from '../../scrobblers/ScrobbleClients.ts';
+import { WildcardEmitter } from '../../common/WildcardEmitter.ts';
+import { initServer, type ServerLocals } from '../../server/index.ts';
+import { getRoot } from '../../ioc.ts';
+import { fastPasswordHasher } from '../utils/authTestUtils.ts';
+import { JobManager } from '../../jobs/JobManager.ts';
+import { projectRootDir } from '../../common/infrastructure/Atomic.ts';
+import { createTmpDir } from '../utils/tmpDir.ts';
+import LastfmApiClient from '../../common/vendor/LastfmApiClient.ts';
+import { JobRepository } from '../../common/database/drizzle/repositories/JobRepository.ts';
+import { MirrorRepository } from '../../common/database/drizzle/repositories/MirrorRepository.ts';
+import { users } from '../../common/database/drizzle/schema/auth.ts';
+import { components } from '../../common/database/drizzle/schema/schema.ts';
+import { fixtureCreateComponent } from '../utils/databaseFixtures.ts';
+import type { JobApiJson } from '../../../core/Job.ts';
+
+const fixture = (name: string) => path.resolve(projectRootDir, 'src/backend/tests/jobs/fixtures', name);
+const internalConfig = { localUrl: new URL('http://localhost:9078'), configDir: 'fake', dataDir: 'fake', logger: loggerTest, version: 'test' };
+
+const fakeLastfmComponent = (user: string | undefined) => {
+    const api = new LastfmApiClient('test', {apiKey: 'key', secret: 'secret'}, {...internalConfig});
+    api.user = user;
+    return {type: 'lastfm', name: 'My Last.fm', api, isReady: () => true};
+}
+
+const buildApp = async (importsDir: string, components: Record<number, object> = {}) => {
+    const sources = new ScrobbleSources(new WildcardEmitter(), internalConfig, loggerTest);
+    const clients = new ScrobbleClients(new WildcardEmitter(), new WildcardEmitter(), internalConfig, loggerTest);
+    const db = await getRoot().items.db();
+    const jobs = new JobManager({db, logger: loggerTest, importsDir, resolveComponent: (id) => components[id], timings: {importPageDelay: 0, emitThrottle: 0}});
+    const [app] = await initServer({sources, clients, jobs}, {testMode: true, passwordHasher: fastPasswordHasher});
+    // the test root creates a new in-memory db per call, so point the manager at the server's
+    jobs.db = (app.locals as ServerLocals).db;
+    return {app, jobs, db: jobs.db};
+}
+
+const waitForImport = async (app: Express, id: number, status = 'completed') => {
+    for (let i = 0; i < 100; i++) {
+        const res = await request(app).get(`/api/jobs/${id}`);
+        if (res.body.importStatus === status) {
+            return res.body as JobApiJson;
+        }
+        await new Promise(r => setTimeout(r, 20));
+    }
+    throw new Error(`Job ${id} never reached ${status}`);
+}
+
+describe('Job API', function () {
+
+    it('creates a job from an uploaded file and imports it', async function () {
+        await using tmp = await createTmpDir('jobUpload');
+        const {app} = await buildApp(tmp.path);
+        const res = await request(app).post('/api/jobs')
+            .field('payload', JSON.stringify({name: 'upload', importFrom: {upload: true}, mirror: {new: {name: 'My export', account: 'uploadtest'}}, start: true}))
+            .attach('file', fixture('ghan.csv'));
+        expect(res.status, JSON.stringify(res.body)).eq(201);
+        expect(res.body.importFrom).to.deep.include({kind: 'file', originalName: 'ghan.csv', format: 'lastfm-ghan-csv'});
+        expect(res.body.persistInputs).is.false;
+        expect(res.body.mirror.account).eq('uploadtest');
+
+        const done = await waitForImport(app, res.body.id);
+        expect(done.imported).eq(6);
+        expect(done.status).eq('completed');
+    });
+
+    it('creates a job from a file already in the imports folder and hides it from options afterwards', async function () {
+        await using tmp = await createTmpDir('jobExisting');
+        await copyFile(fixture('ghan.json'), path.join(tmp.path, 'my-export.json'));
+        const {app} = await buildApp(tmp.path);
+
+        const before = await request(app).get('/api/jobs/options');
+        expect(before.body.importFiles.map((x: {name: string}) => x.name)).to.include('my-export.json');
+
+        const res = await request(app).post('/api/jobs').send({name: 'existing', importFrom: {existingFile: 'my-export.json'}, mirror: {new: {name: 'existing'}}});
+        expect(res.status, JSON.stringify(res.body)).eq(201);
+        expect(res.body.importFrom.format).eq('lastfm-ghan-json');
+        expect(res.body.importStatus).eq('idle');
+
+        const after = await request(app).get('/api/jobs/options');
+        expect(after.body.importFiles.map((x: {name: string}) => x.name)).to.not.include('my-export.json');
+
+        // deleting the job keeps a file the user placed themselves
+        expect((await request(app).delete(`/api/jobs/${res.body.id}`)).status).eq(204);
+        expect(await readdir(tmp.path)).to.include('my-export.json');
+    });
+
+    it('rejects existing file names that escape the imports folder', async function () {
+        await using tmp = await createTmpDir('jobTraversal');
+        const {app} = await buildApp(tmp.path);
+        for (const name of ['../secret.json', '.hidden', 'sub/dir.json']) {
+            const res = await request(app).post('/api/jobs').send({name: 'bad', importFrom: {existingFile: name}, mirror: {new: {name: 'x'}}});
+            expect(res.status, name).eq(400);
+        }
+    });
+
+    it('rejects an unsupported upload and removes the file', async function () {
+        await using tmp = await createTmpDir('jobBadUpload');
+        const bad = path.join(tmp.path, 'source.csv');
+        await writeFile(bad, 'a,b,c\n1,2,3\n');
+        const importsDir = path.join(tmp.path, 'imports');
+        const {app} = await buildApp(importsDir);
+        const res = await request(app).post('/api/jobs')
+            .field('payload', JSON.stringify({name: 'bad', importFrom: {upload: true}, mirror: {new: {name: 'x'}}}))
+            .attach('file', bad);
+        expect(res.status).eq(400);
+        expect(res.body.error).to.include('not a supported');
+        expect(await readdir(importsDir)).length(0);
+    });
+
+    it('puts benjaminbenben files in their own mirror', async function () {
+        await using tmp = await createTmpDir('jobBenjamin');
+        const {app, db} = await buildApp(tmp.path);
+        const existing = await request(app).post('/api/jobs').field('payload', JSON.stringify({name: 'a', importFrom: {upload: true}, mirror: {new: {name: 'shared', account: 'benjamintest'}}})).attach('file', fixture('ghan.csv'));
+        const res = await request(app).post('/api/jobs')
+            .field('payload', JSON.stringify({name: 'b', importFrom: {upload: true}, mirror: {id: existing.body.mirror.id}}))
+            .attach('file', fixture('benjamin.csv'));
+        expect(res.status, JSON.stringify(res.body)).eq(201);
+        expect(res.body.mirror.id).not.eq(existing.body.mirror.id);
+        expect(res.body.mirror.account).to.be.null;
+        expect((await new MirrorRepository(db).getById(res.body.mirror.id))!.account).to.be.null;
+    });
+
+    it('requires an authenticated Last.fm component and uses its account as the mirror', async function () {
+        await using tmp = await createTmpDir('jobComponent');
+        const resolved: Record<number, object> = {};
+        const {app, db} = await buildApp(tmp.path, resolved);
+        const [unauthed, authed, spotify] = await db.insert(components).values([
+            fixtureCreateComponent({uid: 'lfm1', type: 'lastfm'}),
+            fixtureCreateComponent({uid: 'lfm2', type: 'lastfm'}),
+            fixtureCreateComponent({uid: 'sp', type: 'spotify'}),
+        ]).returning();
+        resolved[unauthed.id] = fakeLastfmComponent(undefined);
+        resolved[authed.id] = fakeLastfmComponent('lfmuser');
+        resolved[spotify.id] = {type: 'spotify'};
+
+        expect((await request(app).post('/api/jobs').send({name: 'x', importFrom: {componentId: unauthed.id}})).status).eq(400);
+        expect((await request(app).post('/api/jobs').send({name: 'x', importFrom: {componentId: spotify.id}})).status).eq(400);
+        const res = await request(app).post('/api/jobs').send({name: 'x', importFrom: {componentId: authed.id}, range: {from: '2014-01-01T00:00:00Z', to: '2015-01-01T00:00:00Z'}});
+        expect(res.status, JSON.stringify(res.body)).eq(201);
+        expect(res.body.mirror.account).eq('lfmuser');
+        expect(res.body.persistInputs).is.true;
+        expect(res.body.importFrom).to.deep.include({kind: 'component', componentId: authed.id});
+        expect(res.body.rangeFrom).eq('2014-01-01T00:00:00.000Z');
+    });
+
+    it('validates the payload', async function () {
+        await using tmp = await createTmpDir('jobValidate');
+        const {app} = await buildApp(tmp.path);
+        expect((await request(app).post('/api/jobs').send({importFrom: {upload: true}})).status).eq(400);
+        expect((await request(app).post('/api/jobs').send({name: 'x', importFrom: {existingFile: 'nope.csv'}, mirror: {new: {name: 'x'}}})).status).eq(404);
+        expect((await request(app).post('/api/jobs').send({name: 'x', importFrom: {upload: true}, mirror: {new: {name: 'x'}}})).status).eq(400);
+    });
+
+    it('controls, renames and deletes a job', async function () {
+        await using tmp = await createTmpDir('jobControl');
+        const {app} = await buildApp(tmp.path);
+        const created = await request(app).post('/api/jobs')
+            .field('payload', JSON.stringify({name: 'ctl', importFrom: {upload: true}, mirror: {new: {name: 'ctl'}}}))
+            .attach('file', fixture('ghan.csv'));
+        const id = created.body.id;
+        const uploadedName = (await readdir(tmp.path))[0];
+
+        expect((await request(app).post(`/api/jobs/${id}/pause`)).body.importStatus).eq('idle');
+        expect((await request(app).post(`/api/jobs/${id}/import/start`)).status).eq(200);
+        await waitForImport(app, id);
+
+        const renamed = await request(app).patch(`/api/jobs/${id}`).send({name: 'renamed'});
+        expect(renamed.body.name).eq('renamed');
+
+        const list = await request(app).get('/api/jobs');
+        expect(list.body.map((x: JobApiJson) => x.id)).to.include(id);
+
+        expect((await request(app).delete(`/api/jobs/${id}`)).status).eq(204);
+        expect((await request(app).get(`/api/jobs/${id}`)).status).eq(404);
+        // uploaded file is removed with the job
+        expect(await readdir(tmp.path)).to.not.include(uploadedName);
+    });
+
+    it("hides other users' jobs", async function () {
+        await using tmp = await createTmpDir('jobOtherUser');
+        const {app, db} = await buildApp(tmp.path);
+        const other = (await db.insert(users).values({id: `other-${Date.now()}`, name: 'other', email: `other-${Date.now()}@x.local`, emailVerified: false, createdAt: new Date(), updatedAt: new Date()}).returning())[0];
+        const mirror = await new MirrorRepository(db).findOrCreate({userId: other.id, service: 'lastfm', account: null, name: 'other'});
+        const job = await new JobRepository(db).create({userId: other.id, name: 'theirs', mirrorId: mirror.id, rangeTo: dayjs()});
+
+        expect((await request(app).get(`/api/jobs/${job.id}`)).status).eq(404);
+        expect((await request(app).post(`/api/jobs/${job.id}/start`)).status).eq(404);
+        expect((await request(app).delete(`/api/jobs/${job.id}`)).status).eq(404);
+        expect((await request(app).get('/api/jobs')).body.map((x: JobApiJson) => x.id)).to.not.include(job.id);
+    });
+});

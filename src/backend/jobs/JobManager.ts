@@ -1,4 +1,6 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
+import path from "node:path";
+import { getDataDir } from "../common/index.ts";
 import type { DbConcrete } from "../common/database/drizzle/drizzleUtils.ts";
 import { JobRepository, type JobSelect } from "../common/database/drizzle/repositories/JobRepository.ts";
 import type { WebhookPayload } from "../common/infrastructure/config/health/webhooks.ts";
@@ -18,6 +20,8 @@ export interface JobManagerOpts {
     createProvider?: (job: JobSelect) => ImportProvider | undefined
     /** used by the default provider factory to find a job's Last.fm Source/Client */
     resolveComponent?: ComponentResolver
+    /** where uploaded export files are stored and where users can place their own. Defaults to {dataDir}/imports */
+    importsDir?: string
     notify?: (payload: WebhookPayload) => Promise<void>
     timings?: Partial<JobTimings>
     pacer?: ImportPacer
@@ -53,23 +57,34 @@ export class JobManager {
 
     readonly emitter = new WildcardEmitter();
     readonly locks = new LockRegistry();
+    readonly importsDir: string;
+    /** not readonly so tests can point it at the server's db after init */
+    db: DbConcrete;
     protected runners = new Map<number, JobRunner>();
     protected opts: JobManagerOpts;
     protected logger: Logger;
-    protected jobRepo: JobRepository;
     protected shuttingDown = false;
 
     constructor(opts: JobManagerOpts) {
         this.opts = opts;
         this.logger = childLogger(opts.logger, 'Jobs');
-        this.jobRepo = new JobRepository(opts.db, {logger: this.logger});
+        this.importsDir = opts.importsDir ?? path.join(getDataDir(), 'imports');
+        this.db = opts.db;
+    }
+
+    resolveComponent(componentId: number): object | undefined {
+        return this.opts.resolveComponent?.(componentId);
+    }
+
+    protected get jobRepo() {
+        return new JobRepository(this.db, {logger: this.logger});
     }
 
     getRunner(jobId: number): JobRunner {
         let runner = this.runners.get(jobId);
         if(runner === undefined) {
             runner = new JobRunner(jobId, {
-                db: this.opts.db,
+                db: this.db,
                 logger: this.logger,
                 locks: this.locks,
                 emitter: this.emitter,

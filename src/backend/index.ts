@@ -251,7 +251,14 @@ const dataDir = getDataDir();
                 priority: 'error'
             });
         });
-        [, , server] = await initServer({sources: scrobbleSources, clients: scrobbleClients},{logger, appLoggerStream, initialOutput: output, webFault});
+        // created before the server for its routes. Imports are resumed later, once components have started
+        jobManager = new JobManager({
+            db,
+            logger,
+            notify: async (p) => notifiers?.notify(p),
+            resolveComponent: (id) => scrobbleSources?.sources.find(x => x.componentId === id) ?? scrobbleClients?.clients.find(x => x.componentId === id)
+        });
+        [, , server] = await initServer({sources: scrobbleSources, clients: scrobbleClients, jobs: jobManager},{logger, appLoggerStream, initialOutput: output, webFault});
 
         if(process.env.IS_LOCAL === 'true') {
             logger.info('multi-scrobbler can be run as a background service! See: https://docs.multi-scrobbler.app/installation/service');
@@ -319,12 +326,6 @@ const dataDir = getDataDir();
             }
         }
 
-        jobManager = new JobManager({
-            db,
-            logger,
-            notify: async (p) => notifiers?.notify(p),
-            resolveComponent: (id) => scrobbleSources?.sources.find(x => x.componentId === id) ?? scrobbleClients?.clients.find(x => x.componentId === id)
-        });
         await jobManager.resumeAll();
 
         const runRetentionNow = parseBool(process.env.RETENTION_IMMEDIATE, false);

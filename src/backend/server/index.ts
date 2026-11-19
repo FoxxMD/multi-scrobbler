@@ -31,10 +31,13 @@ import type ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
 import { qsOptions } from '../../core/Atomic.ts';
 import { projectRootDir } from "../common/infrastructure/Atomic.ts";
 import { createTypedRouter, type ValidationFailureHook } from "@minisylar/express-typed-router";
+import type { JobManager } from "../jobs/JobManager.ts";
 
 export interface ServerArgs {
     sources: ScrobbleSources
     clients: ScrobbleClients
+    /** import jobs. Job routes are only added when given */
+    jobs?: JobManager
 }
 export interface ServerOptions {
     logger?: Logger
@@ -63,7 +66,8 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
 
     const {
         sources,
-        clients
+        clients,
+        jobs
     } = args;
     const {
         logger: parentLogger = loggerTest,
@@ -165,7 +169,7 @@ export const initServer = async (args: ServerArgs, opts: ServerOptions = {}): Pr
             return [app, router];
         }
 
-        setupApi({app, router: apiRouter, publicRouter, optionalAuth: optionalAuthMiddleware, hiddenFromWeb, scrobbleSources: sources, scrobbleClients: clients}, {...opts, initialLogOutput: opts.initialOutput, logger, webFault});
+        setupApi({app, router: apiRouter, publicRouter, optionalAuth: optionalAuthMiddleware, hiddenFromWeb, scrobbleSources: sources, scrobbleClients: clients, jobs}, {...opts, initialLogOutput: opts.initialOutput, logger, webFault});
         app.use(errorHandlerMiddleware(logger));
 
         if(opts.testMode === true) {

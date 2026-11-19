@@ -1,6 +1,6 @@
-import { and, eq } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import type { DbConcrete } from "../drizzleUtils.ts";
-import { playMirrors } from "../schema/schema.ts";
+import { playMirrors, playsHistorical } from "../schema/schema.ts";
 import { DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
 import { addRange, subtractRanges, type TimeRange } from "../../../../utils/RangeUtils.ts";
 
@@ -36,6 +36,15 @@ export class MirrorRepository extends DrizzleBaseRepository<'playMirrors'> {
 
     findForUser = async (userId: string): Promise<PlayMirrorSelect[]> => {
         return this.db.select().from(playMirrors).where(eq(playMirrors.userId, userId));
+    }
+
+    /** Number of mirror plays per mirror id */
+    playCounts = async (ids: number[]): Promise<Map<number, number>> => {
+        if(ids.length === 0) {
+            return new Map();
+        }
+        const rows = await this.db.select({mirrorId: playsHistorical.mirrorId, count: count()}).from(playsHistorical).where(inArray(playsHistorical.mirrorId, ids)).groupBy(playsHistorical.mirrorId);
+        return new Map(rows.map(x => [x.mirrorId as number, x.count]));
     }
 
     /** Merge range into coverage. Does not open a transaction, call inside one when paired with play inserts */

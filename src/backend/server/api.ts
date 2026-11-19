@@ -25,6 +25,8 @@ import { findAuthIssue, SimpleError } from "../common/errors/MSErrors.ts";
 import { DrizzlePlayRepository, type QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.ts";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.ts";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
+import type { JobManager } from "../jobs/JobManager.ts";
+import { setupJobRoutes } from "./jobRoutes.ts";
 import {componentStateBodySchema, playStateBodySchema, type SseEvent, type SseEventData, type SseEventName, sseEventSchema, queryPlaysRequestSchema, componentsApiSchema, componentClientApiSchema, paginatedResponseSchema, playApiCommonDetailedSchema, publicDashboardDataSchema, nowPlayingOptionSchema, type ComponentClientApiJson, type ComponentSourceApiJson, asSerializablePlaySelect, trackDataCreditBaseSchema, type TrackDataCreditBase, NDJSON_MEDIA_TYPE, trackSearchSimpleRequestQuerySchema, albumSearchSimpleRequestQuerySchema, artistSearchSimpleRequestQuerySchema } from "../../core/Api.ts";
 import { serializeError } from "serialize-error";
 import { z } from 'zod';
@@ -113,6 +115,7 @@ export interface ApiArgs {
     hiddenFromWeb?: string[]
     scrobbleSources: ScrobbleSources
     scrobbleClients: ScrobbleClients
+    jobs?: JobManager
 }
 
 export interface ApiOptions {
@@ -131,7 +134,8 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         optionalAuth = noopMiddleware,
         hiddenFromWeb = [],
         scrobbleSources,
-        scrobbleClients
+        scrobbleClients,
+        jobs
     } = args;
     const {
         logger = loggerTest,
@@ -360,6 +364,9 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     setupLZEndpointRoutes(app, publicRouter, logger, scrobbleSources, scrobbleClients);
     setupLastfmEndpointRoutes(app, publicRouter, logger, scrobbleSources);
     setupAuthRoutes(app, router, logger, scrobbleSources, scrobbleClients);
+    if(jobs !== undefined) {
+        setupJobRoutes(router, jobs, scrobbleSources, scrobbleClients, logger);
+    }
 
     router.get('/components', {docs: {operationId: 'get-all-sources-clients'}, tags: ['Source/Client'], summary: 'Get All Sources/Clients', responseSchema: componentsApiSchema.array()}, async (req, res, next) => {
 
