@@ -36,6 +36,7 @@ export class JobManager {
     protected opts: JobManagerOpts;
     protected logger: Logger;
     protected jobRepo: JobRepository;
+    protected shuttingDown = false;
 
     constructor(opts: JobManagerOpts) {
         this.opts = opts;
@@ -65,7 +66,12 @@ export class JobManager {
         return this.runners.get(jobId)?.runtime;
     }
 
-    startImport = async (jobId: number) => this.getRunner(jobId).startImport();
+    startImport = async (jobId: number) => {
+        if(this.shuttingDown) {
+            return;
+        }
+        return this.getRunner(jobId).startImport();
+    }
 
     stopImport = async (jobId: number, status: HaltStatus) => this.getRunner(jobId).stopImport(status);
 
@@ -87,6 +93,7 @@ export class JobManager {
 
     /** Halts everything without changing persisted status, so running processes resume on next boot */
     shutdown = async () => {
+        this.shuttingDown = true;
         await Promise.allSettled(Array.from(this.runners.values()).map(x => x.shutdown()));
     }
 

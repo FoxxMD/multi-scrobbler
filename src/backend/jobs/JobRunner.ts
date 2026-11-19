@@ -2,6 +2,7 @@ import { childLogger, type Logger } from "@foxxmd/logging";
 import { delay, isAbortError } from "abort-controller-x";
 import dayjs from "dayjs";
 import pRetry from "p-retry";
+import { randomUUID } from "node:crypto";
 import type { JobProcessStatus } from "../../core/Job.ts";
 import type { WebhookPayload } from "../common/infrastructure/config/health/webhooks.ts";
 import { type DbConcrete, runTransaction } from "../common/database/drizzle/drizzleUtils.ts";
@@ -94,60 +95,94 @@ export class JobRunner {
     }
 
     /**
-     * Throws JobConflictError if another job is importing into the same mirror.
-     * No-op if already running or completed.
+     * Throws JobConflictError if another job is importing into the same mirror, or any error from creating the import provider.
+     * No-op if already running/starting or completed.
      * */
     async startImport(): Promise<void> {
         if(this.importTask !== undefined) {
             return;
         }
-        const job = await this.getJob();
-        if(job.importStatus === 'completed') {
-            return;
-        }
-        const provider = this.deps.createProvider(job);
-        if(provider === undefined) {
-            // mirror-only job, nothing to import
-            await this.setImport({importStatus: 'completed', importCompletedAt: dayjs()});
-            return;
-        }
-        const lockKey = mirrorImportLockKey(job.mirrorId);
-        const holder = `job:${this.jobId}`;
-        if(!this.deps.locks.tryAcquire(lockKey, holder)) {
-            throw new JobConflictError(`Another import (${this.deps.locks.holder(lockKey)}) is already running for this mirror`);
-        }
-
-        await this.setImport({importStatus: 'running', importStartedAt: job.importStartedAt ?? dayjs(), importError: null});
-        this.logger.info('Import started');
-
-        const abort = new AbortController();
-        const task: ProcessTask = {abort, promise: Promise.resolve()};
-        task.promise = (async () => {
-            try {
-                await this.runImport(job, provider, abort.signal);
-                await this.setImport({importStatus: 'completed', importCompletedAt: dayjs()});
-                const done = await this.getJob();
-                this.logger.info(`Import complete: ${done.imported} new scrobbles added to mirror`);
-                await this.deps.notify?.({title: `Job ${job.name} - Import Complete`, message: `${done.imported} new scrobbles added (${done.importFetched} fetched)`, priority: 'info'});
-            } catch (e) {
-                if(isAbortError(e) || abort.signal.aborted) {
-                    if(task.halt !== undefined && task.halt !== 'shutdown') {
-                        await this.setImport({importStatus: task.halt});
-                    }
-                    this.logger.info(`Import halted (${task.halt ?? 'aborted'})`);
-                } else {
-                    this.logger.error(new Error('Import failed', {cause: e}));
-                    await this.setImport({importStatus: 'failed', importError: e as Error});
-                    await this.deps.notify?.({title: `Job ${job.name} - Import Failed`, message: (e as Error).message, priority: 'error'});
-                }
-            } finally {
-                this.deps.locks.release(lockKey, holder);
-                this.importTask = undefined;
-                this.runtime.import = {};
-                this.emitUpdate({runtime: this.runtime}, true);
-            }
-        })();
+        // registered before any await so a concurrent start, stop, or shutdown sees it
+        const task: ProcessTask = {abort: new AbortController(), promise: Promise.resolve()};
         this.importTask = task;
+        let reportStart!: (err?: unknown) => void;
+        const started = new Promise<unknown>(resolve => { reportStart = resolve; });
+        task.promise = this.runImportTask(task, reportStart);
+        const startErr = await started;
+        if(startErr !== undefined) {
+            throw startErr;
+        }
+    }
+
+    protected async runImportTask(task: ProcessTask, reportStart: (err?: unknown) => void): Promise<void> {
+        const {signal} = task.abort;
+        const holder = `job:${this.jobId}:${randomUUID()}`;
+        let lockKey: string | undefined;
+        let isStarted = false;
+        let job: JobSelect | undefined;
+        let completed = false;
+        try {
+            job = await this.getJob();
+            if(job.importStatus === 'completed') {
+                return;
+            }
+            const provider = this.deps.createProvider(job);
+            if(provider === undefined) {
+                // mirror-only job, nothing to import
+                await this.setImport({importStatus: 'completed', importCompletedAt: dayjs()});
+                return;
+            }
+            const key = mirrorImportLockKey(job.mirrorId);
+            if(!this.deps.locks.tryAcquire(key, holder)) {
+                throw new JobConflictError('Another import is already running for this mirror');
+            }
+            lockKey = key;
+            signal.throwIfAborted();
+            await this.setImport({importStatus: 'running', importStartedAt: job.importStartedAt ?? dayjs(), importError: null});
+            isStarted = true;
+            reportStart();
+            this.logger.info('Import started');
+
+            await this.runImport(job, provider, signal);
+            await this.setImport({importStatus: 'completed', importCompletedAt: dayjs()});
+            completed = true;
+        } catch (e) {
+            if(signal.aborted) {
+                if(task.halt !== undefined && task.halt !== 'shutdown') {
+                    await this.safely(() => this.setImport({importStatus: task.halt as HaltStatus}), 'persist halted import status');
+                }
+                this.logger.info(`Import halted (${task.halt ?? 'aborted'})`);
+            } else if(!isStarted) {
+                reportStart(e);
+            } else {
+                this.logger.error(new Error('Import failed', {cause: e}));
+                await this.safely(() => this.setImport({importStatus: 'failed', importError: e as Error}), 'persist failed import status');
+                await this.safely(() => this.deps.notify?.({title: `Job ${job?.name ?? this.jobId} - Import Failed`, message: (e as Error).message, priority: 'error'}), 'send notification');
+            }
+        } finally {
+            // no-op if already reported
+            reportStart();
+            if(lockKey !== undefined) {
+                this.deps.locks.release(lockKey, holder);
+            }
+            this.importTask = undefined;
+            this.runtime.import = {};
+            this.emitUpdate({runtime: this.runtime}, true);
+        }
+
+        if(completed) {
+            const done = await this.jobRepo.getById(this.jobId);
+            this.logger.info(`Import complete: ${done?.imported} new scrobbles added to mirror`);
+            await this.safely(() => this.deps.notify?.({title: `Job ${job?.name ?? this.jobId} - Import Complete`, message: `${done?.imported} new scrobbles added (${done?.importFetched} fetched)`, priority: 'info'}), 'send notification');
+        }
+    }
+
+    protected async safely(fn: () => Promise<unknown> | undefined, action: string) {
+        try {
+            await fn();
+        } catch (e) {
+            this.logger.warn(new Error(`Failed to ${action}`, {cause: e}));
+        }
     }
 
     /** Halts the import and keeps its cursor. Start resumes */
@@ -168,7 +203,8 @@ export class JobRunner {
     /** Abort without changing persisted status so the import resumes on next boot */
     async shutdown(): Promise<void> {
         if(this.importTask !== undefined) {
-            this.importTask.halt = 'shutdown';
+            // a user halt already in progress wins so paused/stopped is still persisted
+            this.importTask.halt ??= 'shutdown';
             this.importTask.abort.abort(new Error('Shutting down'));
             await this.importTask.promise;
         }
@@ -218,7 +254,7 @@ export class JobRunner {
             for(const gap of gaps) {
                 const prev = state.cursor;
                 // coverage moves the top of a partially imported gap down to just above the cursor, so reuse a cursor that falls inside it
-                const cursor: JobImportCursorApi = isApiCursor(prev) && prev.to >= gap[0] && prev.to <= gap[1] + 1
+                const cursor: JobImportCursorApi = isApiCursor(prev) && prev.to >= gap[0] && prev.to <= gap[1]
                     ? prev
                     : {gapTo: gap[1], to: gap[1]};
                 await runBatches(gap, cursor);
@@ -289,7 +325,7 @@ export class JobRunner {
             signal,
             shouldRetry: ({error}) => !isAbortError(error) && !signal.aborted,
             onFailedAttempt: ({error, attemptNumber, retriesLeft}) => {
-                if(retriesLeft === 0 || isAbortError(error)) {
+                if(retriesLeft === 0 || isAbortError(error) || signal.aborted) {
                     return;
                 }
                 const wait = this.timings.importRetryBase * Math.pow(2, attemptNumber - 1);

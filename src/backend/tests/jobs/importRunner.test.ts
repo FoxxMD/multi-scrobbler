@@ -172,6 +172,30 @@ describe('Job import runner', function () {
         expect(done.importError?.message).to.include('no progress');
     });
 
+    it('runs only one import when started twice concurrently', async function () {
+        const provider = new FakeTimeProvider([100, 200, 300, 400], 2);
+        const {db, jobs, job, deps} = await setup();
+        const runner = new JobRunner(job.id, deps(provider));
+        await Promise.all([runner.startImport(), runner.startImport()]);
+        // @ts-expect-error reading protected task for test
+        await runner.importTask?.promise;
+        expect(provider.fetches).length(2);
+        expect(await count(db)).eq(4);
+        expect((await jobs.getById(job.id))!.imported).eq(4);
+    });
+
+    it('a stop during startup halts before fetching', async function () {
+        const provider = new FakeTimeProvider([100, 200]);
+        const {jobs, job, deps} = await setup();
+        const runner = new JobRunner(job.id, deps(provider));
+        const starting = runner.startImport();
+        await runner.stopImport('paused');
+        await starting;
+        expect(provider.fetches).length(0);
+        expect((await jobs.getById(job.id))!.importStatus).eq('paused');
+        expect(runner.importRunning).is.false;
+    });
+
     it('keeps running status on shutdown so it can resume', async function () {
         const provider = new FakeTimeProvider([100, 200, 300], 1);
         const {jobs, job, deps} = await setup();

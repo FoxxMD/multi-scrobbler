@@ -6,7 +6,9 @@ import { transientDb } from '../utils/TransientTestUtils.ts';
 import { ensureOwner } from '../../common/auth/owner.ts';
 import { MirrorRepository } from '../../common/database/drizzle/repositories/MirrorRepository.ts';
 import { JobRepository } from '../../common/database/drizzle/repositories/JobRepository.ts';
-import { components, plays } from '../../common/database/drizzle/schema/schema.ts';
+import { components, plays, playsHistorical } from '../../common/database/drizzle/schema/schema.ts';
+import { mirrorImportLockKey } from '../../jobs/JobRunner.ts';
+import { MirrorRepository as Mirrors } from '../../common/database/drizzle/repositories/MirrorRepository.ts';
 import { JobManager } from '../../jobs/JobManager.ts';
 import type { ImportProvider } from '../../jobs/ImportProvider.ts';
 import { FakeTimeProvider } from './fakes.ts';
@@ -21,7 +23,7 @@ const setup = async () => {
     const jobs = new JobRepository(db);
     const newJob = (name = 'job') => jobs.create({userId: owner.id, name, mirrorId: mirror.id, rangeTo: dayjs(1000), componentFromId: undefined, importStatus: 'running'});
     const manager = (provider: () => ImportProvider) => new JobManager({db, logger: loggerTest, timings, createProvider: provider});
-    return {db, jobs, newJob, manager};
+    return {db, jobs, newJob, manager, mirror};
 }
 
 const settle = async (manager: JobManager, jobId: number) => {
@@ -62,7 +64,7 @@ describe('Job manager', function () {
     });
 
     it('deleting a job stops its import and keeps client plays', async function () {
-        const {db, jobs, newJob, manager} = await setup();
+        const {db, jobs, newJob, manager, mirror} = await setup();
         const job = await newJob();
         const component = await db.insert(components).values(fixtureCreateComponent({mode: 'client', type: 'listenbrainz'})).returning();
         await db.insert(plays).values(fixtureCreatePlay({componentId: component[0].id, state: 'scrobbled', jobId: job.id}));
@@ -75,14 +77,57 @@ describe('Job manager', function () {
             return p;
         });
         await m.startImport(job.id);
+        const runner = m.getRunner(job.id);
         const deleting = m.deleteJob(job.id);
         release();
         await deleting;
 
+        expect(runner.importRunning).is.false;
+        expect(m.locks.holder(mirrorImportLockKey(mirror.id))).to.be.undefined;
+        expect(await db.select().from(playsHistorical)).length(0);
         expect(await jobs.getById(job.id)).to.be.undefined;
         const remaining = await db.select().from(plays);
         expect(remaining).length(1);
         expect(remaining[0].jobId).to.be.null;
+    });
+
+    it('resumes an import interrupted by shutdown without duplicates', async function () {
+        const {db, jobs, newJob, manager, mirror} = await setup();
+        const job = await newJob();
+        const ts = [100, 200, 300, 400, 500, 600, 700, 800, 900];
+        let first!: JobManager;
+        first = manager(() => {
+            const p = new FakeTimeProvider(ts, 2);
+            p.onFetch = (n) => { if (n === 3) { void first.shutdown(); } };
+            return p;
+        });
+        await first.resumeAll();
+        await settle(first, job.id);
+        const interrupted = (await jobs.getById(job.id))!;
+        expect(interrupted.importStatus).eq('running');
+        expect(interrupted.imported).lt(9);
+
+        const second = manager(() => new FakeTimeProvider(ts, 2));
+        await second.resumeAll();
+        await settle(second, job.id);
+
+        const done = (await jobs.getById(job.id))!;
+        expect(done.importStatus).eq('completed');
+        expect(done.imported).eq(9);
+        expect(done.importTotal).eq(9);
+        expect(await db.select().from(playsHistorical)).length(9);
+        expect((await new Mirrors(db).getById(mirror.id))!.coverage).to.deep.eq([[0, 1000]]);
+    });
+
+    it('does not start imports after shutdown', async function () {
+        const {jobs, newJob, manager} = await setup();
+        const job = await newJob();
+        const provider = new FakeTimeProvider([100]);
+        const m = manager(() => provider);
+        await m.shutdown();
+        await m.resumeAll();
+        expect(provider.fetches).length(0);
+        expect((await jobs.getById(job.id))!.importStatus).eq('running');
     });
 
     it('fails to start a job whose import origin has no provider', async function () {
