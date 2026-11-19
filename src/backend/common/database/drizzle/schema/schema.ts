@@ -103,6 +103,27 @@ export const playInputs = sqliteTable("play_inputs", {
   uniqueIndex('play_input_id_idx').on(table.playId)
 ]);
 
+/**
+ * An upstream account's set of scrobbles (IE a Last.fm user) that is imported/mirrored into plays_historical.
+ * Owned by a user and shared by every component/job that resolves to the same service + account.
+ * */
+export const playMirrors = sqliteTable("play_mirrors", {
+  id: integer().primaryKey(),
+  userId: text().references(() => users.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
+  // lastfm, etc...
+  service: text({length: 50}).notNull(),
+  // upstream username. null => unknown or intentionally isolated (IE minute-precision file imports)
+  account: text({length: 200}),
+  name: text().notNull(),
+  // sorted, merged, inclusive [fromMs, toMs] ranges that are completely mirrored
+  coverage: text({mode: 'json'}).$type<[number, number][]>().notNull().$defaultFn(() => []),
+  createdAt: DayjsTimestamp('createdAt').notNull().$defaultFn(() => dayjs()),
+  updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()).$onUpdate(() => dayjs()),
+}, (table) => [
+  index('mirror_user_id_idx').on(table.userId),
+  uniqueIndex('mirror_user_service_account_idx').on(table.userId, table.service, table.account)
+]);
+
 export const playsHistorical = sqliteTable("plays_historical", {
   id: integer().primaryKey(),
   uid: text({ length: 200 }).unique(),
@@ -111,9 +132,11 @@ export const playsHistorical = sqliteTable("plays_historical", {
   seenAt: DayjsTimestamp('seenAt'),
   play: PlayJson('play').notNull(),
   playHash: text(),
-  mbidIdentifier: text()
+  mbidIdentifier: text(),
+  mirrorId: integer().references(() => playMirrors.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
 }, (table) => [
   index("play_historical_component_id_idx").on(table.componentId),
+  index("play_historical_mirror_played_idx").on(table.mirrorId, table.playedAt),
   uniqueIndex("play_historical_uid_idx").on(table.uid),
   index("play_historical_playedAt_idx").on(table.playedAt)
 ]);
@@ -236,7 +259,7 @@ export const playEvents = sqliteTable("play_events", {
   index('play_event_id_idx').on(table.playId)
 ]);
 
-const playRelations = defineRelations({ plays, queueStates, playEvents, playInputs, components, jobs, componentMigrations, playsHistorical, users, sessions, accounts, verifications, appSettings, apikeys, userSettings }, (r) => ({
+const playRelations = defineRelations({ plays, queueStates, playEvents, playInputs, components, jobs, componentMigrations, playsHistorical, playMirrors, users, sessions, accounts, verifications, appSettings, apikeys, userSettings }, (r) => ({
   plays: {
     queueStates: r.many.queueStates(),
     input: r.one.playInputs({
@@ -266,6 +289,17 @@ const playRelations = defineRelations({ plays, queueStates, playEvents, playInpu
       from: r.playsHistorical.componentId,
       to: r.components.id,
     }),
+    mirror: r.one.playMirrors({
+      from: r.playsHistorical.mirrorId,
+      to: r.playMirrors.id,
+    }),
+  },
+  playMirrors: {
+    plays: r.many.playsHistorical(),
+    user: r.one.users({
+      from: r.playMirrors.userId,
+      to: r.users.id,
+    }),
   },
   queueStates: {
     play: r.one.plays({
@@ -279,7 +313,7 @@ const playRelations = defineRelations({ plays, queueStates, playEvents, playInpu
   },
   components: {
     plays: r.many.plays(),
-    playsHistorical: r.many.plays(),
+    playsHistorical: r.many.playsHistorical(),
     queueStates: r.many.queueStates(),
     migrations: r.many.componentMigrations(),
     user: r.one.users({
@@ -362,6 +396,8 @@ export const getConfigByTableName = <T extends TableName>(name: T) => {
       return componentMigrations;
     case 'jobs':
       return jobs;
+    case 'playMirrors':
+      return playMirrors;
   }
 }
 
