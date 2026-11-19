@@ -413,19 +413,23 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         return await pMap(partArr, async (x) => this.transformManager.parseTransformerConfig(x));
     }
 
-    public transformPlay = async (play: PlayObject, hookType: TransformHook, transformOpts: {log?: boolean | 'all'} & OptionalCacheUsage = {}) => {
+    /**
+     * @param transformOpts.stages Run these stages instead of this component's own rules for the hook (IE an import job's transforms)
+     * */
+    public transformPlay = async (play: PlayObject, hookType: TransformHook, transformOpts: {log?: boolean | 'all', stages?: StageConfig[]} & OptionalCacheUsage = {}) => {
 
         const {
             log,
+            stages,
             useCachedResult = true
         } = transformOpts;
 
         let logger!: Logger;
 
         try {
-            let hook: StageConfig[] | undefined;
+            let hook: StageConfig[] | undefined = stages;
 
-            switch (hookType) {
+            switch (stages === undefined ? hookType : undefined) {
                 case TRANSFORM_HOOK.preCompare:
                     hook = this.transformRules.preCompare;
                     break;
