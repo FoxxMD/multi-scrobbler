@@ -8,7 +8,7 @@ tableOfContents:
   maxHeadingLevel: 4
 ---
 
-Multi-Scrobbler has the ability to **bulk import** Plays/Scrobbles and (TBA) **re-export** those to existing [Clients](/configuration/clients) or file.
+Multi-Scrobbler has the ability to **bulk import** Plays/Scrobbles and **re-export** those to existing [Clients](/configuration/clients).
 
 You can use this feature to backup your data from one or more services into Mutli-Scrobbler's database. Then, you can re-export any slice of these backups to any number of Clients just like regular scrobbles.
 
@@ -48,6 +48,24 @@ In plain terms this means:
 If you have multiple data sources (like a Last.fm MS Client *and* a csv export of last.fm data) make sure that the mirror created has an account set and that you use that same mirror for the second job.
 
 </details>
+
+### Export
+
+An **Export** sends the scrobbles a job imported into its [mirror](#import-mirror) to a [Client](/configuration/clients). A job can export to several Clients. Each Client is exported to separately and has its own progress and controls.
+
+Exported scrobbles go through the Client the same way as live scrobbles:
+
+* the Client's own [transforms](/configuration/transforms) are applied
+* scrobbles the Client already has are skipped as duplicates
+* the Client sends them to its service one at a time
+
+So exporting the same scrobbles twice, or exporting history the Client already has, does not create duplicates.
+
+<Aside type="caution">
+
+**Last.fm** and **Libre.fm** refuse scrobbles older than about 14 days. Do not export older history to them.
+
+</Aside>
 
 ### Import Sources
 
@@ -116,7 +134,7 @@ Place files directly in the `imports` folder of the [data directory](/installati
 
 ## How To Import
 
-Import Jobs are under **Import Jobs** in the dashboard menu. Choose **New Import** to create one.
+Jobs are under **Import/Export** in the dashboard menu. Choose **New Job** to create one.
 
 **Options** for job creation:
 
@@ -127,3 +145,42 @@ Import Jobs are under **Import Jobs** in the dashboard menu. Choose **New Import
 * **Start now**: start the import as soon as the job is created. Otherwise start it from the job's page.
 
 After **starting** the job you can monitor it from it's details page and see real-time progress/percentage. Jobs can be paused and will continue from the last fetched/parsed scrobble position when resumed.
+
+## How To Export
+
+Choose Clients under **Export To** when creating a job. Leave it empty to only import.
+
+**Options** for export:
+
+* **Order**
+  * **Newest first** (default) starts exporting as soon as the newest scrobbles are imported, while the import keeps running.
+  * **Oldest first** waits until the oldest scrobbles in the range are imported. Use it when the order scrobbles arrive at the Client matters.
+* **Transforms**: change scrobbles before they are sent. They run before each Client's own transforms.
+  * **None**
+  * **Preset**: a preset from [`transformersPresets`](/configuration/transforms#presets) in your config.
+  * **Copy from a Source/Client**: the `preCompare` or `postCompare` transforms of one of your Sources/Clients.
+  * A copy of the transforms is saved with the job. Changing your config later does not change an existing job.
+* **Queue Limit** (under **Advanced**): how many of the job's scrobbles may wait in each Client's queue at once. The default of 20 leaves room for live scrobbles. You can change it on the job's page while the export runs.
+
+On the job's page, the **Export** section shows each Client's progress and what happened to the scrobbles sent to it (scrobbled, already scrobbled, failed). Each Client has its own **Start**/**Pause**/**Stop** buttons. The buttons next to the job's name control the import and every export at once.
+
+* **Pause** or **Stop** halts sending new scrobbles. Scrobbles already in the Client's queue are still sent.
+* **Resume** continues from where the export stopped.
+* The export waits, without failing, while the Client is not running or its queue is full.
+
+You are notified when an export completes or fails. Individual failed scrobbles from a job do not send notifications.
+
+### Failed Scrobbles
+
+If many scrobbles fail in a row (10, or the queue limit if it is higher) the export stops and shows the last error. This usually means the Client is misconfigured or its service is down. Fix the problem, then **Resume**.
+
+Failed scrobbles from a job are not retried automatically. To retry them, either:
+
+* retry them from the Client's page: in the **Scrobbles** filters turn on **Show scrobbles from Import/Export jobs** and set **Played Between** to cover the job's range, then choose **Retry All Unsuccessful** from the menu next to **Scrobbles**, or
+* create a new job for the same mirror and export it to the Client again. Failed scrobbles are sent again, scrobbles the Client already has are skipped.
+
+### Scrobbles in the Client
+
+Scrobbles from jobs are hidden in a Client's scrobble list by default so they don't bury live scrobbles. Turn on **Show scrobbles from Import/Export jobs** in the list's filters to see them.
+
+They are not counted in the Client's live **Scrobbled** total.

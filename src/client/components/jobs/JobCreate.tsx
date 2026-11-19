@@ -359,7 +359,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                         // a Fieldset, not a Field: checkboxes in one Field share its input id so every label toggles the first
                         children={(field) => <Fieldset.Root>
                             <Fieldset.Legend>Export To</Fieldset.Legend>
-                            <Fieldset.HelperText>Clients that get the imported scrobbles. Leave empty to only import.</Fieldset.HelperText>
+                            <Fieldset.HelperText>Clients that get the imported scrobbles. Leave empty to only import. See the <ChakraLink textDecoration="underline" href={`${TRANSFER_DOCS}#how-to-export`} target="_blank">export docs</ChakraLink>.</Fieldset.HelperText>
                             {options.targets.length === 0 ? <Text color="fg.muted" textStyle="sm">No Clients are configured.</Text> : <Fieldset.Content gap="2" mt="1">
                                 {options.targets.map(t => <Checkbox.Root
                                     key={t.componentId}
