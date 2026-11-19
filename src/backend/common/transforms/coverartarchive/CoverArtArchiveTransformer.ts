@@ -1,4 +1,5 @@
-import type { Credit, LifecycleInput, OptionalCacheUsage, PlayObject } from "../../../../core/Atomic.ts";
+import type { Credit, LifecycleInput, OptionalCacheUsage } from "../../../../core/Atomic.ts";
+import type { PlayObject } from "../../../../core/PlaySchema.ts";
 import { isWhenCondition } from "../../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../../infrastructure/config/health/webhooks.ts";
 import type {ExternalMetadataTerm, PlayTransformMetadataStage} from "../../../../core/Transform.ts";

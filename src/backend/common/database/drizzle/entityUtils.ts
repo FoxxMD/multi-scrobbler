@@ -1,14 +1,15 @@
 import assert from "node:assert";
-import type {PlayHistoricalNew, PlayHistoricalSelect, PlayNew, PlaySelect, PlaySelectWithQueueStates, QueueStateSelect} from "./drizzleTypes.ts";
+import type {PlayEventSelect, PlayHistoricalNew, PlayHistoricalSelect, PlayNew, PlaySelect, PlaySelectWithQueueStates, QueueStateSelect} from "./drizzleTypes.ts";
 import type {PlayInputNew} from "./drizzleTypes.ts";
 import type {QueueStateNew} from "./drizzleTypes.ts";
 import type {ComponentNew} from "./drizzleTypes.ts";
 import type { MarkOptional, MarkRequired } from "ts-essentials";
-import type { ErrorLike, LifecycleStep, PlayObject } from "../../../../core/Atomic.ts";
+import type { ErrorLike, LifecycleStep } from "../../../../core/Atomic.ts";
+import type { PlayObject } from "../../../../core/PlaySchema.ts";
 import dayjs from "dayjs";
 import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../utils/PlayComparisonUtils.ts";
 import { hashObject } from "../../../utils/StringUtils.ts";
-import { PLAY_EVENT_TYPE, type PlayEventDupeCheck, type PlayEventDupeCheckData, type PlayEventPlayStateChange, type PlayEventPlayStateChangeData, type PlayEventQueueStateChange, type PlayEventQueueStateChangeData, type PlayEventScrobbleResult, type PlayEventScrobbleResultData, type PlayEventTransform, type PlayEventUpdatePlay, type PlayEventUpdatePlayData } from "../../../../core/PlayEvent.ts";
+import { PLAY_EVENT_TYPE, playEventSchema, type PlayEvent, type PlayEventDupeCheck, type PlayEventDupeCheckData, type PlayEventPlayStateChange, type PlayEventPlayStateChangeData, type PlayEventQueueStateChange, type PlayEventQueueStateChangeData, type PlayEventScrobbleResult, type PlayEventScrobbleResultData, type PlayEventTransform, type PlayEventUpdatePlay, type PlayEventUpdatePlayData } from "../../../../core/PlayEvent.ts";
 
 export const generateComponentEntity = (data: MarkOptional<ComponentNew, 'uid'>): ComponentNew => {
     assert(data.name !== undefined, 'Must provide name');
@@ -167,6 +168,10 @@ export const scrobbleToPlayEvent = (data: PlayEventScrobbleResultData): Omit<Pla
     createdAt: data.createdAt ?? dayjs(),
     data
 });
+
+/** Decode Play Event rows, whose data column is stored as JSON, to Play Events. Throws if an event does not validate. */
+export const asPlayEvents = (rows: PlayEventSelect[]): PlayEvent[] =>
+    rows.map(({createdAt, ...rest}) => ({...playEventSchema.decode(rest as Parameters<typeof playEventSchema.decode>[0]), createdAt}));
 
 export const entityIsPlayEntity = (obj: object): obj is PlaySelectWithQueueStates => `play` in obj && typeof obj.play === 'object'
     && `componentId` in obj && typeof obj.componentId === 'number'

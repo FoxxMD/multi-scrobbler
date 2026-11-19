@@ -6,7 +6,8 @@ import { existingScrobble, genericSourcePlayMatch, playsAreAddedOnly, playsAreBu
 import { generatePlay, generatePlays } from "../../../core/tests/utils/PlayTestUtils.ts";
 import { nameToCredit } from "../../../core/MusicMetadata.ts";
 import { namesToCredits } from "../../../core/MusicMetadata.ts";
-import { SCROBBLE_TS_SOC_END, type PlayObject } from "../../../core/Atomic.ts";
+import { SCROBBLE_TS_SOC_END } from "../../../core/Atomic.ts";
+import type { PlayObject } from "../../../core/PlaySchema.ts";
 
 const newPlay = generatePlay();
 

@@ -1,3 +1,4 @@
+import { generateSseMessage } from '../../core/tests/utils/apiFixtures.js';
 import preview from "../../../.storybook/preview.js";
 import React from 'react';
 import { sse } from 'msw';
@@ -19,7 +20,7 @@ const meta = preview.meta({
     layout: 'padded',
       msw: {
         handlers: [
-          sse('/api/events?next=true', async ({ params, client }) => {
+          sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
           }),
         ],
       },
@@ -39,7 +40,7 @@ decorators: [
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
 
-const randomQueue = () => faker.helpers.arrayElement(['deadLetter','deadLetterRemoved','deadLetterDequeued','deadQueued']);
+const randomQueue = () => faker.helpers.arrayElement(['deadLetter','deadLetterRemoved','deadLetterDequeued','deadQueued'] as const);
 
 export const StatsQueued = meta.story({
   args: {
@@ -52,8 +53,8 @@ export const StatsQueued = meta.story({
   parameters: {
       msw: {
         handlers: [
-          sse('/api/events?next=true', async ({ params, client }) => {
-          setInterval(() => client.send({event: randomQueue(), data: {componentId: 1}}), 2000);
+          sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
+          setInterval(() => client.send(generateSseMessage(randomQueue(), {})), 2000);
           }),
         ],
       },

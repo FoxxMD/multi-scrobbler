@@ -1,20 +1,11 @@
+import { asJsonPlayer } from "../../core/PlayMarshalUtils.ts";
 import { childLogger, type Logger, type LogLevel } from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
 import type {Duration} from "dayjs/plugin/duration.js";
 import type EventEmitter from "events";
 import type { MarkOptional } from "ts-essentials";
-import {
-    type NowPlayingUpdateThreshold,
-    type PlayObject,
-    type ScrobbleActionResult, type PlayMatchResult, type SourcePlayerObj,
-    INGRESS_QUEUE,
-    DEAD_QUEUE,
-    type SourcePlayerJson,
-    QUEUE_STATUS_COMPLETED,
-    SOURCE_SOT,
-    QUEUE_STATUS_FAILED,
-    PARSED_FROM
-} from "../../core/Atomic.ts";
+import { INGRESS_QUEUE, DEAD_QUEUE, QUEUE_STATUS_COMPLETED, SOURCE_SOT, QUEUE_STATUS_FAILED, PARSED_FROM } from "../../core/Atomic.ts";
+import type { NowPlayingUpdateThreshold, PlayObject, ScrobbleActionResult, PlayMatchResult, SourcePlayerObj, SourcePlayerJson } from "../../core/PlaySchema.ts";
 import { truncateStringToLength } from "../../core/StringUtils.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
 import AbstractComponent from "../common/AbstractComponent.ts";
@@ -30,7 +21,8 @@ import {
     type TimeRangeListensFetcher,
 } from "../common/infrastructure/Atomic.ts";
 import { CALCULATED_PLAYER_STATUSES } from '../../core/Atomic.ts';
-import type {QueueContext, ReportedPlayerStatus, ScrobbleResult} from '../../core/Atomic.ts';
+import type { QueueContext, ReportedPlayerStatus } from '../../core/Atomic.ts';
+import type { ScrobbleResult } from '../../core/PlaySchema.ts';
 import type {ClientType} from "../../core/Atomic.ts";
 import type {CommonClientConfig, NowPlayingOptions, UpstreamRefreshOptions} from "../common/infrastructure/config/client/index.ts";
 import { TRANSFORM_HOOK } from "../../core/Transform.ts";
@@ -61,12 +53,11 @@ import { generateLoggableAbortReason, ScrobbleSubmitError, SimpleError, StageCha
 import { serializeError} from 'serialize-error';
 import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.ts";
 import { spawn, isAbortError, delay, waitForEvent } from 'abort-controller-x';
-import type { QueryPlaysOpts, WithPlayRelation } from "../common/database/drizzle/repositories/PlayRepository.ts";
+import type { QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.ts";
 import type {PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
-import { asPlay } from "../../core/PlayMarshalUtils.ts";
 import { GenericRepository } from "../common/database/drizzle/repositories/BaseRepository.ts";
 import assert from "node:assert";
-import { COMPONENT_STATE, type ComponentClientApiJson, type PlayApiCommonDetailed } from "../../core/Api.ts";
+import { COMPONENT_STATE, type ComponentClientApiJson } from "../../core/Api.ts";
 import type {ComponentState} from "react";
 import { PLAY_EVENT_TYPE, type PlayEvent } from "../../core/PlayEvent.ts";
 import { dupeCheckToPlayEvent, queueCompletionStateToPlayEvent, scrobbleToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from "../common/database/drizzle/entityUtils.ts";
@@ -450,6 +441,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             lastImportSuccess: undefined,
             ...super.getApiData(),
             ...this.getComponentApiData(),
+            mode: 'client',
             type: this.type,
             status: this.status,
             queued: this.queuedLength,
@@ -469,7 +461,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             return {};
         }
         return {
-            [this.nowPlayingLastPlay.platformId]: {...(this.nowPlayingLastPlay as unknown as SourcePlayerJson), expiration: !this.nowPlayingIsRealtime ? this.nowPlayingExpirationDate?.toISOString() : undefined }
+            [this.nowPlayingLastPlay.platformId]: {...asJsonPlayer(this.nowPlayingLastPlay), expiration: !this.nowPlayingIsRealtime ? this.nowPlayingExpirationDate?.toISOString() : undefined }
         }
     }
 
@@ -1054,7 +1046,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
             //const processable = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], [QUEUE_STATUS_FAILED], retries);
             const processableArgs: QueryPlaysOpts  = {queues: [{queueName: INGRESS_QUEUE, queueStatus: QUEUE_STATUS_FAILED, retries}], with: ['queues']};
-            let processable = await this.playRepo.findPlaysPaginated(processableArgs);
+            let processable = await this.playRepo.findPlaysPaginated<'queueStates'>(processableArgs);
             this.deadLetterQueued = processable.meta.total;
 
             const total = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], {queueStatus: [QUEUE_STATUS_FAILED], retries: 10000});
@@ -1073,7 +1065,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 more = processable.data.length === processable.meta.limit;
                 if(more) {
                     offset += processable.meta.limit;
-                    processable = await this.playRepo.findPlaysPaginated({...processableArgs, offset});
+                    processable = await this.playRepo.findPlaysPaginated<'queueStates'>({...processableArgs, offset});
                 }
             }
             this.setStatus(`All processable Dead Plays have been queued`);
@@ -1306,7 +1298,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         let offset = 0;
         while (true) {
             const { data, meta } = await this.playRepo.getQueued(INGRESS_QUEUE, { offset, retries: 0 });
-            const existingQueued = await this.existingPlay(queueablePlay, data.map(x => asPlay(x.play)), false);
+            const existingQueued = await this.existingPlay(queueablePlay, data.map(x => x.play), false);
             // closestMatchedPlay is always set when match is true and queued plays from db always have an id
             const matchedId = existingQueued.closestMatchedPlay?.id;
             // want to be very confident of this
@@ -1559,37 +1551,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     public getQueued = (queueName: string, offset?: number) => {
         return this.playRepo.getQueued(queueName, {offset});
-    }
-
-    public getPlaysPaginated = (args: QueryPlaysOpts) => {
-        const {
-            limit,
-            offset,
-            with: withQuery = ['input','parent-input','queues'],
-            ...rest
-        } = args;
-        const parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
-        const parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
-        return this.playRepo.findPlaysPaginated({limit: parsedLimit, offset: parsedOffset, with: withQuery, ...rest});
-    }
-
-    public async getPlaysPaginatedInternal(args: QueryPlaysOpts) {
-        const {
-            limit,
-            offset,
-            with: withQuery = ['input','parent-input','queues'],
-            ...rest
-        } = args;
-        const parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
-        const parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
-        return this.playRepo.findPlaysPaginated({limit: parsedLimit, offset: parsedOffset, with: withQuery, ...rest});
-    }
-
-    public async getPlayApiResponse(uid: string, opts: {with?: WithPlayRelation[]} = {}): Promise<PlayApiCommonDetailed> {
-        const {
-            with: withQuery = ['input','parent-input','queues','events'],
-        } = opts;
-        return await this.playRepo.findByUid(uid, { with: withQuery as WithPlayRelation[] }) as unknown as PlayApiCommonDetailed;
     }
 
     public async deletePlay(play: PlayWith<'children'>, children?: boolean): Promise<void> {

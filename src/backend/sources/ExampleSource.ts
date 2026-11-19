@@ -1,6 +1,7 @@
 import type { EventEmitter } from "events";
 import request from 'superagent';
-import type {PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
+import type { URLData } from "../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal } from "../../core/PlaySchema.ts";
 import type {
     FormatPlayObjectOptions,
     InternalConfig,

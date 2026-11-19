@@ -1,5 +1,6 @@
 import type { Response } from 'superagent';
-import type {Credit, OptionalCacheUsage, PlayObject, PlayObjectMinimal, TrackData, URLData} from "../../../../core/Atomic.ts";
+import type { Credit, OptionalCacheUsage, TrackData, URLData } from "../../../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal } from "../../../../core/PlaySchema.ts";
 import { DEVELOPER_CONTACT } from "../../infrastructure/Atomic.ts";
 import { type AbstractApiOptions, type FormatPlayObjectOptions, MUSICBRAINZ_URL, type MusicbrainzApiConfigData } from "../../infrastructure/Atomic.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";

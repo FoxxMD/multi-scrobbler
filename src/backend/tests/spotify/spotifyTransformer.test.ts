@@ -6,7 +6,7 @@ import asPromised from 'chai-as-promised';
 import { before, beforeEach, describe, it } from 'mocha';
 import type { TrackSearchResult } from '../../../core/Api.ts';
 import dayjs from 'dayjs';
-import type { PlayObject } from '../../../core/Atomic.ts';
+import type { PlayObject } from '../../../core/PlaySchema.ts';
 import { initMemoryCache } from '../../common/Cache.ts';
 import SpotifyTransformer, {
     COMPILATION_PENALTY,

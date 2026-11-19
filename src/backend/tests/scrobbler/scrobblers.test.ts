@@ -6,7 +6,8 @@ import dayjs from "dayjs";
 import { describe, it } from 'mocha';
 import { http, HttpResponse } from 'msw';
 import pEvent from 'p-event';
-import { INGRESS_QUEUE, type PlayObject, QUEUE_STATUS_FAILED, SOURCE_SOT } from "../../../core/Atomic.ts";
+import { INGRESS_QUEUE, QUEUE_STATUS_FAILED, SOURCE_SOT } from "../../../core/Atomic.ts";
+import type { PlayObject } from "../../../core/PlaySchema.ts";
 import { sleep, sortByOldestPlayDate } from "../../utils.ts";
 import { genGroupIdStr } from '../../../core/PlayUtils.ts';
 import mixedDuration from '../plays/mixedDuration.json' with { type: 'json' };
@@ -41,8 +42,8 @@ const firstPlayDate = dayjs().subtract(1, 'hour');
 const olderFirstPlayDate = dayjs().subtract(4, 'hour');
 
 const withDurPlays = withDuration.map(asPlay);
-// @ts-expect-error mixed duration is missing meta but not used for tests
-const mixedDurPlays = mixedDuration.map(asPlay);
+// mixed duration fixtures are missing meta, not used for tests
+const mixedDurPlays = mixedDuration.map(x => asPlay({meta: {}, ...x}));
 const normalizedWithDur = normalizePlays(withDurPlays, {initialDate: firstPlayDate});
 const normalizedWithMixedDur = normalizePlays(mixedDurPlays, {initialDate: firstPlayDate});
 

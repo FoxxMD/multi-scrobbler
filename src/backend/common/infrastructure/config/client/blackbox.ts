@@ -2,7 +2,7 @@ import * as z from "zod";
 import {componentTypeSchema} from "../../../../../core/Atomic.ts";
 import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, nowPlayingOptionsSchema, type EnvClientSchema} from "./index.ts";
 import { httpUrl } from "../../../../utils/ZodUtils.ts";
-import { publicPlaySchema, publicPlayerSchema } from "../../../../../core/PlayJsonSchema.ts";
+import { publicPlaySchema, publicPlayerSchema } from "../../../../../core/PlaySchema.ts";
 
 export const blackboxDataSchema = z.object({
     endpoint: httpUrl.meta({
@@ -84,10 +84,12 @@ export const blackboxScrobblePayloadSchema = z.object({
     type: z.literal('scrobble'),
     play: publicPlaySchema,
 }).meta({title: 'Blackbox Scrobble Payload'});
-export type BlackboxScrobblePayload = z.output<typeof blackboxScrobblePayloadSchema>;
+/** JSON shape of the payload sent */
+export type BlackboxScrobblePayload = z.input<typeof blackboxScrobblePayloadSchema>;
 
 export const blackboxNowPlayingPayloadSchema = z.object({
     type: z.literal('nowPlaying'),
     play: publicPlayerSchema.nullable().meta({description: 'The Player reporting Now Playing, or null when Now Playing is cleared'}),
 }).meta({title: 'Blackbox Now Playing Payload'});
-export type BlackboxNowPlayingPayload = z.output<typeof blackboxNowPlayingPayloadSchema>;
+/** JSON shape of the payload sent */
+export type BlackboxNowPlayingPayload = z.input<typeof blackboxNowPlayingPayloadSchema>;

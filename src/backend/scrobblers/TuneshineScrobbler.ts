@@ -1,6 +1,6 @@
 import { childLogger, type Logger, type LogLevel } from "@foxxmd/logging";
 import type EventEmitter from "events";
-import type {PlayMatchResult, PlayObject, SourcePlayerObj} from "../../core/Atomic.ts";
+import type { PlayMatchResult, PlayObject, SourcePlayerObj } from "../../core/PlaySchema.ts";
 import type {FormatPlayObjectOptions} from "../common/infrastructure/Atomic.ts";
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.ts";
 import { playToPostImageMetadata, TuneshineApiClient } from "../common/vendor/tuneshine/TuneshineApiClient.ts";

@@ -12,7 +12,7 @@ import { randomPlayState} from '../../core/tests/utils/fixtures.js'
 import dayjs from "dayjs";
 import qs from 'qs';
 import { asJsonPlayObject } from "../../core/PlayMarshalUtils.js";
-import { generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList } from "../../core/tests/utils/apiFixtures.js";
+import { generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList, generateSseMessage } from "../../core/tests/utils/apiFixtures.js";
 import type { PaginatedResponse, QueryPlaysOptsJson} from "../../core/Api.js";
 import type {MsSseEvent, PlayApiCommonDetailed} from "../../core/Api.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
@@ -257,7 +257,7 @@ export const ListLiveUpdates = meta.story({
           await delay(1000);
           return res;
         }),
-        sse('/api/events?next=true', async ({ params, client }) => {
+        sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
             setInterval(() => {
 
               const index = faker.number.int({min: 0, max: 7});
@@ -269,10 +269,7 @@ export const ListLiveUpdates = meta.story({
               liveUpdateData[index].play.data.track = {name: faker.music.songName()};
               liveUpdateData[index].updatedAt = dayjs().toISOString();
 
-              client.send({
-              //@ts-expect-error
-              event: 'playUpdate', 
-              data: {componentId: 1, data: {uid: liveUpdateData[index].uid}}})
+              client.send(generateSseMessage('playUpdate', {uid: liveUpdateData[index].uid}))
             }, 2000);
         })
       ],
@@ -312,7 +309,7 @@ export const ListLiveInsert = meta.story({
           await delay(1000);
           return res;
         }),
-        sse('/api/events?next=true', async ({ params, client }) => {
+        sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
             setInterval(() => {
               //const first = livePlayInsertData[0].play.data.playDate;
               //const last = livePlayInsertData[livePlayData.length - 1].play.data.playDate;
@@ -326,10 +323,7 @@ export const ListLiveInsert = meta.story({
                 }]
               });
               livePlayInsertData.splice(randomIndex, 0, generatedPlayData);
-              client.send({
-              //@ts-expect-error
-              event: 'playInsert', 
-              data: {componentId: 1, data: generatedPlayData}});
+              client.send(generateSseMessage('playInsert', generatedPlayData));
 
             }, 2000);
         })

@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 import type { DBusInterface} from 'dbus-ts';
 import { sessionBus, Connection, type ConnectOpts } from 'dbus-ts';
 import type EventEmitter from "events";
-import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal } from "../../core/PlaySchema.ts";
 import type {FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic.ts";
 import {
     MPRIS_IFACE,

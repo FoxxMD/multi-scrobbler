@@ -3,7 +3,7 @@ import { useSSEAnyEvent, useSSEContext } from '@flamefrontend/sse-runtime-react'
 import { type InfiniteData, useInfiniteQuery, type UseInfiniteQueryResult, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { type ComponentProps, useCallback, useMemo, useState } from "react";
-import type {MsSseEvent, MsSseEventPayload, PaginatedResponse, PlayApiCommonDetailed, QueryPlaysOptsJson, QueryPlaysOptsJsonRefreshable } from '../../../core/Api.js';
+import {asSseEvent, type MsSseEvent, type PaginatedResponse, type PlayApiCommonDetailed, type QueryPlaysOptsJson, type QueryPlaysOptsJsonRefreshable } from '../../../core/Api.js';
 import {actionContextSchema, type ComponentType, type QueueContext} from '../../../core/Atomic.js';
 import { fetchPlaysPage, tanQueries, useQueryWatcher } from '../../queries/index.js';
 import { ActivitySummarySkeleton } from '../ActivityDetail.js';
@@ -83,11 +83,12 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
     const queryClient = useQueryClient();
     const client = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(client, (payload) => {
-        if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === componentId) {
-            switch (payload.type) {
+        const event = asSseEvent(payload.data);
+        if (event?.componentId === componentId) {
+            switch (event.event) {
               case 'playInsert':
                 { 
-                  const componentData = payload.data as MsSseEventPayload<PlayApiCommonDetailed>;
+                  const componentData = event;
                 console.debug(`[Insert Check ${componentData.data.uid}] Recieved playInsert for Component ${componentId}, checking if Play can be inserted...`);
                 if(playInWindow(componentData.data, queryJson)) {
                   queryClient.setQueryData(tanQueries.activities.list(componentId, query).queryKey, (old: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown> | undefined) => {
@@ -101,7 +102,7 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
                       if(old === undefined) {
                         return old;
                       }
-                      const componentData = payload.data as MsSseEventPayload<Pick<PlayApiCommonDetailed, 'uid'>>;
+                      const componentData = event;
                       // playDelete events don't happen outside of ui the except for retention cleanup
                       // and its unlikely the user would have fetched data during a retention cleanup event
                       //

@@ -1,4 +1,5 @@
-import { SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type AmbPlayObject, type Credit, type ScrobbleTsSOC, type TrackData, type TrackStringOptions, type MusicServiceName, type MusicServices, type MusicServicesAny, type MBIdType, musicServiceIdBaseSchema, musicServicesSchema, musicServiceName } from "./Atomic.ts";
+import { SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type Credit, type ScrobbleTsSOC, type TrackData, type MusicServiceName, type MusicServices, type MusicServicesAny, type MBIdType, musicServiceIdBaseSchema, musicServicesSchema, musicServiceName } from "./Atomic.ts";
+import type { AmbPlayObject, TrackStringOptions } from "./PlaySchema.ts";
 import { compareNormalizedStrings, defaultBuildTrackStringTransformers } from "./StringUtils.ts";
 import { removeUndefinedKeys } from "./DataUtils.ts";
 import type { Dayjs } from "dayjs";

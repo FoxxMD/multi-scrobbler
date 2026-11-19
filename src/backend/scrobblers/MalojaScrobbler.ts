@@ -1,7 +1,8 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import type EventEmitter from "events";
 import normalizeUrl from "normalize-url";
-import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject} from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, type ComponentAuthType } from "../../core/Atomic.ts";
+import type { PlayObject } from "../../core/PlaySchema.ts";
 import { capitalize } from "../../core/StringUtils.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";

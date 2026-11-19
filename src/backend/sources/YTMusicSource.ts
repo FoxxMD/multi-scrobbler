@@ -1,6 +1,7 @@
 import dayjs, { type Dayjs } from "dayjs";
 import type EventEmitter from "events";
-import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type PlayObjectMinimal} from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, type ComponentAuthType } from "../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal } from "../../core/PlaySchema.ts";
 import type {FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic.ts";
 import type { MSBackendEventMap } from "../common/infrastructure/MSBackendEventMap.ts";
 import type {YTMusicSourceConfig} from "../common/infrastructure/config/source/ytmusic.ts";

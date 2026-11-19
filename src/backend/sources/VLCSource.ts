@@ -2,7 +2,8 @@ import { parseRegexSingle, parseToRegex } from "@foxxmd/regex-buddy-core";
 import type { EventEmitter } from "events";
 import * as VLC from "vlc-client"
 import type {VlcMeta, VlcStatus} from "vlc-client/dist/Types.js";
-import type {ComponentAuthType, PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import type { ComponentAuthType } from "../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal } from "../../core/PlaySchema.ts";
 import type {
     FormatPlayObjectOptions,
     InternalConfig,

@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, type ComponentProps, useEffect, type ReactNode } from "react"
 import { Portal, Group, Span, Menu, Box, Heading, Skeleton, Wrap, HStack, Badge, Stack, List, Flex, Text, Card, Button, CloseButton, SkeletonText, type BadgeProps, type MenuItemProps, createOverlay, Dialog, type MenuSelectionDetails } from '@chakra-ui/react';
-import { COMPONENT_STATE, type ComponentCommonApiJson, type ComponentsApiJson, type ComponentState, type ComponentStateBody, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
+import { COMPONENT_STATE, type ComponentCommonApiJson, type ComponentsApiJson, type ComponentState, type ComponentStateBody, isComponentSourceApiJson, type MsSseEvent, asSseEvent } from "../../../core/Api.js";
 import { capitalize, capitalizeWords } from "../../../core/StringUtils.js";
 import { ChevronLeftButton, EllipsisButton, ExternalLinkIcon, EyeButton, EyeClosedIcon, EyeIcon, IdleIcon, PowerButton, PowerIcon, type PowerOffButton, PowerOffIcon, RetryButton, RetryIcon, SyncPlayIconRaw, UnlockButton, UnlockIconRaw } from "../icons/ChakraIcons.js";
 import { PlayersContainer, PlayersContainerFetchable } from "../chakraPlayer/Player.js";
@@ -511,16 +511,16 @@ export const ComponentDetailedFetchable = (props: { componentId: number }) => {
     const queryClient = useQueryClient();
     const client = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(client, (payload) => {
-        if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === props.componentId) {
-            switch (payload.type) {
+        const event = asSseEvent(payload.data);
+        if (event?.componentId === props.componentId) {
+            switch (event.event) {
                 case 'componentUpdate':
                     queryClient.setQueryData(tanQueries.components.single(props.componentId).queryKey, (old: ComponentCommonApiJson | undefined) => {
                         if(old === undefined) {
                             // don't create partial data if the full component hasn't been fetched yet
                             return old;
                         }
-                        const componentData = payload.data as MsSseEventPayload<Partial<ComponentCommonApiJson>>;
-                        return { ...old, ...componentData.data };
+                        return { ...old, ...event.data };
                     });
             }
         }

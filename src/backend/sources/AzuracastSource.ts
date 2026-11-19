@@ -5,7 +5,8 @@ import type { EventEmitter } from "events";
 import type { CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket';
 import { WS } from 'iso-websocket'
 import pEvent from 'p-event';
-import type {PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
+import type { URLData } from "../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal } from "../../core/PlaySchema.ts";
 import type {
     FormatPlayObjectOptions,
     InternalConfig,

@@ -1,6 +1,7 @@
 import dayjs, { type Dayjs } from "dayjs";
 
-import type {PlayProgress, PlayProgressPositional, Second} from "../../../core/Atomic.ts";
+import type { Second } from "../../../core/Atomic.ts";
+import type { PlayProgress, PlayProgressPositional } from "../../../core/PlaySchema.ts";
 
 export class ListenProgressTS implements PlayProgress {
 

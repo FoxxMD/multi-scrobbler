@@ -1,4 +1,5 @@
-import { type Credit, isPlayObject, type ObjectPlayData, type PlayObject, type TrackMeta, type TrackMetaIsrc } from "../../../core/Atomic.ts";
+import type { Credit, TrackMeta, TrackMetaIsrc } from "../../../core/Atomic.ts";
+import { isPlayObject, type ObjectPlayData, type PlayObject } from "../../../core/PlaySchema.ts";
 import type {AtomicStageConfig, PlayTransformPartsAtomic, StageConfig} from "../../../core/Transform.ts";
 import AbstractTransformer from "./AbstractTransformer.ts";
 import { testWhenConditions } from "../../utils/PlayTransformUtils.ts";

@@ -1,5 +1,6 @@
 import { searchAndReplace } from "@foxxmd/regex-buddy-core";
-import type {Credit, PlayObject} from "../../../core/Atomic.ts";
+import type { Credit } from "../../../core/Atomic.ts";
+import type { PlayObject } from "../../../core/PlaySchema.ts";
 import { configValToSearchReplace, isSearchAndReplaceTerm, isUserStage, testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
 import type {ConditionalSearchAndReplaceRegExp, PlayTransformUserStage} from "../../../core/Transform.ts";

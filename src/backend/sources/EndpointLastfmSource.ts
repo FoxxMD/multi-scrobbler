@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import type EventEmitter from "events";
-import { PARSED_FROM, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { PARSED_FROM, SOURCE_SOT } from "../../core/Atomic.ts";
+import type { PlayObject } from "../../core/PlaySchema.ts";
 import type {
     ExpressRequest,
     FormatPlayObjectOptions,

@@ -1,6 +1,6 @@
 import { withAlbumArt } from "../../core/MusicMetadata.ts";
 import type { EventEmitter } from "events";
-import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal } from "../../core/PlaySchema.ts";
 import type {
     FormatPlayObjectOptions,
     InternalConfig,

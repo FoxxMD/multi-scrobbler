@@ -1,7 +1,8 @@
 import { creditIsrc, creditMbid, isrcMeta, mbMeta } from "../../../../core/MusicMetadata.ts";
 import { nameToCredit } from "../../../../core/MusicMetadata.ts";
 import dayjs, { type Dayjs, type ManipulateType } from "dayjs";
-import {type PlayObject, type PlayObjectMinimal, type MBID, type ScrobbleActionResult, PARSED_FROM} from "../../../../core/Atomic.ts";
+import { type MBID, PARSED_FROM } from "../../../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal, ScrobbleActionResult } from "../../../../core/PlaySchema.ts";
 import { getRoot } from "../../../ioc.ts";
 import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.ts";

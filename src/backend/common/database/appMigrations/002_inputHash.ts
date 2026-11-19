@@ -1,7 +1,8 @@
 import type { SqliteDatabase, Migration } from 'sqlite-up';
 import type { MigrateBaseContext } from '../appMigrator.ts';
 import { playInputs, plays as drizzlePlays } from '../drizzle/schema/schema.ts';
-import { eq } from 'drizzle-orm';
+import { eq, getColumns, sql } from 'drizzle-orm';
+import { asLegacyPlay } from '../../../../core/PlayMarshalUtils.ts';
 import { playContentBasicInvariantTransform } from '../../../utils/PlayComparisonUtils.ts';
 import { hashObject } from '../../../utils/StringUtils.ts';
 
@@ -19,14 +20,15 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
     
     // first update input hashes
     while (more) {
-        const inputRows = await ctx.db.select().from(playInputs).limit(100).offset(offset);
+        // read raw, plays may be in a legacy shape
+        const inputRows = await ctx.db.select({...getColumns(playInputs), play: sql<string>`${playInputs.play}`}).from(playInputs).limit(100).offset(offset);
         for (const row of inputRows) {
             if (row.playHash !== null) {
                 processed++;
             }
             try {
                 await ctx.db.update(playInputs).set({
-                    playHash: hashObject(playContentBasicInvariantTransform(row.play).data)
+                    playHash: hashObject(playContentBasicInvariantTransform(asLegacyPlay(row.play)).data)
                 }).where(eq(playInputs.id, row.id));
                 updated++;
                 processed++;
@@ -49,11 +51,11 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
     more = true;
     // then update Plays so hashes reflect Plays after transforms are done 
     while (more) {
-        const playsRows = await ctx.db.select().from(drizzlePlays).limit(100).offset(offset);
+        const playsRows = await ctx.db.select({...getColumns(drizzlePlays), play: sql<string>`${drizzlePlays.play}`}).from(drizzlePlays).limit(100).offset(offset);
         for (const row of playsRows) {
             try {
                 await ctx.db.update(drizzlePlays).set({
-                    playHash: hashObject(playContentBasicInvariantTransform(row.play).data)
+                    playHash: hashObject(playContentBasicInvariantTransform(asLegacyPlay(row.play)).data)
                 }).where(eq(drizzlePlays.id, row.id));
                 updated++;
                 processed++;

@@ -1,5 +1,6 @@
 import { HStack, Box, Field, Stack, Fieldset, Button, IconButton, DateInput, DatePicker, Portal, Text, Span } from "@chakra-ui/react"
-import { playEditStrictCreateSchema, type PlayObjectMinimal, type TrackData } from '../../../core/Atomic.js';
+import { playEditStrictCreateSchema, type TrackData } from '../../../core/Atomic.js';
+import type { PlayObjectMinimal } from '../../../core/PlaySchema.js';
 import { MSErrorBoundary } from '../ErrorBoundary.js';
 import { useForm, formOptions } from '@tanstack/react-form';
 import { TrackSearch } from "./TrackSearch.js";
@@ -95,6 +96,7 @@ export const PlayEdit = (props: PlayEditProps) => {
                 track: { name: '' },
                 artists: [],
                 ...data,
+                playDate: data.playDate ?? undefined,
                 // ArrayField needs an array, an empty list is removed on submit
                 albumArtists: data.albumArtists ?? []
             },

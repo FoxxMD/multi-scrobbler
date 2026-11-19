@@ -5,7 +5,7 @@ import { type CountUpStat, CountUpValueText } from "./CountUpStat";
 import { capitalize, capitalizeWords } from "../../core/StringUtils";
 import { getMusicServiceIcon } from "./icons/ChakraIcons";
 import { AvatarStack, type AvatarStackItem } from "./AvatarStack";
-import type { PublicDashboardData, PublicPlay } from "../../core/Api";
+import type { PublicDashboardData, DashboardPlay } from "../../core/Api";
 import { TrackResultAlbumContent } from "./play/TrackSearch";
 import { ArtistCreditTags } from "./ArtistCreditDisplay";
 import { MusicServiceIndicatorStack } from "./musicServices/MusicServiceIndicators";
@@ -158,7 +158,7 @@ export const ComponentStats = (props: Pick<PublicDashboardData, 'sources' | 'cli
     return <Wrap ref={wrapRef} gap="10" justify="space-evenly">{componentStats}</Wrap>
 }
 
-export const PublicPlayCompactItem = (props: { play: PublicPlay }) => {
+export const PublicPlayCompactItem = (props: { play: DashboardPlay }) => {
 
     const {
         track,
@@ -193,7 +193,7 @@ export const PublicPlayCompactItem = (props: { play: PublicPlay }) => {
 }
 
 // eslint-disable-next-line arrow-body-style
-export const PublicPlayData = (props: { play: PublicPlay }) => {
+export const PublicPlayData = (props: { play: DashboardPlay }) => {
     return (<Box>
         {/* <Box hideBelow="md">
             <PlayDataDataList dates={false} play={props.play} />
@@ -207,9 +207,9 @@ export const PublicPlayData = (props: { play: PublicPlay }) => {
 }
 
 export interface RecentPublicPlaysProps {
-    data?: PublicPlay[]
+    data?: DashboardPlay[]
     /** shown first, marked as Now Playing */
-    nowPlaying?: PublicPlay | null
+    nowPlaying?: DashboardPlay | null
 }
 
 const NowPlayingIndicator = () => (

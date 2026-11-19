@@ -1,6 +1,6 @@
 import { type ComponentProps, useState, useCallback, useEffect, type ReactNode, type PropsWithChildren } from "react"
 import { Badge, Stat, HStack, type BadgeProps } from '@chakra-ui/react';
-import type {ComponentClientApiJson, ComponentCommonApiJson, MsSseEvent} from "../../../core/Api.js";
+import {asSseEvent, type ComponentClientApiJson, type ComponentCommonApiJson, type MsSseEvent} from "../../../core/Api.js";
 import { TextMuted } from "../TextMuted.js";
 import type { IconBaseProps } from "react-icons/lib";
 import { DownArrowIcon, UpArrowIcon } from "../icons/ChakraIcons.js";
@@ -144,8 +144,9 @@ export const CountIndicatorStreamable = (props: { data: Pick<ComponentCommonApiJ
 
     const client = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(client, (payload) => {
-        if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === data.id) {
-            switch (payload.type) {
+        const event = asSseEvent(payload.data);
+        if (event?.componentId === data.id) {
+            switch (event.event) {
                 case 'scrobble':
                 case 'discovered':
                     setStatsData((old) => ({current: (old.current ?? 0) + 1, total: old.total + 1}));
@@ -175,8 +176,9 @@ export const QueuedIndicatorStreamable = (props: { data: Pick<ComponentClientApi
 
     const client = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(client, (payload) => {
-        if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === data.id) {
-            switch (payload.type) {
+        const event = asSseEvent(payload.data);
+        if (event?.componentId === data.id) {
+            switch (event.event) {
                 case 'playQueued':
                     setStatsData((old) => ({current: old.current + 1}));
                     break;
@@ -208,13 +210,13 @@ export const DeadLetterIndicatorStreamable = (props: { data: Pick<ComponentClien
 
     const client = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(client, (payload) => {
-        if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === data.id) {
-            switch (payload.type) {
+        const event = asSseEvent(payload.data);
+        if (event?.componentId === data.id) {
+            switch (event.event) {
                 case 'deadLetter':
                     setStatsData((old) => ({current: old.current, total: old.total + 1}));
                     break;
                 case 'deadLetterRemoved':
-                case 'removeDeadLetter':
                     setStatsData((old) => ({current: old.current, total: old.total - 1}));
                     break;
                 case 'deadLetterDequeued':
@@ -250,7 +252,7 @@ export const DateIndicatorStreamable = (props: Omit<ComponentProps<typeof DateIn
 
         const client = useSSEContext<MsSseEvent>();
         useSSEAnyEvent(client, (payload) => {
-            if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === id) {
+            if (asSseEvent(payload.data)?.componentId === id) {
                 // TODO update state from event
                 setCurrent(dayjs().toISOString());
             }

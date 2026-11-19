@@ -5,7 +5,7 @@ import { http, HttpResponse, sse } from 'msw';
 import { Container } from '@chakra-ui/react';
 import { ComponentDetailedDesktop } from "../../client/components/msComponent/MSComponentDetailed.js";
 import {Provider} from "../../client/components/Provider.js";
-import { generateClientApiJson, generateFakeError, generateHistoricalPlayApi, generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList, generateSourceApiJson, generateSourcePlayerJson } from "../../core/tests/utils/apiFixtures.js";
+import { generateClientApiJson, generateFakeError, generateHistoricalPlayApi, generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList, generateSourceApiJson, generateSourcePlayerJson, generateSseMessage } from "../../core/tests/utils/apiFixtures.js";
 import type {PaginatedResponse, MsSseEvent, PlayApiCommonDetailed} from "../../core/Api.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import { sseProviderOptions } from "../../client/App.js";
@@ -58,7 +58,7 @@ const meta = preview.meta({
           }
           return HttpResponse.json(generatePlayApiCommonDetailed({}, serializeError(new Error('This is an error', {cause: new Error('this is a nested error', {cause: new Error('another error')})}))));
         }),
-        sse('/api/events?next=true', async ({ params, client }) => {})
+        sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {})
       ],
     },
   },
@@ -102,7 +102,7 @@ export const ClientHistoricalFailDetailed = meta.story({
     }
 });
 
-const randomQueue = () => faker.helpers.arrayElement(['scrobbleQueued', 'scrobbleDequeued']);
+const randomQueue = () => faker.helpers.arrayElement(['playQueued', 'playDequeued'] as const);
 
 export const ClientDetailedFetchable = meta.story({
     args: {
@@ -113,19 +113,10 @@ export const ClientDetailedFetchable = meta.story({
     parameters: {
         msw: {
           handlers: [
-            sse('/api/events?next=true', async ({ params, client }) => {
-            setInterval(() => client.send({
-              //@ts-expect-error
-              event: randomQueue(), 
-              data: {componentId: 1}}), 2000);
-            setInterval(() => client.send({
-              //@ts-expect-error
-              event: 'deadLetter', 
-              data: {componentId: 1}}), 3000);
-            setInterval(() => client.send({
-              //@ts-expect-error
-              event: 'scrobble', 
-              data: {componentId: 1}}), 2500);
+            sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
+            setInterval(() => client.send(generateSseMessage(randomQueue(), {})), 2000);
+            setInterval(() => client.send(generateSseMessage('deadLetter', {})), 3000);
+            setInterval(() => client.send(generateSseMessage('scrobble', {})), 2500);
             })
           ],
         },

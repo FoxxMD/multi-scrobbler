@@ -1,6 +1,6 @@
 import type { Dayjs } from "dayjs";
 import type { AdditionalTrackInfoResponse } from "./vendor/listenbrainz/interfaces.ts";
-import type { Merge, RequiredKeys, StrictOmit } from "ts-essentials";
+import type { StrictOmit } from "ts-essentials";
 import type {ErrorObject} from "serialize-error";
 import type { FlowControlTerm, TransformHook } from "./Transform.ts";
 import type {Changeset} from "json-diff-ts";
@@ -89,14 +89,14 @@ export const musicServiceMBSchema = z.object({
     ...musicServiceIdBaseSchema.shape,
     name: z.literal(musicServiceName.enum.musicbrainz),
     idType: z.enum(['recording', 'release', 'track', 'artist', 'release-group']).optional()
-});
+}).meta({title: 'MusicBrainz ID'});
 export type MusicServiceMB = z.infer<typeof musicServiceMBSchema>;
 export const musicServiceNonMBSchema = z.object({
     ...musicServiceIdBaseSchema.shape,
     name: musicServiceName.exclude(['musicbrainz']),
-});
+}).meta({title: 'Music Service ID'});
 export type MusicServiceNonMB = z.infer<typeof musicServiceNonMBSchema>;
-export const musicServicesBaseSchema = z.discriminatedUnion('name', [musicServiceMBSchema.omit({image: true}), musicServiceNonMBSchema.omit({image: true})]);
+export const musicServicesBaseSchema = z.discriminatedUnion('name', [musicServiceMBSchema.omit({image: true}).meta({title: 'MusicBrainz ID'}), musicServiceNonMBSchema.omit({image: true}).meta({title: 'Music Service ID'})]);
 export type MusicServicesBase = z.infer<typeof musicServicesBaseSchema>;
 export const musicServicesSchema = z.discriminatedUnion('name', [musicServiceMBSchema, musicServiceNonMBSchema]);
 
@@ -115,22 +115,6 @@ export const COMPONENT_TYPES: ComponentType[] = [COMPONENT_TYPE_SOURCE, COMPONEN
 export const isComponentTypeSource = (type: string): type is ComponentTypeSource => type === COMPONENT_TYPE_SOURCE;
 export const isComponentTypeClient = (type: string): type is ComponentTypeClient => type === COMPONENT_TYPE_CLIENT;
 export const isComponentType = (type: string): type is ComponentType => isComponentTypeClient(type) || isComponentTypeSource(type);
-export interface SourceStatusData {
-    status: string;
-    type: SourceType;
-    display: string;
-    tracksDiscovered: number;
-    name: string;
-    canPoll: boolean;
-    hasAuth: boolean;
-    hasAuthInteraction: boolean;
-    authed: boolean;
-    players: Record<string, SourcePlayerJson>
-    sot: SOURCE_SOT_TYPES
-    supportsUpstreamRecentlyPlayed: boolean;
-    manualListening?: boolean
-    systemListeningBehavior?: boolean
-}
 
 export interface ClientStatusData {
     status: string;
@@ -151,44 +135,6 @@ export interface ClientStatusData {
 
 export type PlayObjectIncludeTypes = 'album' | 'time' | 'artist' | 'track' | 'timeFromNow' | 'trackId' | 'comment' | 'platform' | 'session';
 export const recentIncludes: PlayObjectIncludeTypes[] = ['time', 'timeFromNow', 'track', 'album', 'artist', 'comment'];
-
-export interface TrackStringOptions<T = string> {
-    include?: PlayObjectIncludeTypes[]
-    transformers?: {
-        artists?: (a: string[]) => T | string
-        album?: (t: string | undefined, data: AmbPlayObject, hasExistingParts?: boolean) => T | string | undefined
-        track?: (t: string | undefined, data: AmbPlayObject, hasExistingParts?: boolean) => T | string
-        time?: (t: Dayjs | undefined, i?: ScrobbleTsSOC) => T | string
-        timeFromNow?: (t: Dayjs | undefined) => T | string | undefined
-        comment?: (c: string | undefined) => T | string | undefined
-        platform?: (d: string | undefined, u: string | undefined, s: string | undefined) => T | string | undefined
-        reducer?: (arr: (T | string | undefined)[]) => T //(acc: T, curr: T | string) => T
-    }
-}
-
-export interface PlayProgressAmb<D extends DateLike = Dayjs> {
-    timestamp: D
-    position?: number
-    positionPercent?: number
-}
-
-export interface PlayProgress extends PlayProgressAmb {
-    timestamp: Dayjs
-}
-
-export interface PlayProgressPositional extends PlayProgress {
-    position: number
-}
-
-export interface ListenRangeDataAmb<D extends DateLike = Dayjs> {
-    start: PlayProgressAmb<D>
-    end: PlayProgressAmb<D>
-}
-
-export interface ListenRangeData extends ListenRangeDataAmb {
-    start: PlayProgress
-    end: PlayProgress
-}
 
 export const mbidSchema = z.stringFormat('mbid',/[a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12}/);
 
@@ -216,7 +162,7 @@ export const creditSchema = z.object({
     // not httpUrl because some sources (plex) use relative proxy urls
     image: z.string().optional(),
     metadata: musicServicesSchema.array().optional()
-})
+}).meta({id: 'Credit'})
 export type Credit = z.infer<typeof creditSchema>;
 
 export interface TrackMeta {
@@ -267,32 +213,11 @@ export const playTrackStrictDataSchema = z.object({
     albumArtists: z.object({...creditSchema.shape, name: z.string().nonempty()}).array().optional()
 })
 
-export interface PlayData<D extends DateLike = Dayjs> extends TrackData {
-    /**
-     * The date the track was played at
-     * */
-    playDate?: D
-    /** Number of seconds the track was listened to */
-    listenedFor?: number
-    listenRanges?: ListenRangeDataAmb<D>[]
-    playDateCompleted?: D
-    repeat?: boolean
-}
-
-export const playDataSchema = z.object({
-    ...playTrackDataSchema.shape,
-    playDate: z.string().optional(),
-    playDateCompleted: z.string().optional(),
-    listenedFor: z.number().nonnegative().optional(),
-    repeat: z.boolean().optional()
-});
-
 export const playDataStrictSchema = z.object({
     ...playTrackStrictDataSchema.shape,
     playDate: z.string().optional(),
     listenedFor: z.number().nonnegative().optional()
 });
-
 
 export const playMetaUrlSchema = z.looseObject({
     web: z.string().optional(),
@@ -302,93 +227,6 @@ export const playMetaUrlSchema = z.looseObject({
 export const parsedFromSchema = z.enum(['backlog','now playing','player','history','ingress'])
 export type PARSED_FROM_TYPE = z.infer<typeof parsedFromSchema>;// 'backlog' | 'now playing' | 'player' | 'history' | 'ingress';
 export const PARSED_FROM = parsedFromSchema.enum;
-
-export type PlayMeta<D extends DateLike = Dayjs, T = {}> = Merge<PlayMetaBase<D>, T>;
-
-export interface PlayMetaBase<D extends DateLike = Dayjs> {
-    source?: string
-    sourceSOT?: SOURCE_SOT_TYPES
-
-    seenAt?: D
-
-    //dbUid?: string
-    //dbId?: number
-
-    /*
-    * If applicable, the name of the Service providing the track (Spotify, Tidal, etc...)
-    */
-    musicService?: string
-
-    /**
-     * Specifies from what facet/data from the source this play was parsed from IE player, backlog, now playing, etc...
-     * */
-    parsedFrom?: PARSED_FROM_TYPE
-    /**
-     * Unique ID for this track, given by the Source
-     * */
-    trackId?: string
-
-    /**
-     * Atomic ID for this instance of played tracked IE a unique ID for "this track played at this time"
-     * */
-    playId?: string
-    newFromSource?: boolean
-    url?: {
-        /**
-         * The URL where this track can be found for the serice it was created from
-         * 
-         * IE
-         * 
-         * * Spotify Source <-- url to spotify track
-         * * Maloja Client <--- url to specific scrobble
-         */
-        web?: string
-        /**
-         * The URL where this play was originally played
-         * 
-         * IE Frank Sinatra - My way FROM youtube.com <-- URL pointing to specific video
-         */
-        origin?: string
-    }
-    user?: string
-    mediaType?: string
-    server?: string
-    library?: string
-    /**
-     * The position the "player" is at in the track at the time the play was reported, in seconds
-     * */
-    trackProgressPosition?: number
-
-    /*
-    * Name of the media player (program)
-    */
-    mediaPlayerName?: string
-
-   /*
-    * Version of the media player (program)
-    */
-    mediaPlayerVersion?: string
-    /**
-     * A unique identifier for the device playing this track
-     * */
-    deviceId?: string
-    /** The ID/Key for individual sessions on a device/platform */
-    sessionId?: string
-
-    nowPlaying?: boolean
-
-    scrobbleTsSOC?: ScrobbleTsSOC
-
-    comment?: string
-
-    /** Was the component activitely monitoring when this Play was created? */
-    wasMonitored?: boolean
-
-    //lifecycle: PlayLifecycle<D>
-    lifecycleInputs?: LifecycleInput[]
-
-    //[key: string]: any
-}
 
 export const playMetaSchema = z.looseObject({
     source: z.string().optional(),
@@ -403,24 +241,6 @@ export interface LifecycleInput {
 }
 
 export type ErrorLike = Error | ErrorObject;
-
-/** scrobble action plus the match result before scrobbling */
-export interface ScrobbleResult<D extends DateLike = Dayjs> {
-    match?: PlayMatchResult<D>
-    payload?: ScrobblePayload
-    warnings?: string[]
-    error?: Error | ErrorObject
-    response?: ScrobbleResponse
-    mergedScrobble?: AmbPlayObjectMinimal<D>
-    createdAt?: D
-}
-
-export interface PlayLifecycle<D extends DateLike = Dayjs> {
-    input?: object
-    original?: PlayObjectMinimal<D>
-    steps: LifecycleStep[]
-    scrobble?: ScrobbleResult<D>
-}
 
 export interface LifecycleStep {
     stageName: string
@@ -441,74 +261,12 @@ export interface LifecycleStep {
 export type ScrobblePayload = object | string;
 export type ScrobbleResponse = object | string;
 
-export interface ScrobbleActionResult<D extends DateLike = Dayjs> {
-    payload: ScrobblePayload, 
-    response?: ScrobbleResponse, 
-    mergedScrobble?: AmbPlayObject<D>
-    warnings?: string[]
-    createdAt: string
-}
-
-export interface PlayMatchResult<D extends DateLike = Dayjs> {
-    match: boolean
-    score: number
-    breakdowns: string[]
-    reason?: string
-    closestMatchedPlay?: AmbPlayObjectMinimal<D>
-    transformedPlay?: PlayObjectMinimal
-    summary?: string
-    createdAt: string
-}
-
 export type ScrobbleTsSOC = 1 | 2;
 
 export const SCROBBLE_TS_SOC_START: ScrobbleTsSOC = 1;
 export const SCROBBLE_TS_SOC_END: ScrobbleTsSOC = 2;
 
 export type DateLike = Dayjs | string
-
-export interface PlayOriginal<D extends DateLike = Dayjs> {
-    data?: object
-    play?: PlayObjectMinimal<D>
-}
-
-export interface AmbPlayObject<D extends DateLike = Dayjs, T = {}> {
-    id?: number
-    uid?: string
-    data: PlayData<D>,
-    meta: PlayMeta<D,T>
-    original?: PlayOriginal<D>
-    scrobble?: ScrobbleResult<D>
-    lifecycle?: LifecycleStep[]
-}
-
-export type AmbPlayObjectMinimal<D extends DateLike = Dayjs, T = {}> = Pick<AmbPlayObject<D,T>, RequiredKeys<AmbPlayObject<D>>> & Pick<AmbPlayObject<D,T>, 'id' | 'uid'>;
-
-export const isPlayObject = (obj: object): obj is PlayObject => {
-   return obj !== undefined && obj !== null &&  'data' in obj && typeof obj.data === 'object' && 'meta' in obj && typeof obj.meta === 'object';
-}
-
-export type PlayObject<T = {}> = AmbPlayObject<Dayjs,T>;
-/** PlayObject that is known to have a playDate */
-export type DatedPlayObject<T = {}> = PlayObject<T> & { data: { playDate: Dayjs } };
-export type PlayObjectMinimal<D extends DateLike = Dayjs, T = {}> = AmbPlayObjectMinimal<D,T>;
-export interface PlayActivity {
-  play: JsonPlayObject
-  status: string
-  error?: ErrorLike
-}
-export type JsonPlayObject = AmbPlayObject<string>;
-
-export interface ObjectPlayData extends PlayData {
-    playDate?: Dayjs
-    playDateCompleted?: Dayjs
-}
-
-
-export const playEditCreateSchema = z.object({
-    data: playDataSchema,
-    meta: playMetaSchema
-});
 
 export const playEditStrictCreateSchema = z.object({
     data: playDataStrictSchema,
@@ -532,38 +290,6 @@ export interface LogEvent {
 
 export type PlayPlatformIdStr = string;
 
-export interface SourcePlayerObj<D extends DateLike = Dayjs> {
-    /** unique tuple identifying user and device */
-    platformId: PlayPlatformIdStr,
-    /** full play/scrobble object information */
-    play?: AmbPlayObject<D>,
-    playFirstSeenAt?: string,
-    /** last time play was updated in MS */
-    playLastUpdatedAt?: string,
-    /** last time player self-reported it was updated at */
-    playerLastUpdatedAt: string
-    /** when this specific play/player was created */
-    createdAt?: number
-    /** player poisition */
-    position?: Second
-    listenedDuration: Second
-    /** if player is mirroring generic now-playing (from upstream LZ/LFM client) */
-    nowPlayingMode?: boolean
-    /** status of player */
-    status: {
-        /** what player reported: paused, playing, stopped, unknown  */
-        reported: string
-        /** what MS has derived from watching player behavior: paused, playing, stopped, unknown  */
-        calculated: string
-        /** When player has not reported any new updates for N seconds */
-        stale: boolean
-        /** When player has not reported any new updates for N * 2 seconds */
-        orphaned: boolean
-    }
-}
-
-export type SourcePlayerJson = SourcePlayerObj<string>;
-
 export interface SourceScrobble<PlayType> {
     source: string
     play: PlayType
@@ -572,8 +298,6 @@ export interface SourceScrobble<PlayType> {
 export interface QueuedScrobble<PlayType> extends SourceScrobble<PlayType> {
     id: string
 }
-
-export type NowPlayingUpdateThreshold = (play?: PlayObject) => number;
 
 export interface DeadLetterScrobble<PlayType, RetryType = Dayjs> extends QueuedScrobble<PlayType> {
     id: string
@@ -680,12 +404,6 @@ export type MissingMbidType = 'artists' | 'title' | 'album' | 'duration';
 export const DEFAULT_MISSING_TYPES: MissingMbidType[] = ['artists','title','album', 'duration'];
 export const DEFAULT_MISSING_MBIDS_TYPES: MissingMbidType[] = ['artists','title','album'];
 
-export interface TransformResult {
-    type: string,
-    name: string,
-    play: PlayData
-}
-
 export const KNOWN_MEDIA_PROVIDER_URLS = [
 'spotify.com',
 // spotify cdn
@@ -764,7 +482,6 @@ export type PlayState = PlaySourceState | PlayClientState;
 export const PLAY_STATES = Array.from(new Set([...PLAY_CLIENT_STATE, ...PLAY_SOURCE_STATE]));
 export const isPlayState = (val: string): val is PlayState => PLAY_STATES.includes(val);
 
-
 export type QueueStatus = 'queued' | 'completed' | 'failed';
 export const QUEUE_STATUS_QUEUED: QueueStatus = 'queued';
 export const QUEUE_STATUS_COMPLETED: QueueStatus = 'completed';
@@ -779,7 +496,7 @@ export const queueContextSchema = z.object({
     useCache: z.boolean().optional(),
     reason: z.string().optional(),
     isRetry: z.boolean().optional()
-});
+}).meta({title: 'Queue Context'});
 
 export type QueueContext = z.infer<typeof queueContextSchema>;
 
@@ -826,8 +543,11 @@ export type DeepReplaceValue<Type, ReplaceTuple extends readonly [any, any][]> =
 export const qsOptions: IParseBaseOptions = { 
     ignoreQueryPrefix: true, 
     depth: 5,
-    parameterLimit: 20,
+    // a plays query with every filter is ~80 params
+    parameterLimit: 100,
     arrayLimit: 20,
+    // fail instead of silently dropping params (or turning an array into an object) over the limits
+    throwOnLimitExceeded: true,
     plainObjects: true,
     allowPrototypes: false
 };

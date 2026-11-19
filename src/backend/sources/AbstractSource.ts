@@ -2,7 +2,8 @@ import { childLogger, type LogDataPretty, type LogLevel } from '@foxxmd/logging'
 import dayjs, { type Dayjs } from "dayjs";
 import type { EventEmitter } from "events";
 import type { FixedSizeList } from "fixed-size-list";
-import { DEAD_QUEUE, INGRESS_QUEUE, PARSED_FROM, type PlayMatchResult, type PlayObject, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, SOURCE_SOT } from "../../core/Atomic.ts";
+import { DEAD_QUEUE, INGRESS_QUEUE, PARSED_FROM, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, SOURCE_SOT } from "../../core/Atomic.ts";
+import type { PlayMatchResult, PlayObject } from "../../core/PlaySchema.ts";
 import { capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
 import AbstractComponent from "../common/AbstractComponent.ts";
@@ -41,11 +42,9 @@ import pMap from 'p-map';
 import type { Counter } from 'prom-client';
 import { spawn, isAbortError, delay, throwIfAborted, waitForEvent } from 'abort-controller-x';
 import { generateLoggableAbortReason, StageChangeError } from '../common/errors/MSErrors.ts';
-import type { QueryPlaysOpts, RequestPlayQuery, WithPlayRelation } from '../common/database/drizzle/repositories/PlayRepository.ts';
-import { asPlay } from '../../core/PlayMarshalUtils.ts';
+import type { QueryPlaysOpts } from '../common/database/drizzle/repositories/PlayRepository.ts';
 import { AsyncTask, SimpleIntervalJob } from 'toad-scheduler';
-import { COMPONENT_STATE, type ComponentSourceApiJson, type ComponentState, type PlayApiCommonDetailed } from '../../core/Api.ts';
-import type {PaginatedResponse} from "../../core/Api.ts";
+import { COMPONENT_STATE, type ComponentSourceApiJson, type ComponentState } from '../../core/Api.ts';
 import type { PlayWith } from '../common/database/drizzle/drizzleTypes.ts';
 import { PLAY_EVENT_TYPE, type PlayEvent } from '../../core/PlayEvent.ts';
 import { dupeCheckToPlayEvent, queueCompletionStateToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from '../common/database/drizzle/entityUtils.ts';
@@ -369,6 +368,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             lastImportSuccess: undefined,
             ...super.getApiData(),
             ...this.getComponentApiData(),
+            mode: 'source',
             type: this.type,
             status: this.status,
             players: {},
@@ -444,16 +444,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return list.sort(sortByNewestPlayDate);
     }
 
-    getRecentPlaysApi = async (query: RequestPlayQuery) => {
-        const res = await this.playRepo.findPlays({
-            limit: 100,
-        });
-        return res.map((x) => {
-            const {id, ...rest} = x;
-            return rest;
-        })
-    }
-
     protected recentDiscoveredCacheKey = () => {
         return `recentDiscovered-${this.dbComponent.id}`;
     }
@@ -472,7 +462,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 order: 'desc',
                 sort: 'playedAt',
                 limit: 200
-            })).map(x => ({...asPlay(x.play), id: x.id, uid: x.uid}))
+            })).map(x => ({...x.play, id: x.id, uid: x.uid}))
             list.sort(sortByOldestPlayDate);
             await this.cache.cacheDb.set<PlayObject[]>(cacheKey, list, '2m');
         }
@@ -488,7 +478,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 order: 'desc',
                 sort: 'playedAt',
                 limit: 200
-            })).map(x => ({...asPlay(x.play), id: x.id, uid: x.uid}))
+            })).map(x => ({...x.play, id: x.id, uid: x.uid}))
             list.sort(sortByOldestPlayDate);
             await this.cache.cacheDb.set<PlayObject[]>(cacheKey, list, '2m');
         }
@@ -1162,7 +1152,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
             //const processable = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], [QUEUE_STATUS_FAILED], retries);
             const processableArgs: QueryPlaysOpts  = {queues: [{queueName: INGRESS_QUEUE, queueStatus: QUEUE_STATUS_FAILED, retries}], with: ['queues']};
-            let processable = await this.playRepo.findPlaysPaginated(processableArgs);
+            let processable = await this.playRepo.findPlaysPaginated<'queueStates'>(processableArgs);
             this.deadLetterQueued = processable.meta.total;
 
             const total = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], {queueStatus: [QUEUE_STATUS_FAILED], retries: 10000});
@@ -1181,7 +1171,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 more = processable.data.length === processable.meta.limit;
                 if(more) {
                     offset += processable.meta.limit;
-                    processable = await this.playRepo.findPlaysPaginated({...processableArgs, offset});
+                    processable = await this.playRepo.findPlaysPaginated<'queueStates'>({...processableArgs, offset});
                 }
             }
             this.setStatus(`All processable Dead Plays have been queued`);
@@ -1238,37 +1228,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
             maxInterval = this.config.data.maxInterval;
         }
         return maxInterval - this.getInterval();
-    }
-
-    public async getPlaysPaginated(args: QueryPlaysOpts): Promise<PaginatedResponse<PlayApiCommonDetailed>> {
-        const {
-            limit,
-            offset,
-            with: withQuery = ['input','parent-input','queues'],
-            ...rest
-        } = args;
-        const parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
-        const parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
-        return this.playRepo.findPlaysPaginated({limit: parsedLimit, offset: parsedOffset, with: withQuery, ...rest});
-    }
-
-    public async getPlaysPaginatedInternal(args: QueryPlaysOpts) {
-        const {
-            limit,
-            offset,
-            with: withQuery = ['input','parent-input','queues'],
-            ...rest
-        } = args;
-        const parsedLimit = limit !== undefined ? Number.parseInt(limit as unknown as string) : undefined;
-        const parsedOffset = offset !== undefined ? Number.parseInt(offset as unknown as string) : undefined;
-        return this.playRepo.findPlaysPaginated({limit: parsedLimit, offset: parsedOffset, with: withQuery, ...rest});
-    }
-
-    public async getPlayApiResponse(uid: string, opts: {with?: WithPlayRelation[]} = {}): Promise<PlayApiCommonDetailed> {
-        const {
-            with: withQuery = ['input','parent-input','queues','events'],
-        } = opts;
-        return await this.playRepo.findByUid(uid, { with: withQuery as WithPlayRelation[] }) as unknown as PlayApiCommonDetailed;
     }
 
     public async deletePlay(play: PlayWith<'children'>, children?: boolean): Promise<void> {

@@ -6,7 +6,7 @@ import { ChakraCodeBlockShort } from "./CodeBlock";
 import { capitalizeWords } from "../../core/StringUtils";
 import { MSCollapsible, type MSCollapsibleExternalProps } from "./MSCollapsible";
 import { TimelineErrorIcon } from "./timeline/TimelineIcon";
-import type {ScrobbleResult} from "../../core/Atomic";
+import type { ScrobbleResult } from "../../core/PlaySchema";
 import { TimelineItemSummaryText } from "../utils/ComponentUtils";
 import { Muted } from "./Typography";
 
