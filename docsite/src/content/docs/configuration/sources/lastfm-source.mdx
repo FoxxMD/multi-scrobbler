@@ -21,6 +21,23 @@ This Source **monitors your Last.fm scrobble history** and re-scrobbles new acti
 
 :::
 
+<Aside type="warning" title="API Keys for Paid Members Only">
+
+[Starting **December 1st 2026**](https://support.last.fm/t/api-keys-will-require-pro-from-1st-december/121030) Last.fm will allow **API Keys for Pro (paid) Last.fm Accounts only.**
+
+This applies to all new **and existing** keys. This means that your existing Last.fm Client with Multi-Scrobbler will stop working on this day unless you have a Pro (paid) account.
+
+This is being discussed [here](https://github.com/FoxxMD/multi-scrobbler/discussions/788) in the Multi-Scrobbler repository and work is being done to implement Last.fm imports/migrations [here](https://github.com/FoxxMD/multi-scrobbler/issues/791).
+
+In the meantime, you should either:
+
+* backup your Last.fm history using one of these tools
+  * https://benjaminbenben.com/lastfm-to-csv/
+  * https://lastfm.ghan.nl/export/
+* or create a [listenbrainz](https://listenbrainz.org) account and use their automated import in settings -> imports listens
+
+</Aside>
+
 To configure this Source use the same registration instructions and configuration data shown in [Last.fm (Client)](/configuration/clients/lastfm) with the difference being `"configureAs": "source"` defined in the File/AIO configuration below.
 
 ## Configuration

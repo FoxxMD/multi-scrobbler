@@ -138,6 +138,9 @@ services:
         [Restart multi-scrobbler](#start-multi-scrobbler) to create the new Source. You may wish to refer to the [User and Library defaults/filtering](/configuration/sources/plex) in the Plex Source docs for a more granular setup.
     </TabItem>
     <TabItem value="lastfm" label="Last.fm">
+
+        <Badge text="Warning!" size="small" variant="caution" /> [Last.fm is ending free API Keys](/configuration/clients/lastfm)
+
         If you are already scrobbling to Last.fm and wish to mirror your scrobbling activity to one or more other [Clients](#setup-clients), use this Source.
         
         If, instead, you want to scrobble **from** multi-scrobbler **to** Last.fm then see the Last.fm tab in the [Setup Clients](#setup-clients) section below.
@@ -283,6 +286,8 @@ Modify the `lastfm.json` file you created in the [Setup Sources](#setup-sources)
 
     </TabItem>
     <TabItem value="lastfm" label="Last.fm">
+        <Badge text="Warning!" size="small" variant="caution" /> [Last.fm is ending free API Keys](/configuration/clients/lastfm)
+        
         [Register for an API account at Last.fm.](https://www.last.fm/api/account/create)
 
         Use the following for **Callback URL**:
