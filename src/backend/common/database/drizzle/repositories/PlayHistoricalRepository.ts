@@ -6,7 +6,7 @@ import { historicalPlayInputs, playsHistorical } from "../schema/schema.ts";
 import type {FindWhere, FindMany, WhereClause, PlayHistoricalSelect, PlayHistoricalNew, HistoricalPlayInputNew, HistoricalPlayInputSelect} from "../drizzleTypes.ts";
 import type { MarkOptional } from "ts-essentials";
 import { removeUndefinedKeys } from '../../../../../core/DataUtils.ts';
-import { and, asc, desc, eq, gt, gte, inArray, lt, lte, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import dayjs from "dayjs";
 import { EmptyFilter } from "drizzle-orm/relations";
 import { buildDateCompare, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
@@ -221,6 +221,61 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         const dir = order === 'desc' ? desc : asc;
         const rows = await this.db.select().from(t).where(and(...conditions)).orderBy(dir(t.playedAt), dir(t.id)).limit(limit);
         return rows.map(x => ({id: x.id, playedAt: x.playedAt!.valueOf(), play: hydratePlaySelect(x, [])}));
+    }
+
+    /**
+     * Up to `limit` ids of a mirror's plays, optionally only in `range` (inclusive, ms) and only those not compacted yet.
+     * Ordered by id so batched cleanups make steady progress.
+     * */
+    findMirrorIds = async (args: {mirrorId: number, range?: [number, number], uncompacted?: boolean, limit: number}): Promise<number[]> => {
+        const {mirrorId, range, uncompacted = false, limit} = args;
+        const t = playsHistorical;
+        const conditions = [eq(t.mirrorId, mirrorId)];
+        if (range !== undefined) {
+            conditions.push(gte(t.playedAt, dayjs(range[0])), lte(t.playedAt, dayjs(range[1])));
+        }
+        if (uncompacted) {
+            conditions.push(isNull(t.compacted));
+        }
+        const rows = await this.db.select({id: t.id}).from(t).where(and(...conditions)).orderBy(asc(t.id)).limit(limit);
+        return rows.map(x => x.id);
+    }
+
+    /** Number of a mirror's plays, optionally only in `range` (inclusive, ms) and only those not compacted yet */
+    countMirror = async (args: {mirrorId: number, range?: [number, number], uncompacted?: boolean}): Promise<number> => {
+        const {mirrorId, range, uncompacted = false} = args;
+        const t = playsHistorical;
+        const conditions = [eq(t.mirrorId, mirrorId)];
+        if (range !== undefined) {
+            conditions.push(gte(t.playedAt, dayjs(range[0])), lte(t.playedAt, dayjs(range[1])));
+        }
+        if (uncompacted) {
+            conditions.push(isNull(t.compacted));
+        }
+        const [row] = await this.db.select({count: count()}).from(t).where(and(...conditions));
+        return row?.count ?? 0;
+    }
+
+    /** Replace raw upstream data of these plays with a removal note */
+    compactInputs = async (ids: number[]): Promise<void> => {
+        if (ids.length === 0) {
+            return;
+        }
+        await runTransaction(this.db, async () => {
+            await this.db.update(historicalPlayInputs).set({data: {removedReason: 'Removed by compaction'}}).where(inArray(historicalPlayInputs.playId, ids));
+            await this.db.update(playsHistorical).set({compacted: 'input'}).where(inArray(playsHistorical.id, ids));
+        });
+    }
+
+    /** Delete plays and their inputs */
+    deleteWithInputs = async (ids: number[]): Promise<void> => {
+        if (ids.length === 0) {
+            return;
+        }
+        await runTransaction(this.db, async () => {
+            await this.db.delete(historicalPlayInputs).where(inArray(historicalPlayInputs.playId, ids));
+            await this.db.delete(playsHistorical).where(inArray(playsHistorical.id, ids));
+        });
     }
 
     findPlayIds = async (args: QueryPlaysOpts, opts: ComponentConstrainedRepoOpts = {}): Promise<number[]> => {

@@ -29,6 +29,10 @@ export class JobRepository extends DrizzleBaseRepository<'jobs'> {
         return this.db.select().from(jobs).where(eq(jobs.importStatus, 'running'));
     }
 
+    findByMirror = async (mirrorId: number): Promise<JobSelect[]> => {
+        return this.db.select().from(jobs).where(eq(jobs.mirrorId, mirrorId));
+    }
+
     findForUser = async (userId: string): Promise<JobSelect[]> => {
         return this.db.select().from(jobs).where(eq(jobs.userId, userId));
     }

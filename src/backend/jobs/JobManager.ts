@@ -10,6 +10,7 @@ import type { ImportPacer, ImportProvider } from "./ImportProvider.ts";
 import { type ExportClient, type HaltStatus, JobRunner, type JobRuntime } from "./JobRunner.ts";
 import { JobTargetRepository } from "../common/database/drizzle/repositories/JobTargetRepository.ts";
 import { LockRegistry } from "./LockRegistry.ts";
+import { MirrorService } from "./MirrorService.ts";
 import { LastfmFileImportProvider } from "./lastfm/LastfmFileImportProvider.ts";
 import { LastfmApiImportProvider, type LastfmImportSource } from "./lastfm/LastfmApiImportProvider.ts";
 import LastfmApiClient from "../common/vendor/LastfmApiClient.ts";
@@ -89,6 +90,7 @@ export class JobManager {
     readonly emitter = new WildcardEmitter();
     readonly locks = new LockRegistry();
     readonly importsDir: string;
+    readonly mirrors: MirrorService;
     /** not readonly so tests can point it at the server's db after init */
     db: DbConcrete;
     protected runners = new Map<number, JobRunner>();
@@ -101,6 +103,20 @@ export class JobManager {
         this.logger = childLogger(opts.logger, 'Jobs');
         this.importsDir = opts.importsDir ?? path.join(getDataDir(), 'imports');
         this.db = opts.db;
+        const getDb = () => this.db;
+        this.mirrors = new MirrorService({
+            get db() { return getDb(); },
+            logger: this.logger,
+            locks: this.locks,
+            emitter: this.emitter,
+            isJobActive: (jobId) => this.isJobActive(jobId),
+        });
+    }
+
+    /** true while the job's import or any of its exports is running in this process */
+    isJobActive(jobId: number): boolean {
+        const runner = this.runners.get(jobId);
+        return runner !== undefined && (runner.importRunning || runner.exportsRunning.length > 0);
     }
 
     resolveComponent(componentId: number): object | undefined {
@@ -265,6 +281,7 @@ export class JobManager {
     /** Halts everything without changing persisted status, so running processes resume on next boot */
     shutdown = async () => {
         this.shuttingDown = true;
+        await this.mirrors.shutdown();
         await Promise.allSettled(Array.from(this.runners.values()).map(x => x.shutdown()));
     }
 

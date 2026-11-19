@@ -135,6 +135,8 @@ export const playsHistorical = sqliteTable("plays_historical", {
   playHash: text(),
   mbidIdentifier: text(),
   mirrorId: integer().references(() => playMirrors.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
+  // 'input' once the raw upstream data in historical_play_inputs was removed
+  compacted: text(),
 }, (table) => [
   index("play_historical_component_id_idx").on(table.componentId),
   index("play_historical_mirror_played_idx").on(table.mirrorId, table.playedAt),

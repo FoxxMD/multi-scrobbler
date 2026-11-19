@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 import type { DbConcrete } from "../drizzleUtils.ts";
 import { playMirrors, playsHistorical } from "../schema/schema.ts";
 import { DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
-import { addRange, subtractRanges, type TimeRange } from "../../../../utils/RangeUtils.ts";
+import { addRange, removeRange, subtractRanges, type TimeRange } from "../../../../utils/RangeUtils.ts";
 
 export type PlayMirrorSelect = typeof playMirrors.$inferSelect;
 
@@ -61,6 +61,17 @@ export class MirrorRepository extends DrizzleBaseRepository<'playMirrors'> {
             throw new Error(`Mirror ${id} does not exist`);
         }
         const coverage = addRange(mirror.coverage, range);
+        await this.updateById(id, {coverage});
+        return coverage;
+    }
+
+    /** Remove a range from coverage, or all coverage when range is undefined */
+    removeCoverage = async (id: number, range?: TimeRange): Promise<TimeRange[]> => {
+        const mirror = await this.getById(id);
+        if(mirror === undefined) {
+            throw new Error(`Mirror ${id} does not exist`);
+        }
+        const coverage = range === undefined ? [] : removeRange(mirror.coverage, range);
         await this.updateById(id, {coverage});
         return coverage;
     }

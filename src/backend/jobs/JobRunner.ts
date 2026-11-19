@@ -180,6 +180,9 @@ export class JobRunner {
                 await this.setImport({importStatus: 'completed', importCompletedAt: dayjs()});
                 return;
             }
+            if(this.deps.locks.holder(mirrorLockKey(job.mirrorId)) !== undefined) {
+                throw new JobConflictError('A cleanup is running for this mirror. Start again when it finishes');
+            }
             const key = mirrorImportLockKey(job.mirrorId);
             if(!this.deps.locks.tryAcquire(key, holder)) {
                 throw new JobConflictError('Another import is already running for this mirror');

@@ -1,0 +1,1 @@
+ALTER TABLE `plays_historical` ADD `compacted` text;

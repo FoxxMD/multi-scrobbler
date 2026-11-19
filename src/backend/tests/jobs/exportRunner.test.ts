@@ -11,7 +11,7 @@ import { JobTargetRepository } from '../../common/database/drizzle/repositories/
 import { DrizzlePlayHistoricalRepository } from '../../common/database/drizzle/repositories/PlayHistoricalRepository.ts';
 import { components } from '../../common/database/drizzle/schema/schema.ts';
 import { WildcardEmitter } from '../../common/WildcardEmitter.ts';
-import { componentLockKey, type ExportClient, JobRunner, type JobRunnerDeps } from '../../jobs/JobRunner.ts';
+import { componentLockKey, type ExportClient, mirrorLockKey, JobRunner, type JobRunnerDeps } from '../../jobs/JobRunner.ts';
 import { LockRegistry } from '../../jobs/LockRegistry.ts';
 import type { DbConcrete } from '../../common/database/drizzle/drizzleUtils.ts';
 import { COMPONENT_STATE } from '../../../core/Api.ts';
@@ -265,6 +265,17 @@ describe('Job export runner', function () {
         await until(() => runner.runtime.exports[target.id]?.waiting === 'Waiting for a cleanup to finish');
         expect(client.queued).length(0);
         locks.release(componentLockKey(client.componentId), 'cleanup');
+        await exportTask(runner, target.id);
+        expect(client.queued).length(7);
+    });
+
+    it('waits while a cleanup holds the mirror lock', async function () {
+        const {runner, target, client, locks, mirror} = await setup();
+        locks.tryAcquire(mirrorLockKey(mirror.id), 'cleanup');
+        await runner.startExport(target.id);
+        await until(() => runner.runtime.exports[target.id]?.waiting === 'Waiting for a cleanup to finish');
+        expect(client.queued).length(0);
+        locks.release(mirrorLockKey(mirror.id), 'cleanup');
         await exportTask(runner, target.id);
         expect(client.queued).length(7);
     });
