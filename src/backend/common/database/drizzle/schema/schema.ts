@@ -141,6 +141,18 @@ export const playsHistorical = sqliteTable("plays_historical", {
   index("play_historical_playedAt_idx").on(table.playedAt)
 ]);
 
+/** Raw upstream data used to create a historical Play. Mirrors play_inputs for plays_historical */
+export const historicalPlayInputs = sqliteTable("historical_play_inputs", {
+  id: integer({ mode: 'number' }).primaryKey(),
+  playId: integer().notNull().references(() => playsHistorical.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
+  data: text({ mode: 'json' }).$type<object>(),
+  play: PlayJson('play').notNull(),
+  playHash: text(),
+  createdAt: DayjsTimestamp('createdAt').$defaultFn(() => dayjs())
+}, (table) => [
+  uniqueIndex('historical_play_input_id_idx').on(table.playId)
+]);
+
 // export const playParentRelations = defineRelations({plays}, (r) => ({
 //   plays: {
 //     parent: r.one.plays({
@@ -259,7 +271,7 @@ export const playEvents = sqliteTable("play_events", {
   index('play_event_id_idx').on(table.playId)
 ]);
 
-const playRelations = defineRelations({ plays, queueStates, playEvents, playInputs, components, jobs, componentMigrations, playsHistorical, playMirrors, users, sessions, accounts, verifications, appSettings, apikeys, userSettings }, (r) => ({
+const playRelations = defineRelations({ plays, queueStates, playEvents, playInputs, components, jobs, componentMigrations, playsHistorical, historicalPlayInputs, playMirrors, users, sessions, accounts, verifications, appSettings, apikeys, userSettings }, (r) => ({
   plays: {
     queueStates: r.many.queueStates(),
     input: r.one.playInputs({
@@ -292,6 +304,11 @@ const playRelations = defineRelations({ plays, queueStates, playEvents, playInpu
     mirror: r.one.playMirrors({
       from: r.playsHistorical.mirrorId,
       to: r.playMirrors.id,
+    }),
+    input: r.one.historicalPlayInputs({
+      from: r.playsHistorical.id,
+      to: r.historicalPlayInputs.playId,
+      optional: true,
     }),
   },
   playMirrors: {
@@ -398,6 +415,8 @@ export const getConfigByTableName = <T extends TableName>(name: T) => {
       return jobs;
     case 'playMirrors':
       return playMirrors;
+    case 'historicalPlayInputs':
+      return historicalPlayInputs;
   }
 }
 

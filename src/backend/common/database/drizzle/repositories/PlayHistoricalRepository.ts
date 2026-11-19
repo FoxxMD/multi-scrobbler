@@ -1,9 +1,9 @@
 import { type DbConcrete, runTransaction } from "../drizzleUtils.ts";
 import { TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
 import type { PlayObject } from "../../../../../core/PlaySchema.ts";
-import { generatePlayHistoricalEntity, hydratePlaySelect, type PlayHydateOptions, type PlayHistoricalEntityOpts } from "../entityUtils.ts";
-import { plays, playsHistorical } from "../schema/schema.ts";
-import type {FindWhere, FindMany, WhereClause, PlayHistoricalSelect, PlayHistoricalNew} from "../drizzleTypes.ts";;
+import { generateInputEntity, generatePlayHistoricalEntity, hydratePlaySelect, type PlayHydateOptions, type PlayHistoricalEntityOpts } from "../entityUtils.ts";
+import { historicalPlayInputs, playsHistorical } from "../schema/schema.ts";
+import type {FindWhere, FindMany, WhereClause, PlayHistoricalSelect, PlayHistoricalNew, HistoricalPlayInputNew, HistoricalPlayInputSelect} from "../drizzleTypes.ts";
 import type { MarkOptional } from "ts-essentials";
 import { removeUndefinedKeys } from '../../../../../core/DataUtils.ts';
 import { inArray, sql } from "drizzle-orm";
@@ -36,8 +36,19 @@ export interface HydrateOpts {
    hydrate?: PlayHydateOptions[] 
 }
 
+export interface WithInputOpts {
+    /** include historical_play_inputs row as `input` */
+    withInput?: boolean
+}
+
+export type PlayHistoricalSelectMaybeInput = PlayHistoricalSelect & { input?: HistoricalPlayInputSelect | null };
+
 export type RepositoryCreatePlayHistoricalOpts = PlayHistoricalEntityOpts
-    & Pick<PlayHistoricalNew, 'play' | 'componentId'>;
+    & Pick<PlayHistoricalNew, 'play' | 'componentId'>
+    & {
+        /** raw upstream data. When undefined no input row is created */
+        input?: Partial<Pick<HistoricalPlayInputNew, 'play' | 'data'>>
+    };
 
 type PlayIdentifierPrimitiveMap = {
   uid: string;
@@ -91,20 +102,34 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
             const entitiesData = entitiesOpts.map((data) => {
                 const {
                     play,
+                    input,
                     ...rest
                 } = data;
                 return generatePlayHistoricalEntity(play, { componentId: this.componentId, ...rest });
             });
 
             playRows = await this.db.insert(playsHistorical).values(entitiesData).returning();
+
+            const inputDatas = playRows.flatMap((x, index) => {
+                const {play, input} = entitiesOpts[index];
+                if(input === undefined) {
+                    return [];
+                }
+                const {play: inputPlay = play, ...restInput} = input;
+                return [generateInputEntity({ play: inputPlay, playId: x.id, ...restInput }) as HistoricalPlayInputNew];
+            });
+            if(inputDatas.length > 0) {
+                await this.db.insert(historicalPlayInputs).values(inputDatas);
+            }
         });
 
         return playRows.map(x => ({...x, play: hydratePlaySelect(x, hydrate)}));
     }
 
-    findPlays = async (args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PlayHistoricalSelect[]> => {
+    findPlays = async (args: QueryPlaysOpts, opts: HydrateOpts & WithInputOpts & ComponentConstrainedRepoOpts = {}): Promise<PlayHistoricalSelectMaybeInput[]> => {
         const {
             hydrate,
+            withInput = false,
             componentId = this.componentId
         } = opts;
         // this does not work as type for query variable
@@ -133,7 +158,10 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         }
 
         query = removeUndefinedKeys(query, false);
-        const results = await this.db.query.playsHistorical.findMany(query);
+        if(withInput) {
+            query.with = {input: true};
+        }
+        const results = await this.db.query.playsHistorical.findMany(query) as PlayHistoricalSelectMaybeInput[];
         return results.map((x) => ({...x, play: hydratePlaySelect(x, hydrate)}));
     }
 
@@ -207,7 +235,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
 
     deletePlays = async (playsData: (Pick<PlayHistoricalSelect, 'id'> | number)[]) => {
         const ids = playsData.map(x => typeof x === 'number' ? x : x.id);
-        await this.db.delete(playsHistorical).where(inArray(plays.id, ids));
+        await this.db.delete(playsHistorical).where(inArray(playsHistorical.id, ids));
     }
 
     public checkExisting = async (play: PlayObject, opts: {taAccuracy?: TemporalAccuracy[]} & ComponentConstrainedRepoOpts = {}): Promise<PlayHistoricalSelect | undefined> => {
@@ -313,9 +341,24 @@ export const buildPlayHistoricalWhere = (args: PlayWhereOpts): WhereClause<'play
     return where;
 }
 
+/**
+ * Moves raw upstream data (play.original) into `input` so it is stored in historical_play_inputs instead of the play json
+ * */
 export const playToRepositoryCreatePlayHistoricalOpts = (data: MarkOptional<RepositoryCreatePlayHistoricalOpts, 'componentId'>): RepositoryCreatePlayHistoricalOpts => {
-    return {
+    const {
+        play: {
+            original,
+            ...playRest
+        },
+        ...rest
+    } = data;
+    const opts: RepositoryCreatePlayHistoricalOpts = {
         uid: data.play.meta?.playId,
-        ...data
+        ...rest,
+        play: playRest,
+    };
+    if(original !== undefined && opts.input === undefined) {
+        opts.input = {play: original.play, data: original.data};
     }
+    return opts;
 }
