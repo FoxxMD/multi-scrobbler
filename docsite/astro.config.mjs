@@ -145,7 +145,7 @@ export default defineConfig({
             variant: 'caution',
             link: {
               text: 'Learn More',
-              href: `${base}/configuration/clients/lastfm`,
+              href: `/configuration/clients/lastfm`,
             },
             endDate: '2026-11-30',
           },
@@ -155,7 +155,7 @@ export default defineConfig({
             variant: 'caution',
             link: {
               text: 'Learn More',
-              href: `${base}/configuration/clients/lastfm`,
+              href: `/configuration/clients/lastfm`,
             },
             startDate: '2026-11-30',
             endDate: '2026-12-15',
