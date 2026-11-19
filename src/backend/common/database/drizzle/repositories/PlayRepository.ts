@@ -48,6 +48,8 @@ const identifierExtractor: { [K in keyof PlayIdentifierPrimitiveMap]: (play: {id
   id: (play) => play.id,
   uid: (play) => play.uid,
 };
+const COMPACT_BATCH = 1000;
+
 export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
     protected hasQueueNextPrepared?: ReturnType<typeof this.prepareHasQueueNext>
@@ -364,6 +366,49 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return rows.map(x => x.id);
     }
 
+    /**
+     * Replace raw data of plays with a removal note: upstream input data ('input') and inputs used by transform stages ('transform').
+     * Marks each play with the compacted types.
+     * */
+    public compactPlays = async (ids: number[], types: CompactableProperty[]) => {
+        if(ids.length === 0 || types.length === 0) {
+            return;
+        }
+        const compacted = (['input', 'transform'] as CompactableProperty[]).filter(x => types.includes(x)).join('-');
+        // bounded so the IN list stays under sqlite's variable limit
+        for(let i = 0; i < ids.length; i += COMPACT_BATCH) {
+            await this.compactBatch(ids.slice(i, i + COMPACT_BATCH), types, compacted);
+        }
+    }
+
+    protected compactBatch = async (ids: number[], types: CompactableProperty[], compacted: string) => {
+        await runTransaction(this.db, async () => {
+            if(types.includes('input')) {
+                await this.db.update(playInputs).set({
+                    data: {removedReason: 'Removed by compaction'}
+                }).where(inArray(playInputs.playId, ids));
+            }
+            if(types.includes('transform')) {
+                const events = await this.db.select().from(playEvents).where(and(inArray(playEvents.playId, ids), eq(playEvents.eventName, 'transform')));
+                for(const ev of events) {
+                    const transformEvent = ev as PlayEventTransform;
+                    let compactedInput = false;
+                    const data = transformEvent.data.map(x => {
+                        if(x.inputs !== undefined && x.inputs.length > 0) {
+                            compactedInput = true;
+                            return {...x, inputs: x.inputs.map((y) => ({type: y.type, input: 'Removed by compaction'}))};
+                        }
+                        return x;
+                    });
+                    if(compactedInput) {
+                        await this.db.update(playEvents).set({data}).where(eq(playEvents.id, ev.id));
+                    }
+                }
+            }
+            await this.db.update(plays).set({compacted}).where(inArray(plays.id, ids));
+        });
+    }
+
     public retentionCleanup = async (componentType: string, retentionOpts: RetentionOptions & ComponentConstrainedRepoOpts) => {
 
         const loggerDel = childLogger(this.logger, ['Retention', 'Delete']);
@@ -430,40 +475,9 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                 const ids = await this.findPurgablePlayIds(date, {compacted: compactedFlags.join('-'), states: [state], dateComparer: 'seenAt', componentId: retentionOpts.componentId});
                 loggerCom.trace(`Found ${ids.length} '${retentionType}' plays`);
                 if(ids.length === 0) {
-                    summaryDelStates.push(`No '${retentionType}' Plays older than ${shortTodayAwareFormat(date)}`);
+                    summaryCompactStates.push(`No '${retentionType}' Plays older than ${shortTodayAwareFormat(date)}`);
                 } else {
-                    for(const id of ids) {
-                        if(compactTypes.includes('input')) {
-                            await this.db.update(playInputs).set({
-                                data: {removedReason: 'Removed by compaction'}
-                            }).where(eq(playInputs.playId, id));
-                        }
-                        if(compactTypes.includes('transform')) {
-                            const events = await this.db.query.playEvents.findMany({where: {playId: id}});
-                            for(const ev of events) {
-                                if(ev.eventName === 'transform') {
-                                    const transformEvent = ev as PlayEventTransform;
-                                    let compactedInput = false;
-                                    transformEvent.data = transformEvent.data.map(x => {
-                                        if(x.inputs !== undefined && x.inputs.length > 0) {
-                                            compactedInput = true;
-                                            return {...x, inputs: x.inputs.map((y) => ({type: y.type, input: 'Removed by compaction'}))};
-                                        }
-                                        return x;
-                                    });
-                                    if(compactedInput) {
-                                        await this.db.update(playEvents).set({data: transformEvent.data}).where(eq(playEvents.id, ev.id));
-                                    }
-                                }
-                            }
-                        }
-
-                        const updater = this.db.update(plays);
-                        const vals: Parameters<typeof updater.set>[0] = {
-                            compacted: compactedFlags.join('-')
-                        };
-                        await this.db.update(plays).set(vals).where(eq(plays.id, id));
-                    }
+                    await this.compactPlays(ids, compactedFlags);
                     loggerCom.trace(`Compacted ${ids.length} '${retentionType}' plays`);
                     summaryCompactStates.push(`${ids.length} '${retentionType}' Plays older than ${shortTodayAwareFormat(date)}`)
                 }
@@ -472,7 +486,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             }
         }
 
-        loggerCom.verbose(`Cleanup done! Summary:\n${summaryDelStates.join(' | ')}`);
+        loggerCom.verbose(`Cleanup done! Summary:\n${summaryCompactStates.join(' | ')}`);
     }
 
     protected prepareGetQueueNext = () => this.db.query.plays.findFirst({
