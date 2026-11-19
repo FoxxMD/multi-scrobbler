@@ -134,6 +134,7 @@ export class JobManager {
     }
 
     deleteJob = async (jobId: number) => {
+        const userId = (await this.jobRepo.getById(jobId))?.userId;
         const runner = this.runners.get(jobId);
         if(runner !== undefined) {
             await runner.stopImport('stopped');
@@ -141,6 +142,6 @@ export class JobManager {
             this.runners.delete(jobId);
         }
         await this.jobRepo.deleteJob(jobId);
-        this.emitter.emit('jobDeleted', {jobId});
+        this.emitter.emit('jobDeleted', {jobId, userId});
     }
 }

@@ -67,6 +67,8 @@ export class JobRunner {
     protected historicalRepo: DrizzlePlayHistoricalRepository;
     protected importTask?: ProcessTask;
     runtime: JobRuntime = {import: {}};
+    /** owner, so events only reach their sessions. Known once the job has been loaded */
+    userId?: string | null;
 
     protected pendingEmit: Record<string, unknown> = {};
     protected lastEmit = 0;
@@ -91,6 +93,7 @@ export class JobRunner {
         if(job === undefined) {
             throw new Error(`Job ${this.jobId} does not exist`);
         }
+        this.userId = job.userId;
         return job;
     }
 
@@ -353,7 +356,7 @@ export class JobRunner {
             this.lastEmit = Date.now();
             const payload = this.pendingEmit;
             this.pendingEmit = {};
-            this.deps.emitter.emit('jobUpdate', {jobId: this.jobId, data: payload});
+            this.deps.emitter.emit('jobUpdate', {jobId: this.jobId, userId: this.userId, data: payload});
         }
         const since = Date.now() - this.lastEmit;
         if(force || since >= this.timings.emitThrottle) {

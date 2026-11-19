@@ -228,8 +228,21 @@ export type SseEvent = z.input<typeof sseEventSchema>;
 export type SseEventName = SseEvent['event'];
 export type SseEventData<K extends SseEventName> = Extract<SseEvent, {event: K}>['data'];
 
+/**
+ * Import job events sent to /api/events. Only sent to sessions of the job's owner.
+ * `data` is a partial Job (see GET /api/jobs/:id), with only the fields that changed.
+ * */
+export const jobSseEventSchema = z.discriminatedUnion('event', [
+    z.object({event: z.literal('jobUpdate'), jobId: z.int(), data: z.record(z.string(), z.unknown())}).meta({title: 'Job Update', description: "Some of a Job's data changed"}),
+    z.object({event: z.literal('jobDeleted'), jobId: z.int(), data: z.object({})}).meta({title: 'Job Deleted', description: 'A Job was deleted'}),
+]).meta({id: 'JobSseEvent'});
+export type JobSseEvent = z.input<typeof jobSseEventSchema>;
+
 /** SSE event name to event data, for the SSE client */
-export type MsSseEvent = {[K in SseEventName]: Extract<SseEvent, {event: K}>} & {log: LogEvent};
+export type MsSseEvent = {[K in SseEventName]: Extract<SseEvent, {event: K}>} & {[K in JobSseEvent['event']]: Extract<JobSseEvent, {event: K}>} & {log: LogEvent};
+
+export const asJobSseEvent = (data: unknown): JobSseEvent | undefined =>
+    data !== null && typeof data === 'object' && 'event' in data && 'jobId' in data ? data as JobSseEvent : undefined;
 
 /** Narrow the data of any received SSE event. Log events have no componentId/event */
 export const asSseEvent = (data: unknown): SseEvent | undefined =>
