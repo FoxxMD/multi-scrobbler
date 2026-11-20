@@ -96,7 +96,7 @@ const formSchema = z.object({
     let mirror: JobCreate['mirror'];
     if (v.source === 'upload' || v.source === 'existing') {
         mirror = v.mirror === 'new'
-            ? {new: {name: v.mirrorName.trim(), account: v.mirrorAccount.trim() === '' ? undefined : v.mirrorAccount.trim()}}
+            ? {new: {name: v.mirrorName.trim()}}
             : {id: Number.parseInt(v.mirror)};
     }
     let transforms: JobCreate['transforms'];

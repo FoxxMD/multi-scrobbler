@@ -6,15 +6,17 @@ const DAY = 24 * 60 * 60 * 1000;
 
 export const generateMirrorApiJson = (data: Partial<MirrorApiJson> = {}): MirrorApiJson => {
     const id = data.id ?? faker.number.int({min: 1, max: 100});
-    const account = data.account !== undefined ? data.account : faker.internet.username();
+    const account = faker.internet.username();
     const end = dayjs().subtract(faker.number.int({min: 1, max: 30}), 'day').valueOf();
     const start = end - faker.number.int({min: 365, max: 3650}) * DAY;
     return {
         id,
-        name: `Last.fm ${account ?? 'import'}`,
-        service: 'lastfm',
-        account,
+        name: `Last.fm ${account}`,
+        service: 'mixed',
+        account: null,
+        locked: false,
         coverage: [[start, end]],
+        segments: [{range: [start, end], origin: 'lastfm', jobId: 1}],
         gaps: [],
         plays: faker.number.int({min: 1000, max: 150000}),
         jobs: [{id: 1, name: 'Last.fm import'}],
@@ -68,6 +70,8 @@ export const generateJobApiJson = (data: Partial<JobApiJson> = {}): JobApiJson =
         rangeFrom: null,
         rangeTo: createdAt.toISOString(),
         persistInputs: true,
+        importOverlap: 'skip',
+        importReplacedAt: null,
         transformOptions: null,
         transformSource: null,
         exportOrder: 'asc',
@@ -96,7 +100,7 @@ export const generateJobOptionsApiJson = (data: Partial<JobOptionsApiJson> = {})
             {componentId: 1, name: 'My Last.fm', mode: 'source', ready: true, account: 'listener'},
             {componentId: 2, name: 'Last.fm Scrobbler', mode: 'client', ready: true, account: 'listener'},
         ],
-        mirrors: [{id: 1, name: 'Last.fm listener', service: 'lastfm', account: 'listener', coverage: [[end - 2000 * DAY, end]], playCount: 84321}],
+        mirrors: [{id: 1, name: 'Last.fm listener', service: 'mixed', account: null, locked: false, coverage: [[end - 2000 * DAY, end]], playCount: 84321}],
         importFiles: [{name: 'scrobbles-listener.json', size: 24 * 1024 * 1024, modifiedAt: dayjs().subtract(2, 'day').toISOString()}],
         targets: [
             {componentId: 3, name: 'Maloja', type: 'maloja', ready: true, rejectsOldScrobbles: false},

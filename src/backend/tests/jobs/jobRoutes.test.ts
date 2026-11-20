@@ -25,6 +25,7 @@ import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { fixtureCreateComponent, fixtureCreatePlay } from '../utils/databaseFixtures.ts';
 import type { JobApiJson, JobOptionsApiJson, MirrorApiJson } from '../../../core/Job.ts';
 import { mirrorLockKey } from '../../jobs/JobRunner.ts';
+import { ensureOwner } from '../../common/auth/owner.ts';
 import type { PlayTransformPartsConfigOptions } from '../../../core/Transform.ts';
 
 const fixture = (name: string) => path.resolve(projectRootDir, 'src/backend/tests/jobs/fixtures', name);
@@ -68,12 +69,13 @@ describe('Job API', function () {
         await using tmp = await createTmpDir('jobUpload');
         const {app} = await buildApp(tmp.path);
         const res = await request(app).post('/api/jobs')
-            .field('payload', JSON.stringify({name: 'upload', importFrom: {upload: true}, mirror: {new: {name: 'My export', account: 'uploadtest'}}, start: true}))
+            .field('payload', JSON.stringify({name: 'upload', importFrom: {upload: true}, mirror: {new: {name: 'My export'}}, start: true}))
             .attach('file', fixture('ghan.csv'));
         expect(res.status, JSON.stringify(res.body)).eq(201);
         expect(res.body.importFrom).to.deep.include({kind: 'file', originalName: 'ghan.csv', format: 'lastfm-ghan-csv'});
         expect(res.body.persistInputs).is.false;
-        expect(res.body.mirror.account).eq('uploadtest');
+        expect(res.body.mirror).to.deep.include({name: 'My export', service: 'mixed', account: null});
+        expect(res.body.importOverlap).eq('skip');
 
         const done = await waitForImport(app, res.body.id);
         expect(done.imported).eq(6);
@@ -125,20 +127,36 @@ describe('Job API', function () {
         expect(await readdir(path.join(importsDir, 'uploads'))).length(0);
     });
 
-    it('puts benjaminbenben files in their own mirror', async function () {
+    it('imports benjaminbenben files into the chosen mirror with the given overlap mode', async function () {
         await using tmp = await createTmpDir('jobBenjamin');
-        const {app, db} = await buildApp(tmp.path);
-        const existing = await request(app).post('/api/jobs').field('payload', JSON.stringify({name: 'a', importFrom: {upload: true}, mirror: {new: {name: 'shared', account: 'benjamintest'}}})).attach('file', fixture('ghan.csv'));
+        const {app} = await buildApp(tmp.path);
+        const existing = await request(app).post('/api/jobs').field('payload', JSON.stringify({name: 'a', importFrom: {upload: true}, mirror: {new: {name: 'shared'}}})).attach('file', fixture('ghan.csv'));
         const res = await request(app).post('/api/jobs')
-            .field('payload', JSON.stringify({name: 'b', importFrom: {upload: true}, mirror: {id: existing.body.mirror.id}}))
+            .field('payload', JSON.stringify({name: 'b', importFrom: {upload: true}, mirror: {id: existing.body.mirror.id}, overlap: 'replace'}))
             .attach('file', fixture('benjamin.csv'));
         expect(res.status, JSON.stringify(res.body)).eq(201);
-        expect(res.body.mirror.id).not.eq(existing.body.mirror.id);
-        expect(res.body.mirror.account).to.be.null;
-        expect((await new MirrorRepository(db).getById(res.body.mirror.id))!.account).to.be.null;
+        expect(res.body.mirror.id).eq(existing.body.mirror.id);
+        expect(res.body.importOverlap).eq('replace');
+        expect(res.body.importReplacedAt).null;
     });
 
-    it('requires an authenticated Last.fm component and uses its account as the mirror', async function () {
+    it('rejects imports into a locked mirror but allows exporting from it', async function () {
+        await using tmp = await createTmpDir('jobLockedMirror');
+        await copyFile(fixture('ghan.csv'), path.join(tmp.path, 'placed.csv'));
+        const {app, db} = await buildApp(tmp.path);
+        const owner = await ensureOwner(db);
+        const locked = await new MirrorRepository(db).findOrCreate({userId: owner.id, service: 'tealfm', account: 'did:plc:abc', name: 'teal'});
+        const res = await request(app).post('/api/jobs').send({name: 'x', importFrom: {existingFile: 'placed.csv'}, mirror: {id: locked.id}});
+        expect(res.status).eq(400);
+        expect(res.body.error).to.include("can't be imported into");
+        const options = (await request(app).get('/api/jobs/options')).body;
+        expect(options.mirrors.find((x: {id: number}) => x.id === locked.id)).to.deep.include({locked: true});
+        const exportOnly = await request(app).post('/api/jobs').send({name: 'x', importFrom: {mirrorId: locked.id}, overlap: 'replace'});
+        expect(exportOnly.status, JSON.stringify(exportOnly.body)).eq(201);
+        expect(exportOnly.body.importOverlap).eq('skip');
+    });
+
+    it('requires an authenticated Last.fm component and creates a mirror named after its account', async function () {
         await using tmp = await createTmpDir('jobComponent');
         const resolved: Record<number, object> = {};
         const {app, db} = await buildApp(tmp.path, resolved);
@@ -155,8 +173,12 @@ describe('Job API', function () {
         expect((await request(app).post('/api/jobs').send({name: 'x', importFrom: {componentId: spotify.id}})).status).eq(400);
         const res = await request(app).post('/api/jobs').send({name: 'x', importFrom: {componentId: authed.id}, range: {from: '2014-01-01T00:00:00Z', to: '2015-01-01T00:00:00Z'}});
         expect(res.status, JSON.stringify(res.body)).eq(201);
-        expect(res.body.mirror.account).eq('lfmuser');
+        expect(res.body.mirror).to.deep.include({name: 'Last.fm lfmuser', account: null});
         expect(res.body.persistInputs).is.true;
+        // into an existing mirror, IE one a file filled
+        const into = await request(app).post('/api/jobs').send({name: 'y', importFrom: {componentId: authed.id}, mirror: {id: res.body.mirror.id}});
+        expect(into.status, JSON.stringify(into.body)).eq(201);
+        expect(into.body.mirror.id).eq(res.body.mirror.id);
         expect(res.body.importFrom).to.deep.include({kind: 'component', componentId: authed.id});
         expect(res.body.rangeFrom).eq('2014-01-01T00:00:00.000Z');
     });
@@ -249,20 +271,20 @@ describe('Job API', function () {
         expect(dayjs(future.body.rangeTo).isAfter(dayjs())).is.false;
     });
 
-    it('resolves a new mirror with a known account to the existing mirror', async function () {
+    it('always creates a separate mirror for a new mirror', async function () {
         await using tmp = await createTmpDir('jobMirrorResolve');
         await copyFile(fixture('ghan.csv'), path.join(tmp.path, 'placed.csv'));
         const {app} = await buildApp(tmp.path);
-        const a = await request(app).post('/api/jobs').send({name: 'a', importFrom: {existingFile: 'placed.csv'}, mirror: {new: {name: 'first', account: 'resolveme'}}});
-        const b = await request(app).post('/api/jobs').send({name: 'b', importFrom: {existingFile: 'placed.csv'}, mirror: {new: {name: 'second', account: 'resolveme'}}});
-        expect(b.body.mirror.id).eq(a.body.mirror.id);
+        const a = await request(app).post('/api/jobs').send({name: 'a', importFrom: {existingFile: 'placed.csv'}, mirror: {new: {name: 'same'}}});
+        const b = await request(app).post('/api/jobs').send({name: 'b', importFrom: {existingFile: 'placed.csv'}, mirror: {new: {name: 'same'}}});
+        expect(b.body.mirror.id).not.eq(a.body.mirror.id);
     });
 
     it('returns 201 with startError when the import cannot start', async function () {
         await using tmp = await createTmpDir('jobStartConflict');
         await copyFile(fixture('ghan.csv'), path.join(tmp.path, 'placed.csv'));
         const {app, jobs} = await buildApp(tmp.path);
-        const first = await request(app).post('/api/jobs').send({name: 'a', importFrom: {existingFile: 'placed.csv'}, mirror: {new: {name: 'm', account: 'conflict'}}});
+        const first = await request(app).post('/api/jobs').send({name: 'a', importFrom: {existingFile: 'placed.csv'}, mirror: {new: {name: 'm'}}});
         jobs.locks.tryAcquire(`mirror-import:${first.body.mirror.id}`, 'someone');
         const second = await request(app).post('/api/jobs').send({name: 'b', importFrom: {existingFile: 'placed.csv'}, mirror: {id: first.body.mirror.id}, start: true});
         expect(second.status).eq(201);

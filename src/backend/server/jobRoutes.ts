@@ -116,10 +116,9 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                 importComponents.push({componentId: c.componentId, name: c.name, mode, ready: c.isReady(), account: c.api.user ?? null});
             }
         }
-        // locked mirrors only take imports from their own service
-        const userMirrors = (await mirrorRepo.findForUser(req.auth!.userId)).filter(x => !isLockedMirror(x));
+        const userMirrors = await mirrorRepo.findForUser(req.auth!.userId);
         const counts = await mirrorRepo.playCounts(userMirrors.map(x => x.id));
-        const mirrors: JobOptionsApiJson['mirrors'] = userMirrors.map(x => ({id: x.id, name: x.name, service: x.service, account: x.account, coverage: x.coverage, playCount: counts.get(x.id) ?? 0}));
+        const mirrors: JobOptionsApiJson['mirrors'] = userMirrors.map(x => ({id: x.id, name: x.name, service: x.service, account: x.account, locked: isLockedMirror(x), coverage: x.coverage, playCount: counts.get(x.id) ?? 0}));
 
         const used = new Set((await jobRepo.findAll()).map(x => x.importFile?.path).filter(x => x !== undefined));
         const importFiles: JobOptionsApiJson['importFiles'] = [];
@@ -249,21 +248,29 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
             let componentFromId: number | undefined;
             let importFile: JobImportFile | undefined;
 
-            const fileMirror = async (isolated: boolean): Promise<PlayMirrorSelect> => {
-                if (isolated) {
-                    return mirrorRepo.findOrCreate({userId, service: MIRROR_SERVICE_MIXED, account: null, name: payload.mirror !== undefined && 'new' in payload.mirror ? payload.mirror.new.name : `${payload.name} (benjaminbenben)`});
-                }
+            /**
+             * The mirror an import goes into: an existing user mirror (validated now, so a bad id is a 404 before anything is created)
+             * or a new one, created inside the job transaction
+             * */
+            const importMirror = async (defaultName?: string): Promise<() => Promise<PlayMirrorSelect>> => {
                 if (payload.mirror === undefined) {
-                    throw new JobRequestError('mirror is required when importing a file');
+                    if (defaultName === undefined) {
+                        throw new JobRequestError('mirror is required when importing a file');
+                    }
+                    return () => mirrorRepo.findOrCreate({userId, service: MIRROR_SERVICE_MIXED, account: null, name: defaultName});
                 }
                 if ('id' in payload.mirror) {
                     const existing = await mirrorRepo.getById(payload.mirror.id);
-                    if (existing === undefined || existing.userId !== userId || isLockedMirror(existing)) {
+                    if (existing === undefined || existing.userId !== userId) {
                         throw new JobRequestError('Mirror not found', 404);
                     }
-                    return existing;
+                    if (isLockedMirror(existing)) {
+                        throw new JobRequestError(`Mirror '${existing.name}' only holds scrobbles from its own ${existing.service} account and can't be imported into`);
+                    }
+                    return async () => existing;
                 }
-                return mirrorRepo.findOrCreate({userId, service: MIRROR_SERVICE_MIXED, account: payload.mirror.new.account ?? null, name: payload.mirror.new.name});
+                const name = payload.mirror.new.name;
+                return () => mirrorRepo.findOrCreate({userId, service: MIRROR_SERVICE_MIXED, account: null, name});
             }
 
             if ('mirrorId' in payload.importFrom) {
@@ -281,8 +288,7 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                     throw new JobRequestError('Last.fm component must be authenticated before importing from it');
                 }
                 componentFromId = payload.importFrom.componentId;
-                const account = component.api.user;
-                resolveMirror = () => mirrorRepo.findOrCreate({userId, service: MIRROR_SERVICE_MIXED, account, name: `Last.fm ${account}`});
+                resolveMirror = await importMirror(`Last.fm ${component.api.user}`);
             } else {
                 let filePath: string;
                 let originalName: string;
@@ -314,13 +320,7 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                 }
                 const format = await detectLastfmFileFormat(filePath);
                 importFile = {path: filePath, originalName, format, size: (await stat(filePath)).size, managed};
-                // validate an existing mirror now so a bad id is a 404 before anything is created
-                if (format !== 'lastfm-benjamin-csv' && payload.mirror !== undefined && 'id' in payload.mirror) {
-                    const existing = await fileMirror(false);
-                    resolveMirror = async () => existing;
-                } else {
-                    resolveMirror = () => fileMirror(format === 'lastfm-benjamin-csv');
-                }
+                resolveMirror = await importMirror();
             }
 
             const transforms = payload.transforms !== undefined ? await jobs.resolveTransforms(payload.transforms) : undefined;
@@ -347,6 +347,8 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                     rangeTo,
                     // a mirror-only job imports nothing
                     persistInputs: 'mirrorId' in payload.importFrom ? false : payload.persistInputs ?? importFile === undefined,
+                    // a mirror-only job imports nothing
+                    importOverlap: 'mirrorId' in payload.importFrom ? 'skip' : payload.overlap,
                     exportOrder: payload.exportOrder,
                     exportQueueLimit: payload.exportQueueLimit,
                     ...transforms,

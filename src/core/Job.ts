@@ -94,6 +94,9 @@ export interface JobApiJson {
     rangeFrom: string | null
     rangeTo: string
     persistInputs: boolean
+    importOverlap: JobImportOverlap
+    /** replace: when the mirror plays in the job's range were deleted. null => not yet (or skip) */
+    importReplacedAt: string | null
     /** transform stages applied to exported plays, null => none */
     transformOptions: unknown[] | null
     transformSource: JobTransformSource | null
@@ -152,8 +155,12 @@ export interface MirrorApiJson {
     name: string
     service: string
     account: string | null
+    /** only takes scrobbles from its own service + account, can't be imported into */
+    locked: boolean
     /** completely mirrored time ranges, inclusive unix ms */
     coverage: [number, number][]
+    /** coverage split by what filled it */
+    segments: MirrorSegment[]
     /** holes between the first and last covered time */
     gaps: [number, number][]
     plays: number
@@ -179,7 +186,8 @@ export interface ClientJobPlaysSummaryJson {
 
 export interface JobOptionsApiJson {
     importComponents: { componentId: number, name: string, mode: 'source' | 'client', ready: boolean, account: string | null }[]
-    mirrors: { id: number, name: string, service: string, account: string | null, coverage: [number, number][], playCount: number }[]
+    /** locked mirrors can only be exported from (importFrom.mirrorId) */
+    mirrors: { id: number, name: string, service: string, account: string | null, locked: boolean, coverage: [number, number][], playCount: number }[]
     /** files placed in the data directory's imports folder that no job uses yet */
     importFiles: { name: string, size: number, modifiedAt: string }[]
     /** Clients a job can export to. rejectsOldScrobbles => the service refuses scrobbles older than ~14 days (Last.fm-type) */
@@ -228,8 +236,9 @@ export const jobCreateSchema = z.object({
     ]),
     mirror: z.union([
         z.object({id: z.int().positive()}),
-        z.object({new: z.object({name: z.string().trim().min(1).max(200), account: z.string().trim().min(1).max(200).optional()})}),
-    ]).optional().meta({description: 'Mirror to import a file into. Ignored for Last.fm components (their account decides the mirror), benjaminbenben files (always a new mirror) and importFrom.mirrorId'}),
+        z.object({new: z.object({name: z.string().trim().min(1).max(200)})}),
+    ]).optional().meta({description: 'Mirror to import into: an existing mirror or a new one. Any import can go into any mirror except locked ones. Required for files. Omitted for a Last.fm component, a new mirror is created. Ignored for importFrom.mirrorId'}),
+    overlap: z.enum(JOB_IMPORT_OVERLAPS).default('skip').meta({description: "Where the mirror already has data in the job's range: skip imports only what it doesn't cover yet, replace deletes the mirror's scrobbles in the job's exact range first and imports all of it. Ignored for importFrom.mirrorId"}),
     range: z.union([
         z.literal('all'),
         z.object({from: z.iso.datetime({offset: true}).optional(), to: z.iso.datetime({offset: true}).optional()}),
