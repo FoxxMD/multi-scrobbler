@@ -8,7 +8,7 @@ import {type AlbumSearchResult, type ArtistSearchResult, type TrackSearchResult,
 import type { SourcePlayerJson } from "../../core/PlaySchema";
 import type { UserSettingKey, UserSettingResponse, UserSettingValue } from "../../core/UserSettings";
 import { queryPlayOptsRefreshableToJson } from "../utils/ComponentUtils";
-import type { JobApiJson, JobOptionsApiJson } from "../../core/Job";
+import type { ClientJobPlaysSummaryJson, JobApiJson, JobOptionsApiJson, MirrorApiJson } from "../../core/Job";
 const components = createQueryKeys('components', {
     list: () => ({
         queryKey: ['components'],
@@ -197,7 +197,22 @@ const jobs = createQueryKeys('jobs', {
   })
 });
 
-export const tanQueries = mergeQueryKeys(components, activities, players, logs, metadata, dashboard, userSettings, jobs);
+const mirrors = createQueryKeys('mirrors', {
+  list: () => ({
+    queryKey: ['list'],
+    queryFn: () => ky.get('mirrors', { baseUrl }).json<MirrorApiJson[]>()
+  }),
+  detail: (mirrorId: number) => ({
+    queryKey: [mirrorId],
+    queryFn: () => ky.get(`mirrors/${mirrorId}`, { baseUrl }).json<MirrorApiJson>()
+  }),
+  clientJobPlays: (componentId: number) => ({
+    queryKey: ['clientJobPlays', componentId],
+    queryFn: () => ky.get(`components/${componentId}/job-plays/summary`, { baseUrl }).json<ClientJobPlaysSummaryJson>()
+  }),
+});
+
+export const tanQueries = mergeQueryKeys(components, activities, players, logs, metadata, dashboard, userSettings, jobs, mirrors);
 
 export const useQueryState = (queryKey: Readonly<unknown[]>) => {
   const queryClient = useQueryClient()

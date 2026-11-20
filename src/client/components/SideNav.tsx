@@ -156,6 +156,10 @@ export const NAV_LINKS: SideNavProps[] = [
             {
                 title: 'Import/Export',
                 url: '/jobs'
+            },
+            {
+                title: 'Mirrors',
+                url: '/mirrors'
             }
         ]
     },

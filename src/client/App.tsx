@@ -17,6 +17,7 @@ import { SettingsContainer } from './components/settings/settings';
 import { JobListFetchable } from './components/jobs/JobList';
 import { JobDetailRoutable } from './components/jobs/JobDetail';
 import { JobCreateFetchable } from './components/jobs/JobCreate';
+import { MirrorDetailRoutable, MirrorListFetchable } from './components/mirrors/Mirrors';
 import { Toaster } from './components/Toaster';
 import { AuthGate, LoginForm, LogOut, SetPasswordForm } from './components/auth/Auth';
 import { useHasAccess } from './auth/authClient';
@@ -96,6 +97,14 @@ const routesNested: RouteObject[] = [
         {
             path: "jobs/:jobId",
             element: <MSErrorBoundary><JobDetailRoutable/></MSErrorBoundary>
+        },
+        {
+            path: "mirrors",
+            element: <MSErrorBoundary><MirrorListFetchable/></MSErrorBoundary>
+        },
+        {
+            path: "mirrors/:mirrorId",
+            element: <MSErrorBoundary><MirrorDetailRoutable/></MSErrorBoundary>
         },
         {
             path: "login",

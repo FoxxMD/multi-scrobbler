@@ -1,9 +1,9 @@
-import { Box, Button, Card, Code, Collapsible, Container, DataList, Editable, Flex, Heading, HStack, IconButton, NumberInput, Separator, SkeletonText, Stack, Text } from '@chakra-ui/react';
+import { Box, Button, Card, Link as ChakraLink, Code, Collapsible, Container, DataList, Editable, Flex, Heading, HStack, IconButton, NumberInput, Separator, SkeletonText, Stack, Text } from '@chakra-ui/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import ky from 'ky';
 import { useState, type ReactNode } from 'react';
 import { LuCheck, LuPencil, LuX } from 'react-icons/lu';
-import { useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { EXPORT_QUEUE_LIMIT_MAX, type JobApiJson, type JobTargetApiJson } from "../../../core/Job";
 import { tanQueries } from "../../queries";
 import { baseUrl } from "../../utils";
@@ -177,7 +177,7 @@ export const ImportPanel = (props: { job: JobApiJson }) => {
                             {job.importFrom.kind === 'file' ? ` (${FILE_FORMAT_NAMES[job.importFrom.format]}, ${formatBytes(job.importFrom.size)})` : ''}
                         </DataItem>
                         <DataItem label="Mirror">
-                            {job.mirror.name}{job.mirror.account !== null ? ` (${job.mirror.account})` : ''}
+                            <ChakraLink asChild><Link to={`/mirrors/${job.mirror.id}`}>{job.mirror.name}</Link></ChakraLink>{job.mirror.account !== null ? ` (${job.mirror.account})` : ''}
                             {job.importFrom.kind === 'file' && job.importFrom.format === 'lastfm-benjamin-csv' ? <Text as="span" color="fg.muted"> - benjaminbenben files always get a new mirror of their own</Text> : undefined}
                         </DataItem>
                         <DataItem label="Range">{job.rangeFrom === null ? 'Beginning' : formatJobDate(job.rangeFrom)} to {formatJobDate(job.rangeTo)}</DataItem>
