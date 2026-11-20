@@ -503,6 +503,7 @@ describe('Job API', function () {
         it("cleans up a job's mirror data and scrobbles, and deletes it with cleanup", async function () {
             await using tmp = await createTmpDir('cleanupJob');
             const {app, job, db} = await cleanupApp(tmp.path);
+            expect(((await request(app).get(`/api/jobs/${job.id}`)).body as JobApiJson).targets[0].records).eq(2);
             expect((await request(app).post(`/api/jobs/${job.id}/cleanup/historical`).send({action: 'compact'})).status).eq(202);
             await mirrorIdle(app, job.mirror.id);
             const historical = await db.select().from(playsHistorical);
@@ -513,7 +514,9 @@ describe('Job API', function () {
             await until(async () => (await clientPlays(db)).length === 1);
             // only the deleted job's play is left, and the job keeps its numbers
             expect(await clientPlays(db)).eql([{jobId: null, compacted: null}]);
-            expect(((await request(app).get(`/api/jobs/${job.id}`)).body as JobApiJson).targets[0].stats).eql({scrobbled: 1, failed: 1});
+            const cleaned = (await request(app).get(`/api/jobs/${job.id}`)).body as JobApiJson;
+            expect(cleaned.targets[0].stats).eql({scrobbled: 1, failed: 1});
+            expect(cleaned.targets[0].records).eq(0);
 
             expect((await request(app).delete(`/api/jobs/${job.id}?historical=nuke`)).status).eq(400);
             expect((await request(app).delete(`/api/jobs/${job.id}?historical=delete&scrobbles=delete`)).status).eq(202);

@@ -45,8 +45,10 @@ export interface JobTargetApiJson {
     exported: number
     /** client plays created from them, the rest were already queued or scrobbled */
     queued: number
-    /** the job's client plays by state */
+    /** the job's client plays by state, including ones a cleanup deleted. Frozen once completed */
     stats: Partial<Record<string, number>> | null
+    /** the job's client plays in the Client right now */
+    records: number
     error: ErrorObject | null
     breaker: { failedInARow: number, trippedAt?: number }
     startedAt: string | null

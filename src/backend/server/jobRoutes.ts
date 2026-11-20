@@ -12,7 +12,7 @@ import { JobRepository, type JobSelect } from "../common/database/drizzle/reposi
 import { runTransaction } from "../common/database/drizzle/drizzleUtils.ts";
 import { MirrorRepository, type PlayMirrorSelect } from "../common/database/drizzle/repositories/MirrorRepository.ts";
 import { addStats, JobTargetRepository, type JobTargetSelect } from "../common/database/drizzle/repositories/JobTargetRepository.ts";
-import type { JobImportFile } from "../common/infrastructure/Job.ts";
+import type { JobImportFile, JobTargetStats } from "../common/infrastructure/Job.ts";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import { toJobApiJson } from "../jobs/jobApi.ts";
@@ -62,10 +62,11 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
         const stored = preloaded.targets ?? await targetRepo.findByJob(job.id);
         // a completed target keeps its snapshot, others show what the client has now (IE queued plays draining while paused)
         // plus plays a cleanup deleted from the client
-        const live = stored.some(x => x.status !== 'completed') ? await targetRepo.playStats(job.id) : new Map();
+        const live = stored.length > 0 ? await targetRepo.playStats(job.id) : new Map<number, JobTargetStats>();
         const targets = stored.map(t => t.status === 'completed' ? t : {...t, stats: addStats(live.get(t.componentId), t.removedStats)});
+        const records = new Map<number, number>([...live].map(([id, s]) => [id, Object.values(s).reduce<number>((acc, n) => acc + (n ?? 0), 0)]));
         const mirrorPlaysInRange = await mirrorRepo.countInRange(job.mirrorId, [job.rangeFrom?.valueOf() ?? 0, job.rangeTo.valueOf()]);
-        return toJobApiJson(job, mirror!, {componentName: componentName(job.componentFromId), runtime: jobs.getRuntime(job.id), targets, resolveClient: exportClient, mirrorPlaysInRange});
+        return toJobApiJson(job, mirror!, {componentName: componentName(job.componentFromId), runtime: jobs.getRuntime(job.id), targets, resolveClient: exportClient, mirrorPlaysInRange, records});
     }
 
     /** the job if it exists and belongs to the requester, otherwise responds 404 */

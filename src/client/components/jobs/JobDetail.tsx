@@ -1,6 +1,8 @@
 import { Box, Button, Card, Link as ChakraLink, RadioGroup, Code, Collapsible, Container, DataList, Editable, Flex, Heading, HStack, IconButton, NumberInput, Separator, SkeletonText, Stack, Text } from '@chakra-ui/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import ky from 'ky';
+import { useSSEAnyEvent, useSSEContext } from "@flamefrontend/sse-runtime-react";
+import { asCleanupSseEvent, asJobSseEvent, type MsSseEvent } from "../../../core/Api";
 import { useState, type ReactNode } from 'react';
 import { LuCheck, LuPencil, LuX } from 'react-icons/lu';
 import { Link, useNavigate, useParams } from "react-router";
@@ -171,6 +173,7 @@ export const CleanupPanel = (props: { job: JobApiJson }) => {
         onError: (e) => toaster.create({type: 'error', title: 'Could not clean up scrobble records', description: apiErrorMessage(e)}),
     });
     const cleanup = job.runtime.cleanup;
+    const records = job.targets.reduce((acc, t) => acc + t.records, 0);
     const exporting = job.targets.some(x => x.status === 'running');
     // one cleanup at a time, and none while deleting
     const blocked = job.runtime.deleting === true ? 'The job is being deleted.' : (cleanup !== undefined || mirrorTask !== null ? 'Wait for the running cleanup to finish.' : undefined);
@@ -180,7 +183,7 @@ export const CleanupPanel = (props: { job: JobApiJson }) => {
             <Card.Header><Heading size="lg">Clean Up</Heading></Card.Header>
             <Card.Body>
                 <Stack gap="5">
-                    <CleanupRow title="Mirror data" description={<>The {job.mirrorPlaysInRange.toLocaleString()} scrobbles in <ChakraLink asChild><Link to={`/mirrors/${job.mirror.id}`}>{job.mirror.name}</Link></ChakraLink> played in this job's range. Other jobs using the mirror may need them, and must be stopped too.</>}>
+                    <CleanupRow title="Mirror data" description={<>This job imported {job.mirrorPlaysInRange.toLocaleString()} Plays into Mirror <ChakraLink asChild><Link to={`/mirrors/${job.mirror.id}`}>{job.mirror.name}</Link></ChakraLink>. Other jobs using the mirror may need them, and must be stopped too.</>}>
                         {mirrorTask !== null ? <CleanupProgress task={mirrorTask} text={taskText(mirrorTask)}/> : <CleanupButtons
                             pending={historical.isPending}
                             disabledReason={busy}
@@ -191,7 +194,7 @@ export const CleanupPanel = (props: { job: JobApiJson }) => {
                             onConfirm={(a) => historical.mutate(a)}
                         />}
                     </CleanupRow>
-                    {job.targets.length > 0 ? <CleanupRow title="Scrobble records in Clients" description="What the Clients recorded for the scrobbles this job sent them, shown in their activity lists. Scrobbles already sent stay on the services.">
+                    {job.targets.length > 0 ? <CleanupRow title="Scrobble records in Clients" description={`${records.toLocaleString()} total Plays were exported to MS Clients. Note: Cleanup actions do not affect data in the actual services, just data in MS.`}>
                         {cleanup !== undefined ? <CleanupProgress task={cleanup} text={`${cleanup.action === 'delete' ? 'Deleting' : 'Compacting'}: ${cleanup.done.toLocaleString()} of ${cleanup.total.toLocaleString()}`}/> : <CleanupButtons
                             pending={scrobbles.isPending}
                             disabledReason={blocked ?? (exporting ? 'Stop the exports to clean up.' : undefined)}
@@ -272,7 +275,7 @@ export const ImportPanel = (props: { job: JobApiJson }) => {
                             {job.importFrom.kind === 'file' ? ` (${FILE_FORMAT_NAMES[job.importFrom.format]}, ${formatBytes(job.importFrom.size)})` : ''}
                         </DataItem>
                         <DataItem label="Mirror">
-                            <ChakraLink asChild><Link to={`/mirrors/${job.mirror.id}`}>{job.mirror.name}</Link></ChakraLink>{job.mirror.account !== null ? ` (${job.mirror.account})` : ''}
+                            <HStack><ChakraLink asChild><Link to={`/mirrors/${job.mirror.id}`}>{job.mirror.name}</Link></ChakraLink>{job.mirror.account !== null ? ` (${job.mirror.account})` : ''}</HStack>
                             {job.importFrom.kind === 'file' && job.importFrom.format === 'lastfm-benjamin-csv' ? <Text as="span" color="fg.muted"> - benjaminbenben files always get a new mirror of their own</Text> : undefined}
                         </DataItem>
                         <DataItem label="Range">{job.rangeFrom === null ? 'Beginning' : formatJobDate(job.rangeFrom)} to {formatJobDate(job.rangeTo)}</DataItem>
@@ -414,10 +417,31 @@ export const JobDetail = (props: { job: JobApiJson }) => {
     );
 }
 
+/** Refetches a job when the records in its Clients change: a cleanup purged plays, or an export started or stopped */
+const useJobRecordsRefresh = (jobId: number, componentIds: number[]) => {
+    const queryClient = useQueryClient();
+    const sse = useSSEContext<MsSseEvent>();
+    useSSEAnyEvent(sse, (payload) => {
+        const job = asJobSseEvent(payload.data);
+        if (job !== undefined) {
+            const targets = (job.data as {targetUpdates?: Record<string, {status?: string}>}).targetUpdates;
+            if (job.jobId === jobId && targets !== undefined && Object.values(targets).some(x => x.status !== undefined)) {
+                queryClient.invalidateQueries({queryKey: tanQueries.jobs.detail(jobId).queryKey});
+            }
+            return;
+        }
+        const event = asCleanupSseEvent(payload.data);
+        if (event?.event === 'playsPurged' && componentIds.includes(event.componentId)) {
+            queryClient.invalidateQueries({queryKey: tanQueries.jobs.detail(jobId).queryKey});
+        }
+    });
+}
+
 export const JobDetailFetchable = (props: { jobId: number }) => {
     useJobEvents();
     useMirrorEvents();
     const { isPending, isError, data, error } = useQuery(tanQueries.jobs.detail(props.jobId));
+    useJobRecordsRefresh(props.jobId, data?.targets.map(x => x.componentId) ?? []);
     if (isPending) {
         return <SkeletonText noOfLines={4}/>;
     }

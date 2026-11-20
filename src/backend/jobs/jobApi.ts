@@ -34,7 +34,7 @@ export const jobImportOrigin = (job: JobSelect, componentName?: string): JobImpo
     return {kind: 'mirror'};
 }
 
-export const toJobTargetApiJson = (target: JobTargetSelect, client?: {name: string, type: string}): JobTargetApiJson => ({
+export const toJobTargetApiJson = (target: JobTargetSelect, client?: {name: string, type: string}, records = 0): JobTargetApiJson => ({
     id: target.id,
     componentId: target.componentId,
     name: client?.name,
@@ -44,6 +44,7 @@ export const toJobTargetApiJson = (target: JobTargetSelect, client?: {name: stri
     exported: target.exported,
     queued: target.queued,
     stats: target.stats,
+    records,
     error: target.error !== null ? serializeError(target.error) : null,
     breaker: target.breaker,
     startedAt: target.startedAt?.toISOString() ?? null,
@@ -51,7 +52,7 @@ export const toJobTargetApiJson = (target: JobTargetSelect, client?: {name: stri
     updatedAt: target.updatedAt.toISOString(),
 });
 
-export const toJobApiJson = (job: JobSelect, mirror: PlayMirrorSelect, opts: {componentName?: string, runtime?: JobRuntime, targets?: JobTargetSelect[], resolveClient?: (componentId: number) => {name: string, type: string} | undefined, mirrorPlaysInRange?: number} = {}): JobApiJson => ({
+export const toJobApiJson = (job: JobSelect, mirror: PlayMirrorSelect, opts: {componentName?: string, runtime?: JobRuntime, targets?: JobTargetSelect[], resolveClient?: (componentId: number) => {name: string, type: string} | undefined, mirrorPlaysInRange?: number, records?: Map<number, number>} = {}): JobApiJson => ({
     id: job.id,
     name: job.name,
     status: deriveJobStatus([job.importStatus, ...(opts.targets ?? []).map(x => x.status)]),
@@ -64,7 +65,7 @@ export const toJobApiJson = (job: JobSelect, mirror: PlayMirrorSelect, opts: {co
     transformSource: job.transformSource,
     exportOrder: job.exportOrder,
     exportQueueLimit: job.exportQueueLimit,
-    targets: (opts.targets ?? []).map(x => toJobTargetApiJson(x, opts.resolveClient?.(x.componentId))),
+    targets: (opts.targets ?? []).map(x => toJobTargetApiJson(x, opts.resolveClient?.(x.componentId), opts.records?.get(x.componentId))),
     mirrorPlaysInRange: opts.mirrorPlaysInRange ?? 0,
     importStatus: job.importStatus,
     importCursor: job.importCursor,
