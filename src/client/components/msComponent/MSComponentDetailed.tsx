@@ -1,5 +1,7 @@
 import React, { useCallback, useMemo, type ComponentProps, useEffect, type ReactNode } from "react"
-import { ClientJobPlays } from './ClientJobPlays';
+import { clientJobPlaysDialog, useClientJobPlaysEvents } from './ClientJobPlays';
+import { LuEraser } from 'react-icons/lu';
+import { countComponentJobs } from './Stats.js';
 import { Portal, Group, Span, Menu, Box, Heading, Skeleton, Wrap, HStack, Badge, Stack, List, Flex, Text, Card, Button, CloseButton, SkeletonText, type BadgeProps, type MenuItemProps, createOverlay, Dialog, type MenuSelectionDetails } from '@chakra-ui/react';
 import { COMPONENT_STATE, type ComponentCommonApiJson, type ComponentsApiJson, type ComponentState, type ComponentStateBody, isComponentSourceApiJson, type MsSseEvent, asSseEvent } from "../../../core/Api.js";
 import { capitalize, capitalizeWords } from "../../../core/StringUtils.js";
@@ -274,6 +276,7 @@ const MenuItemIgnore = componentStateMenuItem(EyeClosedIcon, 'ignore', 'Ignore')
 const MenuItemMonitor = componentStateMenuItem(EyeIcon, 'monitor', 'Monitor');
 const MenuItemAuth = componentStateMenuItem(UnlockIconRaw, 'auth', 'Auth');
 const MenuItemSync = componentStateMenuItem(SyncPlayIconRaw, 'syncHistorical', 'Sync Plays...');
+const MenuItemJobCleanup = componentStateMenuItem(LuEraser, 'jobCleanup', 'Job Cleanup');
 
 const primaryActionProps: ComponentProps<typeof PowerOffButton> = {
     margin: "1px",
@@ -283,7 +286,7 @@ const primaryActionProps: ComponentProps<typeof PowerOffButton> = {
 
 export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof ComponentStateBadge>, 'suffix' | 'data' | 'componentId'> & {
     componentId: number,
-    data: ComponentProps<typeof ComponentStateBadge>['data'] & Pick<ComponentsApiJson, 'synced' | 'type'>}) => {
+    data: ComponentProps<typeof ComponentStateBadge>['data'] & Pick<ComponentsApiJson, 'synced' | 'type' | 'mode'>}) => {
     const {
         componentId,
         live,
@@ -355,6 +358,13 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
         menuItems.push(<MenuItemSync/>)
     }
 
+    // job scrobble records only exist in Clients
+    const isClient = props.data.mode === 'client';
+    const {data: jobs} = useQuery({...tanQueries.jobs.list(), enabled: isClient});
+    if(isClient && jobs !== undefined && countComponentJobs(jobs, componentId) > 0) {
+        menuItems.push(<MenuItemJobCleanup/>)
+    }
+
     const menuCb = useCallback((select: MenuSelectionDetails) => {
         switch(select.value) {
             case 'auth':
@@ -362,6 +372,9 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
                 break;
             case 'syncHistorical':
                 syncDialog.open('syncPlays', {data: {id: componentId, type: props.data.type}});
+                break;
+            case 'jobCleanup':
+                clientJobPlaysDialog.open('jobCleanup', {componentId});
                 break;
             default:
                 mutate(select.value as ComponentStateBody['state']);
@@ -447,10 +460,13 @@ export const ComponentDetailedDesktop = (props: {data: ComponentsApiJson, live?:
     },[errors, authed]);
     const target = React.useRef<HTMLDivElement>(null);
     const isWrapped = useIsWrapped(target);
+    // reports a finished cleanup of job records even when its dialog is closed
+    useClientJobPlaysEvents(data.id, data.mode === 'client');
     return (
         <MSErrorBoundary>
         <dialog.Viewport />
         <syncDialog.Viewport />
+        <clientJobPlaysDialog.Viewport />
         <Flex direction="row" wrap="wrap" style={{whiteSpace: 'break-spaces'}} truncate rowGap="4">
             <Wrap width="100%" ref={target}>
                 <Box marginEnd="auto" truncate>
@@ -469,7 +485,6 @@ export const ComponentDetailedDesktop = (props: {data: ComponentsApiJson, live?:
             {warnings.length > 0 ? <>{warnings.map(x => <ErrorAlert error={x} status="warning"/>)}</> : undefined }
             <MSErrorBoundary>{props.live ? <PlayersContainerFetchable nowPlaying={isSource ? undefined : true} data={data}/> : <PlayersContainer nowPlaying={isSource ? undefined : true} data={data} live={props.live}/>}</MSErrorBoundary>
             <MSErrorBoundary><ListContainerFilterable componentType={data.mode} componentId={data.id}/></MSErrorBoundary>
-            {data.mode === 'client' ? <MSErrorBoundary><ClientJobPlays componentId={data.id}/></MSErrorBoundary> : undefined}
         </Flex>
         </MSErrorBoundary>
     )

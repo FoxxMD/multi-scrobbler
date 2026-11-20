@@ -49,7 +49,7 @@ import { MdOutlineFiberNew } from "react-icons/md";
 import { RiZzzFill } from "react-icons/ri";
 import { SiGoogledocs } from "react-icons/si";
 import type { Clipboard, IconProps} from "@chakra-ui/react";
-import { IconButton, useClipboard, Spinner, Icon, StackSeparator, HStack, Badge } from "@chakra-ui/react"
+import { IconButton, useClipboard, Spinner, Icon, StackSeparator, HStack, Badge, Box } from "@chakra-ui/react"
 import type {ComponentProps, PropsWithChildren, ReactNode} from 'react';
 import type {IconBaseProps, IconType} from "react-icons/lib";
 
@@ -427,3 +427,4 @@ export const LoginButton = makeIconButton(LuLogIn);
 export const LogoutIconRaw = LuLogOut;
 export const LogoutIcon = makeChakraIcon(LuLogOut);
 export const LogoutButton = makeIconButton(LuLogOut);
+export const IconWrapper = (props: { children: ReactNode; }) => <Box paddingX="1" marginX="1" display="inline-block" rounded="md" backgroundColor="bg.emphasized">{props.children}</Box>;

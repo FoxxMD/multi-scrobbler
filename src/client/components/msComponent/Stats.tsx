@@ -1,9 +1,9 @@
 import { type ComponentProps, useState, useCallback, useEffect, type ReactNode, type PropsWithChildren } from "react"
-import { Badge, Stat, HStack, type BadgeProps } from '@chakra-ui/react';
+import { Badge, Box, Stat, HStack, Popover, Portal, Stack, Span, Text, type BadgeProps } from '@chakra-ui/react';
 import {asSseEvent, type ComponentClientApiJson, type ComponentCommonApiJson, type MsSseEvent} from "../../../core/Api.js";
 import { TextMuted } from "../TextMuted.js";
 import type { IconBaseProps } from "react-icons/lib";
-import { DownArrowIcon, UpArrowIcon } from "../icons/ChakraIcons.js";
+import { DownArrowIcon, EllipsisChakraIcon, IconWrapper, UpArrowIcon } from "../icons/ChakraIcons.js";
 import { useTimeout } from 'react-use-timeout';
 import {
     useSSEContext,
@@ -16,6 +16,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { JobApiJson } from "../../../core/Job.js";
 import { tanQueries } from "../../queries/index.js";
 import { useJobEvents } from "../jobs/jobUtils.js";
+import { ClientJobPlaysCountsFetchable } from "./ClientJobPlays.js";
 
 type Color = BadgeProps['colorPalette'] & IconBaseProps['color'];
 
@@ -308,12 +309,15 @@ export const DateIndicator = (props: {
 export const countComponentJobs = (jobs: Pick<JobApiJson, 'importFrom' | 'targets'>[], componentId: number): number =>
     jobs.filter(j => (j.importFrom.kind === 'component' && j.importFrom.componentId === componentId) || j.targets.some(t => t.componentId === componentId)).length;
 
-export const JobsStatStatic = (props: { current: number } & Omit<ComponentProps<typeof StaticStat>, 'label' | 'helpText'>) => {
+const JOBS_HELP = 'Import jobs that import from or export to this';
+
+export const JobsStatStatic = (props: { current: number } & Omit<ComponentProps<typeof StaticStat>, 'label'>) => {
     const {current, ...rest} = props;
-    return <StaticStat label="Jobs" helpText="Import jobs that import from or export to this" {...rest}>{current}</StaticStat>;
+    return <StaticStat label="Jobs" helpText={JOBS_HELP} {...rest}>{current}</StaticStat>;
 }
 
-export const JobsStatStreamable = (props: { data: Pick<ComponentCommonApiJson, 'id'> } & Omit<ComponentProps<typeof JobsStatStatic>, 'current'>) => {
+/** For a Client, opens a popover with the counts of the scrobble records its jobs made */
+export const JobsStatStreamable = (props: { data: Pick<ComponentCommonApiJson, 'id' | 'mode'> } & Omit<ComponentProps<typeof JobsStatStatic>, 'current'>) => {
     const {
         data,
         ...rest
@@ -325,5 +329,33 @@ export const JobsStatStreamable = (props: { data: Pick<ComponentCommonApiJson, '
         // still loading, or jobs can't be read (IE not logged in)
         return null;
     }
-    return <JobsStatStatic current={countComponentJobs(jobs, data.id)} {...rest}/>;
+    const current = countComponentJobs(jobs, data.id);
+    if (data.mode !== 'client') {
+        return <JobsStatStatic current={current} {...rest}/>;
+    }
+    return (
+        <Popover.Root lazyMount unmountOnExit positioning={{placement: 'bottom-start'}}>
+            <Popover.Trigger asChild>
+                <Box as="button" cursor="pointer" textAlign="start" alignSelf="flex-start" flexGrow={rest.flexGrow}>
+                    <StaticStat label={<Span textDecoration="underline dashed 1px">Jobs</Span>} {...rest}>{current}</StaticStat>
+                </Box>
+            </Popover.Trigger>
+            <Portal>
+                <Popover.Positioner>
+                    <Popover.Content>
+                        <Popover.Arrow>
+                            <Popover.ArrowTip/>
+                        </Popover.Arrow>
+                        <Popover.Body>
+                            <Stack gap="2">
+                                <Span textStyle="sm">{JOBS_HELP} Client.</Span>
+                                <ClientJobPlaysCountsFetchable componentId={data.id}/>
+                                <Text textStyle="xs"><Badge size="xs" variant="solid" colorPalette="green">Tip</Badge> Cleanup Plays from Jobs in the Client <IconWrapper><EllipsisChakraIcon size="xs"/></IconWrapper> Menu</Text>
+                            </Stack>
+                        </Popover.Body>
+                    </Popover.Content>
+                </Popover.Positioner>
+            </Portal>
+        </Popover.Root>
+    );
 }

@@ -1,4 +1,4 @@
-import { Card, Heading, Link as ChakraLink, Stack, Text } from '@chakra-ui/react';
+import { CloseButton, createOverlay, Dialog, Link as ChakraLink, Portal, SkeletonText, Stack, Text } from '@chakra-ui/react';
 import { useSSEAnyEvent, useSSEContext } from "@flamefrontend/sse-runtime-react";
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import ky from 'ky';
@@ -7,21 +7,25 @@ import { asCleanupSseEvent, asJobSseEvent, type MsSseEvent } from "../../../core
 import type { CleanupAction, ClientJobPlaysSummaryJson, JobCleanupProgressJson } from "../../../core/Job";
 import { tanQueries } from "../../queries";
 import { baseUrl } from "../../utils";
+import { ErrorAlert } from "../ErrorAlert";
 import { TextMuted } from "../TextMuted";
 import { toaster } from "../Toaster";
 import { CleanupButtons } from "../jobs/CleanupButtons";
 import { apiErrorMessage } from "../jobs/jobUtils";
 import { CleanupProgress } from "../mirrors/mirrorUtils";
 
-/** Cleanup of every scrobble record import jobs created in a Client. Hidden while there are none */
-export const ClientJobPlays = (props: { componentId: number }) => {
-    const {componentId} = props;
+/**
+ * Keeps a Client's cached job play summary up to date from SSE events, and tells the user when a cleanup of them finished.
+ * Mount once per page so a finished cleanup is reported even while its dialog is closed.
+ * */
+export const useClientJobPlaysEvents = (componentId: number, enabled = true) => {
     const queryClient = useQueryClient();
     const key = tanQueries.mirrors.clientJobPlays(componentId).queryKey;
-    const {data} = useQuery(tanQueries.mirrors.clientJobPlays(componentId));
-
     const sse = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(sse, (payload) => {
+        if (!enabled) {
+            return;
+        }
         const job = asJobSseEvent(payload.data);
         if (job !== undefined) {
             // an export started or stopped, which decides if a cleanup can run
@@ -55,41 +59,93 @@ export const ClientJobPlays = (props: { componentId: number }) => {
             }
         }
     });
+}
 
-    const {mutate, isPending} = useMutation({
+/** Counts of a Client's job scrobble records, read-only */
+export const ClientJobPlaysCounts = (props: { data: ClientJobPlaysSummaryJson }) => {
+    const {data} = props;
+    return (
+        <Text textStyle="sm">
+            {data.total.toLocaleString()} Plays from import jobs
+            {data.orphaned > 0 ? `, ${data.orphaned.toLocaleString()} from deleted jobs` : ''}
+            {data.compacted > 0 ? `, ${data.compacted.toLocaleString()} compacted` : ''}
+            {data.queued > 0 ? `, ${data.queued.toLocaleString()} still queued` : ''}.
+        </Text>
+    );
+}
+
+/** Fetches and shows the counts of a Client's job scrobble records */
+export const ClientJobPlaysCountsFetchable = (props: { componentId: number }) => {
+    const {isPending, isError, data, error} = useQuery(tanQueries.mirrors.clientJobPlays(props.componentId));
+    if (isPending) {
+        return <SkeletonText noOfLines={1}/>;
+    }
+    if (isError) {
+        return <ErrorAlert error={error}/>;
+    }
+    return <ClientJobPlaysCounts data={data}/>;
+}
+
+/** Cleanup of every scrobble record import jobs created in a Client */
+export const ClientJobPlays = (props: { componentId: number }) => {
+    const {componentId} = props;
+    const {isPending, isError, data, error} = useQuery(tanQueries.mirrors.clientJobPlays(componentId));
+
+    const {mutate, isPending: mutating} = useMutation({
         mutationFn: (action: CleanupAction) => ky.post(`components/${componentId}/cleanup/job-plays`, {baseUrl, json: {action}}),
         onError: (e) => toaster.create({type: 'error', title: 'Could not start the cleanup', description: apiErrorMessage(e)}),
     });
 
-    if (data === undefined || (data.total === 0 && data.task === null)) {
-        return null;
+    if (isPending) {
+        return <SkeletonText noOfLines={3}/>;
+    }
+    if (isError) {
+        return <ErrorAlert error={error}/>;
+    }
+    if (data.total === 0 && data.task === null) {
+        return <TextMuted textStyle="sm">This Client has no records from import jobs.</TextMuted>;
     }
     const exporting = data.exportingJobs.length > 0
         ? <>Stop exports to this Client to clean up: {data.exportingJobs.map((j, i) => <span key={j.id}>{i > 0 ? ', ' : ''}<ChakraLink asChild><Link to={`/jobs/${j.id}`}>{j.name}</Link></ChakraLink></span>)}</>
         : undefined;
     return (
-        <Card.Root variant="subtle" width="100%">
-            <Card.Header><Heading size="md">Job Scrobble Records</Heading></Card.Header>
-            <Card.Body>
-                <Stack gap="3">
-                    <Text textStyle="sm">
-                        {data.total.toLocaleString()} records from import jobs
-                        {data.orphaned > 0 ? `, ${data.orphaned.toLocaleString()} of deleted jobs` : ''}
-                        {data.compacted > 0 ? `, ${data.compacted.toLocaleString()} compacted` : ''}
-                        {data.queued > 0 ? `, ${data.queued.toLocaleString()} still queued` : ''}.
-                    </Text>
-                    <TextMuted textStyle="sm">Scrobbles already sent stay on the service. Records still in the queue are skipped.</TextMuted>
-                    {data.task !== null ? <CleanupProgress task={data.task} text={`${data.task.action === 'delete' ? 'Deleting' : 'Compacting'}: ${data.task.done.toLocaleString()} of ${data.task.total.toLocaleString()}`}/> : <CleanupButtons
-                        pending={isPending}
-                        disabledReason={exporting}
-                        explain={{
-                            compact: 'Remove the raw data and transform details saved with these records. The records stay in the activity list.',
-                            delete: 'Delete these records. They disappear from the activity list.',
-                        }}
-                        onConfirm={(a) => mutate(a)}
-                    />}
-                </Stack>
-            </Card.Body>
-        </Card.Root>
+        <Stack gap="3">
+            <ClientJobPlaysCounts data={data}/>
+            <TextMuted textStyle="sm">Plays already scrobbled stay on the service. Plays still in the queue are skipped.</TextMuted>
+            {data.task !== null ? <CleanupProgress task={data.task} text={`${data.task.action === 'delete' ? 'Deleting' : 'Compacting'}: ${data.task.done.toLocaleString()} of ${data.task.total.toLocaleString()}`}/> : <CleanupButtons
+                pending={mutating}
+                disabledReason={exporting}
+                explain={{
+                    compact: 'Remove the raw data and transform details saved with these Plays. The Plays stay in the activity list.',
+                    delete: 'Delete these Plays. They disappear from the Play list.',
+                }}
+                onConfirm={(a) => mutate(a)}
+            />}
+        </Stack>
     );
 }
+
+/** ClientJobPlays in a dialog. Render `clientJobPlaysDialog.Viewport` once on the page */
+export const clientJobPlaysDialog = createOverlay<{componentId: number}>((props) => {
+    const {componentId, ...rest} = props;
+    return (
+        <Dialog.Root {...rest}>
+            <Portal>
+                <Dialog.Backdrop/>
+                <Dialog.Positioner>
+                    <Dialog.Content>
+                        <Dialog.Header>
+                            <Dialog.Title>Job Plays</Dialog.Title>
+                        </Dialog.Header>
+                        <Dialog.Body>
+                            <ClientJobPlays componentId={componentId}/>
+                        </Dialog.Body>
+                        <Dialog.CloseTrigger asChild>
+                            <CloseButton size="sm"/>
+                        </Dialog.CloseTrigger>
+                    </Dialog.Content>
+                </Dialog.Positioner>
+            </Portal>
+        </Dialog.Root>
+    );
+});
