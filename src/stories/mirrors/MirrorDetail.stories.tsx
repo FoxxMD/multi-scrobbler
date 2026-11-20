@@ -31,3 +31,28 @@ export const Base = meta.story({
     })
   }
 });
+
+export const MixedSources = meta.story({
+  args: {
+    mirror: generateMirrorApiJson({
+      coverage: [[day(5000), day(3)]],
+      segments: [
+        {range: [day(5000), day(3000)], origin: 'lastfm-benjamin', jobId: 3},
+        {range: [day(3000) + 1, day(1000)], origin: 'unknown', jobId: null},
+        {range: [day(1000) + 1, day(3)], origin: 'lastfm', jobId: 1},
+      ],
+      jobs: [{id: 1, name: 'Last.fm import'}],
+    })
+  }
+});
+
+export const Locked = meta.story({
+  args: {
+    mirror: generateMirrorApiJson({
+      name: 'teal.fm history',
+      service: 'tealfm',
+      account: 'did:plc:abc123',
+      locked: true,
+    })
+  }
+});

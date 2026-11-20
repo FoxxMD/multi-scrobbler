@@ -20,7 +20,33 @@ const coverageSummary = (mirror: MirrorApiJson): string => mirror.coverage.lengt
     ? 'Nothing imported'
     : formatRange([mirror.coverage[0][0], mirror.coverage[mirror.coverage.length - 1][1]]);
 
-const accountText = (mirror: MirrorApiJson) => `${mirror.service === 'lastfm' ? 'Last.fm' : mirror.service}${mirror.account !== null ? `: ${mirror.account}` : ''}`;
+const accountText = (mirror: MirrorApiJson) => mirror.locked ? `Locked to ${mirror.service}${mirror.account !== null ? `: ${mirror.account}` : ''}` : 'Any source';
+
+const ORIGIN_NAMES: Record<string, string> = {
+    lastfm: 'Last.fm',
+    'lastfm-benjamin': 'benjaminbenben file',
+    unknown: 'Unknown source',
+};
+
+/** Covered ranges with the source and job that filled each */
+const SegmentList = (props: { mirror: MirrorApiJson }) => {
+    const {segments, jobs} = props.mirror;
+    if (segments.length === 0) {
+        return <Text>Nothing yet</Text>;
+    }
+    return (
+        <Stack gap="0">
+            {segments.map(seg => {
+                const job = seg.jobId === null ? undefined : jobs.find(j => j.id === seg.jobId);
+                return <Text key={seg.range[0]}>
+                    {formatRange(seg.range)} <Text as="span" color="fg.muted">
+                        - {ORIGIN_NAMES[seg.origin] ?? seg.origin}{job !== undefined ? <>, <ChakraLink asChild><Link to={`/jobs/${job.id}`}>{job.name}</Link></ChakraLink></> : seg.jobId !== null ? ', deleted job' : ''}
+                    </Text>
+                </Text>;
+            })}
+        </Stack>
+    );
+}
 
 export const MirrorSummary = (props: { mirror: MirrorApiJson }) => {
     const {mirror} = props;
@@ -196,9 +222,9 @@ export const MirrorDetail = (props: { mirror: MirrorApiJson }) => {
                     <Stack gap="4">
                         {mirror.task !== null ? <Stack gap="1"><CleanupProgress task={mirror.task} text={taskText(mirror.task)}/></Stack> : undefined}
                         <DataList.Root orientation="horizontal" size="sm">
-                            <DataItem label="Account">{accountText(mirror)}</DataItem>
+                            <DataItem label="Holds">{accountText(mirror)}</DataItem>
                             <DataItem label="Plays">{mirror.plays.toLocaleString()}</DataItem>
-                            <DataItem label="Imported"><RangeList ranges={mirror.coverage} empty="Nothing yet"/></DataItem>
+                            <DataItem label="Imported"><SegmentList mirror={mirror}/></DataItem>
                             {mirror.gaps.length > 0 ? <DataItem label="Not imported"><RangeList ranges={mirror.gaps} empty="-"/></DataItem> : undefined}
                             <DataItem label="Jobs">
                                 {mirror.jobs.length === 0 ? 'None' : <Stack gap="0">{mirror.jobs.map(j => <ChakraLink key={j.id} asChild><Link to={`/jobs/${j.id}`}>{j.name}</Link></ChakraLink>)}</Stack>}

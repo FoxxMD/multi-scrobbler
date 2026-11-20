@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { LuUpload } from 'react-icons/lu';
 import { useNavigate } from "react-router";
 import * as z from "zod";
-import { EXPORT_QUEUE_LIMIT_DEFAULT, EXPORT_QUEUE_LIMIT_MAX, type JobApiJson, type JobCreate, type JobExportOrder, type JobOptionsApiJson } from "../../../core/Job";
+import { EXPORT_QUEUE_LIMIT_DEFAULT, EXPORT_QUEUE_LIMIT_MAX, JOB_IMPORT_OVERLAPS, type JobApiJson, type JobCreate, type JobExportOrder, type JobImportOverlap, type JobOptionsApiJson } from "../../../core/Job";
 import { tanQueries } from "../../queries";
 import { baseUrl } from "../../utils";
 import { ErrorAlert } from "../ErrorAlert";
@@ -34,7 +34,9 @@ const formSchema = z.object({
     /** 'new' or a mirror id */
     mirror: z.string(),
     mirrorName: z.string(),
-    mirrorAccount: z.string(),
+    overlap: z.enum(JOB_IMPORT_OVERLAPS),
+    /** replace into an existing mirror deletes Plays, the user has to say so */
+    confirmReplace: z.boolean(),
     range: z.enum(['all', 'custom']),
     /** datetime-local values */
     from: z.string(),
@@ -66,8 +68,11 @@ const formSchema = z.object({
     if (v.source === 'mirror' && v.targets.length === 0) {
         ctx.addIssue({code: 'custom', path: ['targets'], message: 'Choose at least one Client to export to'});
     }
-    if ((v.source === 'upload' || v.source === 'existing') && v.mirror === 'new' && v.mirrorName.trim() === '') {
+    if (v.source !== 'mirror' && v.mirror === 'new' && v.mirrorName.trim() === '') {
         ctx.addIssue({code: 'custom', path: ['mirrorName'], message: 'Name the new mirror'});
+    }
+    if (v.source !== 'mirror' && v.mirror !== 'new' && v.overlap === 'replace' && !v.confirmReplace) {
+        ctx.addIssue({code: 'custom', path: ['confirmReplace'], message: 'Confirm that Plays in the mirror will be deleted'});
     }
     if (v.range === 'custom' && v.from !== '' && v.to !== '' && !dayjs(v.from).isBefore(dayjs(v.to))) {
         ctx.addIssue({code: 'custom', path: ['to'], message: 'Must be after From'});
@@ -94,7 +99,7 @@ const formSchema = z.object({
             importFrom = {mirrorId: Number.parseInt(v.exportMirror)};
     }
     let mirror: JobCreate['mirror'];
-    if (v.source === 'upload' || v.source === 'existing') {
+    if (v.source !== 'mirror') {
         mirror = v.mirror === 'new'
             ? {new: {name: v.mirrorName.trim()}}
             : {id: Number.parseInt(v.mirror)};
@@ -111,6 +116,8 @@ const formSchema = z.object({
             name: v.name,
             importFrom,
             mirror,
+            // a new mirror has nothing to replace
+            overlap: v.source === 'mirror' || v.mirror === 'new' ? undefined : v.overlap,
             range: v.range === 'all' ? 'all' : {
                 from: v.from === '' ? undefined : dayjs(v.from).toISOString(),
                 // datetime-local has minute precision, include the whole minute
@@ -201,7 +208,8 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                 exportMirror: options.mirrors[0]?.id.toString() ?? '',
                 mirror: 'new',
                 mirrorName: 'Last.fm',
-                mirrorAccount: '',
+                overlap: 'skip' as JobImportOverlap,
+                confirmReplace: false,
                 range: 'all' as 'all' | 'custom',
                 from: '',
                 to: '',
@@ -246,9 +254,15 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
         ...(options.presets.length > 0 ? [{value: 'preset' as const, label: 'Preset'}] : []),
         ...(options.componentTransforms.length > 0 ? [{value: 'component' as const, label: 'Copy from a Source/Client'}] : []),
     ];
+    const overlapItems: RadioFormItem<JobImportOverlap>[] = [
+        {value: 'skip', label: 'Keep'},
+        {value: 'replace', label: 'Replace'},
+    ];
+    // locked mirrors only take scrobbles from their own service
+    const importMirrors = options.mirrors.filter(x => !x.locked);
     const mirrorGroups: SelectFormGroup[] = [
         {items: [{value: 'new', label: 'New mirror'}]},
-        ...(options.mirrors.length > 0 ? [{label: 'Existing', items: options.mirrors.map(x => ({
+        ...(importMirrors.length > 0 ? [{label: 'Existing', items: importMirrors.map(x => ({
             value: x.id.toString(),
             label: `${x.name}${x.account !== null ? ` (${x.account})` : ''} - ${x.playCount.toLocaleString()} Plays`
         }))}] : []),
@@ -280,7 +294,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                             name="componentId"
                             children={(field) => options.importComponents.length === 0
                                 ? <Field.Root invalid={field.errors.length > 0}><Text color="fg.warning">No Last.fm Sources or Clients are ready to import from. Import from an export file instead.</Text><FormFieldErrors field={field}/></Field.Root>
-                                : <FormNativeSelect field={field} label="Last.fm Source/Client" groups={componentGroups} helperText="Imports into the mirror for this component's Last.fm account"/>}
+                                : <FormNativeSelect field={field} label="Last.fm Source/Client" groups={componentGroups} helperText="Imports through this component's Last.fm account"/>}
                         /> : undefined}
                         {source === 'upload' ? <form.Field
                             name="file"
@@ -309,31 +323,39 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                             name="exportMirror"
                             children={(field) => <FormNativeSelect field={field} label="Mirror" groups={exportMirrorGroups} helperText="Nothing is imported. The job exports Plays already in this mirror."/>}
                         /> : undefined}
-                        {source === 'upload' || source === 'existing' ? <Stack gap="3">
+                        {source !== 'mirror' ? <Stack gap="3">
                             <form.Field
                                 name="mirror"
-                                children={(field) => <FormNativeSelect field={field} label="Mirror" groups={mirrorGroups} helperText="Where imported Plays are stored. Plays already in the mirror are skipped. benjaminbenben files always get a new mirror of their own because their timestamps have no seconds."/>}
+                                children={(field) => <FormNativeSelect field={field} label="Mirror" groups={mirrorGroups} helperText="Where imported Plays are stored. A mirror can hold Plays from different sources, IE Last.fm for older years and a file for the rest."/>}
                             />
                             <form.Subscribe
                                 selector={(state) => state.values.mirror}
-                                children={(mirror) => mirror === 'new' ? <Flex gap="3" wrap="wrap">
+                                children={(mirror) => mirror === 'new' ? <form.Field
+                                    name="mirrorName"
+                                    children={(field) => <Field.Root invalid={field.errors.length > 0}>
+                                        <Field.Label>Mirror Name</Field.Label>
+                                        <Input value={field.value} maxLength={200} onChange={(e) => field.handleChange(e.currentTarget.value)} onBlur={field.handleBlur}/>
+                                        <FormFieldErrors field={field}/>
+                                    </Field.Root>}
+                                /> : <Stack gap="3">
                                     <form.Field
-                                        name="mirrorName"
-                                        children={(field) => <Field.Root invalid={field.errors.length > 0} flex="1" minWidth="12rem">
-                                            <Field.Label>Mirror Name</Field.Label>
-                                            <Input value={field.value} maxLength={200} onChange={(e) => field.handleChange(e.currentTarget.value)} onBlur={field.handleBlur}/>
-                                            <FormFieldErrors field={field}/>
-                                        </Field.Root>}
+                                        name="overlap"
+                                        children={(field) => <FormRadio field={field} label="Plays Already in the Mirror" items={overlapItems} helperText={<>
+                                            Keep skips time the mirror already has. Replace deletes the mirror's Plays in this job's range, then imports all of it. Use Replace when this source is better than what is there, IE a benjaminbenben file (no seconds in its timestamps) overlapping Last.fm data.
+                                        </>}/>}
                                     />
-                                    <form.Field
-                                        name="mirrorAccount"
-                                        children={(field) => <Field.Root flex="1" minWidth="12rem">
-                                            <Field.Label>Last.fm Username (optional)</Field.Label>
-                                            <Input value={field.value} maxLength={200} onChange={(e) => field.handleChange(e.currentTarget.value)} onBlur={field.handleBlur}/>
-                                            <Field.HelperText>Uses the existing mirror for this username, if there is one</Field.HelperText>
-                                        </Field.Root>}
+                                    <form.Subscribe
+                                        selector={(state) => state.values.overlap}
+                                        children={(overlap) => overlap === 'replace' ? <form.Field
+                                            name="confirmReplace"
+                                            children={(field) => <FormCheckbox
+                                                field={field}
+                                                label={`Delete the Plays in ${importMirrors.find(x => x.id.toString() === mirror)?.name ?? 'the mirror'} within this job's range before importing`}
+                                                helperText="Other jobs using this mirror and range will export the new Plays if they run again."
+                                            />}
+                                        /> : undefined}
                                     />
-                                </Flex> : undefined}
+                                </Stack>}
                             />
                         </Stack> : undefined}
                         {source !== 'mirror' ? <form.Field

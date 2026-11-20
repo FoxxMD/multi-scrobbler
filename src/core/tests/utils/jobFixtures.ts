@@ -9,14 +9,15 @@ export const generateMirrorApiJson = (data: Partial<MirrorApiJson> = {}): Mirror
     const account = faker.internet.username();
     const end = dayjs().subtract(faker.number.int({min: 1, max: 30}), 'day').valueOf();
     const start = end - faker.number.int({min: 365, max: 3650}) * DAY;
+    const coverage = data.coverage ?? [[start, end]];
     return {
         id,
         name: `Last.fm ${account}`,
         service: 'mixed',
         account: null,
         locked: false,
-        coverage: [[start, end]],
-        segments: [{range: [start, end], origin: 'lastfm', jobId: 1}],
+        coverage,
+        segments: coverage.map(range => ({range, origin: 'lastfm', jobId: 1})),
         gaps: [],
         plays: faker.number.int({min: 1000, max: 150000}),
         jobs: [{id: 1, name: 'Last.fm import'}],

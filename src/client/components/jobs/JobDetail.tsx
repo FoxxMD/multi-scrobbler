@@ -300,8 +300,10 @@ export const ImportPanel = (props: { job: JobApiJson }) => {
                         </DataItem>
                         <DataItem label="Mirror">
                             <HStack><ChakraLink asChild><Link to={`/mirrors/${job.mirror.id}`}>{job.mirror.name}</Link></ChakraLink>{job.mirror.account !== null ? ` (${job.mirror.account})` : ''}</HStack>
-                            {job.importFrom.kind === 'file' && job.importFrom.format === 'lastfm-benjamin-csv' ? <Text as="span" color="fg.muted"> - benjaminbenben files always get a new mirror of their own</Text> : undefined}
                         </DataItem>
+                        {job.importFrom.kind !== 'mirror' ? <DataItem label="Plays in mirror">
+                            {job.importOverlap === 'skip' ? 'Kept, only new time is imported' : `Replaced${job.importReplacedAt !== null ? ` (deleted ${formatJobDate(job.importReplacedAt)})` : ', deleted when the import starts'}`}
+                        </DataItem> : undefined}
                         <DataItem label="Range">{job.rangeFrom === null ? 'Beginning' : formatPlayedDate(job.rangeFrom)} to {formatPlayedDate(job.rangeTo)}</DataItem>
                         {position !== undefined ? <DataItem label="Position">{position}</DataItem> : undefined}
                         {job.importFrom.kind !== 'mirror' ? <DataItem label="Started">{formatJobDate(job.importStartedAt)}</DataItem> : undefined}
