@@ -33,7 +33,7 @@ export const MirrorSummary = (props: { mirror: MirrorApiJson }) => {
                     </LinkOverlay>
                     <TextMuted textStyle="sm" truncate>{accountText(mirror)}</TextMuted>
                 </Card.Header>
-                <Card.Body px="6" py="3">
+                <Card.Body pt="3">
                     <Stack gap="1">
                         <Text textStyle="sm">{mirror.plays.toLocaleString()} plays</Text>
                         <TextMuted textStyle="sm">{coverageSummary(mirror)}</TextMuted>

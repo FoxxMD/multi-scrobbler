@@ -16,7 +16,8 @@ export const JobSummary = (props: { job: JobApiJson }) => {
             <LinkBox>
                 <Card.Header>
                     <Flex justify="space-between" alignItems="flex-start" gap="2">
-                        <LinkOverlay asChild>
+                        {/* flex items don't shrink below their content by default, which would push the badge out */}
+                        <LinkOverlay asChild flex="1" minWidth="0">
                             <Link to={`/jobs/${job.id}`}><Heading truncate>{job.name}</Heading></Link>
                         </LinkOverlay>
                         <JobStatusBadge status={job.status} flexShrink="0"/>
@@ -24,7 +25,7 @@ export const JobSummary = (props: { job: JobApiJson }) => {
                     <TextMuted textStyle="sm" truncate>{importOriginText(job.importFrom)}</TextMuted>
                     <TextMuted textStyle="sm" truncate>Mirror: {job.mirror.name}</TextMuted>
                 </Card.Header>
-                <Card.Body px="6" py="3">
+                <Card.Body pt="3">
                     <Stack gap="2">
                         {job.importFrom.kind !== 'mirror' ? <>
                             <ImportProgressBar job={job}/>
