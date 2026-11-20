@@ -341,7 +341,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                                     <form.Field
                                         name="overlap"
                                         children={(field) => <FormRadio field={field} label="Plays Already in the Mirror" items={overlapItems} helperText={<>
-                                            Keep skips time the mirror already has. Replace deletes the mirror's Plays in this job's range, then imports all of it. Use Replace when this source is better than what is there, IE a benjaminbenben file (no seconds in its timestamps) overlapping Last.fm data.
+                                            {field.value === 'skip' ? <><strong>Keep</strong> skips Plays from the time ranges the mirror already has.</> : <><strong>Replace</strong> deletes the mirror's Plays that in the same time range as this job's range, then imports from this job.</>}
                                         </>}/>}
                                     />
                                     <form.Subscribe
@@ -350,7 +350,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                                             name="confirmReplace"
                                             children={(field) => <FormCheckbox
                                                 field={field}
-                                                label={`Delete the Plays in ${importMirrors.find(x => x.id.toString() === mirror)?.name ?? 'the mirror'} within this job's range before importing`}
+                                                label={<><strong>Confirm:</strong> Delete the Plays in <strong>{importMirrors.find(x => x.id.toString() === mirror)?.name ?? 'the mirror'}</strong> within this job's range before importing</>}
                                                 helperText="Other jobs using this mirror and range will export the new Plays if they run again."
                                             />}
                                         /> : undefined}
