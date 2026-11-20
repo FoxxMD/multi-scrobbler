@@ -11,7 +11,7 @@ import { ErrorAlert } from "../ErrorAlert";
 import { TextMuted } from "../TextMuted";
 import { toaster } from "../Toaster";
 import { CleanupButtons } from "../jobs/CleanupButtons";
-import { apiErrorMessage } from "../jobs/jobUtils";
+import { apiErrorMessage, useComponentJobCount } from "../jobs/jobUtils";
 import { CleanupProgress } from "../mirrors/mirrorUtils";
 
 /**
@@ -62,10 +62,11 @@ export const useClientJobPlaysEvents = (componentId: number, enabled = true) => 
 }
 
 /** Counts of a Client's job scrobble records, read-only */
-export const ClientJobPlaysCounts = (props: { data: ClientJobPlaysSummaryJson }) => {
-    const {data} = props;
+export const ClientJobPlaysCounts = (props: { data: ClientJobPlaysSummaryJson, jobs?: number }) => {
+    const {data, jobs} = props;
     return (
         <Text textStyle="sm">
+            {jobs !== undefined ? `${jobs.toLocaleString()} job${jobs === 1 ? '' : 's'}, ` : ''}
             {data.total.toLocaleString()} Plays from import jobs
             {data.orphaned > 0 ? `, ${data.orphaned.toLocaleString()} from deleted jobs` : ''}
             {data.compacted > 0 ? `, ${data.compacted.toLocaleString()} compacted` : ''}
@@ -77,19 +78,21 @@ export const ClientJobPlaysCounts = (props: { data: ClientJobPlaysSummaryJson })
 /** Fetches and shows the counts of a Client's job scrobble records */
 export const ClientJobPlaysCountsFetchable = (props: { componentId: number }) => {
     const {isPending, isError, data, error} = useQuery(tanQueries.mirrors.clientJobPlays(props.componentId));
+    const jobs = useComponentJobCount(props.componentId);
     if (isPending) {
         return <SkeletonText noOfLines={1}/>;
     }
     if (isError) {
         return <ErrorAlert error={error}/>;
     }
-    return <ClientJobPlaysCounts data={data}/>;
+    return <ClientJobPlaysCounts data={data} jobs={jobs}/>;
 }
 
 /** Cleanup of every scrobble record import jobs created in a Client */
 export const ClientJobPlays = (props: { componentId: number }) => {
     const {componentId} = props;
     const {isPending, isError, data, error} = useQuery(tanQueries.mirrors.clientJobPlays(componentId));
+    const jobs = useComponentJobCount(componentId);
 
     const {mutate, isPending: mutating} = useMutation({
         mutationFn: (action: CleanupAction) => ky.post(`components/${componentId}/cleanup/job-plays`, {baseUrl, json: {action}}),
@@ -110,14 +113,14 @@ export const ClientJobPlays = (props: { componentId: number }) => {
         : undefined;
     return (
         <Stack gap="3">
-            <ClientJobPlaysCounts data={data}/>
+            <ClientJobPlaysCounts data={data} jobs={jobs}/>
             <TextMuted textStyle="sm">Plays already scrobbled stay on the service. Plays still in the queue are skipped.</TextMuted>
             {data.task !== null ? <CleanupProgress task={data.task} text={`${data.task.action === 'delete' ? 'Deleting' : 'Compacting'}: ${data.task.done.toLocaleString()} of ${data.task.total.toLocaleString()}`}/> : <CleanupButtons
                 pending={mutating}
                 disabledReason={exporting}
                 explain={{
                     compact: 'Remove the raw data and transform details saved with these Plays. The Plays stay in the activity list.',
-                    delete: 'Delete these Plays. They disappear from the Play list.',
+                    delete: 'Delete these Plays in the MS database. This does not affect downstream scrobbles in the service.',
                 }}
                 onConfirm={(a) => mutate(a)}
             />}

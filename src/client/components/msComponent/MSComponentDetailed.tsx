@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, type ComponentProps, useEffect, type ReactNode } from "react"
 import { clientJobPlaysDialog, useClientJobPlaysEvents } from './ClientJobPlays';
 import { LuEraser } from 'react-icons/lu';
-import { countComponentJobs } from './Stats.js';
+import { countComponentJobs, useJobEvents } from '../jobs/jobUtils.js';
 import { Portal, Group, Span, Menu, Box, Heading, Skeleton, Wrap, HStack, Badge, Stack, List, Flex, Text, Card, Button, CloseButton, SkeletonText, type BadgeProps, type MenuItemProps, createOverlay, Dialog, type MenuSelectionDetails } from '@chakra-ui/react';
 import { COMPONENT_STATE, type ComponentCommonApiJson, type ComponentsApiJson, type ComponentState, type ComponentStateBody, isComponentSourceApiJson, type MsSseEvent, asSseEvent } from "../../../core/Api.js";
 import { capitalize, capitalizeWords } from "../../../core/StringUtils.js";
@@ -16,7 +16,7 @@ import {
     useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
 import { Link } from "react-router";
-import { CountIndicatorStreamable, DateIndicatorStreamable, DeadLetterIndicatorStreamable, QueuedIndicatorStreamable, JobsStatStreamable, StaticStat } from "./Stats.js";
+import { CountIndicatorStreamable, DateIndicatorStreamable, DeadLetterIndicatorStreamable, QueuedIndicatorStreamable, JobsStatStreamable, JobPlaysStatStreamable, StaticStat } from "./Stats.js";
 import { ListContainerFilterable } from "../playActivity/ActivityList.js";
 import { useParams } from "react-router-dom";
 import { ComponentStateBadge } from "../Badges.js";
@@ -106,7 +106,7 @@ export const MSComponentStats = (props: { data?: ComponentsApiJson, live?: boole
             <QueuedIndicatorStreamable data={props.data} flexGrow="0"/>
             <DeadLetterIndicatorStreamable data={props.data} flexGrow="0"/>
             <DateIndicatorStreamable data={props.data} flexGrow="0"/>
-            <JobsStatStreamable data={props.data} flexGrow="0"/>
+            {props.data.mode === 'client' ? <JobPlaysStatStreamable data={props.data} flexGrow="0"/> : <JobsStatStreamable data={props.data} flexGrow="0"/>}
             {synced !== undefined ? <SyncedStat data={props.data}/> : null}
             
         </Wrap>
@@ -361,7 +361,11 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
     // job scrobble records only exist in Clients
     const isClient = props.data.mode === 'client';
     const {data: jobs} = useQuery({...tanQueries.jobs.list(), enabled: isClient});
-    if(isClient && jobs !== undefined && countComponentJobs(jobs, componentId) > 0) {
+    // records of deleted jobs can be left over after the Client has no jobs
+    const {data: jobPlays} = useQuery({...tanQueries.mirrors.clientJobPlays(componentId), enabled: isClient});
+    const hasJobs = jobs !== undefined && countComponentJobs(jobs, componentId) > 0;
+    const hasJobPlays = jobPlays !== undefined && (jobPlays.total > 0 || jobPlays.task !== null);
+    if(isClient && (hasJobs || hasJobPlays)) {
         menuItems.push(<MenuItemJobCleanup/>)
     }
 
@@ -462,6 +466,8 @@ export const ComponentDetailedDesktop = (props: {data: ComponentsApiJson, live?:
     const isWrapped = useIsWrapped(target);
     // reports a finished cleanup of job records even when its dialog is closed
     useClientJobPlaysEvents(data.id, data.mode === 'client');
+    // keeps job counts current
+    useJobEvents();
     return (
         <MSErrorBoundary>
         <dialog.Viewport />

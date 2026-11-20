@@ -13,9 +13,9 @@ import dayjs from "dayjs";
 import { shortTodayAwareFormat } from "../../utils/index.js";
 import { TextTip } from "../ToggleTip.js";
 import { useQuery } from '@tanstack/react-query';
-import type { JobApiJson } from "../../../core/Job.js";
 import { tanQueries } from "../../queries/index.js";
-import { useJobEvents } from "../jobs/jobUtils.js";
+import { useComponentJobCount } from "../jobs/jobUtils.js";
+import { NumberValueText } from "../AbbreviatedNumber.js";
 import { ClientJobPlaysCountsFetchable } from "./ClientJobPlays.js";
 
 type Color = BadgeProps['colorPalette'] & IconBaseProps['color'];
@@ -305,10 +305,6 @@ export const DateIndicator = (props: {
             <TextMuted textStyle="sm">{shortTodayAwareFormat(dayjs(usedDate))} {useActive? 'Last Active At' : 'Last Ready At'}</TextMuted>
         );
 }
-/** Jobs that import from the component or export to it */
-export const countComponentJobs = (jobs: Pick<JobApiJson, 'importFrom' | 'targets'>[], componentId: number): number =>
-    jobs.filter(j => (j.importFrom.kind === 'component' && j.importFrom.componentId === componentId) || j.targets.some(t => t.componentId === componentId)).length;
-
 const JOBS_HELP = 'Import jobs that import from or export to this';
 
 export const JobsStatStatic = (props: { current: number } & Omit<ComponentProps<typeof StaticStat>, 'label'>) => {
@@ -316,28 +312,41 @@ export const JobsStatStatic = (props: { current: number } & Omit<ComponentProps<
     return <StaticStat label="Jobs" helpText={JOBS_HELP} {...rest}>{current}</StaticStat>;
 }
 
-/** For a Client, opens a popover with the counts of the scrobble records its jobs made */
-export const JobsStatStreamable = (props: { data: Pick<ComponentCommonApiJson, 'id' | 'mode'> } & Omit<ComponentProps<typeof JobsStatStatic>, 'current'>) => {
+/** Mount useJobEvents once on the page to keep it current */
+export const JobsStatStreamable = (props: { data: Pick<ComponentCommonApiJson, 'id'> } & Omit<ComponentProps<typeof JobsStatStatic>, 'current'>) => {
     const {
         data,
         ...rest
     } = props;
-    // job SSE events keep the cached job list current
-    useJobEvents();
-    const {data: jobs} = useQuery(tanQueries.jobs.list());
-    if (jobs === undefined) {
-        // still loading, or jobs can't be read (IE not logged in)
+    const current = useComponentJobCount(data.id);
+    if (current === undefined) {
         return null;
     }
-    const current = countComponentJobs(jobs, data.id);
-    if (data.mode !== 'client') {
-        return <JobsStatStatic current={current} {...rest}/>;
+    return <JobsStatStatic current={current} {...rest}/>;
+}
+
+/**
+ * Plays import jobs created in a Client. Opens a popover with their details.
+ * Kept current by useClientJobPlaysEvents, which the page mounts once
+ * */
+export const JobPlaysStatStreamable = (props: { data: Pick<ComponentCommonApiJson, 'id' | 'mode'> } & ComponentProps<typeof Stat.Root>) => {
+    const {
+        data,
+        ...rest
+    } = props;
+    const isClient = data.mode === 'client';
+    const {data: summary} = useQuery({...tanQueries.mirrors.clientJobPlays(data.id), enabled: isClient});
+    if (!isClient || summary === undefined) {
+        return null;
     }
     return (
         <Popover.Root lazyMount unmountOnExit positioning={{placement: 'bottom-start'}}>
             <Popover.Trigger asChild>
                 <Box as="button" cursor="pointer" textAlign="start" alignSelf="flex-start" flexGrow={rest.flexGrow}>
-                    <StaticStat label={<Span textDecoration="underline dashed 1px">Jobs</Span>} {...rest}>{current}</StaticStat>
+                    <Stat.Root size={{ smDown: "sm", base: "md" }} {...rest}>
+                        <Stat.Label><Span textDecoration="underline dashed 1px">Job Plays</Span></Stat.Label>
+                        <NumberValueText value={summary.total} abbreviate textWrapMode="nowrap"/>
+                    </Stat.Root>
                 </Box>
             </Popover.Trigger>
             <Portal>
@@ -348,7 +357,6 @@ export const JobsStatStreamable = (props: { data: Pick<ComponentCommonApiJson, '
                         </Popover.Arrow>
                         <Popover.Body>
                             <Stack gap="2">
-                                <Span textStyle="sm">{JOBS_HELP} Client.</Span>
                                 <ClientJobPlaysCountsFetchable componentId={data.id}/>
                                 <Text textStyle="xs"><Badge size="xs" variant="solid" colorPalette="green">Tip</Badge> Cleanup Plays from Jobs in the Client <IconWrapper><EllipsisChakraIcon size="xs"/></IconWrapper> Menu</Text>
                             </Stack>

@@ -1,6 +1,6 @@
 import { Badge, Progress, type BadgeProps } from '@chakra-ui/react';
 import { useSSEAnyEvent, useSSEContext } from "@flamefrontend/sse-runtime-react";
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { HTTPError } from 'ky';
 import { asJobSseEvent, type MsSseEvent } from "../../../core/Api";
@@ -164,4 +164,17 @@ export const useSetJob = () => {
             return old.some(x => x.id === job.id) ? old.map(x => x.id === job.id ? job : x) : [job, ...old];
         });
     };
+}
+
+/** Jobs that import from the component or export to it */
+export const countComponentJobs = (jobs: Pick<JobApiJson, 'importFrom' | 'targets'>[], componentId: number): number =>
+    jobs.filter(j => (j.importFrom.kind === 'component' && j.importFrom.componentId === componentId) || j.targets.some(t => t.componentId === componentId)).length;
+
+/**
+ * Number of jobs that import from or export to the component. Mount useJobEvents once on the page to keep it current.
+ * undefined while loading, or when jobs can't be read (IE not logged in)
+ * */
+export const useComponentJobCount = (componentId: number, enabled = true): number | undefined => {
+    const {data} = useQuery({...tanQueries.jobs.list(), enabled});
+    return data === undefined ? undefined : countComponentJobs(data, componentId);
 }
