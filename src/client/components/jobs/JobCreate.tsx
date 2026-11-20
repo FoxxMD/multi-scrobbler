@@ -16,6 +16,7 @@ import { TextMuted } from "../TextMuted";
 import { toaster } from "../Toaster";
 import { JobBackButton } from "./JobList";
 import { apiErrorMessage, useSetJob } from "./jobUtils";
+import { InfoPopover } from '../ToggleTip';
 
 type CreatedJob = JobApiJson & { startError?: string };
 type Source = 'component' | 'upload' | 'existing' | 'mirror';
@@ -283,9 +284,11 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                         <FormFieldErrors field={field}/>
                     </Field.Root>}
                 />
+                <Stack my="2">
+                <Heading mb="2">Import</Heading>
                 <form.Field
                     name="source"
-                    children={(field) => <FormRadio field={field} label="Import From" items={sourceItems}/>}
+                    children={(field) => <FormRadio field={field} label="Import From" items={sourceItems} helperText="Import data into a Mirror"/>}
                 />
                 <form.Subscribe
                     selector={(state) => state.values.source}
@@ -378,7 +381,11 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                 />
                 <form.Field
                     name="range"
-                    children={(field) => <FormRadio field={field} label="Range" items={[{value: 'all', label: 'Everything'}, {value: 'custom', label: 'Between dates'}]}/>}
+                    children={(field) => <FormRadio field={field} 
+                    label="Range" 
+                    items={[{value: 'all', label: 'Everything'}, {value: 'custom', label: 'Between dates'}]}
+                    helperText="Plays with 'played at' timestamps within this range will be imported"
+                    />}
                 />
                 <form.Subscribe
                     selector={(state) => state.values.range}
@@ -403,14 +410,15 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                         />
                     </Flex> : undefined}
                 />
-                <Stack gap="4">
-                    <Heading size="md">Export</Heading>
+                </Stack>
+                <Stack gap="4" my="2">
+                    <Heading mb="2">Export</Heading>
                     <form.Field
                         name="targets"
                         // a Fieldset, not a Field: checkboxes in one Field share its input id so every label toggles the first
                         children={(field) => <Fieldset.Root invalid={field.errors.length > 0}>
                             <Fieldset.Legend>Export To</Fieldset.Legend>
-                            <Fieldset.HelperText>Clients that get the imported Plays. Leave empty to only import. See the <ChakraLink textDecoration="underline" href={`${TRANSFER_DOCS}#how-to-export`} target="_blank">export docs</ChakraLink>.</Fieldset.HelperText>
+                            <Fieldset.HelperText>Clients that get the imported Plays. Leave empty to only import. See the <ChakraLink textDecoration="underline" href={`${TRANSFER_DOCS}#export`} target="_blank">Export docs</ChakraLink>.</Fieldset.HelperText>
                             {options.targets.length === 0 ? <Text color="fg.muted" textStyle="sm">No Clients are configured.</Text> : <Fieldset.Content gap="2" mt="1">
                                 {options.targets.map(t => <Checkbox.Root
                                     key={t.componentId}
@@ -538,7 +546,15 @@ export const JobCreateFetchable = () => {
         <Container boxSize="full" p="0" maxWidth="4xl">
             <Stack gap="4">
                 <JobBackButton/>
-                <Heading size="2xl">New Job</Heading>
+                <Heading size="2xl">New Job <InfoPopover
+                 iconProps={{size: 'xl'}}
+                buttonProps={{size: 'md'}} question>
+                    <Stack>
+                        <Text>Import data from your existing Clients, or files, and export them as <strong>Plays</strong> to one or more Clients.</Text>
+                        <Text>Learn more in the <ChakraLink textDecoration="underline" href={TRANSFER_DOCS} target="_blank">Import/Export docs</ChakraLink>.</Text>
+                    </Stack>
+                </InfoPopover>
+                </Heading>
                 {error !== null ? <ErrorAlert error={{name: 'Could not create job', message: apiErrorMessage(error)}}/> : undefined}
                 <Card.Root variant="subtle"><Card.Body>{body}</Card.Body></Card.Root>
             </Stack>

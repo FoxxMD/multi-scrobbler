@@ -51,7 +51,10 @@ export const JobList = (props: { jobs: JobApiJson[] }) => (
         <Container boxSize="full" p="0" maxWidth="8xl">
             <Stack gap="3">
                 <Flex justify="space-between" alignItems="center">
-                    <Heading size="2xl">Jobs</Heading>
+                    <Box>
+                        <Heading size="2xl">Jobs</Heading>
+                        <TextMuted>Jobs created to import data to Mirrors or Export Plays to Clients.</TextMuted>
+                    </Box>
                     <Button asChild size="sm" variant="subtle" colorPalette="blue">
                         <Link to="/jobs/new">New Job</Link>
                     </Button>

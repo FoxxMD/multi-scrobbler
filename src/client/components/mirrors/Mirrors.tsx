@@ -76,7 +76,7 @@ export const MirrorList = (props: { mirrors: MirrorApiJson[] }) => (
     <Container boxSize="full" p="0" maxWidth="8xl">
         <Stack gap="3">
             <Heading size="2xl">Mirrors</Heading>
-            <TextMuted>Your Plays history copied from import jobs. Exports read from here.</TextMuted>
+            <TextMuted>Your data added from from import Jobs. Exports read from here.</TextMuted>
             {props.mirrors.length === 0 ? <TextMuted>No mirrors yet. <ChakraLink asChild><Link to="/jobs/new">Create a job</Link></ChakraLink> to import your history.</TextMuted> : undefined}
             <Box gridColumnGap="2" gridRowGap="2" display="grid" gridTemplateColumns={{mdDown: "repeat(1, minmax(295px, 1fr))", base: "repeat(auto-fill, minmax(295px, 1fr))"}}>
                 {props.mirrors.map(x => <MSErrorBoundary key={x.id}><MirrorSummary mirror={x}/></MSErrorBoundary>)}
