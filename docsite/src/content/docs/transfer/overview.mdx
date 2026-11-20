@@ -27,27 +27,36 @@ This granularity and deduplication comes with a slightly more complex mental mod
 
 ### Import Mirror
 
-Importing from a data source associates that data with an **Import Mirror** which acts as a "source of truth" for 1) that specific source 2) with a specific account/configuration. The mirror also keeps track of **what time ranges** have been imported into it.
+Importing from a data source stores that data in an **Import Mirror**, your "source of truth" that exports read from. The mirror also keeps track of **what time ranges** have been imported into it, and which source filled each range.
 
-Mirrors are **independent** of individual import jobs and can be **appended to** by multiple jobs. Your mirrors are listed under **Mirrors** in the dashboard menu.
+Mirrors are **independent** of individual import jobs and can be **appended to** by multiple jobs, **from any mix of sources**. Your mirrors are listed under **Mirrors** in the dashboard menu.
 
 In plain terms this means:
 
 * multiple import jobs can add data to the same "source of truth" (mirror)
+* those jobs can import from different sources, IE a Last.fm Client and an export file
 * a mirror can have multiple, non-overlapping time ranges of data
   * so it doesn't need a "full" dataset to operate or be useful for exporting
-* time ranges that have already been "imported" into a mirror are skipped if a subsequent job has overlap (this deduplicates existing data)
+* when a job imports time the mirror already has, you choose what happens (see [overlapping data](#overlapping-data))
 
-**You are responsible** for configuring initial mirrors, or using the correct mirror, when creating an import job.
-
+**You are responsible** for choosing the mirror, and for mixing sources sensibly, when creating an import job.
 
 <details>
 
 <summary>Example</summary>
 
-If you have multiple data sources (like a Last.fm MS Client *and* a csv export of last.fm data) make sure that the mirror created has an account set and that you use that same mirror for the second job.
+Your scrobbles from 2008 to 2012 only exist on Last.fm, and from 2013 onward you have a more accurate history in a file export. Import the file into a new mirror, then import Last.fm into **the same mirror** with **Range** 2008 to 2012. The mirror holds both slices and exports them as one history.
 
 </details>
+
+#### Overlapping Data
+
+When a job imports into a mirror that already has data in the job's range, choose under **Plays Already in the Mirror**:
+
+* **Keep** (default): only time the mirror doesn't have yet is imported. Data already in the mirror stays.
+* **Replace**: the mirror's scrobbles in the job's **exact range** are deleted first, then the whole range is imported. Use this when the new source is better than what is there.
+
+Replace deletes scrobbles from whatever source filled that range. It can't start while another job is exporting from the same range. Stop that job's exports first. Other jobs using the mirror and range will export the new scrobbles if they run again.
 
 ### Export
 
@@ -73,7 +82,7 @@ Currently, only **Last.fm** based data sources are available due to the [API Key
 
 #### MS Client
 
-You can select any existing MS [Clients](/configuration/clients) (Last.fm only for now) that is fully authenticated and running. The **account** used for the [mirror](#import-mirror) is automatically set based on the authenticated account for that Client.
+You can select any existing MS [Clients](/configuration/clients) (Last.fm only for now) that is fully authenticated and running. Its scrobbles go into the [mirror](#import-mirror) you choose, or a new one.
 
 #### File
 
@@ -86,9 +95,9 @@ Some types of files from third-party data export tools are supported:
 
 <DetailsAdmo type="note" summary="benjaminbenben files">
 
-benjaminbenben exports have timestamps only to the minute. They cannot not be matched reliably against other data sources that include seconds, so:
+benjaminbenben exports have timestamps only to the minute. They cannot be matched reliably against other data sources that include seconds, so:
 
-* A benjaminbenben file is always imported into **a new mirror of its own**, whatever mirror you choose.
+* If a benjaminbenben file overlaps other data in the mirror, use [**Replace**](#overlapping-data) for that range, or import it into a mirror of its own. Otherwise the same scrobbles can end up in the mirror twice.
 * Several scrobbles in the same minute are all kept.
 
 If you can, use a [lastfm.ghan.nl](https://lastfm.ghan.nl/export/) export or MS Client instead.
@@ -138,7 +147,8 @@ Jobs are under **Import/Export** in the dashboard menu. Choose **New Job** to cr
 
 **Options** for job creation:
 
-* **Mirror** (files only): where the scrobbles go. Pick an existing mirror to add a newer export to it, or create a new one. If you give a new mirror a Last.fm username that an existing mirror already has, that mirror is used.
+* **Mirror**: where the scrobbles go. Pick an existing mirror to add to it, or create a new one.
+* **Plays Already in the Mirror** (existing mirrors only): **Keep** or **Replace** data the mirror already has in the job's range. See [overlapping data](#overlapping-data).
 * **Range**: import everything, or only scrobbles between two dates.
 * **Save raw import data**: keeps the original Last.fm data for every scrobble. It is on by default for API imports and off for files. It uses more disk space.
   * original data is not used for anything *now* but will be useful in the future for comparing raw data to what MS parsed
@@ -200,7 +210,7 @@ Cleanups, and deleting a mirror or a job with cleanup, run in the background and
 
 ### Mirrors
 
-Mirrors are under **Mirrors** in the dashboard menu. A mirror's page shows its scrobbles, which time ranges are imported, and the jobs that use it.
+Mirrors are under **Mirrors** in the dashboard menu. A mirror's page shows its scrobbles, which time ranges are imported (with the source and job that imported each), and the jobs that use it.
 
 Under **Clean Up**, choose **Everything** or **Played between** two dates, then **Compact** or **Delete**.
 
