@@ -10,6 +10,7 @@ import { playInputs, plays, playsHistorical, queueStates } from '../../common/da
 import { componentLockKey, type ExportClient, JobConflictError, mirrorLockKey } from '../../jobs/JobRunner.ts';
 import { DrizzlePlayHistoricalRepository } from '../../common/database/drizzle/repositories/PlayHistoricalRepository.ts';
 import { JobManager } from '../../jobs/JobManager.ts';
+import { mergeStatsMax } from '../../jobs/JobPlayCleanup.ts';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { fixtureCreatePlay } from '../utils/databaseFixtures.ts';
 import { TestScrobbler } from '../scrobbler/TestScrobbler.ts';
@@ -47,7 +48,7 @@ const setup = async () => {
         await db.insert(playInputs).values({playId: p.id, play: p.play, data: {raw: true}});
     }
     const events: {name: string, data: unknown}[] = [];
-    const manager = new JobManager({db, logger: loggerTest, timings, createProvider: () => undefined, resolveClient: (id) => id === componentId ? scrobbler as unknown as ExportClient : undefined});
+    const manager = new JobManager({db, logger: loggerTest, timings, createProvider: () => undefined, cleanupBatchSize: 1, resolveClient: (id) => id === componentId ? scrobbler as unknown as ExportClient : undefined});
     for (const name of ['playsPurged', 'clientJobPlaysUpdate', 'jobUpdate', 'jobDeleted']) {
         manager.emitter.on(name, (e: unknown) => events.push({name, data: structuredClone(e)}));
     }
@@ -83,8 +84,8 @@ describe('Job play cleanup', function () {
             expect(scrobbler.queuedLength).eq(0);
             expect(scrobbler.deadLetterLength).eq(deadBefore);
             expect(events.some(x => x.name === 'playsPurged')).is.true;
-            // stats were saved before the plays were deleted
-            expect((await targetRepo.getById(target.id))!.stats).to.deep.eq({queued: 2, scrobbled: 2});
+            // stats were saved before the plays were deleted, after dequeueing (never processed => failed)
+            expect((await targetRepo.getById(target.id))!.stats).to.deep.eq({failed: 2, scrobbled: 2});
             expect(manager.getRuntime(job.id)?.cleanup).eq(undefined);
         } finally {
             await scrobbler[Symbol.asyncDispose]();
@@ -232,9 +233,11 @@ describe('Job play cleanup', function () {
 
         it('refuses before changing anything when another job uses the mirror', async function () {
             const ctx = await setup();
-            const {db, scrobbler, job, manager, state, componentId} = ctx;
+            const {db, scrobbler, job, target, manager, state, componentId} = ctx;
             try {
                 await withMirrorPlays(ctx);
+                // this job's own export keeps running when refused
+                await manager.startExport(job.id, target.id);
                 const other = await new JobRepository(db).create({name: 'other', mirrorId: job.mirrorId, rangeTo: dayjs(), importStatus: 'completed'});
                 const [otherTarget] = await new JobTargetRepository(db).createForJob(other.id, [componentId]);
                 await manager.startExport(other.id, otherTarget.id);
@@ -251,7 +254,9 @@ describe('Job play cleanup', function () {
                 expect(await new JobRepository(db).getById(job.id)).not.eq(undefined);
                 expect(manager.locks.holder(componentLockKey(componentId))).eq(undefined);
                 expect(manager.getRuntime(job.id)?.deleting).eq(undefined);
+                expect(manager.getRunner(job.id).exportsRunning).to.deep.eq([target.id]);
                 await manager.stopJob(other.id, 'stopped');
+                await manager.stopJob(job.id, 'stopped');
             } finally {
                 await scrobbler[Symbol.asyncDispose]();
             }
@@ -277,6 +282,31 @@ describe('Job play cleanup', function () {
             }
         });
 
+        it('refuses a second delete and starting the job while deleting', async function () {
+            const {scrobbler, job, target, manager, events} = await setup();
+            try {
+                const first = manager.deleteJobWithCleanup(job.id, {historical: 'keep', scrobbles: 'keep'});
+                const second = manager.deleteJobWithCleanup(job.id, {historical: 'keep', scrobbles: 'keep'});
+                const [a, b] = await Promise.allSettled([first, second]);
+                expect(a.status).eq('fulfilled');
+                expect(b.status).eq('rejected');
+                expect((b as PromiseRejectedResult).reason).instanceOf(JobConflictError);
+                for (const start of [() => manager.startExport(job.id, target.id), () => manager.startImport(job.id), () => manager.cleanupJobScrobbles(job.id, 'delete')]) {
+                    let err: unknown;
+                    try {
+                        await start();
+                    } catch (e) {
+                        err = e;
+                    }
+                    expect(err).instanceOf(JobConflictError);
+                }
+                await (a as PromiseFulfilledResult<{done: Promise<unknown>}>).value.done;
+                expect(events.filter(x => x.name === 'jobDeleted')).length(1);
+            } finally {
+                await scrobbler[Symbol.asyncDispose]();
+            }
+        });
+
         it('keeps the job and reports the error when the mirror cleanup fails', async function () {
             const {db, scrobbler, job, manager, events} = await setup();
             try {
@@ -292,5 +322,10 @@ describe('Job play cleanup', function () {
                 await scrobbler[Symbol.asyncDispose]();
             }
         });
+    });
+
+    it('merging stats keeps the larger final counts and the current queued count', function () {
+        expect(mergeStatsMax({scrobbled: 5, failed: 1, queued: 3}, {scrobbled: 2, duped: 1})).to.deep.eq({scrobbled: 5, failed: 1, duped: 1});
+        expect(mergeStatsMax(null, {queued: 2})).to.deep.eq({queued: 2});
     });
 });

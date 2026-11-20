@@ -41,6 +41,8 @@ export interface JobManagerOpts {
     transformersPresets?: Record<string, PlayTransformPartsConfigOptions>
     /** validates job transform stages. Defaults to the root container's */
     transformerManager?: TransformerManager
+    /** plays per cleanup batch. Default 1000 */
+    cleanupBatchSize?: number
 }
 
 /** A job's configuration can't be used (IE its Last.fm component is gone). The user has to fix something, retrying won't help */
@@ -110,6 +112,7 @@ export class JobManager {
         this.db = opts.db;
         const getDb = () => this.db;
         this.mirrors = new MirrorService({
+            batchSize: opts.cleanupBatchSize,
             get db() { return getDb(); },
             logger: this.logger,
             locks: this.locks,
@@ -117,6 +120,7 @@ export class JobManager {
             isJobActive: (jobId) => this.isJobActive(jobId),
         });
         this.jobPlays = new JobPlayCleanup({
+            batchSize: opts.cleanupBatchSize,
             get db() { return getDb(); },
             logger: this.logger,
             locks: this.locks,
@@ -223,7 +227,9 @@ export class JobManager {
         if(this.shuttingDown) {
             return;
         }
-        return this.getRunner(jobId).startImport();
+        const runner = this.getRunner(jobId);
+        this.assertNotDeleting(runner);
+        return runner.startImport();
     }
 
     stopImport = async (jobId: number, status: HaltStatus) => this.getRunner(jobId).stopImport(status);
@@ -232,7 +238,9 @@ export class JobManager {
         if(this.shuttingDown) {
             return;
         }
-        return this.getRunner(jobId).startExport(targetId);
+        const runner = this.getRunner(jobId);
+        this.assertNotDeleting(runner);
+        return runner.startExport(targetId);
     }
 
     stopExport = async (jobId: number, targetId: number, status: HaltStatus) => this.getRunner(jobId).stopExport(targetId, status);
@@ -262,6 +270,19 @@ export class JobManager {
         }
     }
 
+    protected assertNotDeleting(runner: JobRunner) {
+        if (runner.runtime.deleting === true) {
+            throw new JobConflictError('The job is being deleted');
+        }
+    }
+
+    protected assertNoJobCleanup(runner: JobRunner) {
+        this.assertNotDeleting(runner);
+        if (runner.runtime.cleanup !== undefined) {
+            throw new JobConflictError('A cleanup is already running for this job');
+        }
+    }
+
     /** Take every Client's cleanup lock or none. Returns the release function */
     protected acquireClients(componentIds: number[], holder: string): () => void {
         const keys = componentIds.map(componentLockKey);
@@ -286,9 +307,7 @@ export class JobManager {
         if (runner.exportsRunning.length > 0) {
             throw new JobConflictError('Stop the job\'s exports first');
         }
-        if (runner.runtime.cleanup !== undefined) {
-            throw new JobConflictError('A cleanup is already running for this job');
-        }
+        this.assertNoJobCleanup(runner);
         const holder = `job-cleanup:${jobId}:${randomUUID()}`;
         const release = this.acquireClients(targets.map(x => x.componentId), holder);
         runner.setCleanup({action, done: 0, total: 0});
@@ -407,14 +426,12 @@ export class JobManager {
         if (job === undefined) {
             throw new Error(`Job ${jobId} does not exist`);
         }
-        const runner = this.getRunner(jobId);
-        if (runner.runtime.deleting === true || runner.runtime.cleanup !== undefined) {
-            throw new JobConflictError('A cleanup is already running for this job');
-        }
         const targets = scrobbles === 'keep' ? [] : await this.targetRepo.findByJob(jobId);
         const otherJobs = historical === 'keep' ? [] : (await this.jobRepo.findByMirror(job.mirrorId)).filter(x => x.id !== jobId);
 
         // checked and locked without awaiting in between, so nothing can start after the checks pass
+        const runner = this.getRunner(jobId);
+        this.assertNoJobCleanup(runner);
         const busy = otherJobs.filter(x => this.isJobActive(x.id));
         if (busy.length > 0) {
             throw new JobConflictError(`Mirror data can't be cleaned up while ${busy.map(x => `'${x.name}'`).join(', ')} uses it. Stop its import and exports first`);
@@ -439,7 +456,11 @@ export class JobManager {
                 await this.stopJob(jobId, 'stopped');
                 if (scrobbles !== 'keep') {
                     for (const t of targets) {
-                        await this.jobPlays.run({componentId: t.componentId, jobId, queued: 'cancel', action: scrobbles, holder, onProgress: (p) => runner.setCleanup({...p, componentId: t.componentId})});
+                        const result = await this.jobPlays.run({componentId: t.componentId, jobId, queued: 'cancel', action: scrobbles, holder, onProgress: (p) => runner.setCleanup({...p, componentId: t.componentId})});
+                        if (result.skipped > 0) {
+                            // deleting the job would unlink them and they would still be scrobbled
+                            throw new Error(`${result.skipped} scrobbles could not be removed from the queue of Client ${t.componentId}`);
+                        }
                     }
                     runner.setCleanup(undefined);
                 }
@@ -449,8 +470,9 @@ export class JobManager {
                         throw new Error(`Mirror cleanup failed: ${error}`);
                     }
                 }
-                releaseAll();
+                // still locked, so nothing exports into the Clients or imports into the mirror before the job is gone
                 await this.deleteJob(jobId);
+                releaseAll();
                 return {};
             } catch (e) {
                 releaseAll();

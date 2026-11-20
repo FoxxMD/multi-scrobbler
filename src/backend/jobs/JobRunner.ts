@@ -585,7 +585,7 @@ export class JobRunner {
                 await wait('Client is not running');
                 continue;
             }
-            if(this.deps.locks.holder(componentLockKey(componentId)) !== undefined || this.deps.locks.holder(mirrorLockKey(job.mirrorId)) !== undefined) {
+            if(this.cleanupLocked(componentId, job.mirrorId)) {
                 await wait('Waiting for a cleanup to finish');
                 continue;
             }
@@ -630,6 +630,10 @@ export class JobRunner {
                 }, {concurrency: 5});
             }
             signal.throwIfAborted();
+            if(this.cleanupLocked(componentId, job.mirrorId)) {
+                // a cleanup started while this page was read, the next pass waits for it and reads the page again
+                continue;
+            }
             const created = await client.queuePlay(plays, undefined, {jobId: this.jobId});
             const last = rows[rows.length - 1];
             cursor = {playedAt: last.playedAt, id: last.id} satisfies JobTargetCursor;
@@ -640,6 +644,10 @@ export class JobRunner {
             await this.setTarget(targetId, {cursor, exported, queued, stats, breaker});
             logger.verbose(`Exported ${rows.length} scrobbles, ${created.length} new to the client`);
         }
+    }
+
+    protected cleanupLocked(componentId: number, mirrorId: number): boolean {
+        return this.deps.locks.holder(componentLockKey(componentId)) !== undefined || this.deps.locks.holder(mirrorLockKey(mirrorId)) !== undefined;
     }
 
     /** Wake every export loop so it re-checks now (new coverage, import finished, settings changed) */

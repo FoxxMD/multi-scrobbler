@@ -156,6 +156,11 @@ export class MirrorService {
             task.total = await this.historicalRepo.countMirror({mirrorId: id});
             await this.mirrorRepo.removeCoverage(id);
             await this.batches(mirror, task, signal, () => this.historicalRepo.findMirrorIds({mirrorId: id, limit: this.batchSize}), (ids) => this.historicalRepo.deleteWithInputs(ids));
+            const jobs = await this.jobRepo.findByMirror(id);
+            if (jobs.length > 0) {
+                // created while deleting. The plays are gone, the mirror stays for that job
+                throw new JobConflictError(`Job '${jobs[0].name}' was created on this mirror while it was being deleted`);
+            }
             await this.mirrorRepo.deleteByIds([id]);
             this.logger.info(`Mirror ${id} deleted with ${task.done} plays`);
             this.deps.emitter.emit('mirrorDeleted', {mirrorId: id, userId: mirror.userId});
