@@ -324,7 +324,7 @@ export const ListFilters = (props: {
                     {props.componentType === 'client' ? <Switch.Root mt="2" alignSelf="center" checked={filters.jobId === undefined} onCheckedChange={(d) => setJobPlays(d.checked)}>
                         <Switch.HiddenInput/>
                         <Switch.Control/>
-                        <Switch.Label>Show scrobbles from Import/Export jobs</Switch.Label>
+                        <Switch.Label>Plays From Export Jobs</Switch.Label>
                     </Switch.Root> : undefined}
                 </Wrap>
             </Card.Body>
