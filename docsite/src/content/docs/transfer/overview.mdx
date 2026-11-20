@@ -8,6 +8,8 @@ tableOfContents:
   maxHeadingLevel: 4
 ---
 
+import { Badge } from '@astrojs/starlight/components';
+
 Multi-Scrobbler has the ability to **bulk import** Plays/Scrobbles and **re-export** those to existing [Clients](/configuration/clients).
 
 You can use this feature to backup your data from one or more services into Mutli-Scrobbler's database. Then, you can re-export any slice of these backups to any number of Clients just like regular scrobbles.
@@ -16,30 +18,23 @@ Multi-Scrobbler's approach to import/export is built so that:
 
 * data is deduplicated as much as possible
 * import and export are separate, pausable/resumable processes so that you can complete them at your own pace
+* you can build data to export from many source
 
 <Aside type="important">
 
-This granularity and deduplication comes with a slightly more complex mental model compared to "import X then export to Y" so make sure to read the sections below to understand how everything works **before** starting your first import.
+This granularity and deduplication comes with a slightly more complex mental model than just "import X then export to Y" so make sure to read the sections below to understand how everything works **before** starting your first import.
 
 </Aside>
 
-## Concepts
+## Mirror
 
-### Import Mirror
+A **Mirror** is a **source of truth** for some set of Play (scrobble) data. In a [Job](#job), Plays are exported (sent to [Clients](/configuration/clients)) from a Mirror.
 
-Importing from a data source stores that data in an **Import Mirror**, your "source of truth" that exports read from. The mirror also keeps track of **what time ranges** have been imported into it, and which source filled each range.
+##### Data is origin agnostic
 
-Mirrors are **independent** of individual import jobs and can be **appended to** by multiple jobs, **from any mix of sources**. Your mirrors are listed under **Mirrors** in the dashboard menu.
+A Mirror does not care where the data added to it comes from. The Mirror can have data from multiple, different data sources like any MS Clients, files, etc.
 
-In plain terms this means:
-
-* multiple import jobs can add data to the same "source of truth" (mirror)
-* those jobs can import from different sources, IE a Last.fm Client and an export file
-* a mirror can have multiple, non-overlapping time ranges of data
-  * so it doesn't need a "full" dataset to operate or be useful for exporting
-* when a job imports time the mirror already has, you choose what happens (see [overlapping data](#overlapping-data))
-
-**You are responsible** for choosing the mirror, and for mixing sources sensibly, when creating an import job.
+**You are responsible** for choosing the mirror, and for mixing sources sensibly, when creating a Job.
 
 <details>
 
@@ -49,42 +44,43 @@ Your scrobbles from 2008 to 2012 only exist on Last.fm, and from 2013 onward you
 
 </details>
 
-#### Overlapping Data
+##### Tracks Date Ranges
 
-When a job imports into a mirror that already has data in the job's range, choose under **Plays Already in the Mirror**:
+When you add data to a Mirror you specify the Date Range the data being imported is for (or it is automatically calculated). The Mirror keeps track of each individual range.
 
-* **Keep** (default): only time the mirror doesn't have yet is imported. Data already in the mirror stays.
-* **Replace**: the mirror's scrobbles in the job's **exact range** are deleted first, then the whole range is imported. Use this when the new source is better than what is there.
+##### Add Data Over Time
 
-Replace deletes scrobbles from whatever source filled that range. It can't start while another job is exporting from the same range. Stop that job's exports first. Other jobs using the mirror and range will export the new scrobbles if they run again.
+You can add data to a Mirror many times by using multiple jobs. Only one job can be adding data to a Mirror at a time.
 
-### Export
+When you add new data to an existing mirror you have two approaches for handling *existing data* in the Mirror which is based on the Date Range for the Job you are adding:
 
-An **Export** sends the scrobbles a job imported into its [mirror](#import-mirror) to a [Client](/configuration/clients). A job can export to several Clients. Each Client is exported to separately and has its own progress and controls.
+* **Keep** (default) - Keeps existing data in the mirror that has a date range that overlaps with the new Job
+* **Replace** - Delete all the existing data in the mirror that has a date range that overlaps with the new Job, then replace it with whatever is imported from the new Job
+  * <Badge text="Important" size="small" variant="tip" /> This deletes the **entire** overlapping range of existing data, it does not compare or replace Plays individually.
 
-Exported scrobbles go through the Client the same way as live scrobbles:
+## Job
 
-* the Client's own [transforms](/configuration/transforms) are applied
-* scrobbles the Client already has are skipped as duplicates
-* the Client sends them to its service one at a time
+A **Job** consists of two, independent processes:
 
-So exporting the same scrobbles twice, or exporting history the Client already has, does not create duplicates.
+* an **Import** process where data is added to a new or existing [Mirror](#mirror)
+* an optional **Export** process where a Mirror sends its Plays to one or more [Clients](/configuration/clients)
 
-<Aside type="caution">
+### Import
 
-**Last.fm** and **Libre.fm** refuse scrobbles older than about 14 days. Do not export older history to them.
+The **Import** process for a Job is used to:
 
-</Aside>
+* add data to a new or existing Mirror from some source, which will then be used for Exporting
+* or select the existing Mirror to use for the [Export](#export) process without adding any additional data
 
-### Import Sources
+#### Import Sources
 
 Currently, only **Last.fm** based data sources are available due to the [API Key deadline](/configuration/clients/lastfm), but more data sources will be available in the future.
 
-#### MS Client
+##### Import from MS Client {#ms-client}
 
-You can select any existing MS [Clients](/configuration/clients) (Last.fm only for now) that is fully authenticated and running. Its scrobbles go into the [mirror](#import-mirror) you choose, or a new one.
+You can select any existing MS [Clients](/configuration/clients) (Last.fm only for now) that is fully authenticated and running. MS will fetch Plays/scrobbles from the upstream service to add to the Mirror.
 
-#### File
+##### Import from File {#client}
 
 Some types of files from third-party data export tools are supported:
 
@@ -104,8 +100,10 @@ If you can, use a [lastfm.ghan.nl](https://lastfm.ghan.nl/export/) export or MS 
 
 </DetailsAdmo>
 
+Files can be added through the **Dashboard** or by adding them to a folder on your filesystem:
+
 <Tabs groupId="uploadFileMethod">
-<TabItem value="ui" label="UI">
+<TabItem value="ui" label="Dashboard">
 
 Files can be uploaded directly through the UI in the Import Job creation process.
 
@@ -141,103 +139,112 @@ Place files directly in the `imports` folder of the [data directory](/installati
 </TabItem>
 </Tabs>
 
-## How To Import
+### Export
 
-Jobs are under **Import/Export** in the dashboard menu. Choose **New Job** to create one.
+The **Export** process sends Plays from the [Mirror](#mirror) configured by the [Import](#import) process to one or more [Client](/configuration/clients). Each Client is exported to separately and has its own progress and controls.
 
-**Options** for job creation:
+Exported scrobbles go through the Client the same way as live scrobbles:
 
-* **Mirror**: where the scrobbles go. Pick an existing mirror to add to it, or create a new one.
-* **Plays Already in the Mirror** (existing mirrors only): **Keep** or **Replace** data the mirror already has in the job's range. See [overlapping data](#overlapping-data).
-* **Range**: import everything, or only scrobbles between two dates.
-* **Save raw import data**: keeps the original Last.fm data for every scrobble. It is on by default for API imports and off for files. It uses more disk space.
-  * original data is not used for anything *now* but will be useful in the future for comparing raw data to what MS parsed
-* **Start now**: start the import as soon as the job is created. Otherwise start it from the job's page.
+* the Client's own [transforms](/configuration/transforms) are applied
+* scrobbles the Client already has are skipped as duplicates
+* the Client sends them to its service one at a time
 
-After **starting** the job you can monitor it from it's details page and see real-time progress/percentage. Jobs can be paused and will continue from the last fetched/parsed scrobble position when resumed.
+So exporting the same scrobbles twice, or exporting history the Client already has, does not create duplicates.
 
-## How To Export
+:::tip
 
-Choose Clients under **Export To** when creating a job. Leave it empty to only import.
+Exporting is **optional.** You can create an import-only Job to get data into a Mirror "now" and decide to Export it later using a new Job.
 
-To export scrobbles you already imported, without importing anything, choose **Existing mirror** under **Import From** and pick the mirror. The job's **Range** still decides which scrobbles are exported.
+:::
 
-**Options** for export:
+<DetailsAdmo type="tip" summary="Exported Plays in Clients">
 
-* **Order**
-  * **Newest first** (default) starts exporting as soon as the newest scrobbles are imported, while the import keeps running.
-  * **Oldest first** waits until the oldest scrobbles in the range are imported. Use it when the order scrobbles arrive at the Client matters.
-* **Transforms**: change scrobbles before they are sent. They run before each Client's own transforms.
-  * **None**
-  * **Preset**: a preset from [`transformersPresets`](/configuration/transforms#presets) in your config.
-  * **Copy from a Source/Client**: the `preCompare` or `postCompare` transforms of one of your Sources/Clients.
-  * A copy of the transforms is saved with the job. Changing your config later does not change an existing job.
-* **Queue Limit** (under **Advanced**): the job only sends more scrobbles to a Client while that Client's queue holds fewer than this many. The queue includes live scrobbles and other jobs' scrobbles. The default is 20. You can change it on the job's page while the export runs.
-
-On the job's page, the **Export** section shows each Client's progress and what happened to the scrobbles sent to it (scrobbled, already scrobbled, failed). Each Client has its own **Start**/**Pause**/**Stop** buttons. The buttons next to the job's name control the import and every export at once.
-
-* **Pause** or **Stop** halts sending new scrobbles. Scrobbles already in the Client's queue are still sent.
-* **Resume** continues from where the export stopped.
-* The export waits, without failing, while the Client is not running or its queue is full.
-
-You are notified when an export completes or fails. Individual failed scrobbles from a job do not send notifications.
-
-### Failed Scrobbles
-
-If many scrobbles fail in a row (10, or the queue limit if it is higher) the export stops and shows the last error. This usually means the Client is misconfigured or its service is down. Fix the problem, then **Resume**.
-
-Failed scrobbles from a job are not retried automatically. To retry them, either:
-
-* retry them from the Client's page: in the **Scrobbles** filters turn on **Show scrobbles from Import/Export jobs** and set **Played Between** to cover the job's range, then choose **Retry All Unsuccessful** from the menu next to **Scrobbles**, or
-* create a new job from the **Existing mirror** and export it to the Client again. Failed scrobbles are sent again, scrobbles the Client already has are skipped.
-
-### Scrobbles in the Client
-
-Scrobbles from jobs are hidden in a Client's scrobble list by default so they don't bury live scrobbles. Turn on **Show scrobbles from Import/Export jobs** in the list's filters to see them.
+Play from jobs are hidden in a Client's Play list by default so they don't bury live Plays. Turn on **Plays from Export jobs** in the list's filters to see them.
 
 They are not counted in the Client's live **Scrobbled** total.
 
+</DetailsAdmo>
+
+<Aside type="note">
+
+**Last.fm** and **Libre.fm** will not accept scrobbles with play dates older than about 14 days. Do not export older history to them.
+
+</Aside>
+
+#### Transforming Exported Plays
+
+You can optionally use [Transforms](/configuration/transforms) to modify Plays before they are sent to each Client. Think of this as the same as using the [`postCompare` Hook](/configuration/transforms/#hook) on a Source.
+
+Transform configuration can be copied from
+
+* an existing [Source](/configuration/sources) or [Client](/configuration/clients) you have configured to use transforms or
+* from a [preset](/configuration/transforms/#presets)
+
+and is selected from the UI when creating a new Job.
+
+<DetailsAdmo type="note" summary="Export Speed and Transforms">
+
+Plays are exported sequentially and Transforms that use external services (Musicbrainz, Rocksky, etc...) rely on making API calls which means the export process is only as fast the slowest API call. If you are exporting *many* (1000s to 10,000s) Plays this will significantly slow down the rate of progress.
+
+</DetailsAdmo>
+
+#### Failed Plays
+
+If many exported Plays fail in a row (10, or the queue limit if it is higher) the export stops and shows the last error. This usually means the Client is misconfigured or its service is down. Fix the problem, then **Resume**.
+
+Failed Plays from a job are not retried automatically. To retry them, either:
+
+* retry them from the Client's page: in the **Plays** filters turn on **Plays from Export jobs** and set **Played Between** to cover the job's range, then choose **Retry All Unsuccessful** from the menu next to **Plays**, or
+* create a new job from the **Existing mirror** and export it to the Client again. Failed Plays are sent again, Plays the Client already has are skipped.
+
 ## Cleaning Up
 
-Imported scrobbles and the records Clients keep of exported scrobbles take up disk space. Once your exports are done you can **compact** or **delete** them.
+Imported Plays and the records Clients keep of exported Plays take up disk space. Once your exports are done you can use the same behavior as a [Rentention Policy](/configuration/#retention) to **compact** or **delete** them
 
-* **Compact** removes the raw data saved with each scrobble. The scrobbles themselves are kept.
-* **Delete** removes the scrobbles.
+* **Compact** removes the raw data and transform events saved with each Play. The Plays themselves are kept.
+* **Delete** removes the Play.
 
-Scrobbles already sent to a service always stay on that service. Cleaning up only changes what Multi-Scrobbler keeps.
+Plays already sent to a service always stay on that service. Cleaning up only changes what Multi-Scrobbler keeps.
 
-Cleanups, and deleting a mirror or a job with cleanup, run in the background and show their progress on the page. A deleted mirror or job disappears once its data is gone. A cleanup can't start while an import or export that uses the same data is running. Stop it first.
+<Badge text="Note" size="small" variant="note" /> A cleanup can't start while an import or export that uses the same data is running.
 
-### Mirrors
+<Tabs groupId="cleanupLocations">
+<TabItem value="mirror" label="Mirror">
 
-Mirrors are under **Mirrors** in the dashboard menu. A mirror's page shows its scrobbles, which time ranges are imported (with the source and job that imported each), and the jobs that use it.
+A [Mirror](#mirror) can be deleted or you can delete/compact specific time ranges.
 
-Under **Clean Up**, choose **Everything** or **Played between** two dates, then **Compact** or **Delete**.
+Find individual mirrors by navigating to its details page (Dashboard -> Menu -> Mirrors).
 
-* Compacted scrobbles can still be exported.
-* Deleted scrobbles are no longer covered by the mirror. A job that imports that time again fetches them again.
+When you delete/clean up a Mirror it affects all data in that Mirror which subsequently affects any Job that might import/export from that mirror.
 
-To delete a whole mirror, first delete every job that uses it, then choose **Delete** on the mirror's page.
+Mirrors can only be deleted if no Jobs are currently associated with, so you'll need to delete any Jobs first.
 
-### A Job's Data
+</TabItem>
+<TabItem value="job" label="Jobs">
+
+##### Job Data
 
 The **Clean Up** section of a job's page has two parts:
 
 * **Mirror data**: the scrobbles in the job's mirror played in the job's range. Other jobs that use the mirror may still need them.
-* **Scrobble records in Clients**: what each Client recorded for the scrobbles this job sent it. Stop the job's exports first.
-  * Scrobbles still waiting in a Client's queue are removed from it and are not sent. They show as failed.
+* **Plays in Clients**: the exported Plays this job sent to each Client. Stop the job's exports first.
+  * Plays still waiting in a Client's queue are removed from it and are not sent. They show as failed.
 
-### Deleting a Job
+#####  Deleting a Job
 
-**Delete** on a job's page stops the job, then asks what to do with its **Mirror data** and its **Scrobble records in Clients**:
+**Delete** on a job's page stops the job, then asks what to do with its **Mirror data** and its **Plays in Clients**:
 
 * **Keep** (default) leaves them as they are.
 * **Compact** or **Delete** cleans them up as described above, before the job is deleted.
 
-Scrobble records you keep stay in the Clients' scrobble lists after the job is gone.
+Plays you keep stay in the Clients' Play list after the job is gone.
 
-### Job Scrobbles in a Client
+</TabItem>
+<TabItem value="client" label="Exported Plays in Client">
 
-A Client's page shows a **Job Scrobble Records** section when import jobs have exported to it. It covers every job, including deleted ones.
+A Client's page shows a **Job Plays** count for Plays that still existing in the database and were associated with a Job.
 
-Use **Compact** or **Delete** there to clean up all of them at once. Records still in the Client's queue are skipped. Stop any job exporting to the Client first.
+Use **Compact** or **Delete** there to clean up all of them at once. Plays still in the Client's queue are skipped. Stop any job exporting to the Client first.
+
+</TabItem>
+</Tabs>
