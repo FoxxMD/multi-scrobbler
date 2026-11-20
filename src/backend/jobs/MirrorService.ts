@@ -43,9 +43,9 @@ export interface MirrorServiceDeps {
     batchSize?: number
 }
 
-/** A cleanup started in the background. `done` settles when it finishes (never rejects) */
+/** A cleanup started in the background. `done` resolves when it finishes, with the error if it failed or was interrupted. Never rejects */
 export interface StartedTask {
-    done: Promise<void>
+    done: Promise<{error?: string}>
 }
 
 /**
@@ -122,10 +122,10 @@ export class MirrorService {
      *
      * Throws JobConflictError if a job using the mirror is running or another cleanup is.
      * */
-    startCleanup = async (id: number, opts: {action: CleanupAction, range?: TimeRange}): Promise<StartedTask> => {
+    startCleanup = async (id: number, opts: {action: CleanupAction, range?: TimeRange, holder?: string}): Promise<StartedTask> => {
         const {action, range} = opts;
         const mirror = await this.getOrThrow(id);
-        const release = await this.acquire(mirror, async (jobs) => {
+        const release = await this.acquire(mirror, opts.holder, async (jobs) => {
             const active = jobs.filter(x => this.deps.isJobActive(x.id));
             if (active.length > 0) {
                 throw new JobConflictError(`Stop the import and exports of ${active.map(x => `'${x.name}'`).join(', ')} first`);
@@ -147,7 +147,7 @@ export class MirrorService {
     /** Delete a mirror and all its plays in the background. Throws JobConflictError while any job uses it */
     startDelete = async (id: number): Promise<StartedTask> => {
         const mirror = await this.getOrThrow(id);
-        const release = await this.acquire(mirror, async (jobs) => {
+        const release = await this.acquire(mirror, undefined, async (jobs) => {
             if (jobs.length > 0) {
                 throw new JobConflictError(`Used by ${jobs.length} job${jobs.length === 1 ? '' : 's'} (${jobs.map(x => `'${x.name}'`).join(', ')}). Delete them first`);
             }
@@ -180,9 +180,17 @@ export class MirrorService {
     /**
      * Take the mirror's lock, then run `check` with the jobs using the mirror. Locked first so no job can start in between.
      * Returns the release function. Releases and rethrows if check throws.
+     *
+     * With `existingHolder` the caller already holds the lock and has done its own checks: check is skipped and the lock is not released.
      * */
-    protected async acquire(mirror: PlayMirrorSelect, check: (jobs: JobSelect[]) => Promise<void>): Promise<() => void> {
+    protected async acquire(mirror: PlayMirrorSelect, existingHolder: string | undefined, check: (jobs: JobSelect[]) => Promise<void>): Promise<() => void> {
         const key = mirrorLockKey(mirror.id);
+        if (existingHolder !== undefined) {
+            if (this.deps.locks.holder(key) !== existingHolder) {
+                throw new JobConflictError('A cleanup is already running for this mirror');
+            }
+            return () => undefined;
+        }
         const holder = `mirror-cleanup:${randomUUID()}`;
         if (!this.deps.locks.tryAcquire(key, holder)) {
             throw new JobConflictError('A cleanup is already running for this mirror');
@@ -207,7 +215,9 @@ export class MirrorService {
             try {
                 await fn(task, abort.signal);
             } catch (e) {
-                if (!abort.signal.aborted) {
+                if (abort.signal.aborted) {
+                    error = 'Interrupted by shutdown';
+                } else {
                     this.logger.error(new Error(`Mirror ${mirror.id} ${task.kind} failed`, {cause: e}));
                     error = (e as Error).message;
                 }
@@ -217,6 +227,7 @@ export class MirrorService {
                 release();
             }
             this.emit(mirror, {task: null, taskResult: {...task, error}});
+            return {error};
         })();
         return {done};
     }

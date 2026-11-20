@@ -4,10 +4,11 @@ import dayjs from 'dayjs';
 import { loggerTest } from '@foxxmd/logging';
 import { eq } from 'drizzle-orm';
 import { MirrorRepository } from '../../common/database/drizzle/repositories/MirrorRepository.ts';
-import { JobRepository } from '../../common/database/drizzle/repositories/JobRepository.ts';
+import { JobRepository, type JobSelect } from '../../common/database/drizzle/repositories/JobRepository.ts';
 import { JobTargetRepository } from '../../common/database/drizzle/repositories/JobTargetRepository.ts';
-import { playInputs, plays, queueStates } from '../../common/database/drizzle/schema/schema.ts';
-import { componentLockKey, type ExportClient, JobConflictError } from '../../jobs/JobRunner.ts';
+import { playInputs, plays, playsHistorical, queueStates } from '../../common/database/drizzle/schema/schema.ts';
+import { componentLockKey, type ExportClient, JobConflictError, mirrorLockKey } from '../../jobs/JobRunner.ts';
+import { DrizzlePlayHistoricalRepository } from '../../common/database/drizzle/repositories/PlayHistoricalRepository.ts';
 import { JobManager } from '../../jobs/JobManager.ts';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { fixtureCreatePlay } from '../utils/databaseFixtures.ts';
@@ -28,7 +29,7 @@ const setup = async () => {
     const componentId = scrobbler.componentId;
     const mirror = await new MirrorRepository(db).findOrCreate({userId: null as unknown as string, service: 'lastfm', account: null, name: 'm'});
     const jobRepo = new JobRepository(db);
-    const job = await jobRepo.create({name: 'export', mirrorId: mirror.id, rangeTo: dayjs(), importStatus: 'completed'});
+    const job = await jobRepo.create({name: 'export', mirrorId: mirror.id, rangeTo: dayjs(), importStatus: 'completed'}) as JobSelect;
     const targetRepo = new JobTargetRepository(db);
     const [target] = await targetRepo.createForJob(job.id, [componentId]);
     await targetRepo.update(target.id, {status: 'stopped'});
@@ -47,7 +48,7 @@ const setup = async () => {
     }
     const events: {name: string, data: unknown}[] = [];
     const manager = new JobManager({db, logger: loggerTest, timings, createProvider: () => undefined, resolveClient: (id) => id === componentId ? scrobbler as unknown as ExportClient : undefined});
-    for (const name of ['playsPurged', 'clientJobPlaysUpdate', 'jobUpdate']) {
+    for (const name of ['playsPurged', 'clientJobPlaysUpdate', 'jobUpdate', 'jobDeleted']) {
         manager.emitter.on(name, (e: unknown) => events.push({name, data: structuredClone(e)}));
     }
     const state = async () => {
@@ -175,5 +176,121 @@ describe('Job play cleanup', function () {
         } finally {
             await scrobbler[Symbol.asyncDispose]();
         }
+    });
+
+    describe('Job delete with cleanup', function () {
+
+        const withMirrorPlays = async (ctx: Awaited<ReturnType<typeof setup>>) => {
+            const {db, job} = ctx;
+            const mirrors = new MirrorRepository(db);
+            await mirrors.addCoverage(job.mirrorId, [0, job.rangeTo.valueOf()]);
+            // one inside the job's range, one after it
+            await new DrizzlePlayHistoricalRepository(db).insertIgnoreDuplicates([job.rangeTo.valueOf() - 1000, job.rangeTo.valueOf() + 1000].map(ts => ({
+                uid: `m${job.mirrorId}:${ts}`, mirrorId: job.mirrorId, play: generatePlay({playDate: dayjs(ts)}),
+            })));
+            return mirrors;
+        }
+
+        it('cleans up scrobbles, then mirror data in range, then deletes the job', async function () {
+            const ctx = await setup();
+            const {db, scrobbler, job, manager, events, state} = ctx;
+            try {
+                const mirrors = await withMirrorPlays(ctx);
+                const {done} = await manager.deleteJobWithCleanup(job.id, {historical: 'delete', scrobbles: 'delete'});
+                expect(manager.getRuntime(job.id)?.deleting).eq(true);
+                expect(await done).to.deep.eq({});
+
+                const s = await state();
+                // cleaned before the job row was deleted, which would have unlinked them
+                expect(s.total).eq(2);
+                expect(s.orphan).not.eq(undefined);
+                expect(s.normal).not.eq(undefined);
+                expect((await db.select().from(playsHistorical)).map(x => x.playedAt!.valueOf())).to.deep.eq([job.rangeTo.valueOf() + 1000]);
+                expect((await mirrors.getById(job.mirrorId))!.coverage).to.deep.eq([]);
+                expect(await new JobRepository(db).getById(job.id)).eq(undefined);
+                expect(events.some(x => x.name === 'jobDeleted')).is.true;
+                expect(manager.locks.holder(componentLockKey(scrobbler.componentId))).eq(undefined);
+                expect(manager.locks.holder(mirrorLockKey(job.mirrorId))).eq(undefined);
+            } finally {
+                await scrobbler[Symbol.asyncDispose]();
+            }
+        });
+
+        it('keeps everything when asked, and stops running exports first', async function () {
+            const {db, scrobbler, job, target, manager, state} = await setup();
+            try {
+                await manager.startExport(job.id, target.id);
+                await (await manager.deleteJobWithCleanup(job.id, {historical: 'keep', scrobbles: 'keep'})).done;
+                const s = await state();
+                expect(s.total).eq(6);
+                expect(await new JobRepository(db).getById(job.id)).eq(undefined);
+                expect(manager.getRunner(job.id).exportsRunning).length(0);
+            } finally {
+                await scrobbler[Symbol.asyncDispose]();
+            }
+        });
+
+        it('refuses before changing anything when another job uses the mirror', async function () {
+            const ctx = await setup();
+            const {db, scrobbler, job, manager, state, componentId} = ctx;
+            try {
+                await withMirrorPlays(ctx);
+                const other = await new JobRepository(db).create({name: 'other', mirrorId: job.mirrorId, rangeTo: dayjs(), importStatus: 'completed'});
+                const [otherTarget] = await new JobTargetRepository(db).createForJob(other.id, [componentId]);
+                await manager.startExport(other.id, otherTarget.id);
+                let err: unknown;
+                try {
+                    await manager.deleteJobWithCleanup(job.id, {historical: 'delete', scrobbles: 'delete'});
+                } catch (e) {
+                    err = e;
+                }
+                expect(err).instanceOf(JobConflictError);
+                expect((err as Error).message).to.include("'other'");
+                expect((await state()).total).eq(6);
+                expect(await db.select().from(playsHistorical)).length(2);
+                expect(await new JobRepository(db).getById(job.id)).not.eq(undefined);
+                expect(manager.locks.holder(componentLockKey(componentId))).eq(undefined);
+                expect(manager.getRuntime(job.id)?.deleting).eq(undefined);
+                await manager.stopJob(other.id, 'stopped');
+            } finally {
+                await scrobbler[Symbol.asyncDispose]();
+            }
+        });
+
+        it('refuses before changing anything when a client is locked', async function () {
+            const ctx = await setup();
+            const {db, scrobbler, job, manager, state, componentId} = ctx;
+            try {
+                manager.locks.tryAcquire(componentLockKey(componentId), 'other');
+                let err: unknown;
+                try {
+                    await manager.deleteJobWithCleanup(job.id, {historical: 'delete', scrobbles: 'delete'});
+                } catch (e) {
+                    err = e;
+                }
+                expect(err).instanceOf(JobConflictError);
+                expect(manager.locks.holder(mirrorLockKey(job.mirrorId))).eq(undefined);
+                expect((await state()).total).eq(6);
+                expect(await new JobRepository(db).getById(job.id)).not.eq(undefined);
+            } finally {
+                await scrobbler[Symbol.asyncDispose]();
+            }
+        });
+
+        it('keeps the job and reports the error when the mirror cleanup fails', async function () {
+            const {db, scrobbler, job, manager, events} = await setup();
+            try {
+                manager.mirrors.startCleanup = async () => ({done: Promise.resolve({error: 'disk full'})});
+                const {error} = await (await manager.deleteJobWithCleanup(job.id, {historical: 'delete', scrobbles: 'keep'})).done;
+                expect(error).to.include('disk full');
+                expect(await new JobRepository(db).getById(job.id)).not.eq(undefined);
+                expect(manager.getRuntime(job.id)?.deleting).eq(undefined);
+                const last = events.findLast(x => x.name === 'jobUpdate')!.data as {data: {deleteError?: string}};
+                expect(last.data.deleteError).to.include('disk full');
+                expect(manager.locks.holder(mirrorLockKey(job.mirrorId))).eq(undefined);
+            } finally {
+                await scrobbler[Symbol.asyncDispose]();
+            }
+        });
     });
 });

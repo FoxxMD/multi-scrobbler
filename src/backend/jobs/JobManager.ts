@@ -7,7 +7,7 @@ import type { WebhookPayload } from "../common/infrastructure/config/health/webh
 import { WildcardEmitter } from "../common/WildcardEmitter.ts";
 import type { JobTimings } from "./constants.ts";
 import type { ImportPacer, ImportProvider } from "./ImportProvider.ts";
-import { componentLockKey, type ExportClient, type HaltStatus, JobConflictError, JobRunner, type JobRuntime } from "./JobRunner.ts";
+import { componentLockKey, type ExportClient, type HaltStatus, JobConflictError, JobRunner, type JobRuntime, mirrorLockKey } from "./JobRunner.ts";
 import { JobTargetRepository } from "../common/database/drizzle/repositories/JobTargetRepository.ts";
 import { LockRegistry } from "./LockRegistry.ts";
 import { type CleanupAction, MirrorService, type StartedTask } from "./MirrorService.ts";
@@ -293,16 +293,19 @@ export class JobManager {
         const release = this.acquireClients(targets.map(x => x.componentId), holder);
         runner.setCleanup({action, done: 0, total: 0});
         const done = (async () => {
+            let error: string | undefined;
             try {
                 for (const t of targets) {
                     await this.jobPlays.run({componentId: t.componentId, jobId, queued: 'cancel', action, holder, onProgress: (p) => runner.setCleanup({...p, componentId: t.componentId})});
                 }
             } catch (e) {
                 this.logger.error(new Error(`Cleanup of Job ${jobId} scrobbles failed`, {cause: e}));
+                error = (e as Error).message;
             } finally {
                 release();
                 runner.setCleanup(undefined);
             }
+            return {error};
         })();
         return {done};
     }
@@ -352,6 +355,7 @@ export class JobManager {
                 this.clientCleanups.delete(componentId);
             }
             emit({task: null, taskResult: {...result, error}});
+            return {error};
         })();
         return {done};
     }
@@ -389,6 +393,74 @@ export class JobManager {
         this.shuttingDown = true;
         await this.mirrors.shutdown();
         await Promise.allSettled(Array.from(this.runners.values()).map(x => x.shutdown()));
+    }
+
+    /**
+     * Delete a job and clean up its data, in the background. Every guard is checked before anything changes.
+     *
+     * Order: stop the job, clean up its scrobbles in each Client (queued ones are dequeued), clean up mirror data in its range, delete the job.
+     * Ends with `jobDeleted`. On failure the job is kept and `deleteError` is sent.
+     * */
+    deleteJobWithCleanup = async (jobId: number, opts: {historical: CleanupAction | 'keep', scrobbles: CleanupAction | 'keep'}): Promise<StartedTask> => {
+        const {historical, scrobbles} = opts;
+        const job = await this.jobRepo.getById(jobId);
+        if (job === undefined) {
+            throw new Error(`Job ${jobId} does not exist`);
+        }
+        const runner = this.getRunner(jobId);
+        if (runner.runtime.deleting === true || runner.runtime.cleanup !== undefined) {
+            throw new JobConflictError('A cleanup is already running for this job');
+        }
+        const targets = scrobbles === 'keep' ? [] : await this.targetRepo.findByJob(jobId);
+        const otherJobs = historical === 'keep' ? [] : (await this.jobRepo.findByMirror(job.mirrorId)).filter(x => x.id !== jobId);
+
+        // checked and locked without awaiting in between, so nothing can start after the checks pass
+        const busy = otherJobs.filter(x => this.isJobActive(x.id));
+        if (busy.length > 0) {
+            throw new JobConflictError(`Mirror data can't be cleaned up while ${busy.map(x => `'${x.name}'`).join(', ')} uses it. Stop its import and exports first`);
+        }
+        const holder = `job-delete:${jobId}:${randomUUID()}`;
+        const release = this.acquireClients(targets.map(x => x.componentId), holder);
+        const mirrorKey = mirrorLockKey(job.mirrorId);
+        if (historical !== 'keep') {
+            if (!this.locks.tryAcquire(mirrorKey, holder)) {
+                release();
+                throw new JobConflictError('A cleanup is already running for this job\'s mirror');
+            }
+        }
+        const releaseAll = () => {
+            release();
+            this.locks.release(mirrorKey, holder);
+        }
+
+        runner.setDeleting(true);
+        const done = (async () => {
+            try {
+                await this.stopJob(jobId, 'stopped');
+                if (scrobbles !== 'keep') {
+                    for (const t of targets) {
+                        await this.jobPlays.run({componentId: t.componentId, jobId, queued: 'cancel', action: scrobbles, holder, onProgress: (p) => runner.setCleanup({...p, componentId: t.componentId})});
+                    }
+                    runner.setCleanup(undefined);
+                }
+                if (historical !== 'keep') {
+                    const {error} = await (await this.mirrors.startCleanup(job.mirrorId, {action: historical, range: [job.rangeFrom?.valueOf() ?? 0, job.rangeTo.valueOf()], holder})).done;
+                    if (error !== undefined) {
+                        throw new Error(`Mirror cleanup failed: ${error}`);
+                    }
+                }
+                releaseAll();
+                await this.deleteJob(jobId);
+                return {};
+            } catch (e) {
+                releaseAll();
+                this.logger.error(new Error(`Deleting Job ${jobId} failed`, {cause: e}));
+                runner.setCleanup(undefined);
+                runner.setDeleting(false, (e as Error).message);
+                return {error: (e as Error).message};
+            }
+        })();
+        return {done};
     }
 
     deleteJob = async (jobId: number) => {

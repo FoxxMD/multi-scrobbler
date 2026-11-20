@@ -77,6 +77,8 @@ export interface JobRuntime {
     /** by target id */
     exports: Record<number, JobProcessRuntime>
     cleanup?: JobCleanupRuntime
+    /** the job is being deleted (with cleanups) */
+    deleting?: boolean
 }
 
 export class JobConflictError extends Error {
@@ -414,6 +416,11 @@ export class JobRunner {
         const changed = (this.runtime.cleanup === undefined) !== (cleanup === undefined);
         this.runtime.cleanup = cleanup;
         this.emitUpdate({runtime: this.runtime}, changed);
+    }
+
+    setDeleting(deleting: boolean, error?: string) {
+        this.runtime.deleting = deleting || undefined;
+        this.emitUpdate({runtime: this.runtime, ...(error !== undefined ? {deleteError: error} : {})}, true);
     }
 
     get exportsRunning(): number[] {
