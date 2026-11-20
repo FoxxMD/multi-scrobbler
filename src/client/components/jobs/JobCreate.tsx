@@ -235,7 +235,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
     const fileGroups: SelectFormGroup[] = [{items: options.importFiles.map(x => ({value: x.name, label: `${x.name} (${formatSize(x.size)})`}))}];
     const exportMirrorGroups: SelectFormGroup[] = [{items: options.mirrors.map(x => ({
         value: x.id.toString(),
-        label: `${x.name}${x.account !== null ? ` (${x.account})` : ''} - ${x.playCount.toLocaleString()} scrobbles`
+        label: `${x.name}${x.account !== null ? ` (${x.account})` : ''} - ${x.playCount.toLocaleString()} Plays`
     }))}];
     const presetGroups: SelectFormGroup[] = [{items: options.presets.map(x => ({value: x.name, label: x.name}))}];
     const transformComponentGroups: SelectFormGroup[] = [{items: options.componentTransforms.flatMap(x => (['preCompare', 'postCompare'] as const)
@@ -250,7 +250,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
         {items: [{value: 'new', label: 'New mirror'}]},
         ...(options.mirrors.length > 0 ? [{label: 'Existing', items: options.mirrors.map(x => ({
             value: x.id.toString(),
-            label: `${x.name}${x.account !== null ? ` (${x.account})` : ''} - ${x.playCount.toLocaleString()} scrobbles`
+            label: `${x.name}${x.account !== null ? ` (${x.account})` : ''} - ${x.playCount.toLocaleString()} Plays`
         }))}] : []),
     ];
 
@@ -307,12 +307,12 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                         /> : undefined}
                         {source === 'mirror' ? <form.Field
                             name="exportMirror"
-                            children={(field) => <FormNativeSelect field={field} label="Mirror" groups={exportMirrorGroups} helperText="Nothing is imported. The job exports scrobbles already in this mirror."/>}
+                            children={(field) => <FormNativeSelect field={field} label="Mirror" groups={exportMirrorGroups} helperText="Nothing is imported. The job exports Plays already in this mirror."/>}
                         /> : undefined}
                         {source === 'upload' || source === 'existing' ? <Stack gap="3">
                             <form.Field
                                 name="mirror"
-                                children={(field) => <FormNativeSelect field={field} label="Mirror" groups={mirrorGroups} helperText="Where imported scrobbles are stored. Scrobbles already in the mirror are skipped. benjaminbenben files always get a new mirror of their own because their timestamps have no seconds."/>}
+                                children={(field) => <FormNativeSelect field={field} label="Mirror" groups={mirrorGroups} helperText="Where imported Plays are stored. Plays already in the mirror are skipped. benjaminbenben files always get a new mirror of their own because their timestamps have no seconds."/>}
                             />
                             <form.Subscribe
                                 selector={(state) => state.values.mirror}
@@ -349,7 +349,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                                     <Checkbox.Control/>
                                     <Checkbox.Label>Save raw import data</Checkbox.Label>
                                 </Checkbox.Root>
-                                <Field.HelperText>Keeps the original data of every imported scrobble. Uses more disk space.</Field.HelperText>
+                                <Field.HelperText>Keeps the original data of every imported Play. Uses more disk space.</Field.HelperText>
                             </Field.Root>}
                         /> : undefined}
                     </Stack>}
@@ -388,7 +388,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                         // a Fieldset, not a Field: checkboxes in one Field share its input id so every label toggles the first
                         children={(field) => <Fieldset.Root invalid={field.errors.length > 0}>
                             <Fieldset.Legend>Export To</Fieldset.Legend>
-                            <Fieldset.HelperText>Clients that get the imported scrobbles. Leave empty to only import. See the <ChakraLink textDecoration="underline" href={`${TRANSFER_DOCS}#how-to-export`} target="_blank">export docs</ChakraLink>.</Fieldset.HelperText>
+                            <Fieldset.HelperText>Clients that get the imported Plays. Leave empty to only import. See the <ChakraLink textDecoration="underline" href={`${TRANSFER_DOCS}#how-to-export`} target="_blank">export docs</ChakraLink>.</Fieldset.HelperText>
                             {options.targets.length === 0 ? <Text color="fg.muted" textStyle="sm">No Clients are configured.</Text> : <Fieldset.Content gap="2" mt="1">
                                 {options.targets.map(t => <Checkbox.Root
                                     key={t.componentId}
@@ -415,17 +415,17 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                                 {rejecting.length > 0 ? <Alert.Root status="warning">
                                     <Alert.Indicator/>
                                     <Alert.Content>
-                                        <Alert.Description>{rejecting.map(x => x.name).join(', ')}: Last.fm and Libre.fm refuse scrobbles older than about 14 days, so most imported scrobbles will fail to export there.</Alert.Description>
+                                        <Alert.Description>{rejecting.map(x => x.name).join(', ')}: Last.fm and Libre.fm refuse to scrobble data timestamped as older than about 14 days, so most imported Plays will fail to export there.</Alert.Description>
                                     </Alert.Content>
                                 </Alert.Root> : undefined}
                                 <form.Field
                                     name="exportOrder"
                                     children={(field) => <FormRadio field={field} label="Order" items={[{value: 'desc', label: 'Newest first'}, {value: 'asc', label: 'Oldest first'}]}
-                                        helperText={values.exportOrder === 'desc' ? 'Starts exporting while the import is still running.' : 'Starts exporting once the oldest scrobbles are imported.'}/>}
+                                        helperText={values.exportOrder === 'desc' ? 'Starts exporting while the import is still running.' : 'Starts exporting once the oldest Plays are imported.'}/>}
                                 />
                                 <form.Field
                                     name="transforms"
-                                    children={(field) => <FormRadio field={field} label="Transforms" items={transformItems} helperText="Change scrobbles before they are sent to each Client. Applied before the Client's own transforms."/>}
+                                    children={(field) => <FormRadio field={field} label="Transforms" items={transformItems} helperText="Change Plays before they are sent to each Client. Applied before the Client's own transforms."/>}
                                 />
                                 {values.transforms === 'preset' ? <form.Field
                                     name="preset"
@@ -442,7 +442,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                                         <form.Field
                                             name="exportQueueLimit"
                                             children={(field) => <FormNumberInput field={field} label="Queue Limit" min={1} max={EXPORT_QUEUE_LIMIT_MAX} empty={1} maxWidth="10rem"
-                                                helperText="More scrobbles are only sent while a Client's queue, live scrobbles included, holds fewer than this. Can be changed later."/>}
+                                                helperText="More Plays are only sent while a Client's queue, live Plays included, holds fewer than this. Can be changed later."/>}
                                         />
                                     </Collapsible.Content>
                                 </Collapsible.Root>
