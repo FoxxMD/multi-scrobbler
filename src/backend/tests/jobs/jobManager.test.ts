@@ -187,4 +187,32 @@ describe('Job manager', function () {
         }
         expect(err).to.be.instanceOf(Error);
     });
+
+    it('refuses a replace import only while another job exports from an overlapping range', async function () {
+        const {db, jobs, newJob} = await setup();
+        const exporter = await newJob('exporter');
+        await jobs.update(exporter.id, {importStatus: 'completed', rangeFrom: dayjs(500)});
+        const [client] = await db.insert(components).values(fixtureCreateComponent({mode: 'client'})).returning();
+        const [target] = await new JobTargetRepository(db).createForJob(exporter.id, [client.id]);
+        const m = new JobManager({db, logger: loggerTest, timings, createProvider: () => new FakeTimeProvider([100])});
+        // no client resolves, so the export keeps waiting (running)
+        await m.startExport(exporter.id, target.id);
+
+        const replacer = await newJob('replacer');
+        await jobs.update(replacer.id, {importStatus: 'idle', importOverlap: 'replace'});
+        let err: unknown;
+        try {
+            await m.startImport(replacer.id);
+        } catch (e) {
+            err = e;
+        }
+        expect((err as Error)?.message).includes("'exporter'");
+
+        // [0, 400] does not overlap the exporter's [500, 1000]
+        await jobs.update(replacer.id, {rangeTo: dayjs(400)});
+        await m.startImport(replacer.id);
+        await settle(m, replacer.id);
+        expect((await jobs.getById(replacer.id))!.importStatus).eq('completed');
+        await m.stopJob(exporter.id, 'stopped');
+    });
 });

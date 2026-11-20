@@ -173,7 +173,7 @@ export class JobManager {
                         return exporting && (x.rangeFrom?.valueOf() ?? 0) <= range[1] && x.rangeTo.valueOf() >= range[0];
                     }).map(x => x.name);
                 },
-                deleteMirrorRange: async (mirrorId, range, holder) => (await this.mirrors.startCleanup(mirrorId, {action: 'delete', range, holder})).done,
+                deleteMirrorRange: async (mirrorId, range, holder, signal) => (await this.mirrors.startCleanup(mirrorId, {action: 'delete', range, holder, signal})).done,
                 parseStages: async (raw) => {
                     try {
                         return await pMap(raw, async (x) => this.transformerManager.parseTransformerConfig(x));
@@ -435,8 +435,10 @@ export class JobManager {
     /** Halts everything without changing persisted status, so running processes resume on next boot */
     shutdown = async () => {
         this.shuttingDown = true;
+        // runners first: a replace import aborts its own mirror delete and stays resumable instead of failing on the delete's error
+        const runners = Promise.allSettled(Array.from(this.runners.values()).map(x => x.shutdown()));
         await this.mirrors.shutdown();
-        await Promise.allSettled(Array.from(this.runners.values()).map(x => x.shutdown()));
+        await runners;
     }
 
     /**

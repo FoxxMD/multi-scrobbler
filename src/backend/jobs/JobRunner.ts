@@ -58,7 +58,7 @@ export interface JobRunnerDeps {
      * */
     replaceConflicts?: (job: JobSelect, range: TimeRange) => Promise<string[]>
     /** Delete the mirror's plays in range (MirrorService.startCleanup). The caller holds the mirror lock as `holder` */
-    deleteMirrorRange?: (mirrorId: number, range: TimeRange, holder: string) => Promise<{error?: string}>
+    deleteMirrorRange?: (mirrorId: number, range: TimeRange, holder: string, signal: AbortSignal) => Promise<{error?: string}>
 }
 
 /** Not persisted. Explains what a running process is doing right now */
@@ -418,7 +418,9 @@ export class JobRunner {
             signal.throwIfAborted();
             this.runtime.import = {...this.runtime.import, waiting: 'Deleting the mirror plays in this range before importing'};
             this.emitUpdate({runtime: this.runtime}, true);
-            const {error} = await this.deps.deleteMirrorRange(job.mirrorId, range, holder);
+            const {error} = await this.deps.deleteMirrorRange(job.mirrorId, range, holder, signal);
+            // stopped or shutting down: halt, importReplacedAt stays unset so a resume deletes the rest
+            signal.throwIfAborted();
             if(error !== undefined) {
                 throw new Error(`Could not delete the mirror plays to replace: ${error}`);
             }

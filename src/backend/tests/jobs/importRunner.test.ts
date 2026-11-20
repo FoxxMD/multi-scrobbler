@@ -22,7 +22,7 @@ import type { DbConcrete } from '../../common/database/drizzle/drizzleUtils.ts';
 
 const timings = {importPageDelay: 0, importRetries: 2, importRetryBase: 1, readyTimeout: 30, readyPoll: 5, emitThrottle: 0};
 
-const setup = async (opts: {provider?: ImportProvider, persistInputs?: boolean, rangeFrom?: number, rangeTo?: number, coverage?: [number, number][], overlap?: JobImportOverlap, replaceConflicts?: string[]} = {}) => {
+const setup = async (opts: {provider?: ImportProvider, persistInputs?: boolean, rangeFrom?: number, rangeTo?: number, coverage?: [number, number][], overlap?: JobImportOverlap, replaceConflicts?: string[], cleanupBatchSize?: number} = {}) => {
     const db = await transientDb();
     const owner = await ensureOwner(db);
     const mirrors = new MirrorRepository(db);
@@ -43,13 +43,13 @@ const setup = async (opts: {provider?: ImportProvider, persistInputs?: boolean, 
     });
     const locks = new LockRegistry();
     const emitter = new WildcardEmitter();
-    const mirrorService = new MirrorService({db, logger: loggerTest, locks, emitter, isJobActive: () => false});
+    const mirrorService = new MirrorService({db, logger: loggerTest, locks, emitter, isJobActive: () => false, batchSize: opts.cleanupBatchSize});
     const deps = (provider: ImportProvider | undefined): JobRunnerDeps => ({
         db, logger: loggerTest, locks, emitter, createProvider: () => provider, timings,
         replaceConflicts: async () => opts.replaceConflicts ?? [],
-        deleteMirrorRange: async (mirrorId, range, holder) => (await mirrorService.startCleanup(mirrorId, {action: 'delete', range, holder})).done,
+        deleteMirrorRange: async (mirrorId, range, holder, signal) => (await mirrorService.startCleanup(mirrorId, {action: 'delete', range, holder, signal})).done,
     });
-    return {db, owner, mirror, mirrors, jobs, job, locks, deps};
+    return {db, owner, mirror, mirrors, jobs, job, locks, deps, emitter};
 }
 
 const count = async (db: DbConcrete) => (await db.select().from(playsHistorical)).length;
@@ -281,14 +281,13 @@ describe('Job import runner', function () {
         });
 
         it('skip: a file import drops records in time the mirror already covers', async function () {
-            const {db, mirror, job, jobs, deps} = await setup({coverage: [[150, 450]]});
+            const {db, job, jobs, deps} = await setup({coverage: [[150, 450]]});
             await runToEnd(new JobRunner(job.id, deps(new FakeFileProvider([100, 200, 300, 500]))));
             const rows = await db.select().from(playsHistorical);
             expect(rows.map(x => x.playedAt!.valueOf()).sort((a, b) => a - b)).to.deep.eq([100, 500]);
             const done = (await jobs.getById(job.id))!;
             expect(done.imported).eq(2);
             expect(done.importFetched).eq(4);
-            expect(mirror.id).gt(0);
         });
 
         it('replace: deletes mirror plays in the exact job range, then imports all of it', async function () {
@@ -318,6 +317,28 @@ describe('Job import runner', function () {
             await seedRows(db, mirror.id, [400]);
             await runToEnd(new JobRunner(job.id, deps(new FakeTimeProvider([300]))));
             expect((await db.select().from(playsHistorical)).map(x => x.playedAt!.valueOf()).sort()).to.deep.eq([300, 400]);
+        });
+
+        it('replace: a stop during the delete halts and a resume finishes the replace', async function () {
+            const {db, mirror, job, jobs, deps, emitter} = await setup({overlap: 'replace', rangeFrom: 200, rangeTo: 600, cleanupBatchSize: 1});
+            await seedRows(db, mirror.id, [300, 400, 500]);
+            const runner = new JobRunner(job.id, deps(new FakeTimeProvider([350])));
+            emitter.on('mirrorUpdate', (e: {data: {task?: {done: number} | null}}) => {
+                if ((e.data.task?.done ?? 0) === 1) {
+                    void runner.stopImport('stopped');
+                }
+            });
+            await runToEnd(runner);
+            let state = (await jobs.getById(job.id))!;
+            expect(state.importStatus).eq('stopped');
+            expect(state.importReplacedAt).null;
+            expect(await count(db)).eq(2);
+
+            emitter.removeAllListeners('mirrorUpdate');
+            await runToEnd(runner);
+            state = (await jobs.getById(job.id))!;
+            expect(state.importStatus).eq('completed');
+            expect((await db.select().from(playsHistorical)).map(x => x.playedAt!.valueOf())).to.deep.eq([350]);
         });
 
         it('replace: does not start while another job exports from the range', async function () {

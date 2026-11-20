@@ -126,7 +126,7 @@ export class MirrorService {
      *
      * Throws JobConflictError if a job using the mirror is running or another cleanup is.
      * */
-    startCleanup = async (id: number, opts: {action: CleanupAction, range?: TimeRange, holder?: string}): Promise<StartedTask> => {
+    startCleanup = async (id: number, opts: {action: CleanupAction, range?: TimeRange, holder?: string, signal?: AbortSignal}): Promise<StartedTask> => {
         const {action, range} = opts;
         const mirror = await this.getOrThrow(id);
         const release = await this.acquire(mirror, opts.holder, async (jobs) => {
@@ -135,7 +135,7 @@ export class MirrorService {
                 throw new JobConflictError(`Stop the import and exports of ${active.map(x => `'${x.name}'`).join(', ')} first`);
             }
         });
-        return this.run(mirror, {kind: 'cleanup', action, range, done: 0, total: 0, startedAt: dayjs().toISOString()}, release, async (task, signal) => {
+        return this.run(mirror, {kind: 'cleanup', action, range, done: 0, total: 0, startedAt: dayjs().toISOString()}, release, opts.signal, async (task, signal) => {
             task.total = await this.historicalRepo.countMirror({mirrorId: id, range, uncompacted: action === 'compact'});
             if (action === 'delete') {
                 // first, so an interrupted delete never claims plays that are gone
@@ -156,7 +156,7 @@ export class MirrorService {
                 throw new JobConflictError(`Used by ${jobs.length} job${jobs.length === 1 ? '' : 's'} (${jobs.map(x => `'${x.name}'`).join(', ')}). Delete them first`);
             }
         });
-        return this.run(mirror, {kind: 'delete', done: 0, total: 0, startedAt: dayjs().toISOString()}, release, async (task, signal) => {
+        return this.run(mirror, {kind: 'delete', done: 0, total: 0, startedAt: dayjs().toISOString()}, release, undefined, async (task, signal) => {
             task.total = await this.historicalRepo.countMirror({mirrorId: id});
             await this.mirrorRepo.removeCoverage(id);
             await this.batches(mirror, task, signal, () => this.historicalRepo.findMirrorIds({mirrorId: id, limit: this.batchSize}), (ids) => this.historicalRepo.deleteWithInputs(ids));
@@ -214,8 +214,14 @@ export class MirrorService {
         return release;
     }
 
-    protected run(mirror: PlayMirrorSelect, task: MirrorTask, release: () => void, fn: (task: MirrorTask, signal: AbortSignal) => Promise<void>): StartedTask {
+    /** `outer` (IE the import that started it) also stops the task between batches */
+    protected run(mirror: PlayMirrorSelect, task: MirrorTask, release: () => void, outer: AbortSignal | undefined, fn: (task: MirrorTask, signal: AbortSignal) => Promise<void>): StartedTask {
         const abort = new AbortController();
+        const onOuterAbort = () => abort.abort(outer?.reason);
+        if (outer?.aborted) {
+            onOuterAbort();
+        }
+        outer?.addEventListener('abort', onOuterAbort, {once: true});
         this.tasks.set(mirror.id, task);
         this.aborts.set(mirror.id, abort);
         this.emit(mirror, {task});
@@ -225,12 +231,13 @@ export class MirrorService {
                 await fn(task, abort.signal);
             } catch (e) {
                 if (abort.signal.aborted) {
-                    error = 'Interrupted by shutdown';
+                    error = outer?.aborted === true ? 'Interrupted, the import that started it stopped' : 'Interrupted by shutdown';
                 } else {
                     this.logger.error(new Error(`Mirror ${mirror.id} ${task.kind} failed`, {cause: e}));
                     error = (e as Error).message;
                 }
             } finally {
+                outer?.removeEventListener('abort', onOuterAbort);
                 this.tasks.delete(mirror.id);
                 this.aborts.delete(mirror.id);
                 release();
