@@ -12,6 +12,10 @@ import {
 import dayjs from "dayjs";
 import { shortTodayAwareFormat } from "../../utils/index.js";
 import { TextTip } from "../ToggleTip.js";
+import { useQuery } from '@tanstack/react-query';
+import type { JobApiJson } from "../../../core/Job.js";
+import { tanQueries } from "../../queries/index.js";
+import { useJobEvents } from "../jobs/jobUtils.js";
 
 type Color = BadgeProps['colorPalette'] & IconBaseProps['color'];
 
@@ -299,4 +303,27 @@ export const DateIndicator = (props: {
         return (
             <TextMuted textStyle="sm">{shortTodayAwareFormat(dayjs(usedDate))} {useActive? 'Last Active At' : 'Last Ready At'}</TextMuted>
         );
+}
+/** Jobs that import from the component or export to it */
+export const countComponentJobs = (jobs: Pick<JobApiJson, 'importFrom' | 'targets'>[], componentId: number): number =>
+    jobs.filter(j => (j.importFrom.kind === 'component' && j.importFrom.componentId === componentId) || j.targets.some(t => t.componentId === componentId)).length;
+
+export const JobsStatStatic = (props: { current: number } & Omit<ComponentProps<typeof StaticStat>, 'label' | 'helpText'>) => {
+    const {current, ...rest} = props;
+    return <StaticStat label="Jobs" helpText="Import jobs that import from or export to this" {...rest}>{current}</StaticStat>;
+}
+
+export const JobsStatStreamable = (props: { data: Pick<ComponentCommonApiJson, 'id'> } & Omit<ComponentProps<typeof JobsStatStatic>, 'current'>) => {
+    const {
+        data,
+        ...rest
+    } = props;
+    // job SSE events keep the cached job list current
+    useJobEvents();
+    const {data: jobs} = useQuery(tanQueries.jobs.list());
+    if (jobs === undefined) {
+        // still loading, or jobs can't be read (IE not logged in)
+        return null;
+    }
+    return <JobsStatStatic current={countComponentJobs(jobs, data.id)} {...rest}/>;
 }

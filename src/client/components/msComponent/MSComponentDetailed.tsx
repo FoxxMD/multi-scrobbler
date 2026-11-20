@@ -14,7 +14,7 @@ import {
     useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
 import { Link } from "react-router";
-import { CountIndicatorStreamable, DateIndicatorStreamable, DeadLetterIndicatorStreamable, QueuedIndicatorStreamable, StaticStat } from "./Stats.js";
+import { CountIndicatorStreamable, DateIndicatorStreamable, DeadLetterIndicatorStreamable, QueuedIndicatorStreamable, JobsStatStreamable, StaticStat } from "./Stats.js";
 import { ListContainerFilterable } from "../playActivity/ActivityList.js";
 import { useParams } from "react-router-dom";
 import { ComponentStateBadge } from "../Badges.js";
@@ -104,7 +104,9 @@ export const MSComponentStats = (props: { data?: ComponentsApiJson, live?: boole
             <QueuedIndicatorStreamable data={props.data} flexGrow="0"/>
             <DeadLetterIndicatorStreamable data={props.data} flexGrow="0"/>
             <DateIndicatorStreamable data={props.data} flexGrow="0"/>
+            <JobsStatStreamable data={props.data} flexGrow="0"/>
             {synced !== undefined ? <SyncedStat data={props.data}/> : null}
+            
         </Wrap>
     )
 }
