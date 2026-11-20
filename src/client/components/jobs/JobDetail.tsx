@@ -16,7 +16,7 @@ import { baseUrl } from "../../utils";
 import { ErrorAlert } from "../ErrorAlert";
 import { toaster } from "../Toaster";
 import { JobBackButton } from "./JobList";
-import { apiErrorMessage, exportProgress, ExportProgressBar, FILE_FORMAT_NAMES, formatJobDate, ImportProgressBar, importOriginText, importProgress, JobStatusBadge, useJobEvents, useSetJob } from "./jobUtils";
+import { apiErrorMessage, exportProgress, ExportProgressBar, FILE_FORMAT_NAMES, formatJobDate, formatPlayedDate, ImportProgressBar, importOriginText, importProgress, JobStatusBadge, useJobEvents, useSetJob } from "./jobUtils";
 
 type ControlAction = 'start' | 'pause' | 'stop';
 
@@ -28,7 +28,7 @@ const cursorText = (job: JobApiJson): string | undefined => {
         return undefined;
     }
     if (isApiCursor(job.importCursor)) {
-        return `Plays before ${formatJobDate(new Date(job.importCursor.to).toISOString())}`;
+        return `Plays before ${formatPlayedDate(job.importCursor.to)}`;
     }
     if (isFileCursor(job.importCursor)) {
         const read = job.runtime.import.progress;
@@ -302,7 +302,7 @@ export const ImportPanel = (props: { job: JobApiJson }) => {
                             <HStack><ChakraLink asChild><Link to={`/mirrors/${job.mirror.id}`}>{job.mirror.name}</Link></ChakraLink>{job.mirror.account !== null ? ` (${job.mirror.account})` : ''}</HStack>
                             {job.importFrom.kind === 'file' && job.importFrom.format === 'lastfm-benjamin-csv' ? <Text as="span" color="fg.muted"> - benjaminbenben files always get a new mirror of their own</Text> : undefined}
                         </DataItem>
-                        <DataItem label="Range">{job.rangeFrom === null ? 'Beginning' : formatJobDate(job.rangeFrom)} to {formatJobDate(job.rangeTo)}</DataItem>
+                        <DataItem label="Range">{job.rangeFrom === null ? 'Beginning' : formatPlayedDate(job.rangeFrom)} to {formatPlayedDate(job.rangeTo)}</DataItem>
                         {position !== undefined ? <DataItem label="Position">{position}</DataItem> : undefined}
                         {job.importFrom.kind !== 'mirror' ? <DataItem label="Started">{formatJobDate(job.importStartedAt)}</DataItem> : undefined}
                         <DataItem label="Completed">{formatJobDate(job.importCompletedAt)}</DataItem>
@@ -345,7 +345,7 @@ export const ExportTarget = (props: { job: JobApiJson, target: JobTargetApiJson 
             <Text textStyle="sm">
                 {target.exported.toLocaleString()} exported{job.importStatus === 'completed' ? ` of ${job.mirrorPlaysInRange.toLocaleString()}` : ''}
                 {progress !== undefined ? ` - ${Math.floor(progress * 100)}%` : ''}
-                {target.cursor !== null && target.status !== 'completed' ? `, up to ${formatJobDate(new Date(target.cursor.playedAt).toISOString())}` : ''}
+                {target.cursor !== null && target.status !== 'completed' ? `, up to ${formatPlayedDate(target.cursor.playedAt)}` : ''}
             </Text>
             {stats !== undefined ? <Text textStyle="sm" color="fg.muted">In the Client: {stats}</Text> : undefined}
             {target.exported > target.queued ? <Text textStyle="sm" color="fg.muted">{(target.exported - target.queued).toLocaleString()} were already in the Client and were skipped.</Text> : undefined}

@@ -7,7 +7,7 @@ import { asJobSseEvent, type MsSseEvent } from "../../../core/Api";
 import { deriveJobStatus, type JobApiJson, type JobImportOriginJson, type JobProcessStatus, type JobTargetApiJson, type LastfmFileFormat } from "../../../core/Job";
 import { capitalize } from "../../../core/StringUtils";
 import { tanQueries } from "../../queries";
-import { shortTodayAwareFormat } from "../../utils";
+import { isoToHuman, shortTodayAwareFormat } from "../../utils";
 import { toaster } from "../Toaster";
 
 const statusPalette: Record<JobProcessStatus, BadgeProps['colorPalette']> = {
@@ -71,6 +71,9 @@ export const ImportProgressBar = (props: { job: JobApiJson } & Omit<Progress.Roo
 }
 
 export const formatJobDate = (date: string | null | undefined): string => date === null || date === undefined ? '-' : shortTodayAwareFormat(dayjs(date));
+
+/** When a scrobble was played, IE mirror ranges and export positions. Always has the year since scrobble history spans years */
+export const formatPlayedDate = (date: string | number | Date): string => isoToHuman(dayjs(date).toISOString(), {includeDate: true});
 
 /** The `error` message the job API returns, else the error's own message */
 export const apiErrorMessage = (e: unknown): string => {

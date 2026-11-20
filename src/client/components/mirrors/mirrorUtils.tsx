@@ -1,15 +1,14 @@
 import { Progress, Text } from '@chakra-ui/react';
 import { useSSEAnyEvent, useSSEContext } from "@flamefrontend/sse-runtime-react";
 import { useQueryClient } from '@tanstack/react-query';
-import dayjs from 'dayjs';
 import { asCleanupSseEvent, type MsSseEvent } from "../../../core/Api";
 import type { JobCleanupProgressJson, MirrorApiJson, MirrorTaskJson } from "../../../core/Job";
 import { tanQueries } from "../../queries";
 import { toaster } from "../Toaster";
-import { formatJobDate } from "../jobs/jobUtils";
+import { formatPlayedDate } from "../jobs/jobUtils";
 
 /** A date of a mirror range. 0 is the start of time */
-export const formatRangeEdge = (ms: number): string => ms <= 0 ? 'Beginning' : formatJobDate(dayjs(ms).toISOString());
+export const formatRangeEdge = (ms: number): string => ms <= 0 ? 'Beginning' : formatPlayedDate(ms);
 
 export const formatRange = (range: [number, number]): string => `${formatRangeEdge(range[0])} to ${formatRangeEdge(range[1])}`;
 
