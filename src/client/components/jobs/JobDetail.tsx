@@ -167,6 +167,7 @@ export const CleanupPanel = (props: { job: JobApiJson }) => {
     });
     const scrobbles = useMutation({
         mutationFn: (action: CleanupAction) => ky.post(`jobs/${job.id}/cleanup/scrobbles`, {baseUrl, json: {action}}),
+        onSuccess: (_, action) => toaster.create({type: 'info', title: `${action === 'delete' ? 'Deleting' : 'Compacting'} this job's scrobble records`}),
         onError: (e) => toaster.create({type: 'error', title: 'Could not clean up scrobble records', description: apiErrorMessage(e)}),
     });
     const cleanup = job.runtime.cleanup;

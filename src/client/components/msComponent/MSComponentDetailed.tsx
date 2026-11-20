@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, type ComponentProps, useEffect, type ReactNode } from "react"
+import { ClientJobPlays } from './ClientJobPlays';
 import { Portal, Group, Span, Menu, Box, Heading, Skeleton, Wrap, HStack, Badge, Stack, List, Flex, Text, Card, Button, CloseButton, SkeletonText, type BadgeProps, type MenuItemProps, createOverlay, Dialog, type MenuSelectionDetails } from '@chakra-ui/react';
 import { COMPONENT_STATE, type ComponentCommonApiJson, type ComponentsApiJson, type ComponentState, type ComponentStateBody, isComponentSourceApiJson, type MsSseEvent, asSseEvent } from "../../../core/Api.js";
 import { capitalize, capitalizeWords } from "../../../core/StringUtils.js";
@@ -466,6 +467,7 @@ export const ComponentDetailedDesktop = (props: {data: ComponentsApiJson, live?:
             {warnings.length > 0 ? <>{warnings.map(x => <ErrorAlert error={x} status="warning"/>)}</> : undefined }
             <MSErrorBoundary>{props.live ? <PlayersContainerFetchable nowPlaying={isSource ? undefined : true} data={data}/> : <PlayersContainer nowPlaying={isSource ? undefined : true} data={data} live={props.live}/>}</MSErrorBoundary>
             <MSErrorBoundary><ListContainerFilterable componentType={data.mode} componentId={data.id}/></MSErrorBoundary>
+            {data.mode === 'client' ? <MSErrorBoundary><ClientJobPlays componentId={data.id}/></MSErrorBoundary> : undefined}
         </Flex>
         </MSErrorBoundary>
     )
