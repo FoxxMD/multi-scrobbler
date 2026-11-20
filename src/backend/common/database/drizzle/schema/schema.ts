@@ -5,7 +5,7 @@ import { COMPONENT_TYPE_CLIENT, COMPONENT_TYPE_SOURCE, type ErrorLike, type Queu
 import type { PlayObject } from "../../../../../core/PlaySchema.ts";
 import { asPlay } from "../../../../../core/PlayMarshalUtils.ts";
 import type {JobImportCursor, JobImportFile, JobTargetBreaker, JobTargetCursor, JobTargetStats, JobTransformSource} from "../../../infrastructure/Job.ts";
-import { JOB_PROCESS_STATUSES } from "../../../../../core/Job.ts";
+import { JOB_IMPORT_OVERLAPS, JOB_PROCESS_STATUSES, type MirrorSegment } from "../../../../../core/Job.ts";
 import { serializeError, deserializeError } from "serialize-error";
 import { generatePlayUid } from "../../../../../core/StringUtils.ts";
 import { users, sessions, accounts, verifications, appSettings, apikeys, userSettings } from "./auth.ts";
@@ -105,19 +105,23 @@ export const playInputs = sqliteTable("play_inputs", {
 ]);
 
 /**
- * An upstream account's set of scrobbles (IE a Last.fm user) that is imported/mirrored into plays_historical.
- * Owned by a user and shared by every component/job that resolves to the same service + account.
+ * A set of scrobbles imported/mirrored into plays_historical, owned by a user.
+ *
+ * * service = 'mixed' => a user mirror. Any import (API or file, any service) can fill it
+ * * any other service => locked to that service + account (IE a Teal/Rocksky client's history)
  * */
 export const playMirrors = sqliteTable("play_mirrors", {
   id: integer().primaryKey(),
   userId: text().references(() => users.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
-  // lastfm, etc...
+  // 'mixed' for user mirrors, else the service a locked mirror belongs to
   service: text({length: 50}).notNull(),
-  // upstream username. null => unknown or intentionally isolated (IE minute-precision file imports)
+  // upstream account of a locked mirror. null for user mirrors
   account: text({length: 200}),
   name: text().notNull(),
   // sorted, merged, inclusive [fromMs, toMs] ranges that are completely mirrored
   coverage: text({mode: 'json'}).$type<[number, number][]>().notNull().$defaultFn(() => []),
+  // coverage split by what filled it. Sorted, non-overlapping, their union is coverage
+  segments: text({mode: 'json'}).$type<MirrorSegment[]>().notNull().default([]),
   createdAt: DayjsTimestamp('createdAt').notNull().$defaultFn(() => dayjs()),
   updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()).$onUpdate(() => dayjs()),
 }, (table) => [
@@ -135,6 +139,8 @@ export const playsHistorical = sqliteTable("plays_historical", {
   playHash: text(),
   mbidIdentifier: text(),
   mirrorId: integer().references(() => playMirrors.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
+  // dedupe key scheme of the import that created a mirror row (IE lastfm). null => created before origins were tracked
+  origin: text({length: 50}),
   // 'input' once the raw upstream data in historical_play_inputs was removed
   compacted: text(),
 }, (table) => [
@@ -258,6 +264,10 @@ export const jobs = sqliteTable("jobs", {
   rangeTo: DayjsTimestamp('rangeTo').notNull(),
   // create historical_play_inputs for mirror rows this job inserts
   persistInputs: integer({mode: 'boolean'}).notNull().default(true),
+  // what the import does where the mirror already has data in the job's range
+  importOverlap: text({enum: JOB_IMPORT_OVERLAPS}).notNull().default('skip'),
+  // replace: when the mirror plays in the job's range were deleted. Set once, so a resumed import never deletes its own plays
+  importReplacedAt: DayjsTimestamp('importReplacedAt'),
   exportOrder: text({enum: ['asc','desc']}).notNull().default('desc'),
   // export only sends more plays while a target client's queue (all plays) is shorter than this
   exportQueueLimit: integer().notNull().default(20),

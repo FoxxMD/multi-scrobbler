@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { lstat, mkdir, readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import * as z from "zod";
-import { cleanupBodySchema, jobCreateSchema, jobDeleteQuerySchema, jobUpdateSchema, type JobApiJson, type JobOptionsApiJson } from "../../core/Job.ts";
+import { cleanupBodySchema, isLockedMirror, MIRROR_SERVICE_MIXED, jobCreateSchema, jobDeleteQuerySchema, jobUpdateSchema, type JobApiJson, type JobOptionsApiJson } from "../../core/Job.ts";
 import { JobRepository, type JobSelect } from "../common/database/drizzle/repositories/JobRepository.ts";
 import { runTransaction } from "../common/database/drizzle/drizzleUtils.ts";
 import { MirrorRepository, type PlayMirrorSelect } from "../common/database/drizzle/repositories/MirrorRepository.ts";
@@ -116,8 +116,8 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                 importComponents.push({componentId: c.componentId, name: c.name, mode, ready: c.isReady(), account: c.api.user ?? null});
             }
         }
-        // only Last.fm mirrors can be imported into
-        const userMirrors = (await mirrorRepo.findForUser(req.auth!.userId)).filter(x => x.service === 'lastfm');
+        // locked mirrors only take imports from their own service
+        const userMirrors = (await mirrorRepo.findForUser(req.auth!.userId)).filter(x => !isLockedMirror(x));
         const counts = await mirrorRepo.playCounts(userMirrors.map(x => x.id));
         const mirrors: JobOptionsApiJson['mirrors'] = userMirrors.map(x => ({id: x.id, name: x.name, service: x.service, account: x.account, coverage: x.coverage, playCount: counts.get(x.id) ?? 0}));
 
@@ -251,19 +251,19 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
 
             const fileMirror = async (isolated: boolean): Promise<PlayMirrorSelect> => {
                 if (isolated) {
-                    return mirrorRepo.findOrCreate({userId, service: 'lastfm', account: null, name: payload.mirror !== undefined && 'new' in payload.mirror ? payload.mirror.new.name : `${payload.name} (benjaminbenben)`});
+                    return mirrorRepo.findOrCreate({userId, service: MIRROR_SERVICE_MIXED, account: null, name: payload.mirror !== undefined && 'new' in payload.mirror ? payload.mirror.new.name : `${payload.name} (benjaminbenben)`});
                 }
                 if (payload.mirror === undefined) {
                     throw new JobRequestError('mirror is required when importing a file');
                 }
                 if ('id' in payload.mirror) {
                     const existing = await mirrorRepo.getById(payload.mirror.id);
-                    if (existing === undefined || existing.userId !== userId || existing.service !== 'lastfm') {
+                    if (existing === undefined || existing.userId !== userId || isLockedMirror(existing)) {
                         throw new JobRequestError('Mirror not found', 404);
                     }
                     return existing;
                 }
-                return mirrorRepo.findOrCreate({userId, service: 'lastfm', account: payload.mirror.new.account ?? null, name: payload.mirror.new.name});
+                return mirrorRepo.findOrCreate({userId, service: MIRROR_SERVICE_MIXED, account: payload.mirror.new.account ?? null, name: payload.mirror.new.name});
             }
 
             if ('mirrorId' in payload.importFrom) {
@@ -282,7 +282,7 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                 }
                 componentFromId = payload.importFrom.componentId;
                 const account = component.api.user;
-                resolveMirror = () => mirrorRepo.findOrCreate({userId, service: 'lastfm', account, name: `Last.fm ${account}`});
+                resolveMirror = () => mirrorRepo.findOrCreate({userId, service: MIRROR_SERVICE_MIXED, account, name: `Last.fm ${account}`});
             } else {
                 let filePath: string;
                 let originalName: string;

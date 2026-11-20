@@ -114,4 +114,36 @@ describe('Jobs Schema', function () {
         await db.delete(jobs).where(eq(jobs.id, job[0].id));
         expect(await db.select().from(jobTargets)).length(0);
     });
+
+    it('turns Last.fm mirrors into mixed mirrors and backfills segments', async function () {
+        this.timeout(10000);
+        const all = (await fs.readdir(MIGRATIONS)).sort();
+        const index = all.findIndex(x => x.endsWith('_mixed_mirrors'));
+        expect(index).gt(0);
+
+        await using tmp = await createTmpDir('mixedMirrors');
+        const mf = path.join(tmp.path, 'migrations');
+        await fs.mkdir(mf);
+        for (const m of all.slice(0, index)) {
+            await fs.cp(path.join(MIGRATIONS, m), path.join(mf, m), { recursive: true });
+        }
+
+        const db = await getDb(':memory:');
+        try {
+            await migrateDb(db, { migrationsFolder: mf });
+            const owner = await ensureOwner(db);
+            // raw, the table does not have the new columns yet
+            db.$client.prepare("INSERT INTO play_mirrors (userId, service, account, name, coverage, createdAt, updatedAt) VALUES (?, 'lastfm', 'foxx', 'Last.fm foxx', '[[1,5],[10,20]]', 0, 0)").run(owner.id);
+            db.$client.prepare("INSERT INTO play_mirrors (userId, service, account, name, coverage, createdAt, updatedAt) VALUES (?, 'lastfm', NULL, 'file', '[]', 0, 0)").run(owner.id);
+
+            await migrateDb(db, { migrationsFolder: MIGRATIONS });
+
+            const mirrors = await db.select().from(playMirrors).orderBy(playMirrors.id);
+            expect(mirrors.map(x => [x.service, x.account])).to.deep.eq([['mixed', null], ['mixed', null]]);
+            expect(mirrors[0].segments).to.deep.eq([{range: [1, 5], origin: 'unknown', jobId: null}, {range: [10, 20], origin: 'unknown', jobId: null}]);
+            expect(mirrors[1].segments).to.deep.eq([]);
+        } finally {
+            db.$client.close();
+        }
+    });
 });

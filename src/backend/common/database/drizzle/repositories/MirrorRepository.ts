@@ -3,17 +3,24 @@ import dayjs from "dayjs";
 import type { DbConcrete } from "../drizzleUtils.ts";
 import { playMirrors, playsHistorical } from "../schema/schema.ts";
 import { DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
-import { addRange, removeRange, subtractRanges, type TimeRange } from "../../../../utils/RangeUtils.ts";
+import { addRange, addSegment, removeRange, removeSegmentRange, subtractRanges, type TimeRange } from "../../../../utils/RangeUtils.ts";
+import type { MirrorSegment } from "../../../../../core/Job.ts";
 
 export type PlayMirrorSelect = typeof playMirrors.$inferSelect;
 
 export interface FindOrCreateMirrorOpts {
     userId: string
+    /** MIRROR_SERVICE_MIXED for user mirrors, else the service a locked mirror belongs to */
     service: string
-    /** upstream username. null always creates a new, isolated mirror */
+    /** account of a locked mirror. null always creates a new mirror (user mirrors) */
     account: string | null
     name: string
 }
+
+/** What filled a range of coverage */
+export type CoverageTag = Omit<MirrorSegment, 'range'>;
+
+const UNKNOWN_TAG: CoverageTag = {origin: 'unknown', jobId: null};
 
 export class MirrorRepository extends DrizzleBaseRepository<'playMirrors'> {
 
@@ -54,25 +61,30 @@ export class MirrorRepository extends DrizzleBaseRepository<'playMirrors'> {
         return row?.count ?? 0;
     }
 
-    /** Merge range into coverage. Does not open a transaction, call inside one when paired with play inserts */
-    addCoverage = async (id: number, range: TimeRange): Promise<TimeRange[]> => {
+    /**
+     * Merge range into coverage, and tag the parts that were not covered yet with what filled them.
+     * Does not open a transaction, call inside one when paired with play inserts
+     * */
+    addCoverage = async (id: number, range: TimeRange, tag: CoverageTag = UNKNOWN_TAG): Promise<TimeRange[]> => {
         const mirror = await this.getById(id);
         if(mirror === undefined) {
             throw new Error(`Mirror ${id} does not exist`);
         }
         const coverage = addRange(mirror.coverage, range);
-        await this.updateById(id, {coverage});
+        const segments = addSegment(mirror.segments, range, tag);
+        await this.updateById(id, {coverage, segments});
         return coverage;
     }
 
-    /** Remove a range from coverage, or all coverage when range is undefined */
+    /** Remove a range from coverage (and its segments), or all coverage when range is undefined */
     removeCoverage = async (id: number, range?: TimeRange): Promise<TimeRange[]> => {
         const mirror = await this.getById(id);
         if(mirror === undefined) {
             throw new Error(`Mirror ${id} does not exist`);
         }
         const coverage = range === undefined ? [] : removeRange(mirror.coverage, range);
-        await this.updateById(id, {coverage});
+        const segments = range === undefined ? [] : removeSegmentRange(mirror.segments, range);
+        await this.updateById(id, {coverage, segments});
         return coverage;
     }
 

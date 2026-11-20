@@ -46,6 +46,22 @@ describe('Mirror Repository', function () {
         expect((await repo.getById(m.id))!.coverage).to.deep.eq([[100, 300]]);
         expect(await repo.getGaps(m.id, [0, 400])).to.deep.eq([[0, 99], [301, 400]]);
     });
+
+    it('tags coverage segments and removes them with coverage', async function () {
+        const db = await transientDb();
+        const owner = await ensureOwner(db);
+        const repo = new MirrorRepository(db);
+        const m = await repo.findOrCreate({userId: owner.id, service: 'mixed', account: null, name: 'mixed'});
+        await repo.addCoverage(m.id, [100, 200], {origin: 'lastfm', jobId: null});
+        await repo.addCoverage(m.id, [150, 300], {origin: 'lz', jobId: null});
+        let mirror = (await repo.getById(m.id))!;
+        expect(mirror.coverage).to.deep.eq([[100, 300]]);
+        expect(mirror.segments).to.deep.eq([{range: [100, 200], origin: 'lastfm', jobId: null}, {range: [201, 300], origin: 'lz', jobId: null}]);
+        await repo.removeCoverage(m.id, [180, 220]);
+        mirror = (await repo.getById(m.id))!;
+        expect(mirror.coverage).to.deep.eq([[100, 179], [221, 300]]);
+        expect(mirror.segments).to.deep.eq([{range: [100, 179], origin: 'lastfm', jobId: null}, {range: [221, 300], origin: 'lz', jobId: null}]);
+    });
 });
 
 describe('Play Historical Repository - mirror inserts', function () {

@@ -23,7 +23,7 @@ export const mergeRanges = (ranges: TimeRange[]): TimeRange[] => {
 export const addRange = (ranges: TimeRange[], range: TimeRange): TimeRange[] => mergeRanges([...ranges, range]);
 
 /** Parts of `range` not covered by `remove` */
-const subtractOne = (range: TimeRange, remove: TimeRange): TimeRange[] => {
+export const subtractOne = (range: TimeRange, remove: TimeRange): TimeRange[] => {
     const [from, to] = range;
     const [rFrom, rTo] = remove;
     if (rTo < from || rFrom > to) {
@@ -66,3 +66,37 @@ export const contiguousCoveredFrom = (edge: number, direction: 'asc' | 'desc', c
     }
     return direction === 'desc' ? [containing[0], edge] : [edge, containing[1]];
 }
+
+/** A range of coverage tagged with what filled it */
+export interface TaggedRange<T> {
+    range: TimeRange
+    origin: string
+    jobId: T
+}
+
+const sameTag = <T>(a: TaggedRange<T>, b: TaggedRange<T>) => a.origin === b.origin && a.jobId === b.jobId;
+
+/** Sort and merge touching segments with the same tag. Segments must not overlap */
+const normalizeSegments = <T>(segments: TaggedRange<T>[]): TaggedRange<T>[] => {
+    const sorted = segments.filter(x => x.range[0] <= x.range[1]).sort((a, b) => a.range[0] - b.range[0]);
+    const merged: TaggedRange<T>[] = [];
+    for (const seg of sorted) {
+        const last = merged[merged.length - 1];
+        if (last !== undefined && sameTag(last, seg) && seg.range[0] <= last.range[1] + 1) {
+            last.range = [last.range[0], Math.max(last.range[1], seg.range[1])];
+        } else {
+            merged.push({...seg, range: [seg.range[0], seg.range[1]]});
+        }
+    }
+    return merged;
+}
+
+/** Add `range` with a tag. Only the parts no segment covers yet get the tag, existing segments keep theirs */
+export const addSegment = <T>(segments: TaggedRange<T>[], range: TimeRange, tag: Omit<TaggedRange<T>, 'range'>): TaggedRange<T>[] => {
+    const uncovered = subtractRanges(range, segments.map(x => x.range));
+    return normalizeSegments([...segments, ...uncovered.map(r => ({...tag, range: r}))]);
+}
+
+/** Remove `range` from every segment, keeping the tags of what is left */
+export const removeSegmentRange = <T>(segments: TaggedRange<T>[], range: TimeRange): TaggedRange<T>[] =>
+    normalizeSegments(segments.flatMap(x => subtractOne(x.range, range).map(r => ({...x, range: r}))));

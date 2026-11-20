@@ -1,6 +1,6 @@
 import { assert } from 'chai';
 import { describe, it } from 'mocha';
-import { addRange, contiguousCoveredFrom, mergeRanges, removeRange, subtractRanges } from "../../utils/RangeUtils.ts";
+import { addRange, addSegment, contiguousCoveredFrom, mergeRanges, removeRange, removeSegmentRange, subtractRanges, type TaggedRange } from "../../utils/RangeUtils.ts";
 
 describe('Range Utils', function () {
 
@@ -69,6 +69,32 @@ describe('Range Utils', function () {
         });
         it('returns undefined when edge is not covered', function () {
             assert.isUndefined(contiguousCoveredFrom(15, 'desc', covered));
+        });
+    });
+
+    describe('segments', function () {
+        const lfm = {origin: 'lastfm', jobId: 1};
+        const lz = {origin: 'lz', jobId: 2};
+
+        it('tags only the uncovered parts of a new range', function () {
+            const existing: TaggedRange<number>[] = [{range: [10, 20], ...lfm}];
+            assert.deepEqual(addSegment(existing, [0, 30], lz), [
+                {range: [0, 9], ...lz},
+                {range: [10, 20], ...lfm},
+                {range: [21, 30], ...lz},
+            ]);
+        });
+        it('merges touching segments with the same tag', function () {
+            const existing: TaggedRange<number>[] = [{range: [0, 10], ...lfm}];
+            assert.deepEqual(addSegment(existing, [11, 20], lfm), [{range: [0, 20], ...lfm}]);
+        });
+        it('keeps touching segments with different tags apart', function () {
+            const existing: TaggedRange<number>[] = [{range: [0, 10], ...lfm}];
+            assert.deepEqual(addSegment(existing, [11, 20], lz), [{range: [0, 10], ...lfm}, {range: [11, 20], ...lz}]);
+        });
+        it('removes a range and keeps the tags of what is left', function () {
+            const existing: TaggedRange<number>[] = [{range: [0, 10], ...lfm}, {range: [11, 20], ...lz}];
+            assert.deepEqual(removeSegmentRange(existing, [5, 15]), [{range: [0, 4], ...lfm}, {range: [16, 20], ...lz}]);
         });
     });
 });

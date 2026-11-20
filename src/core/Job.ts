@@ -9,6 +9,30 @@ import type { ErrorObject } from "serialize-error";
 export const JOB_PROCESS_STATUSES = ['idle', 'running', 'paused', 'stopped', 'failed', 'completed'] as const;
 export type JobProcessStatus = typeof JOB_PROCESS_STATUSES[number];
 
+/**
+ * What an import does where its mirror already has data in the job's range.
+ *
+ * * skip => only import time the mirror doesn't cover yet
+ * * replace => delete the mirror's plays in the job's exact range first, then import all of it
+ * */
+export const JOB_IMPORT_OVERLAPS = ['skip', 'replace'] as const;
+export type JobImportOverlap = typeof JOB_IMPORT_OVERLAPS[number];
+
+/** play_mirrors.service of a user mirror. Any other service means the mirror is locked to that service + account */
+export const MIRROR_SERVICE_MIXED = 'mixed';
+
+export const isLockedMirror = (mirror: {service: string}): boolean => mirror.service !== MIRROR_SERVICE_MIXED;
+
+/** Part of a mirror's coverage and what filled it */
+export interface MirrorSegment {
+    /** inclusive unix ms */
+    range: [number, number]
+    /** dedupe key scheme of the import (IE lastfm, lastfm-benjamin). 'unknown' => filled before origins were tracked */
+    origin: string
+    /** job that imported it. null => unknown or the job was deleted */
+    jobId: number | null
+}
+
 export const LASTFM_FILE_FORMATS = ['lastfm-ghan-json', 'lastfm-ghan-csv', 'lastfm-benjamin-csv'] as const;
 export type LastfmFileFormat = typeof LASTFM_FILE_FORMATS[number];
 
