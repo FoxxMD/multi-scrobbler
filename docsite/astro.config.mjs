@@ -165,7 +165,7 @@ export default defineConfig({
       ],
       sidebar: [
         ...rootSidebar(fileURLToPath(new URL('./src/content/docs', import.meta.url)), [
-          { label: 'Config Playground', link: '/playground/', order: 5.5 },
+          { label: 'Config Playground', link: '/playground/', order: 5.6 },
           ...openAPISidebarGroups.map((group) => ({ ...group, order: 7.5 })),
         ], {
           updating: changelogsEnabled

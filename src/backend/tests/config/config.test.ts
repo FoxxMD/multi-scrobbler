@@ -252,7 +252,7 @@ describe('Sample Configs', function () {
                             zocObj = zocObj.supply(envSchema.env.shape.DISCORD_IPC_LOCATIONS, '/path/to/ipc,192.168.0.100:8999')
                     }
                     const componentMockData = zocObj.generate();
-                    const primitives = generateCommonComponentEnvConfigSchema(envSchema.prefix.toLocaleUpperCase());
+                    const primitives = generateCommonComponentEnvConfigSchema(envSchema.prefix.toLocaleUpperCase(), 'client');
                     const primitiveMockData = zocker(primitives).generate();
                     primitiveMockData[`${envSchema.prefix.toLocaleUpperCase()}_ENABLE`] = true;
 
@@ -280,6 +280,7 @@ describe('Sample Configs', function () {
                     expect(clients.instantiateErrors, `${clients.instantiateErrors.map(x => JSON.stringify(serializeError(x), undefined, 2)).join('\n')}`).is.empty;
                     expect(clients.clients).length(1);
                     expect(clients.clients[0].type).eq(componentType);
+                    expect(clients.clients[0].config.options?.scrobbleInterval).eq(primitiveMockData[`${envSchema.prefix.toLocaleUpperCase()}_SCROBBLE_INTERVAL`]);
                 });
             }
         });

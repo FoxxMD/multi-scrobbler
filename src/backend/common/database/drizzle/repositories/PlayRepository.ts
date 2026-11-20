@@ -1,6 +1,6 @@
 import { childLogger } from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
-import { and, eq, inArray, isNull, relationsFilterToSQL, sql } from "drizzle-orm";
+import { and, asc, count, eq, exists, gt, inArray, isNotNull, isNull, ne, not, or, relationsFilterToSQL, type SQL, sql } from "drizzle-orm";
 import { EmptyFilter } from "drizzle-orm/relations";
 import assert from "node:assert";
 import type { MarkOptional, ElementOf } from "ts-essentials";
@@ -48,6 +48,20 @@ const identifierExtractor: { [K in keyof PlayIdentifierPrimitiveMap]: (play: {id
   id: (play) => play.id,
   uid: (play) => play.uid,
 };
+const COMPACT_BATCH = 1000;
+
+export interface JobPlayFilter {
+    componentId: number
+    /** undefined => plays of any job, including deleted ones */
+    jobId?: number
+    /** true => only plays in a queue (queued or failed with retries left), false => only plays not in one */
+    inQueue?: boolean
+    /** only plays not fully compacted (input and transform) */
+    uncompacted?: boolean
+    /** only plays of deleted jobs. Ignored with jobId */
+    orphaned?: boolean
+}
+
 export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
     protected hasQueueNextPrepared?: ReturnType<typeof this.prepareHasQueueNext>
@@ -364,6 +378,101 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return rows.map(x => x.id);
     }
 
+    /**
+     * Replace raw data of plays with a removal note: upstream input data ('input') and inputs used by transform stages ('transform').
+     * Marks each play with the compacted types.
+     * */
+    public compactPlays = async (ids: number[], types: CompactableProperty[]) => {
+        if(ids.length === 0 || types.length === 0) {
+            return;
+        }
+        const compacted = (['input', 'transform'] as CompactableProperty[]).filter(x => types.includes(x)).join('-');
+        // bounded so the IN list stays under sqlite's variable limit
+        for(let i = 0; i < ids.length; i += COMPACT_BATCH) {
+            await this.compactBatch(ids.slice(i, i + COMPACT_BATCH), types, compacted);
+        }
+    }
+
+    protected compactBatch = async (ids: number[], types: CompactableProperty[], compacted: string) => {
+        await runTransaction(this.db, async () => {
+            if(types.includes('input')) {
+                await this.db.update(playInputs).set({
+                    data: {removedReason: 'Removed by compaction'}
+                }).where(inArray(playInputs.playId, ids));
+            }
+            if(types.includes('transform')) {
+                const events = await this.db.select().from(playEvents).where(and(inArray(playEvents.playId, ids), eq(playEvents.eventName, 'transform')));
+                for(const ev of events) {
+                    const transformEvent = ev as PlayEventTransform;
+                    let compactedInput = false;
+                    const data = transformEvent.data.map(x => {
+                        if(x.inputs !== undefined && x.inputs.length > 0) {
+                            compactedInput = true;
+                            return {...x, inputs: x.inputs.map((y) => ({type: y.type, input: 'Removed by compaction'}))};
+                        }
+                        return x;
+                    });
+                    if(compactedInput) {
+                        await this.db.update(playEvents).set({data}).where(eq(playEvents.id, ev.id));
+                    }
+                }
+            }
+            await this.db.update(plays).set({compacted}).where(inArray(plays.id, ids));
+        });
+    }
+
+    protected jobPlayConditions = (args: JobPlayFilter) => {
+        const {componentId, jobId, inQueue, uncompacted = false, orphaned = false} = args;
+        const conditions: SQL[] = [eq(plays.componentId, componentId)];
+        if (jobId !== undefined) {
+            conditions.push(eq(plays.jobId, jobId));
+        } else if (orphaned) {
+            conditions.push(isNull(plays.jobId), sql`json_extract(${plays.play}, '$.meta.jobId') IS NOT NULL`);
+        } else {
+            // job plays keep meta.jobId after their job is deleted (and plays.jobId is nulled)
+            conditions.push(or(isNotNull(plays.jobId), sql`json_extract(${plays.play}, '$.meta.jobId') IS NOT NULL`)!);
+        }
+        if (inQueue !== undefined) {
+            const queued = exists(this.db.select({id: queueStates.id}).from(queueStates).where(eq(queueStates.playId, plays.id)));
+            conditions.push(inQueue ? queued : not(queued)!);
+        }
+        if (uncompacted) {
+            conditions.push(or(isNull(plays.compacted), ne(plays.compacted, 'input-transform'))!);
+        }
+        return conditions;
+    }
+
+    /**
+     * Ids of a component's job plays, ascending, after `afterId`.
+     * Without jobId, every job play of the component is included, also those of deleted jobs.
+     * */
+    findJobPlayIds = async (args: JobPlayFilter & {afterId?: number, limit: number}): Promise<number[]> => {
+        const conditions = this.jobPlayConditions(args);
+        if (args.afterId !== undefined) {
+            conditions.push(gt(plays.id, args.afterId));
+        }
+        const rows = await this.db.select({id: plays.id}).from(plays).where(and(...conditions)).orderBy(asc(plays.id)).limit(args.limit);
+        return rows.map(x => x.id);
+    }
+
+    /** Plays per job and state among these ids. Plays without a job are left out */
+    countStatesByJob = async (ids: number[]): Promise<Map<number, Partial<Record<string, number>>>> => {
+        const rows = ids.length === 0 ? [] : await this.db.select({jobId: plays.jobId, state: plays.state, count: count()}).from(plays).where(inArray(plays.id, ids)).groupBy(plays.jobId, plays.state);
+        const byJob = new Map<number, Partial<Record<string, number>>>();
+        for (const r of rows) {
+            if (r.jobId === null) {
+                continue;
+            }
+            byJob.set(r.jobId, {...byJob.get(r.jobId), [r.state]: r.count});
+        }
+        return byJob;
+    }
+
+    countJobPlays = async (args: JobPlayFilter): Promise<number> => {
+        const [row] = await this.db.select({count: count()}).from(plays).where(and(...this.jobPlayConditions(args)));
+        return row?.count ?? 0;
+    }
+
     public retentionCleanup = async (componentType: string, retentionOpts: RetentionOptions & ComponentConstrainedRepoOpts) => {
 
         const loggerDel = childLogger(this.logger, ['Retention', 'Delete']);
@@ -430,40 +539,9 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                 const ids = await this.findPurgablePlayIds(date, {compacted: compactedFlags.join('-'), states: [state], dateComparer: 'seenAt', componentId: retentionOpts.componentId});
                 loggerCom.trace(`Found ${ids.length} '${retentionType}' plays`);
                 if(ids.length === 0) {
-                    summaryDelStates.push(`No '${retentionType}' Plays older than ${shortTodayAwareFormat(date)}`);
+                    summaryCompactStates.push(`No '${retentionType}' Plays older than ${shortTodayAwareFormat(date)}`);
                 } else {
-                    for(const id of ids) {
-                        if(compactTypes.includes('input')) {
-                            await this.db.update(playInputs).set({
-                                data: {removedReason: 'Removed by compaction'}
-                            }).where(eq(playInputs.playId, id));
-                        }
-                        if(compactTypes.includes('transform')) {
-                            const events = await this.db.query.playEvents.findMany({where: {playId: id}});
-                            for(const ev of events) {
-                                if(ev.eventName === 'transform') {
-                                    const transformEvent = ev as PlayEventTransform;
-                                    let compactedInput = false;
-                                    transformEvent.data = transformEvent.data.map(x => {
-                                        if(x.inputs !== undefined && x.inputs.length > 0) {
-                                            compactedInput = true;
-                                            return {...x, inputs: x.inputs.map((y) => ({type: y.type, input: 'Removed by compaction'}))};
-                                        }
-                                        return x;
-                                    });
-                                    if(compactedInput) {
-                                        await this.db.update(playEvents).set({data: transformEvent.data}).where(eq(playEvents.id, ev.id));
-                                    }
-                                }
-                            }
-                        }
-
-                        const updater = this.db.update(plays);
-                        const vals: Parameters<typeof updater.set>[0] = {
-                            compacted: compactedFlags.join('-')
-                        };
-                        await this.db.update(plays).set(vals).where(eq(plays.id, id));
-                    }
+                    await this.compactPlays(ids, compactedFlags);
                     loggerCom.trace(`Compacted ${ids.length} '${retentionType}' plays`);
                     summaryCompactStates.push(`${ids.length} '${retentionType}' Plays older than ${shortTodayAwareFormat(date)}`)
                 }
@@ -472,7 +550,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             }
         }
 
-        loggerCom.verbose(`Cleanup done! Summary:\n${summaryDelStates.join(' | ')}`);
+        loggerCom.verbose(`Cleanup done! Summary:\n${summaryCompactStates.join(' | ')}`);
     }
 
     protected prepareGetQueueNext = () => this.db.query.plays.findFirst({
@@ -1035,6 +1113,9 @@ export const buildPlayWhere = (args: PlayWhereOpts): WhereClause<'plays'> => {
     }
     if (args.playedAt !== undefined) {
         where.playedAt = buildDateCompare(args.playedAt);
+    }
+    if (args.jobId !== undefined) {
+        where.jobId = args.jobId === null ? {isNull: true} : args.jobId;
     }
     if(args.uid !== undefined) {
         where.uid = {

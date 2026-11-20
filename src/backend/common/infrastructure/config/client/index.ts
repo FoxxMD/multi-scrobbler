@@ -137,6 +137,17 @@ export const commonClientOptionsSchema = z.object({
         examples: [true]
     }),
     /**
+     * Minimum time (milliseconds) to wait between scrobbles sent to this Client
+     *
+     * Some Clients have a minimum interval to respect the service's rate limits. A lower value is raised to that minimum.
+     *
+     * @examples [1000]
+     * */
+    scrobbleInterval: z.number().int().nonnegative().optional().meta({
+        description: "Minimum time (milliseconds) to wait between scrobbles sent to this Client",
+        examples: [1000]
+    }),
+    /**
      * Options used for increasing verbosity of logging in MS (used for debugging)
      * */
     verbose: z.object({

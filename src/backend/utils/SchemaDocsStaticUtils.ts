@@ -62,9 +62,16 @@ for(const [k,v] of clientEntries) {
     writeFileSync(resolve(projectRootDir, `docsite/public/schemas/${k}-client.json`), JSON.stringify(generateSchema(z.array(fileSchema))));
 
     const envSchema = envSchemas;
-    const common = generateCommonComponentEnvConfigSchema(envSchema.prefix.toUpperCase());
-    const commonCol = zodObjectToTableColumns(z.object(common.shape), 'out');
-    const col = [...commonCol,...zodObjectToTableColumns(z.object(envSchema.env.shape), envSchemas.pipe ?? 'out')]
+    const common = generateCommonComponentEnvConfigSchema(envSchema.prefix.toUpperCase(), 'client');
+    // scrobble interval is listed after the client-specific vars
+    const intervalKey = `${envSchema.prefix.toUpperCase()}_SCROBBLE_INTERVAL` as const;
+    const {[intervalKey]: scrobbleInterval, ...commonShape} = common.shape;
+    const commonCol = zodObjectToTableColumns(z.object(commonShape), 'out');
+    const col = [
+        ...commonCol,
+        ...zodObjectToTableColumns(z.object(envSchema.env.shape), envSchemas.pipe ?? 'out'),
+        ...zodObjectToTableColumns(z.object({[intervalKey]: scrobbleInterval}), 'out'),
+    ]
     const tableContent = markdownTable([
         ['Environmental Variable', 'Type', 'Default', 'Description'],
         ...mdCols(col)

@@ -25,7 +25,11 @@ import { findAuthIssue, SimpleError } from "../common/errors/MSErrors.ts";
 import { DrizzlePlayRepository, type QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.ts";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.ts";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
-import {componentStateBodySchema, playStateBodySchema, type SseEvent, type SseEventData, type SseEventName, sseEventSchema, queryPlaysRequestSchema, componentsApiSchema, componentClientApiSchema, paginatedResponseSchema, playApiCommonDetailedSchema, publicDashboardDataSchema, nowPlayingOptionSchema, type ComponentClientApiJson, type ComponentSourceApiJson, asSerializablePlaySelect, trackDataCreditBaseSchema, type TrackDataCreditBase, NDJSON_MEDIA_TYPE, trackSearchSimpleRequestQuerySchema, albumSearchSimpleRequestQuerySchema, artistSearchSimpleRequestQuerySchema } from "../../core/Api.ts";
+import type { JobManager } from "../jobs/JobManager.ts";
+import { setupJobRoutes } from "./jobRoutes.ts";
+import { setupCleanupRoutes } from "./cleanupRoutes.ts";
+import { toJsonable } from "../jobs/jobApi.ts";
+import {componentStateBodySchema, playStateBodySchema, type SseEvent, type JobSseEvent, type CleanupSseEvent, type SseEventData, type SseEventName, sseEventSchema, queryPlaysRequestSchema, componentsApiSchema, componentClientApiSchema, paginatedResponseSchema, playApiCommonDetailedSchema, publicDashboardDataSchema, nowPlayingOptionSchema, type ComponentClientApiJson, type ComponentSourceApiJson, asSerializablePlaySelect, trackDataCreditBaseSchema, type TrackDataCreditBase, NDJSON_MEDIA_TYPE, trackSearchSimpleRequestQuerySchema, albumSearchSimpleRequestQuerySchema, artistSearchSimpleRequestQuerySchema } from "../../core/Api.ts";
 import { serializeError } from "serialize-error";
 import { z } from 'zod';
 import type { createTypedRouter, TypedMiddleware } from "@minisylar/express-typed-router";
@@ -113,6 +117,7 @@ export interface ApiArgs {
     hiddenFromWeb?: string[]
     scrobbleSources: ScrobbleSources
     scrobbleClients: ScrobbleClients
+    jobs?: JobManager
 }
 
 export interface ApiOptions {
@@ -131,7 +136,8 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         optionalAuth = noopMiddleware,
         hiddenFromWeb = [],
         scrobbleSources,
-        scrobbleClients
+        scrobbleClients,
+        jobs
     } = args;
     const {
         logger = loggerTest,
@@ -160,7 +166,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     }
 
     // tab is a client-generated connection id, logs is opt-in so log events are only pushed to clients actually rendering them
-    const eventsChannel = createChannel<DefaultChannelState, {tab?: string, logs: boolean}>();
+    const eventsChannel = createChannel<DefaultChannelState, {tab?: string, logs: boolean, userId?: string}>();
 
     // runs synchronously inside source/client emit() calls so it must never throw back into them
     const forwardEvent = (eventName: string, payload: any) => {
@@ -178,6 +184,27 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     };
     scrobbleSources.emitter.onAny(forwardEvent);
     scrobbleClients.emitter.onAny(forwardEvent);
+
+    // job data belongs to one user so it only goes to that user's sessions
+    jobs?.emitter.onAny((eventName: string | symbol, raw: unknown) => {
+        const payload = raw as {jobId?: number, mirrorId?: number, componentId?: number, userId?: string | null, data?: unknown};
+        const ownerOnly = {filter: (s: {state: {userId?: string}}) => payload.userId !== undefined && payload.userId !== null && s.state.userId === payload.userId};
+        try {
+            if(eventName === 'jobUpdate' || eventName === 'jobDeleted') {
+                const event = {event: eventName, jobId: payload.jobId, data: toJsonable(payload.data ?? {})} as JobSseEvent;
+                eventsChannel.broadcast(event, eventName, ownerOnly);
+            } else if(eventName === 'mirrorUpdate' || eventName === 'mirrorDeleted') {
+                const event = {event: eventName, mirrorId: payload.mirrorId, data: toJsonable(payload.data ?? {})} as CleanupSseEvent;
+                eventsChannel.broadcast(event, eventName, ownerOnly);
+            } else if(eventName === 'playsPurged' || eventName === 'clientJobPlaysUpdate') {
+                // Clients are not owned by a user, same as their other events
+                const event = {event: eventName, componentId: payload.componentId, data: toJsonable(payload.data ?? {})} as CleanupSseEvent;
+                eventsChannel.broadcast(event, eventName);
+            }
+        } catch (e) {
+            logger.warn(new Error(`Failed to forward '${String(eventName)}' event to SSE clients`, {cause: e}));
+        }
+    });
 
     // only warn on the first failure until forwarding succeeds again
     // otherwise the warning is itself a log line that fails to forward, logging another warning, forever
@@ -242,9 +269,9 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     router.get('/events', {docs: {operationId: 'sse-events'}, querySchema: z.object({
         tab: z.string().optional().meta({description: 'Client-generated connection id. Required to opt in to log events via PUT /api/events/:tab/logs'})
     }), middleware: [setLogWebSettings], tags: ['Events'], summary: 'SSE Events',
-    description: 'Server-sent events for Plays, Players and Sources/Clients. The SSE event name is the same as `event` in its data.',
+    description: 'Server-sent events for Plays, Players, Sources/Clients and your import Jobs. The SSE event name is the same as `event` in its data.',
     responses: {200: {description: 'An event stream. Each event\'s data is one of these, as JSON', contentType: 'text/event-stream', schema: sseEventSchema}}}, async (req, res) => {
-        const session = await createSession(req, res, {state: {tab: req.query.tab, logs: false}});
+        const session = await createSession(req, res, {state: {tab: req.query.tab, logs: false, userId: req.auth?.userId}});
         eventsChannel.register(session);
     });
 
@@ -360,6 +387,10 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     setupLZEndpointRoutes(app, publicRouter, logger, scrobbleSources, scrobbleClients);
     setupLastfmEndpointRoutes(app, publicRouter, logger, scrobbleSources);
     setupAuthRoutes(app, router, logger, scrobbleSources, scrobbleClients);
+    if(jobs !== undefined) {
+        setupJobRoutes(router, jobs, scrobbleSources, scrobbleClients, logger);
+        setupCleanupRoutes(router, jobs, scrobbleClients, logger);
+    }
 
     router.get('/components', {docs: {operationId: 'get-all-sources-clients'}, tags: ['Source/Client'], summary: 'Get All Sources/Clients', responseSchema: componentsApiSchema.array()}, async (req, res, next) => {
 

@@ -19,6 +19,8 @@ import type { MSBackendEventMap } from "./common/infrastructure/MSBackendEventMa
 import { setRootCommon } from "./iocCommon.ts";
 import type { RockskySingletonMap } from "./common/vendor/rocksky/RockskyClientWrapped.ts";
 import type { AuthConfig, MetadataConfig } from "./common/infrastructure/config/aioConfig.ts";
+import { playTransformPartsConfigOptionsSchema, type PlayTransformPartsConfigOptions } from "../core/Transform.ts";
+import * as z from "zod";
 let root: ReturnType<typeof createRoot>;
 export interface RootOptions {
     baseUrl?: string,
@@ -33,6 +35,8 @@ export interface RootOptions {
     caMap?: CovertArtSingletonMap | (() => CovertArtSingletonMap)
     transformers?: TransformerCommonConfig[]
     metadata?: MetadataConfig
+    /** not validated yet, invalid presets are dropped */
+    transformersPresets?: Record<string, unknown>
     db?: DbConcrete | (() => Promise<DbConcrete>)
     auth?: AuthConfig
 }
@@ -68,6 +72,27 @@ const scrobbledCounter = new prom.Counter({
             labelNames: ['name', 'type']
 });
 
+/** Keeps presets that are valid stage config. An invalid one is logged and dropped so it can't break startup */
+export const parseTransformersPresets = (raw: unknown, logger: Logger): Record<string, PlayTransformPartsConfigOptions> => {
+    const presets: Record<string, PlayTransformPartsConfigOptions> = {};
+    if(raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+        logger.error('transformersPresets must be an object of named presets, ignoring it');
+        return presets;
+    }
+    for(const [name, value] of Object.entries(raw)) {
+        const res = playTransformPartsConfigOptionsSchema.safeParse(value);
+        if(res.success && Array.isArray(value) && value.length === 0) {
+            logger.error(`Transformers preset '${name}' has no stages and will not be available`);
+        } else if(res.success) {
+            // the original, the schema may not model every field a transformer accepts
+            presets[name] = value as PlayTransformPartsConfigOptions;
+        } else {
+            logger.error(`Transformers preset '${name}' is invalid and will not be available:\n${z.prettifyError(res.error)}`);
+        }
+    }
+    return presets;
+}
+
 const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
     const {
         port = 9078,
@@ -83,7 +108,8 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         db,
         metadata,
         auth: authConfig,
-        transformers = []
+        transformers = [],
+        transformersPresets: rawPresets = {}
     } = options || {};
     let disableWeb = dw;
     if(disableWeb === undefined) {
@@ -165,6 +191,8 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         transformerManager.logger.debug('No preferred metadata providers configured, will use any available.');
     }
 
+    const transformersPresets = parseTransformersPresets(rawPresets, logger);
+
     const cacheApi = (maybeSingletonCache !== undefined ? maybeSingletonCache : cacheFunc()).cacheApi;
     const coverArtApi = new CoverArtApiClient('', {}, {logger, cache: cacheApi});
 
@@ -212,6 +240,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         rsMap: () => maybeSingletonRs !== undefined ? () => maybeSingletonRs : rsFunc,
         caMap: () => maybeSingletonCa !== undefined ? () => maybeSingletonCa : caFunc,
         coverArtApi,
+        transformersPresets,
         authConfig,
         db: () => dbFunc
     }).add((items) => {

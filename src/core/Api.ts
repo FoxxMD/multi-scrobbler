@@ -228,8 +228,37 @@ export type SseEvent = z.input<typeof sseEventSchema>;
 export type SseEventName = SseEvent['event'];
 export type SseEventData<K extends SseEventName> = Extract<SseEvent, {event: K}>['data'];
 
+/**
+ * Import job events sent to /api/events. Only sent to sessions of the job's owner.
+ * `data` is a partial Job (see GET /api/jobs/:id), with only the fields that changed.
+ * */
+export const jobSseEventSchema = z.discriminatedUnion('event', [
+    z.object({event: z.literal('jobUpdate'), jobId: z.int(), data: z.record(z.string(), z.unknown())}).meta({title: 'Job Update', description: "Some of a Job's data changed"}),
+    z.object({event: z.literal('jobDeleted'), jobId: z.int(), data: z.object({})}).meta({title: 'Job Deleted', description: 'A Job was deleted'}),
+]).meta({id: 'JobSseEvent'});
+export type JobSseEvent = z.input<typeof jobSseEventSchema>;
+
+/**
+ * Mirror and job play cleanup events sent to /api/events.
+ * Mirror events only go to sessions of the mirror's owner. Client events go to everyone, like other Client events.
+ * */
+export const cleanupSseEventSchema = z.discriminatedUnion('event', [
+    z.object({event: z.literal('mirrorUpdate'), mirrorId: z.int(), data: z.record(z.string(), z.unknown())}).meta({title: 'Mirror Update', description: "Some of a Mirror's data changed. `task: null` with `taskResult` => a cleanup finished"}),
+    z.object({event: z.literal('mirrorDeleted'), mirrorId: z.int(), data: z.object({})}).meta({title: 'Mirror Deleted', description: 'A Mirror was deleted'}),
+    z.object({event: z.literal('playsPurged'), componentId: z.int(), data: z.object({})}).meta({title: 'Plays Purged', description: "Many of a Client's plays were compacted or deleted at once. Reload its play lists"}),
+    z.object({event: z.literal('clientJobPlaysUpdate'), componentId: z.int(), data: z.record(z.string(), z.unknown())}).meta({title: 'Client Job Plays Update', description: "Progress of a cleanup of a Client's job plays. `task: null` with `taskResult` => finished"}),
+]).meta({id: 'CleanupSseEvent'});
+export type CleanupSseEvent = z.input<typeof cleanupSseEventSchema>;
+export const CLEANUP_SSE_EVENTS = ['mirrorUpdate', 'mirrorDeleted', 'playsPurged', 'clientJobPlaysUpdate'] as const;
+
+export const asCleanupSseEvent = (data: unknown): CleanupSseEvent | undefined =>
+    data !== null && typeof data === 'object' && 'event' in data && (CLEANUP_SSE_EVENTS as readonly unknown[]).includes(data.event) ? data as CleanupSseEvent : undefined;
+
 /** SSE event name to event data, for the SSE client */
-export type MsSseEvent = {[K in SseEventName]: Extract<SseEvent, {event: K}>} & {log: LogEvent};
+export type MsSseEvent = {[K in SseEventName]: Extract<SseEvent, {event: K}>} & {[K in JobSseEvent['event']]: Extract<JobSseEvent, {event: K}>} & {[K in CleanupSseEvent['event']]: Extract<CleanupSseEvent, {event: K}>} & {log: LogEvent};
+
+export const asJobSseEvent = (data: unknown): JobSseEvent | undefined =>
+    data !== null && typeof data === 'object' && 'event' in data && 'jobId' in data ? data as JobSseEvent : undefined;
 
 /** Narrow the data of any received SSE event. Log events have no componentId/event */
 export const asSseEvent = (data: unknown): SseEvent | undefined =>
@@ -279,6 +308,9 @@ export const playWhereOptsSchema = z.object({
     state: playStateEnum.array().optional(),
     stateNot: playStateEnum.array().optional(),
     componentId: zQueryInt.optional(),
+    /** null => only plays not created by an import job */
+    // 'null' because a query string can't carry null
+    jobId: z.union([z.null(), z.literal('null').transform(() => null), zQueryInt]).optional().meta({description: "Import job that created the plays. null (or 'null' in a query string) => only plays not created by a job"}),
     seenAt: compareDateSchema.optional(),
     playedAt: compareDateSchema.optional(),
     queues: queueCriteriaSchema.array().optional(),

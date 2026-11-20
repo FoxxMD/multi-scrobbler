@@ -3,7 +3,7 @@ import { useSSEAnyEvent, useSSEContext } from '@flamefrontend/sse-runtime-react'
 import { type InfiniteData, useInfiniteQuery, type UseInfiniteQueryResult, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { type ComponentProps, useCallback, useMemo, useState } from "react";
-import {asSseEvent, type MsSseEvent, type PaginatedResponse, type PlayApiCommonDetailed, type QueryPlaysOptsJson, type QueryPlaysOptsJsonRefreshable } from '../../../core/Api.js';
+import {asSseEvent, asCleanupSseEvent, type MsSseEvent, type PaginatedResponse, type PlayApiCommonDetailed, type QueryPlaysOptsJson, type QueryPlaysOptsJsonRefreshable } from '../../../core/Api.js';
 import {actionContextSchema, type ComponentType, type QueueContext} from '../../../core/Atomic.js';
 import { fetchPlaysPage, tanQueries, useQueryWatcher } from '../../queries/index.js';
 import { ActivitySummarySkeleton } from '../ActivityDetail.js';
@@ -83,6 +83,12 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
     const queryClient = useQueryClient();
     const client = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(client, (payload) => {
+        const purged = asCleanupSseEvent(payload.data);
+        if (purged?.event === 'playsPurged' && purged.componentId === componentId) {
+            // many plays were compacted or deleted at once, refetch instead of patching
+            queryClient.invalidateQueries({queryKey: tanQueries.activities.list(componentId, query).queryKey});
+            return;
+        }
         const event = asSseEvent(payload.data);
         if (event?.componentId === componentId) {
             switch (event.event) {
@@ -206,6 +212,13 @@ const insertInfinitePlay = (data: PlayApiCommonDetailed, queryData: InfiniteData
 }
 
 const playInWindow = (data: PlayApiCommonDetailed, query: QueryPlaysOptsJson): boolean => {
+  if (query.jobId === 'null' || query.jobId === null) {
+    const jobId = (data as {jobId?: number | null}).jobId ?? (data.play.meta as {jobId?: number}).jobId;
+    if (jobId !== undefined && jobId !== null) {
+      console.debug(`[Insert Check ${data.uid}] Play is from an import/export job, which are hidden`);
+      return false;
+    }
+  }
   if (query.state !== undefined && !query.state.includes(data.state)) {
     console.debug(`[Insert Check ${data.uid}] Play is in state ${data.state} not included in current filters of ${query.state.join(',')}`);
     return false;
@@ -343,7 +356,9 @@ const defaultFilter = (): QueryPlaysOptsJsonRefreshable => ({
       inclusive: true
     },
     order: 'desc',
-    sort: 'playedAt'
+    sort: 'playedAt',
+    // scrobbles from import/export jobs can flood a client's list, hidden until asked for
+    jobId: 'null'
 });
 
 export const ListContainerFilterable = (props: { componentId: number, componentType: ComponentType }) => {

@@ -224,8 +224,9 @@ export const playMetaUrlSchema = z.looseObject({
     origin: z.string().optional()
 })
 
-export const parsedFromSchema = z.enum(['backlog','now playing','player','history','ingress'])
-export type PARSED_FROM_TYPE = z.infer<typeof parsedFromSchema>;// 'backlog' | 'now playing' | 'player' | 'history' | 'ingress';
+// 'job' => exported to a Client by an import job
+export const parsedFromSchema = z.enum(['backlog','now playing','player','history','ingress','job'])
+export type PARSED_FROM_TYPE = z.infer<typeof parsedFromSchema>;
 export const PARSED_FROM = parsedFromSchema.enum;
 
 export const playMetaSchema = z.looseObject({

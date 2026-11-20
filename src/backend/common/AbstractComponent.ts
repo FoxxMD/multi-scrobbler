@@ -232,6 +232,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         return this.dbComponent.countLive;
     }
 
+    /** Add to this component's lifetime backlog/job total, in the database and on the in-memory row */
+    protected async incrementCountNonLive(by: number = 1): Promise<number> {
+        this.dbComponent.countNonLive = await this.componentRepo.incrementCountNonLive(this.dbComponent.id, by);
+        return this.dbComponent.countNonLive;
+    }
+
     protected async doBuildDatabase(): Promise<true | string | undefined> {
         await super.doBuildDatabase();
 
@@ -372,6 +378,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
     }
 
+    /** Recount queue stats from the db (IE after plays were cancelled or deleted in bulk) and send them to the UI */
+    public refreshQueueStats = async () => {
+        await this.updateQueueStats([INGRESS_QUEUE, DEAD_QUEUE]);
+        this.emitEvent('componentUpdate', {queued: this.queuedLength, deadLetterPlays: this.deadLetterQueued, deadLetterPlaysTotal: this.deadLetterLength});
+    }
+
     public abstract stop(opts?: {reason?: string | Error}):  Promise<void>
     public abstract start(opts?: {forceInit?: boolean}):  Promise<boolean>
 
@@ -413,19 +425,23 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         return await pMap(partArr, async (x) => this.transformManager.parseTransformerConfig(x));
     }
 
-    public transformPlay = async (play: PlayObject, hookType: TransformHook, transformOpts: {log?: boolean | 'all'} & OptionalCacheUsage = {}) => {
+    /**
+     * @param transformOpts.stages Run these stages instead of this component's own rules for the hook (IE an import job's transforms)
+     * */
+    public transformPlay = async (play: PlayObject, hookType: TransformHook, transformOpts: {log?: boolean | 'all', stages?: StageConfig[]} & OptionalCacheUsage = {}) => {
 
         const {
             log,
+            stages,
             useCachedResult = true
         } = transformOpts;
 
         let logger!: Logger;
 
         try {
-            let hook: StageConfig[] | undefined;
+            let hook: StageConfig[] | undefined = stages;
 
-            switch (hookType) {
+            switch (stages === undefined ? hookType : undefined) {
                 case TRANSFORM_HOOK.preCompare:
                     hook = this.transformRules.preCompare;
                     break;
@@ -449,7 +465,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
             const shouldLog = log ?? this.config.options?.playTransform?.log ?? isDebugMode();
 
-            const transformHash = `playTransform-${hashObject(hook)}-${playContentCacheHash(play)}`;
+            // hookType is part of the key so cached steps from the same stages run on another hook keep their own hook in the lifecycle
+            const transformHash = `playTransform-${hookType}-${hashObject(hook)}-${playContentCacheHash(play)}`;
             const cachedSteps = useCachedResult ?  await this.cache.cacheTransform.get<LifecycleStep[]>(transformHash) : undefined;
             if(cachedSteps !== undefined) {
                 logger.trace(`Cache hit for Steps => ${transformHash}`);
@@ -858,7 +875,14 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         return this.config.options?.deadLetterRetries ?? DEAD_LETTER_RETRIES_DEFAULT;
     }
 
-    queuePlay = async (data: (PlayObject | PlayObject[]) | (PlaySelectWithQueueStates | PlaySelectWithQueueStates[]), context?: QueueContext) => {
+    /**
+     * @param opts.jobId plays are exported by this import job. They are linked to the job (not a parent Source play) and marked as job plays in meta
+     * */
+    queuePlay = async (data: (PlayObject | PlayObject[]) | (PlaySelectWithQueueStates | PlaySelectWithQueueStates[]), context?: QueueContext, opts: {jobId?: number} = {}) => {
+        const {jobId} = opts;
+        if (jobId !== undefined && (Array.isArray(data) ? data : [data]).some(x => entityIsPlayEntity(x))) {
+            throw new Error('jobId can only be given for new plays, existing plays keep their job');
+        }
         const createdQueuedPlays: PlaySelect[] = [];
 
         const dataArray = Array.isArray(data) ? data : [data];
@@ -911,7 +935,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             // we add this state signal to the play meta data and queue it
             // this way we persist the play and dupe it in queue processing so the user has an audit trail
             const monitoring = this.getMonitoringStatus();
-            const playDatas = dataArray.map(x => ({ ...x, meta: { ...x.meta, wasMonitored: monitoring.monitoring, seenAt: dayjs() } }));
+            const jobMeta = jobId !== undefined ? {jobId, parsedFrom: 'job' as const, newFromSource: false} : {};
+            const playDatas = dataArray.map(x => ({ ...x, meta: { ...x.meta, ...jobMeta, wasMonitored: monitoring.monitoring, seenAt: dayjs() } }));
 
             await pMap(playDatas, async (queueablePlay) => {
                 try {
@@ -939,8 +964,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                     },
                     componentId: this.dbComponent.id,
                     state: 'queued',
-                    // only exists on plays from Source
-                    parentId: queueablePlay.id
+                    // only exists on plays from Source. A job play's id (if any) is a mirror row, not a play
+                    parentId: jobId === undefined ? queueablePlay.id : undefined,
+                    jobId,
                 });
 
                 const playRow = await this.playRepo.createPlays([createPlayData]);

@@ -7,7 +7,7 @@ import { buildTrackString } from "../../core/MusicMetadata.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import type {AbstractApiOptions, FormatPlayObjectOptions, InternalConfigOptional, TimeRangeListensFetcher} from "../common/infrastructure/Atomic.ts";
 import type {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.ts";
-import LastfmApiClient, { LastFMIgnoredScrobble, playToClientPayload, formatPlayObj } from "../common/vendor/LastfmApiClient.ts";
+import LastfmApiClient, { LastFMIgnoredScrobble, playToClientPayload, formatPlayObj, LASTFM_HOST } from "../common/vendor/LastfmApiClient.ts";
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.ts";
 import { findCauseByReference } from "../utils/ErrorUtils.ts";
 import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.ts";
@@ -21,6 +21,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     upstreamType: string = 'Last.fm';
     getScrobblesForTimeRange!: TimeRangeListensFetcher
     protected internalOptions: InternalConfigOptional & AbstractApiOptions;
+    override scrobbleDelayFloor?: number | undefined = 1000;
 
     declare config: LastfmClientConfig;
 
@@ -40,6 +41,10 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         this.api = new LastfmApiClient(this.name, this.config.data, {...this.internalOptions, type: 'lastfm', logger: this.logger});
         this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this.api, this.api.logger);
         await this.api.initialize();
+        if(this.api.url.url.hostname !== LASTFM_HOST) {
+            this.logger.debug(`Detected non-official LFM server, scrobble interval floor is disabled`);
+            this.scrobbleDelayFloor = 0;
+        }
         return true;
     }
 
@@ -98,9 +103,9 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         } catch (e: any) {
             const ignored = findCauseByReference(e, LastFMIgnoredScrobble);
             if(ignored !== undefined) {
-                await this.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Ignored`, message: `Failed to scrobble => ${buildTrackString(playObj)} | ${e.message}`, priority: 'warn'});
+                await this.notifyScrobbleFailure(playObj, {title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Ignored`, message: `Failed to scrobble => ${buildTrackString(playObj)} | ${e.message}`, priority: 'warn'});
             } else {
-                await this.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
+                await this.notifyScrobbleFailure(playObj, {title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             }
             this.logger.error({playInfo: buildTrackString(playObj), payload: playToClientPayload(playObj)}, `Scrobble Error (${sType})`);
             throw e;

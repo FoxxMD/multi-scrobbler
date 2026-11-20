@@ -1,10 +1,11 @@
+import type { WebhookPayload } from "../common/infrastructure/config/health/webhooks.ts";
 import { asJsonPlayer } from "../../core/PlayMarshalUtils.ts";
 import { childLogger, type Logger, type LogLevel } from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
 import type {Duration} from "dayjs/plugin/duration.js";
 import type EventEmitter from "events";
 import type { MarkOptional } from "ts-essentials";
-import { INGRESS_QUEUE, DEAD_QUEUE, QUEUE_STATUS_COMPLETED, SOURCE_SOT, QUEUE_STATUS_FAILED, PARSED_FROM } from "../../core/Atomic.ts";
+import { INGRESS_QUEUE, DEAD_QUEUE, QUEUE_STATUS_COMPLETED, SOURCE_SOT, QUEUE_STATUS_FAILED, PARSED_FROM, PLAY_CLIENT_STATE } from "../../core/Atomic.ts";
 import type { NowPlayingUpdateThreshold, PlayObject, ScrobbleActionResult, PlayMatchResult, SourcePlayerObj, SourcePlayerJson } from "../../core/PlaySchema.ts";
 import { truncateStringToLength } from "../../core/StringUtils.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
@@ -23,7 +24,7 @@ import {
 import { CALCULATED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type { QueueContext, ReportedPlayerStatus } from '../../core/Atomic.ts';
 import type { ScrobbleResult } from '../../core/PlaySchema.ts';
-import type {ClientType} from "../../core/Atomic.ts";
+import type {ClientType, PlayClientState} from "../../core/Atomic.ts";
 import type {CommonClientConfig, NowPlayingOptions, UpstreamRefreshOptions} from "../common/infrastructure/config/client/index.ts";
 import { TRANSFORM_HOOK } from "../../core/Transform.ts";
 import type { Notifiers } from "../notifier/Notifiers.ts";
@@ -94,7 +95,21 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     checkExistingScrobbles: boolean;
     verboseOptions;
 
+    /** number of milliseconds Client is required to wait before sending another scrobble request
+     * 
+     * This is not send X => wait scrobbleDelay ms => send Y...
+     * ...It is send X => check if scrobbleDelay ms has already past, if not then wait (scrobbleDelay - hasPast) => send Y 
+     */
     scrobbleDelay: number = 1000;
+    /** lowest scrobbleDelay (ms) this Client allows, IE to respect a service's rate limit
+     *
+     * A `scrobbleInterval` from config lower than this is raised to this value
+     *
+     * Set it in the constructor, or in doBuildInitData() when it depends on config (IE only for a service's official server).
+     * Both run before applyScrobbleInterval(), so no super call is needed
+     */
+    scrobbleDelayFloor?: number;
+    /** when processing queue is empty, number of milliseconds to sleep before checking processing queue for more work */
     scrobbleSleep: number = 2000;
     scrobbleWaitStopInterval: number = 2000;
     protected deadQueueAbortController: AbortController | undefined;
@@ -275,7 +290,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     'Dead',
                     (): Promise<any> => {
                         if(this.isReady()) {
-                            return this.processDeadLetterQueue(undefined, 'Reprocessing bulk dead Plays by system').then(() => null).catch((e) => {
+                            return this.processDeadLetterQueue(undefined, 'Reprocessing bulk dead Plays by system', false, {excludeJobPlays: true}).then(() => null).catch((e) => {
                                 this.warnings.push(e);
                                 this.logger.error(e);
                             })
@@ -370,7 +385,22 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     protected async postCache(): Promise<void> {
         await super.postCache();
+        this.applyScrobbleInterval();
         await this.generateStaggerMappers();
+    }
+
+    /** Runs in postCache(), after Clients have set scrobbleDelay/scrobbleDelayFloor in their constructor or doBuildInitData() */
+    protected applyScrobbleInterval() {
+        const scrobbleInterval = this.config.options?.scrobbleInterval;
+        if(scrobbleInterval === undefined) {
+            return;
+        }
+        if(this.scrobbleDelayFloor !== undefined && scrobbleInterval < this.scrobbleDelayFloor) {
+            this.logger.warn(`scrobbleInterval (${scrobbleInterval}ms) is lower than the minimum scrobbleDelay this Client allows. Using scrobbleDelayFloor value ${this.scrobbleDelayFloor}ms instead.`);
+            this.scrobbleDelay = this.scrobbleDelayFloor;
+        } else {
+            this.scrobbleDelay = scrobbleInterval;
+        }
     }
 
     protected async postDatabase(): Promise<void> {
@@ -727,18 +757,34 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return obj;
     }
 
-    addScrobbledTrack = async (playObj: PlayObject) => {
+    /** @param opts.nonLive the play came from an import job, count it separately from live scrobbles */
+    addScrobbledTrack = async (playObj: PlayObject, opts: {nonLive?: boolean} = {}) => {
         this.emitEvent('scrobble', { play: playObj });
         try {
-            await this.incrementCountLive();
+            if (opts.nonLive) {
+                await this.incrementCountNonLive();
+            } else {
+                await this.incrementCountLive();
+            }
         } catch (e) {
             this.logger.warn(new Error('Unable to update scrobble count', {cause: e}));
         }
         //this.scrobbledPlayObjs.add({play: playObj, scrobble: scrobbledPlay});
         this.scrobbledCounter.labels(this.getPrometheusLabels()).inc();
         //this.lastScrobbledPlayDate = playObj.data.playDate;
-        this.tracksScrobbled++;
-        this.tracksScrobbledTotal++;
+        // these are reported as live counts
+        if (!opts.nonLive) {
+            this.tracksScrobbled++;
+            this.tracksScrobbledTotal++;
+        }
+    }
+
+    /** Notify about a play that failed to scrobble. Import job plays don't notify per play, the job reports failures itself */
+    protected notifyScrobbleFailure = async (playObj: PlayObject, payload: Omit<WebhookPayload, 'identifier'>) => {
+        if (playObj.meta?.jobId !== undefined) {
+            return;
+        }
+        await this.notify(payload);
     }
 
     findExistingSubmittedPlayObj = async (playObjPre: PlayObject): Promise<([undefined, undefined] | [undefined, ScrobbledPlayObject[]] | [ScrobbledPlayObject, ScrobbledPlayObject[]])> => {
@@ -1013,7 +1059,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
     }
 
-    processDeadLetterQueue = async (attemptWithRetries?: number, reason?: string, sync?: boolean) => {
+    /**
+     * @param opts.excludeJobPlays skip plays exported by import jobs, so a failing export can't flood the queue on every scheduled run. User-initiated retries include them
+     * */
+    processDeadLetterQueue = async (attemptWithRetries?: number, reason?: string, sync?: boolean, opts: {excludeJobPlays?: boolean} = {}) => {
 
         if (!(await this.isReady())) {
             this.deadLogger.warn('Cannot process dead letter scrobbles because client is not ready.');
@@ -1045,9 +1094,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             this.emitEvent('queueState', {queueName: 'dead', status: 'Running'});
 
             //const processable = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], [QUEUE_STATUS_FAILED], retries);
-            const processableArgs: QueryPlaysOpts  = {queues: [{queueName: INGRESS_QUEUE, queueStatus: QUEUE_STATUS_FAILED, retries}], with: ['queues']};
+            const processableArgs: QueryPlaysOpts  = {queues: [{queueName: INGRESS_QUEUE, queueStatus: QUEUE_STATUS_FAILED, retries}], with: ['queues'], ...(opts.excludeJobPlays ? {jobId: null} : {})};
             let processable = await this.playRepo.findPlaysPaginated<'queueStates'>(processableArgs);
-            this.deadLetterQueued = processable.meta.total;
+            if (!opts.excludeJobPlays) {
+                // every other place that tracks deadLetterQueued includes job plays, so an excluded total would undercount it
+                this.deadLetterQueued = processable.meta.total;
+            }
 
             const total = await this.queueRepo.getQueueCount(this.dbComponent.id, [INGRESS_QUEUE], {queueStatus: [QUEUE_STATUS_FAILED], retries: 10000});
             this.deadLetterLength = total;
@@ -1186,7 +1238,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         events.push(scrobbleToPlayEvent(scrobble));
                     }
                     //currQueuedPlay.play = scrobbledPlay;
-                    await this.addScrobbledTrack(scrobbledPlay);
+                    await this.addScrobbledTrack(scrobbledPlay, {nonLive: playEntity.jobId !== null && playEntity.jobId !== undefined});
                     events.push(stateChangeToPlayEvent({state: 'scrobbled'}));
                     events.push(queueCompletionStateToPlayEvent({...queueState, queueStatus: QUEUE_STATUS_COMPLETED}));
                     this.scrobbleRetries = 0;
@@ -1274,8 +1326,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         // we should be adding Plays to the queue without any transforms
         // so run on "raw" play input
         // if we have seen a play with close temporality with the exact input hash then skip it entirely
+        // import job plays are transformed by the job before queueing, so match on the untransformed mirror play they carry
+        const isJobPlay = queueablePlay.meta?.jobId !== undefined;
         const cheapInputExisting = await this.playRepo.checkExisting(queueablePlay, {
-                inputHash: queueablePlay,
+                inputHash: isJobPlay ? (queueablePlay.original?.play ?? queueablePlay) : queueablePlay,
                 // existing should have been created *before* this play
                 seenAt: {
                     type: 'lt',
@@ -1285,11 +1339,17 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 // then the playobject has the id of the source (parent) play
                 // and we can additionally check for frozen source play hash to bypass differences
                 // caused by lifecycle transforms
-                parentId: queueablePlay.id,
+                parentId: isJobPlay ? undefined : queueablePlay.id,
+                // a job play that failed before (IE the client was misconfigured) is queued again when exported again
+                states: isJobPlay ? (PLAY_CLIENT_STATE as PlayClientState[]).filter(x => x !== 'failed') : undefined,
             });
         if (cheapInputExisting !== undefined) {
             this.logger.trace(`Not adding ${buildTrackString(queueablePlay)} to queue because it already exists in db as Play ${cheapInputExisting.uid}`);
             return cheapInputExisting;
+        }
+        if (isJobPlay) {
+            // the hash check is enough for job plays and a fuzzy scan of the whole queue per play would be too slow for bulk exports
+            return;
         }
 
         // may not be needed but if not existing cheap then

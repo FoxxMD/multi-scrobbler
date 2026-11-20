@@ -194,13 +194,22 @@ export type CommonComponentEnvShape<T extends string> = {
     [K in `${T}_NAME`]: z.ZodOptional<z.ZodString>
 } & {
     [K in `${T}_ENABLE`]: z.ZodOptional<ReturnType<typeof z.stringbool>>
+} & {
+    // only in the shape for Clients. Typed as always present because zod can't infer from an optional shape key
+    [K in `${T}_SCROBBLE_INTERVAL`]: z.ZodOptional<z.ZodCoercedNumber>
 };
 
-export const generateCommonComponentEnvConfigSchema = <T extends string>(prefix: T) =>
+/**
+ * @param componentType Clients get additional env vars, IE `${prefix}_SCROBBLE_INTERVAL`
+ * */
+export const generateCommonComponentEnvConfigSchema = <T extends string>(prefix: T, componentType: 'source' | 'client' = 'source') =>
     z.object({
         [`${prefix}_ID`]: z.string().meta({description: 'A globally unique ID EX `myComponentId`', examples: ['myComponentId']}),
         [`${prefix}_NAME`]: z.string().optional().meta({description: 'A vanity name EX `My Cool Component`', default: `Value of \`${prefix}_ID\``, examples: ['My Cool Component']}),
         [`${prefix}_ENABLE`]: z.stringbool().optional().meta({description: 'Should this component be used?', default: true}),
+        ...(componentType === 'client' ? {
+            [`${prefix}_SCROBBLE_INTERVAL`]: z.coerce.number().int().nonnegative().optional().meta({description: 'Minimum time (milliseconds) to wait between scrobbles sent to this Client', examples: [1000]}),
+        } : {}),
     } as CommonComponentEnvShape<T>);
 
 export type CommonComponentEnvConfigParsed<T extends string> = {
@@ -209,14 +218,19 @@ export type CommonComponentEnvConfigParsed<T extends string> = {
     [K in `${T}_NAME`]?: string
 } & {
     [K in `${T}_ENABLE`]?: boolean
+} & {
+    [K in `${T}_SCROBBLE_INTERVAL`]?: number
 };
 
-export const commonComponentEnvConfigToConfigPrimitives = <T extends string>(prefix: T, envConfig: CommonComponentEnvConfigParsed<T>): CommonConfigPrimitives  => {
-    const raw = envConfig as Record<string, string | boolean | undefined>;
+/** Client-only values are returned in `options`, only when set */
+export const commonComponentEnvConfigToConfigPrimitives = <T extends string>(prefix: T, envConfig: CommonComponentEnvConfigParsed<T>): CommonConfigPrimitives & {options?: {scrobbleInterval?: number}}  => {
+    const raw = envConfig as Record<string, string | boolean | number | undefined>;
+    const scrobbleInterval = raw[`${prefix}_SCROBBLE_INTERVAL`] as number | undefined;
     return {
         id: raw[`${prefix}_ID`] as string,
         name: raw[`${prefix}_NAME`] as string | undefined,
-        enable: raw[`${prefix}_ENABLE`] as boolean | undefined
+        enable: raw[`${prefix}_ENABLE`] as boolean | undefined,
+        ...(scrobbleInterval !== undefined ? {options: {scrobbleInterval}} : {}),
     };
 };
 

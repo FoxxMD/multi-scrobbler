@@ -7,6 +7,8 @@ import { ComponentDetailedDesktop } from "../../client/components/msComponent/MS
 import {Provider} from "../../client/components/Provider.js";
 import { generateClientApiJson, generateFakeError, generateHistoricalPlayApi, generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList, generateSourceApiJson, generateSourcePlayerJson, generateSseMessage } from "../../core/tests/utils/apiFixtures.js";
 import type {PaginatedResponse, MsSseEvent, PlayApiCommonDetailed} from "../../core/Api.js";
+import type { ClientJobPlaysSummaryJson, JobApiJson } from "../../core/Job.js";
+import { generateJobApiJson, generateJobTargetApiJson } from "../../core/tests/utils/jobFixtures.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import { sseProviderOptions } from "../../client/App.js";
 import { faker } from "@faker-js/faker";
@@ -46,7 +48,13 @@ const meta = preview.meta({
         }
         return HttpResponse.json(generatePlayApiCommonDetailed({}, serializeError(new Error('This is an error', {cause: new Error('this is a nested error', {cause: new Error('another error')})}))));
       }),
-      sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {})
+      sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {}),
+      // two jobs export to Client 7, one is unrelated
+      http.get('/api/jobs', () => HttpResponse.json<JobApiJson[]>([
+        generateJobApiJson({id: 1, targets: [generateJobTargetApiJson({componentId: 7})]}),
+        generateJobApiJson({id: 2, targets: [generateJobTargetApiJson({componentId: 7}), generateJobTargetApiJson({componentId: 8})]}),
+        generateJobApiJson({id: 3, targets: [generateJobTargetApiJson({componentId: 8})]}),
+      ]))
     );
   },
   parameters: {
@@ -151,4 +159,21 @@ export const SubsonicNotEnhanced = meta.story({
     args: {
       data: {...generateClientApiJson(), playbackReporting: false}
     }
+});
+export const ClientWithJobPlays = meta.story({
+    args: {
+      data: generateClientApiJson({id: 7})
+    },
+    beforeEach({ msw }) {
+      msw.use(
+        http.get('/api/components/:componentId/job-plays/summary', () => HttpResponse.json<ClientJobPlaysSummaryJson>({
+          total: 48210,
+          queued: 35,
+          orphaned: 1200,
+          compacted: 12000,
+          exportingJobs: [],
+          task: null,
+        }))
+      );
+    },
 });
