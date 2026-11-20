@@ -157,6 +157,13 @@ Exporting is **optional.** You can create an import-only Job to get data into a 
 
 :::
 
+<Aside type="tip" title="Scrobble Speed">
+
+The rate at which a Client which send scrobbles to its downstream service is determined by its [Scrobble Interval](/configuration/clients/#scrobble-interval), which defaults to requiring 1000ms (1 second) between each request. Lowering this, in your Client configuration, will signficantly speed up the export rate of progress.
+
+</Aside>
+
+
 <DetailsAdmo type="tip" summary="Exported Plays in Clients">
 
 Play from jobs are hidden in a Client's Play list by default so they don't bury live Plays. Turn on **Plays from Export jobs** in the list's filters to see them.

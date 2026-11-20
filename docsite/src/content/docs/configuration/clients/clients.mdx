@@ -171,8 +171,12 @@ services:
 ```
 :::
 
+<Aside type="important">
+
 Clients that scrobble to official, public servers (like Listenbrainz, Last.fm, Libre.fm) have an **interval floor** which cannot be overridden. This floor is usually 1000ms. If you try to use an interval lower than this a warning will be logged and the floor will be used instead.
 
 The floor is determined by the connection string, so if you use a custom URL for the connection for these Clients the floor is not enforced.
+
+</Aside>
 
 <Monitoring/>
