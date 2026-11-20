@@ -1,4 +1,4 @@
-import { Box, Button, Card, Link as ChakraLink, RadioGroup, Code, Collapsible, Container, DataList, Editable, Flex, Heading, HStack, IconButton, NumberInput, Separator, SkeletonText, Stack, Text } from '@chakra-ui/react';
+import { Box, Button, Card, CloseButton, Link as ChakraLink, RadioGroup, Code, Collapsible, Container, DataList, Dialog, Editable, Flex, Heading, HStack, IconButton, NumberInput, Separator, Portal, SkeletonText, Stack, Text } from '@chakra-ui/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import ky from 'ky';
 import { useSSEAnyEvent, useSSEContext } from "@flamefrontend/sse-runtime-react";
@@ -28,7 +28,7 @@ const cursorText = (job: JobApiJson): string | undefined => {
         return undefined;
     }
     if (isApiCursor(job.importCursor)) {
-        return `Scrobbles before ${formatJobDate(new Date(job.importCursor.to).toISOString())}`;
+        return `Plays before ${formatJobDate(new Date(job.importCursor.to).toISOString())}`;
     }
     if (isFileCursor(job.importCursor)) {
         const read = job.runtime.import.progress;
@@ -130,23 +130,47 @@ export const JobDelete = (props: { job: JobApiJson }) => {
     if (job.runtime.deleting === true) {
         return <Text textStyle="sm" color="fg.warning">Deleting...</Text>;
     }
-    if (!confirming) {
-        return <Button size="sm" variant="subtle" colorPalette="red" onClick={() => setConfirming(true)}>Delete</Button>;
-    }
     return (
-        <Card.Root variant="outline" size="sm" maxWidth="md">
-            <Card.Body>
-                <Stack gap="3">
-                    <Text textStyle="sm">Delete this job? It is stopped first.{job.importFrom.kind === 'file' ? ' An uploaded file is deleted.' : ''}</Text>
-                    <KeepChoice label="Mirror data" help="Scrobbles in the mirror played in this job's range. Other jobs may use them too." value={historical} onChange={setHistorical}/>
-                    {job.targets.length > 0 ? <KeepChoice label="Scrobble records in Clients" help="What the Clients recorded for this job's scrobbles. Scrobbles already sent stay on the services." value={scrobbles} onChange={setScrobbles}/> : undefined}
-                    <HStack justify="flex-end">
-                        <Button size="sm" variant="subtle" disabled={isPending} onClick={() => setConfirming(false)}>Cancel</Button>
-                        <Button size="sm" colorPalette="red" loading={isPending} onClick={() => mutate()}>Delete</Button>
-                    </HStack>
-                </Stack>
-            </Card.Body>
-        </Card.Root>
+        <>
+            <Button size="sm" variant="subtle" colorPalette="red" onClick={() => setConfirming(true)}>Delete...</Button>
+            <Dialog.Root
+                role="alertdialog"
+                closeOnInteractOutside
+                unmountOnExit
+                open={confirming}
+                size="sm"
+                onOpenChange={(e) => {
+                    if (!isPending) {
+                        setConfirming(e.open);
+                    }
+                }}
+            >
+                <Portal>
+                    <Dialog.Backdrop/>
+                    <Dialog.Positioner>
+                        <Dialog.Content>
+                            <Dialog.CloseTrigger asChild>
+                                <CloseButton disabled={isPending}/>
+                            </Dialog.CloseTrigger>
+                            <Dialog.Header>
+                                <Dialog.Title>Delete {job.name}</Dialog.Title>
+                            </Dialog.Header>
+                            <Dialog.Body>
+                                <Stack gap="4">
+                                    <Text textStyle="sm">Delete this job? It is stopped first.{job.importFrom.kind === 'file' ? ' An uploaded file is deleted.' : ''}</Text>
+                                    <KeepChoice label="Mirror data" help="Plays imported into the mirror by this job. Other jobs may use them too." value={historical} onChange={setHistorical}/>
+                                    {job.targets.length > 0 ? <KeepChoice label="Plays in Clients" help="All Plays exported to Clients. Note: Does not affect data in the actual services, just data in MS." value={scrobbles} onChange={setScrobbles}/> : undefined}
+                                </Stack>
+                            </Dialog.Body>
+                            <Dialog.Footer>
+                                <Button variant="outline" disabled={isPending} onClick={() => setConfirming(false)}>Cancel</Button>
+                                <Button colorPalette="red" loading={isPending} onClick={() => mutate()}>Delete</Button>
+                            </Dialog.Footer>
+                        </Dialog.Content>
+                    </Dialog.Positioner>
+                </Portal>
+            </Dialog.Root>
+        </>
     );
 }
 
@@ -169,8 +193,8 @@ export const CleanupPanel = (props: { job: JobApiJson }) => {
     });
     const scrobbles = useMutation({
         mutationFn: (action: CleanupAction) => ky.post(`jobs/${job.id}/cleanup/scrobbles`, {baseUrl, json: {action}}),
-        onSuccess: (_, action) => toaster.create({type: 'info', title: `${action === 'delete' ? 'Deleting' : 'Compacting'} this job's scrobble records`}),
-        onError: (e) => toaster.create({type: 'error', title: 'Could not clean up scrobble records', description: apiErrorMessage(e)}),
+        onSuccess: (_, action) => toaster.create({type: 'info', title: `${action === 'delete' ? 'Deleting' : 'Compacting'} this job's Plays`}),
+        onError: (e) => toaster.create({type: 'error', title: 'Could not clean up Plays', description: apiErrorMessage(e)}),
     });
     const cleanup = job.runtime.cleanup;
     const records = job.targets.reduce((acc, t) => acc + t.records, 0);
@@ -188,19 +212,19 @@ export const CleanupPanel = (props: { job: JobApiJson }) => {
                             pending={historical.isPending}
                             disabledReason={busy}
                             explain={{
-                                compact: "Remove the raw Last.fm data saved with these scrobbles. They stay in the mirror and can still be exported.",
-                                delete: "Delete these scrobbles from the mirror. Importing this range again fetches them again.",
+                                compact: "Remove the raw data saved with these Plays. They stay in the mirror and can still be exported.",
+                                delete: "Delete these Plays from the mirror. Importing this range again fetches them again.",
                             }}
                             onConfirm={(a) => historical.mutate(a)}
                         />}
                     </CleanupRow>
-                    {job.targets.length > 0 ? <CleanupRow title="Scrobble records in Clients" description={`${records.toLocaleString()} total Plays were exported to MS Clients. Note: Cleanup actions do not affect data in the actual services, just data in MS.`}>
+                    {job.targets.length > 0 ? <CleanupRow title="Plays in Clients" description={`${records.toLocaleString()} total Plays were exported to MS Clients. Note: Cleanup actions do not affect data in the actual services, just data in MS.`}>
                         {cleanup !== undefined ? <CleanupProgress task={cleanup} text={`${cleanup.action === 'delete' ? 'Deleting' : 'Compacting'}: ${cleanup.done.toLocaleString()} of ${cleanup.total.toLocaleString()}`}/> : <CleanupButtons
                             pending={scrobbles.isPending}
                             disabledReason={blocked ?? (exporting ? 'Stop the exports to clean up.' : undefined)}
                             explain={{
-                                compact: "Remove the raw data and transform details saved with these records. The records stay.",
-                                delete: "Delete these records from the Clients. Scrobbles still waiting in a Client's queue are removed from it and won't be sent.",
+                                compact: "Remove the raw data and transform details saved with these Plays.",
+                                delete: "Delete these Plays from the MS Clients. Plays still waiting in a Client's queue are removed from it and won't be sent.",
                             }}
                             onConfirm={(a) => scrobbles.mutate(a)}
                         />}
@@ -256,7 +280,7 @@ export const ImportPanel = (props: { job: JobApiJson }) => {
             </Card.Header>
             <Card.Body>
                 <Stack gap="4">
-                    {job.importFrom.kind === 'mirror' ? <Text textStyle="sm">Nothing to import. Exports use the {job.mirrorPlaysInRange.toLocaleString()} scrobbles already in the mirror.</Text> : <Stack gap="1">
+                    {job.importFrom.kind === 'mirror' ? <Text textStyle="sm">Nothing to import. Exports use the {job.mirrorPlaysInRange.toLocaleString()} Plays already in the mirror.</Text> : <Stack gap="1">
                         <ImportProgressBar job={job}/>
                         <Text textStyle="sm">
                             {job.imported.toLocaleString()} new of {job.importFetched.toLocaleString()} fetched
@@ -291,7 +315,7 @@ export const ImportPanel = (props: { job: JobApiJson }) => {
 }
 
 
-const STAT_LABELS: [string, string][] = [['scrobbled', 'scrobbled'], ['duped', 'already scrobbled'], ['failed', 'failed'], ['queued', 'queued'], ['discarded', 'discarded']];
+const STAT_LABELS: [string, string][] = [['exported', 'exported'], ['duped', 'already exported'], ['failed', 'failed'], ['queued', 'queued'], ['discarded', 'discarded']];
 
 const statsText = (stats: JobTargetApiJson['stats']): string | undefined => {
     if (stats === null) {
@@ -326,7 +350,7 @@ export const ExportTarget = (props: { job: JobApiJson, target: JobTargetApiJson 
             {stats !== undefined ? <Text textStyle="sm" color="fg.muted">In the Client: {stats}</Text> : undefined}
             {target.exported > target.queued ? <Text textStyle="sm" color="fg.muted">{(target.exported - target.queued).toLocaleString()} were already in the Client and were skipped.</Text> : undefined}
             {runtime?.waiting !== undefined ? <Text textStyle="sm" color="fg.warning">{runtime.waiting}</Text> : undefined}
-            {target.status !== 'running' && target.status !== 'completed' && queuedLeft > 0 ? <Text textStyle="sm" color="fg.muted">{queuedLeft.toLocaleString()} queued scrobbles will still be sent to the Client.</Text> : undefined}
+            {target.status !== 'running' && target.status !== 'completed' && queuedLeft > 0 ? <Text textStyle="sm" color="fg.muted">{queuedLeft.toLocaleString()} queued Plays will still be sent to the Client.</Text> : undefined}
             {target.status === 'running' && target.breaker.failedInARow > 0 ? <Text textStyle="sm" color="fg.warning">{target.breaker.failedInARow} failed in a row, the export stops at {Math.max(job.exportQueueLimit, 10)}.</Text> : undefined}
             {target.error !== null && target.status === 'failed' ? <ErrorAlert error={target.error}/> : undefined}
         </Stack>
