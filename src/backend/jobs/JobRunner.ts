@@ -63,10 +63,20 @@ export interface JobProcessRuntime {
     progress?: number
 }
 
+/** A cleanup of the job's scrobbles in its Clients. Not persisted */
+export interface JobCleanupRuntime {
+    action: 'compact' | 'delete'
+    /** the Client being cleaned up right now */
+    componentId?: number
+    done: number
+    total: number
+}
+
 export interface JobRuntime {
     import: JobProcessRuntime
     /** by target id */
     exports: Record<number, JobProcessRuntime>
+    cleanup?: JobCleanupRuntime
 }
 
 export class JobConflictError extends Error {
@@ -397,6 +407,13 @@ export class JobRunner {
         const updated = await this.jobRepo.update(this.jobId, data);
         this.emitUpdate({...data, runtime: this.runtime}, true);
         return updated;
+    }
+
+    /** Show (or clear) cleanup progress on the job */
+    setCleanup(cleanup: JobCleanupRuntime | undefined) {
+        const changed = (this.runtime.cleanup === undefined) !== (cleanup === undefined);
+        this.runtime.cleanup = cleanup;
+        this.emitUpdate({runtime: this.runtime}, changed);
     }
 
     get exportsRunning(): number[] {

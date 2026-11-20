@@ -378,6 +378,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
     }
 
+    /** Recount queue stats from the db (IE after plays were cancelled or deleted in bulk) and send them to the UI */
+    public refreshQueueStats = async () => {
+        await this.updateQueueStats([INGRESS_QUEUE, DEAD_QUEUE]);
+        this.emitEvent('componentUpdate', {queued: this.queuedLength, deadLetterPlays: this.deadLetterQueued, deadLetterPlaysTotal: this.deadLetterLength});
+    }
+
     public abstract stop(opts?: {reason?: string | Error}):  Promise<void>
     public abstract start(opts?: {forceInit?: boolean}):  Promise<boolean>
 

@@ -1,6 +1,6 @@
 import { childLogger } from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
-import { and, eq, inArray, isNull, relationsFilterToSQL, sql } from "drizzle-orm";
+import { and, asc, count, eq, exists, gt, inArray, isNotNull, isNull, ne, not, or, relationsFilterToSQL, type SQL, sql } from "drizzle-orm";
 import { EmptyFilter } from "drizzle-orm/relations";
 import assert from "node:assert";
 import type { MarkOptional, ElementOf } from "ts-essentials";
@@ -49,6 +49,16 @@ const identifierExtractor: { [K in keyof PlayIdentifierPrimitiveMap]: (play: {id
   uid: (play) => play.uid,
 };
 const COMPACT_BATCH = 1000;
+
+export interface JobPlayFilter {
+    componentId: number
+    /** undefined => plays of any job, including deleted ones */
+    jobId?: number
+    /** true => only plays in a queue (queued or failed with retries left), false => only plays not in one */
+    inQueue?: boolean
+    /** only plays not fully compacted (input and transform) */
+    uncompacted?: boolean
+}
 
 export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
@@ -407,6 +417,43 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             }
             await this.db.update(plays).set({compacted}).where(inArray(plays.id, ids));
         });
+    }
+
+    protected jobPlayConditions = (args: JobPlayFilter) => {
+        const {componentId, jobId, inQueue, uncompacted = false} = args;
+        const conditions: SQL[] = [eq(plays.componentId, componentId)];
+        if (jobId !== undefined) {
+            conditions.push(eq(plays.jobId, jobId));
+        } else {
+            // job plays keep meta.jobId after their job is deleted (and plays.jobId is nulled)
+            conditions.push(or(isNotNull(plays.jobId), sql`json_extract(${plays.play}, '$.meta.jobId') IS NOT NULL`)!);
+        }
+        if (inQueue !== undefined) {
+            const queued = exists(this.db.select({id: queueStates.id}).from(queueStates).where(eq(queueStates.playId, plays.id)));
+            conditions.push(inQueue ? queued : not(queued)!);
+        }
+        if (uncompacted) {
+            conditions.push(or(isNull(plays.compacted), ne(plays.compacted, 'input-transform'))!);
+        }
+        return conditions;
+    }
+
+    /**
+     * Ids of a component's job plays, ascending, after `afterId`.
+     * Without jobId, every job play of the component is included, also those of deleted jobs.
+     * */
+    findJobPlayIds = async (args: JobPlayFilter & {afterId?: number, limit: number}): Promise<number[]> => {
+        const conditions = this.jobPlayConditions(args);
+        if (args.afterId !== undefined) {
+            conditions.push(gt(plays.id, args.afterId));
+        }
+        const rows = await this.db.select({id: plays.id}).from(plays).where(and(...conditions)).orderBy(asc(plays.id)).limit(args.limit);
+        return rows.map(x => x.id);
+    }
+
+    countJobPlays = async (args: JobPlayFilter): Promise<number> => {
+        const [row] = await this.db.select({count: count()}).from(plays).where(and(...this.jobPlayConditions(args)));
+        return row?.count ?? 0;
     }
 
     public retentionCleanup = async (componentType: string, retentionOpts: RetentionOptions & ComponentConstrainedRepoOpts) => {

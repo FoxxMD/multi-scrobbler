@@ -35,6 +35,10 @@ export class JobTargetRepository extends DrizzleBaseRepository<'jobTargets'> {
         return this.db.select().from(jobTargets).where(inArray(jobTargets.jobId, jobIds)).orderBy(jobTargets.id);
     }
 
+    findByComponent = async (componentId: number): Promise<JobTargetSelect[]> => {
+        return this.db.select().from(jobTargets).where(eq(jobTargets.componentId, componentId));
+    }
+
     findRunning = async (): Promise<JobTargetSelect[]> => {
         return this.db.select().from(jobTargets).where(eq(jobTargets.status, 'running'));
     }

@@ -7,10 +7,12 @@ import type { WebhookPayload } from "../common/infrastructure/config/health/webh
 import { WildcardEmitter } from "../common/WildcardEmitter.ts";
 import type { JobTimings } from "./constants.ts";
 import type { ImportPacer, ImportProvider } from "./ImportProvider.ts";
-import { type ExportClient, type HaltStatus, JobRunner, type JobRuntime } from "./JobRunner.ts";
+import { componentLockKey, type ExportClient, type HaltStatus, JobConflictError, JobRunner, type JobRuntime } from "./JobRunner.ts";
 import { JobTargetRepository } from "../common/database/drizzle/repositories/JobTargetRepository.ts";
 import { LockRegistry } from "./LockRegistry.ts";
-import { MirrorService } from "./MirrorService.ts";
+import { type CleanupAction, MirrorService, type StartedTask } from "./MirrorService.ts";
+import { JobPlayCleanup, type JobPlayCleanupProgress, type JobPlayCleanupResult } from "./JobPlayCleanup.ts";
+import { randomUUID } from "node:crypto";
 import { LastfmFileImportProvider } from "./lastfm/LastfmFileImportProvider.ts";
 import { LastfmApiImportProvider, type LastfmImportSource } from "./lastfm/LastfmApiImportProvider.ts";
 import LastfmApiClient from "../common/vendor/LastfmApiClient.ts";
@@ -91,6 +93,9 @@ export class JobManager {
     readonly locks = new LockRegistry();
     readonly importsDir: string;
     readonly mirrors: MirrorService;
+    readonly jobPlays: JobPlayCleanup;
+    /** job play cleanups of a whole Client (D13), by component id */
+    protected clientCleanups = new Map<number, JobPlayCleanupProgress>();
     /** not readonly so tests can point it at the server's db after init */
     db: DbConcrete;
     protected runners = new Map<number, JobRunner>();
@@ -110,6 +115,13 @@ export class JobManager {
             locks: this.locks,
             emitter: this.emitter,
             isJobActive: (jobId) => this.isJobActive(jobId),
+        });
+        this.jobPlays = new JobPlayCleanup({
+            get db() { return getDb(); },
+            logger: this.logger,
+            locks: this.locks,
+            emitter: this.emitter,
+            resolveClient: (id) => this.opts.resolveClient?.(id),
         });
     }
 
@@ -248,6 +260,100 @@ export class JobManager {
         for(const t of await this.targetRepo.findByJob(jobId)) {
             await this.stopExport(jobId, t.id, status);
         }
+    }
+
+    /** Take every Client's cleanup lock or none. Returns the release function */
+    protected acquireClients(componentIds: number[], holder: string): () => void {
+        const keys = componentIds.map(componentLockKey);
+        const release = () => keys.forEach(k => this.locks.release(k, holder));
+        for (const key of keys) {
+            if (!this.locks.tryAcquire(key, holder)) {
+                release();
+                throw new JobConflictError('A cleanup is already running for one of the Clients');
+            }
+        }
+        return release;
+    }
+
+    /**
+     * Compact or delete the scrobbles a job created in its Clients, in the background (D11-B).
+     * Plays still queued in a Client are dequeued first.
+     * Throws JobConflictError while any of the job's exports runs.
+     * */
+    cleanupJobScrobbles = async (jobId: number, action: CleanupAction): Promise<StartedTask> => {
+        const targets = await this.targetRepo.findByJob(jobId);
+        const runner = this.getRunner(jobId);
+        if (runner.exportsRunning.length > 0) {
+            throw new JobConflictError('Stop the job\'s exports first');
+        }
+        if (runner.runtime.cleanup !== undefined) {
+            throw new JobConflictError('A cleanup is already running for this job');
+        }
+        const holder = `job-cleanup:${jobId}:${randomUUID()}`;
+        const release = this.acquireClients(targets.map(x => x.componentId), holder);
+        runner.setCleanup({action, done: 0, total: 0});
+        const done = (async () => {
+            try {
+                for (const t of targets) {
+                    await this.jobPlays.run({componentId: t.componentId, jobId, queued: 'cancel', action, holder, onProgress: (p) => runner.setCleanup({...p, componentId: t.componentId})});
+                }
+            } catch (e) {
+                this.logger.error(new Error(`Cleanup of Job ${jobId} scrobbles failed`, {cause: e}));
+            } finally {
+                release();
+                runner.setCleanup(undefined);
+            }
+        })();
+        return {done};
+    }
+
+    /** Compact or delete a job's mirror data in its range, in the background (D11-A) */
+    cleanupJobHistorical = async (jobId: number, action: CleanupAction): Promise<StartedTask> => {
+        const job = await this.jobRepo.getById(jobId);
+        if (job === undefined) {
+            throw new Error(`Job ${jobId} does not exist`);
+        }
+        return this.mirrors.startCleanup(job.mirrorId, {action, range: [job.rangeFrom?.valueOf() ?? 0, job.rangeTo.valueOf()]});
+    }
+
+    getClientCleanup(componentId: number): JobPlayCleanupProgress | undefined {
+        return this.clientCleanups.get(componentId);
+    }
+
+    /**
+     * Compact or delete every job play of a Client that is not queued, including plays of deleted jobs, in the background (D13).
+     * Throws JobConflictError while any job exports to the Client.
+     * */
+    cleanupClientJobPlays = async (componentId: number, action: CleanupAction): Promise<StartedTask> => {
+        const targets = await this.targetRepo.findByComponent(componentId);
+        const exporting = targets.filter(t => this.runners.get(t.jobId)?.exportsRunning.includes(t.id) === true);
+        if (exporting.length > 0) {
+            const names = await Promise.all(exporting.map(async t => (await this.jobRepo.getById(t.jobId))?.name ?? String(t.jobId)));
+            throw new JobConflictError(`Stop exports to this Client first (${names.map(x => `'${x}'`).join(', ')})`);
+        }
+        const holder = `client-cleanup:${componentId}:${randomUUID()}`;
+        const release = this.acquireClients([componentId], holder);
+        const emit = (data: Record<string, unknown>) => this.emitter.emit('clientJobPlaysUpdate', {componentId, data});
+        const progress = (p: JobPlayCleanupProgress) => {
+            this.clientCleanups.set(componentId, p);
+            emit({task: p});
+        }
+        progress({action, done: 0, total: 0});
+        const done = (async () => {
+            let result: JobPlayCleanupResult | undefined;
+            let error: string | undefined;
+            try {
+                result = await this.jobPlays.run({componentId, queued: 'skip', action, holder, onProgress: progress});
+            } catch (e) {
+                this.logger.error(new Error(`Cleanup of job plays in Client ${componentId} failed`, {cause: e}));
+                error = (e as Error).message;
+            } finally {
+                release();
+                this.clientCleanups.delete(componentId);
+            }
+            emit({task: null, taskResult: {...result, error}});
+        })();
+        return {done};
     }
 
     /** Restart every process that was running when the app last stopped */
