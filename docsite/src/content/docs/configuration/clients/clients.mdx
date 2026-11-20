@@ -87,7 +87,7 @@ Clients can customize the Now Playing behavior individually using [File or AIO s
     // [!link /Last.fm/ /configuration/clients/lastfm]
     // [!link /File Config/ /configuration?configType=file#configuration-types]
     // ...your Last.fm File Config
-    "name": "myLastFmClient",
+    "id": "myLastFmClient",
     "configureAs": "client",
     "data": {
       // ...
@@ -104,7 +104,7 @@ Clients can customize the Now Playing behavior individually using [File or AIO s
     // [!link /Last.fm/ /configuration/clients/lastfm]
     // [!link /File Config/ /configuration?configType=file#configuration-types]
     // ...your Last.fm File Config
-    "name": "myLastFmClient",
+    "id": "myLastFmClient",
     "configureAs": "client",
     "data": {
       // ...
@@ -116,5 +116,63 @@ Clients can customize the Now Playing behavior individually using [File or AIO s
 ]
 ```
 :::
+
+### Scrobble Interval
+
+The rate at which a Client will send scrobbles to a downstream service can be controlled through File/AIO or ENV.
+
+All clients default to requiring **1000 milliseconds** between scrobble requests when no other value is set.
+
+Set to `0` to disable the interval and send scrobbles as quickly as the service will respond.
+
+:::code-tabs
+```yaml label="docker-compose.yaml (ENV)" brackets
+services: 
+  multi-scrobbler:
+    image: foxxmd/multi-scrobbler
+    environment:
+      # ...
+      # [!code focus:1][!code highlight] [!ref] Can send scrobbles every 100 milliseconds
+      - KOITO_SCROBBLE_INTERVAL=100
+```
+```json5 label="koito.json (File Config)" brackets
+[
+  {
+    // ...your Kotio File Config
+    "id": "myKoito",
+    "configureAs": "client",
+    "data": {
+      // ...
+    },
+    // [!code focus:3]
+    "options": {
+        "scrobbleInterval": 100 // [!code highlight] [!ref] Can send scrobbles every 100 milliseconds
+    }
+  },
+]
+```
+```json5 label="config.json (AIO Config)" brackets
+[
+  // ...your AIO File Config
+  "clients": [
+    {
+      "id": "myKoito",
+      "type": "koito"
+      "data": {
+        // ...
+      },
+      // [!code focus:3]
+      "options": {
+          "scrobbleInterval": 100 // [!code highlight] [!ref] Can send scrobbles every 100 milliseconds
+      }
+    }
+  ],
+]
+```
+:::
+
+Clients that scrobble to official, public servers (like Listenbrainz, Last.fm, Libre.fm) have an **interval floor** which cannot be overridden. This floor is usually 1000ms. If you try to use an interval lower than this a warning will be logged and the floor will be used instead.
+
+The floor is determined by the connection string, so if you use a custom URL for the connection for these Clients the floor is not enforced.
 
 <Monitoring/>

@@ -95,7 +95,21 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     checkExistingScrobbles: boolean;
     verboseOptions;
 
+    /** number of milliseconds Client is required to wait before sending another scrobble request
+     * 
+     * This is not send X => wait scrobbleDelay ms => send Y...
+     * ...It is send X => check if scrobbleDelay ms has already past, if not then wait (scrobbleDelay - hasPast) => send Y 
+     */
     scrobbleDelay: number = 1000;
+    /** lowest scrobbleDelay (ms) this Client allows, IE to respect a service's rate limit
+     *
+     * A `scrobbleInterval` from config lower than this is raised to this value
+     *
+     * Set it in the constructor, or in doBuildInitData() when it depends on config (IE only for a service's official server).
+     * Both run before applyScrobbleInterval(), so no super call is needed
+     */
+    scrobbleDelayFloor?: number;
+    /** when processing queue is empty, number of milliseconds to sleep before checking processing queue for more work */
     scrobbleSleep: number = 2000;
     scrobbleWaitStopInterval: number = 2000;
     protected deadQueueAbortController: AbortController | undefined;
@@ -371,7 +385,22 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     protected async postCache(): Promise<void> {
         await super.postCache();
+        this.applyScrobbleInterval();
         await this.generateStaggerMappers();
+    }
+
+    /** Runs in postCache(), after Clients have set scrobbleDelay/scrobbleDelayFloor in their constructor or doBuildInitData() */
+    protected applyScrobbleInterval() {
+        const scrobbleInterval = this.config.options?.scrobbleInterval;
+        if(scrobbleInterval === undefined) {
+            return;
+        }
+        if(this.scrobbleDelayFloor !== undefined && scrobbleInterval < this.scrobbleDelayFloor) {
+            this.logger.warn(`scrobbleInterval (${scrobbleInterval}ms) is lower than the minimum scrobbleDelay this Client allows. Using scrobbleDelayFloor value ${this.scrobbleDelayFloor}ms instead.`);
+            this.scrobbleDelay = this.scrobbleDelayFloor;
+        } else {
+            this.scrobbleDelay = scrobbleInterval;
+        }
     }
 
     protected async postDatabase(): Promise<void> {

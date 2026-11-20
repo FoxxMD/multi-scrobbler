@@ -938,6 +938,25 @@ describe('Manages scrobble queue', function() {
         // generous upper bound, waiting the full delay again would be >= 1000ms
         expect(Date.now() - start).to.be.lt(500);
     });
+
+    it('Uses scrobbleInterval from config as scrobble delay', async function () {
+        await using testScrobbler = await generateTestScrobbler({name: 'test', id: 'test-interval', options: {scrobbleInterval: 300}});
+        expect(testScrobbler.scrobbleDelay).eq(300);
+    });
+
+    it('Uses scrobbleDelayFloor when scrobbleInterval is lower', async function () {
+        await using testScrobbler = new TestScrobbler({name: 'test', options: {scrobbleInterval: 300}});
+        testScrobbler.scrobbleDelayFloor = 500;
+        await testScrobbler.initialize();
+        expect(testScrobbler.scrobbleDelay).eq(500);
+    });
+
+    it('Uses scrobbleInterval when it is at or above scrobbleDelayFloor', async function () {
+        await using testScrobbler = new TestScrobbler({name: 'test', options: {scrobbleInterval: 800}});
+        testScrobbler.scrobbleDelayFloor = 500;
+        await testScrobbler.initialize();
+        expect(testScrobbler.scrobbleDelay).eq(800);
+    });
 });
 
 describe('Now Playing', function() {

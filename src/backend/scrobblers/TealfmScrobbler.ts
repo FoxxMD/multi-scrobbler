@@ -73,6 +73,9 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
             throw new Error('Must provide an identifier');
         }
         await this.client.client.initClient();
+        if((this.config.options?.scrobbleInterval ?? this.scrobbleDelay) < this.scrobbleDelay) {
+            this.logger.warn(`Scrobble interval is LOWER than recommended ${this.scrobbleDelay}ms . You should only be using this if you are sure your PDS allows higher request rates.`)
+        }
         return true;
     }
 

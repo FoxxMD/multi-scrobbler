@@ -23,6 +23,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
     requiresAuthInteraction = false;
     getScrobblesForTimeRange: TimeRangeListensFetcher
     declare config: ListenBrainzClientConfig;
+    override scrobbleDelayFloor?: number | undefined = 1000;
 
     constructor(name: any, config: ListenBrainzClientConfig, options = {}, emitter: EventEmitter, logger: Logger) {
         super('listenbrainz', name, config, emitter, logger);
@@ -46,6 +47,10 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         } = this.config;
         if (token === undefined) {
             throw new Error('Must provide a User Token');
+        }
+        if(this.api.url.url.hostname !== 'api.listenbrainz.org') {
+            this.logger.debug(`Detected non-official LZ server, scrobble interval floor is disabled`);
+            this.scrobbleDelayFloor = 0;
         }
         return true;
     }

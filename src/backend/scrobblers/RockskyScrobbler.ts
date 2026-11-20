@@ -101,6 +101,9 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         if(appPassword === undefined && token !== undefined) {
             this.logger.warn('Access Token authentication is DEPRECATED and will be removed in a future release. Please switch to handle/appPassword auth as soon as possible.');
         }
+        if((this.config.options?.scrobbleInterval ?? this.scrobbleDelay) < this.scrobbleDelay) {
+            this.logger.warn(`Scrobble interval is LOWER than recommended ${this.scrobbleDelay}ms . You should only be using this if you are sure your PDS allows higher request rates.`)
+        }
         return true;
     }
 

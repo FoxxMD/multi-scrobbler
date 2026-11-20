@@ -16,7 +16,7 @@ import { stripIndents } from 'common-tags';
 import { normalizeStr } from "../../core/StringUtils.ts";
 import type { StringNormalizationOptions } from "../../core/StringUtils.ts";
 import { prettifyError, ZodError } from 'zod';
-import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvConfigSchema, generateConfigLocation, type CommonConfigPrimitives, type UnparsedConfig } from '../common/infrastructure/config/common.ts';
+import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvConfigSchema, generateConfigLocation, type UnparsedConfig } from '../common/infrastructure/config/common.ts';
 import type { CommonClientConfig } from '../common/infrastructure/config/client/index.ts';
 import { getClientEnvSchema, validateClientAIOJson, validateClientJson, type ClientTypeConfigMap } from '../common/infrastructure/config/client/clientsMap.ts';
 import type { MSBackendEventMap } from '../common/infrastructure/MSBackendEventMap.ts';
@@ -229,9 +229,9 @@ export default class ScrobbleClients {
                     switch (entry.source) {
                         case 'env': {
                             const envSchema = await getClientEnvSchema(clientType);
-                            const primitiveSchema = generateCommonComponentEnvConfigSchema(configTypeUpper);
+                            const primitiveSchema = generateCommonComponentEnvConfigSchema(configTypeUpper, 'client');
                             const parsed = primitiveSchema.parse(entry.config);
-                            const primitives: CommonConfigPrimitives = commonComponentEnvConfigToConfigPrimitives(configTypeUpper, parsed);
+                            const {options: primitiveOptions = {}, ...primitives} = commonComponentEnvConfigToConfigPrimitives(configTypeUpper, parsed);
                             const parsedEnvConfigValues = envSchema.env.parse(entry.config);
                             const { data = {}, options = {}, ...rest } = envSchema.toConfig(parsedEnvConfigValues);
                             const transformOptions = transformPresetEnv(configTypeUpper);
@@ -242,6 +242,7 @@ export default class ScrobbleClients {
                                 ...rest,
                                 source: generateConfigLocation('client', entry),
                                 options: {
+                                    ...primitiveOptions,
                                     ...options,
                                     ...(transformOptions ?? {})
                                 }
