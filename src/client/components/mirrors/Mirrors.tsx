@@ -35,7 +35,7 @@ export const MirrorSummary = (props: { mirror: MirrorApiJson }) => {
                 </Card.Header>
                 <Card.Body px="6" py="3">
                     <Stack gap="1">
-                        <Text textStyle="sm">{mirror.plays.toLocaleString()} scrobbles</Text>
+                        <Text textStyle="sm">{mirror.plays.toLocaleString()} plays</Text>
                         <TextMuted textStyle="sm">{coverageSummary(mirror)}</TextMuted>
                         <TextMuted textStyle="sm">Used by {mirror.jobs.length} job{mirror.jobs.length === 1 ? '' : 's'}</TextMuted>
                         {mirror.task !== null ? <CleanupProgress task={mirror.task} text={taskText(mirror.task)}/> : undefined}
@@ -50,7 +50,7 @@ export const MirrorList = (props: { mirrors: MirrorApiJson[] }) => (
     <Container boxSize="full" p="0" maxWidth="8xl">
         <Stack gap="3">
             <Heading size="2xl">Mirrors</Heading>
-            <TextMuted>Your scrobble history copied from Last.fm by import jobs. Exports read from here.</TextMuted>
+            <TextMuted>Your Plays history copied from import jobs. Exports read from here.</TextMuted>
             {props.mirrors.length === 0 ? <TextMuted>No mirrors yet. <ChakraLink asChild><Link to="/jobs/new">Create a job</Link></ChakraLink> to import your history.</TextMuted> : undefined}
             <Box gridColumnGap="2" gridRowGap="2" display="grid" gridTemplateColumns={{mdDown: "repeat(1, minmax(295px, 1fr))", base: "repeat(auto-fill, minmax(295px, 1fr))"}}>
                 {props.mirrors.map(x => <MSErrorBoundary key={x.id}><MirrorSummary mirror={x}/></MSErrorBoundary>)}
@@ -130,7 +130,7 @@ const MirrorCleanup = (props: { mirror: MirrorApiJson }) => {
         onError: (e) => toaster.create({type: 'error', title: 'Could not start the cleanup', description: apiErrorMessage(e)}),
     });
     const rangeValid = scope === 'all' || (from !== '' && to !== '' && !dayjs(from).isAfter(dayjs(to)));
-    const which = scope === 'all' ? 'all scrobbles in this mirror' : 'scrobbles in this mirror played in the range';
+    const which = scope === 'all' ? 'all plays in this mirror' : 'plays in this mirror played in the range';
     return (
         <Stack gap="3">
             <RadioGroup.Root size="sm" value={scope} onValueChange={(d) => setScope(d.value as 'all' | 'range')}>
@@ -147,7 +147,7 @@ const MirrorCleanup = (props: { mirror: MirrorApiJson }) => {
                 pending={isPending}
                 disabledReason={mirror.task !== null ? 'A cleanup is running.' : (!rangeValid ? 'Choose a From date before the To date.' : undefined)}
                 explain={{
-                    compact: `Remove the raw Last.fm data saved with ${which}. The scrobbles stay and can still be exported.`,
+                    compact: `Remove the raw data saved with ${which}. The Plays stay and can still be exported.`,
                     delete: `Delete ${which}. Importing that time again fetches them again.`,
                 }}
                 onConfirm={(action) => mutate(action)}
@@ -173,7 +173,7 @@ const MirrorDelete = (props: { mirror: MirrorApiJson }) => {
     }
     return (
         <Stack gap="1" alignItems="flex-end">
-            <Text textStyle="sm">Delete this mirror and its {mirror.plays.toLocaleString()} scrobbles?</Text>
+            <Text textStyle="sm">Delete this mirror and its {mirror.plays.toLocaleString()} Plays?</Text>
             <HStack>
                 <Button size="sm" variant="subtle" disabled={isPending} onClick={() => setConfirming(false)}>Cancel</Button>
                 <Button size="sm" colorPalette="red" loading={isPending} onClick={() => mutate()}>Delete</Button>
@@ -197,7 +197,7 @@ export const MirrorDetail = (props: { mirror: MirrorApiJson }) => {
                         {mirror.task !== null ? <Stack gap="1"><CleanupProgress task={mirror.task} text={taskText(mirror.task)}/></Stack> : undefined}
                         <DataList.Root orientation="horizontal" size="sm">
                             <DataItem label="Account">{accountText(mirror)}</DataItem>
-                            <DataItem label="Scrobbles">{mirror.plays.toLocaleString()}</DataItem>
+                            <DataItem label="Plays">{mirror.plays.toLocaleString()}</DataItem>
                             <DataItem label="Imported"><RangeList ranges={mirror.coverage} empty="Nothing yet"/></DataItem>
                             {mirror.gaps.length > 0 ? <DataItem label="Not imported"><RangeList ranges={mirror.gaps} empty="-"/></DataItem> : undefined}
                             <DataItem label="Jobs">
