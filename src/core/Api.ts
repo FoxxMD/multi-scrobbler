@@ -238,8 +238,24 @@ export const jobSseEventSchema = z.discriminatedUnion('event', [
 ]).meta({id: 'JobSseEvent'});
 export type JobSseEvent = z.input<typeof jobSseEventSchema>;
 
+/**
+ * Mirror and job play cleanup events sent to /api/events.
+ * Mirror events only go to sessions of the mirror's owner. Client events go to everyone, like other Client events.
+ * */
+export const cleanupSseEventSchema = z.discriminatedUnion('event', [
+    z.object({event: z.literal('mirrorUpdate'), mirrorId: z.int(), data: z.record(z.string(), z.unknown())}).meta({title: 'Mirror Update', description: "Some of a Mirror's data changed. `task: null` with `taskResult` => a cleanup finished"}),
+    z.object({event: z.literal('mirrorDeleted'), mirrorId: z.int(), data: z.object({})}).meta({title: 'Mirror Deleted', description: 'A Mirror was deleted'}),
+    z.object({event: z.literal('playsPurged'), componentId: z.int(), data: z.object({})}).meta({title: 'Plays Purged', description: "Many of a Client's plays were compacted or deleted at once. Reload its play lists"}),
+    z.object({event: z.literal('clientJobPlaysUpdate'), componentId: z.int(), data: z.record(z.string(), z.unknown())}).meta({title: 'Client Job Plays Update', description: "Progress of a cleanup of a Client's job plays. `task: null` with `taskResult` => finished"}),
+]).meta({id: 'CleanupSseEvent'});
+export type CleanupSseEvent = z.input<typeof cleanupSseEventSchema>;
+export const CLEANUP_SSE_EVENTS = ['mirrorUpdate', 'mirrorDeleted', 'playsPurged', 'clientJobPlaysUpdate'] as const;
+
+export const asCleanupSseEvent = (data: unknown): CleanupSseEvent | undefined =>
+    data !== null && typeof data === 'object' && 'event' in data && (CLEANUP_SSE_EVENTS as readonly unknown[]).includes(data.event) ? data as CleanupSseEvent : undefined;
+
 /** SSE event name to event data, for the SSE client */
-export type MsSseEvent = {[K in SseEventName]: Extract<SseEvent, {event: K}>} & {[K in JobSseEvent['event']]: Extract<JobSseEvent, {event: K}>} & {log: LogEvent};
+export type MsSseEvent = {[K in SseEventName]: Extract<SseEvent, {event: K}>} & {[K in JobSseEvent['event']]: Extract<JobSseEvent, {event: K}>} & {[K in CleanupSseEvent['event']]: Extract<CleanupSseEvent, {event: K}>} & {log: LogEvent};
 
 export const asJobSseEvent = (data: unknown): JobSseEvent | undefined =>
     data !== null && typeof data === 'object' && 'event' in data && 'jobId' in data ? data as JobSseEvent : undefined;

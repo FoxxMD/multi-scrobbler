@@ -88,7 +88,67 @@ export interface JobApiJson {
     createdAt: string
     updatedAt: string
     /** exports are keyed by target id */
-    runtime: { import: JobProcessRuntimeJson, exports: Record<string, JobProcessRuntimeJson> }
+    runtime: {
+        import: JobProcessRuntimeJson
+        exports: Record<string, JobProcessRuntimeJson>
+        /** a cleanup of the job's scrobbles in its Clients is running */
+        cleanup?: JobCleanupProgressJson
+        /** the job is being deleted */
+        deleting?: boolean
+    }
+}
+
+export const CLEANUP_ACTIONS = ['compact', 'delete'] as const;
+export type CleanupAction = typeof CLEANUP_ACTIONS[number];
+
+/** Progress of a running cleanup */
+export interface JobCleanupProgressJson {
+    action: CleanupAction
+    /** the Client being cleaned up right now */
+    componentId?: number
+    done: number
+    total: number
+}
+
+/** A cleanup or delete running on a mirror */
+export interface MirrorTaskJson {
+    kind: 'cleanup' | 'delete'
+    action?: CleanupAction
+    /** inclusive unix ms. undefined => the whole mirror */
+    range?: [number, number]
+    done: number
+    total: number
+    startedAt: string
+}
+
+export interface MirrorApiJson {
+    id: number
+    name: string
+    service: string
+    account: string | null
+    /** completely mirrored time ranges, inclusive unix ms */
+    coverage: [number, number][]
+    /** holes between the first and last covered time */
+    gaps: [number, number][]
+    plays: number
+    jobs: { id: number, name: string }[]
+    task: MirrorTaskJson | null
+    createdAt: string
+    updatedAt: string
+}
+
+/** Plays import jobs created in a Client */
+export interface ClientJobPlaysSummaryJson {
+    total: number
+    /** still in the Client's queue. Client-wide cleanups skip these */
+    queued: number
+    /** of jobs that were deleted */
+    orphaned: number
+    /** raw data already removed */
+    compacted: number
+    /** Jobs exporting to the Client right now. A cleanup has to wait until they stop */
+    exportingJobs: { id: number, name: string }[]
+    task: JobCleanupProgressJson | null
 }
 
 export interface JobOptionsApiJson {
@@ -156,6 +216,27 @@ export const jobCreateSchema = z.object({
     start: z.boolean().default(false).meta({description: 'Start the import and all exports once created'}),
 }).meta({title: 'Create Job'});
 export type JobCreate = z.input<typeof jobCreateSchema>;
+
+export const cleanupActionSchema = z.enum(CLEANUP_ACTIONS).meta({description: 'compact removes raw data and keeps the scrobbles, delete removes the scrobbles'});
+
+export const cleanupBodySchema = z.object({
+    action: cleanupActionSchema,
+}).meta({title: 'Cleanup'});
+
+export const mirrorCleanupBodySchema = z.object({
+    action: cleanupActionSchema,
+    range: z.object({from: z.iso.datetime({offset: true}), to: z.iso.datetime({offset: true})}).optional().meta({description: 'Only scrobbles played in this range. Omit for the whole mirror'}),
+}).meta({title: 'Mirror Cleanup'});
+
+export const mirrorUpdateSchema = z.object({
+    name: z.string().trim().min(1).max(200),
+}).meta({title: 'Update Mirror'});
+
+const keepOrCleanup = z.enum(['keep', ...CLEANUP_ACTIONS]).default('keep');
+export const jobDeleteQuerySchema = z.object({
+    historical: keepOrCleanup.meta({description: "What to do with the job's mirror data in its range"}),
+    scrobbles: keepOrCleanup.meta({description: 'What to do with the scrobbles the job created in its Clients'}),
+});
 
 export const jobUpdateSchema = z.object({
     name: z.string().trim().min(1).max(100).optional(),

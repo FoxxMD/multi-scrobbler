@@ -13,6 +13,8 @@ import { LockRegistry } from "./LockRegistry.ts";
 import { type CleanupAction, MirrorService, type StartedTask } from "./MirrorService.ts";
 import { JobPlayCleanup, type JobPlayCleanupProgress, type JobPlayCleanupResult } from "./JobPlayCleanup.ts";
 import { randomUUID } from "node:crypto";
+import { DrizzlePlayRepository } from "../common/database/drizzle/repositories/PlayRepository.ts";
+import type { ClientJobPlaysSummaryJson } from "../../core/Job.ts";
 import { LastfmFileImportProvider } from "./lastfm/LastfmFileImportProvider.ts";
 import { LastfmApiImportProvider, type LastfmImportSource } from "./lastfm/LastfmApiImportProvider.ts";
 import LastfmApiClient from "../common/vendor/LastfmApiClient.ts";
@@ -336,6 +338,21 @@ export class JobManager {
             throw new Error(`Job ${jobId} does not exist`);
         }
         return this.mirrors.startCleanup(job.mirrorId, {action, range: [job.rangeFrom?.valueOf() ?? 0, job.rangeTo.valueOf()]});
+    }
+
+    /** Counts of a Client's job plays, and what blocks or runs a cleanup of them */
+    clientJobPlaysSummary = async (componentId: number): Promise<ClientJobPlaysSummaryJson> => {
+        const repo = new DrizzlePlayRepository(this.db, {logger: this.logger, componentId});
+        const total = await repo.countJobPlays({componentId});
+        const exporting = (await this.targetRepo.findByComponent(componentId)).filter(t => this.runners.get(t.jobId)?.exportsRunning.includes(t.id) === true);
+        return {
+            total,
+            queued: await repo.countJobPlays({componentId, inQueue: true}),
+            orphaned: await repo.countJobPlays({componentId, orphaned: true}),
+            compacted: total - await repo.countJobPlays({componentId, uncompacted: true}),
+            exportingJobs: await Promise.all(exporting.map(async t => ({id: t.jobId, name: (await this.jobRepo.getById(t.jobId))?.name ?? String(t.jobId)}))),
+            task: this.clientCleanups.get(componentId) ?? null,
+        };
     }
 
     getClientCleanup(componentId: number): JobPlayCleanupProgress | undefined {

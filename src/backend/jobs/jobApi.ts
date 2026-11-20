@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import { serializeError } from "serialize-error";
-import { deriveJobStatus, type JobApiJson, type JobImportOriginJson, type JobTargetApiJson } from "../../core/Job.ts";
+import { deriveJobStatus, type JobApiJson, type JobImportOriginJson, type JobTargetApiJson, type MirrorApiJson } from "../../core/Job.ts";
+import type { MirrorDetails } from "./MirrorService.ts";
 import type { JobSelect } from "../common/database/drizzle/repositories/JobRepository.ts";
 import type { PlayMirrorSelect } from "../common/database/drizzle/repositories/MirrorRepository.ts";
 import type { JobTargetSelect } from "../common/database/drizzle/repositories/JobTargetRepository.ts";
@@ -76,4 +77,18 @@ export const toJobApiJson = (job: JobSelect, mirror: PlayMirrorSelect, opts: {co
     createdAt: job.createdAt.toISOString(),
     updatedAt: job.updatedAt.toISOString(),
     runtime: {import: {...(opts.runtime?.import ?? {})}, exports: {...(opts.runtime?.exports ?? {})}},
+});
+
+export const toMirrorApiJson = (details: MirrorDetails): MirrorApiJson => ({
+    id: details.mirror.id,
+    name: details.mirror.name,
+    service: details.mirror.service,
+    account: details.mirror.account,
+    coverage: details.mirror.coverage,
+    gaps: details.gaps,
+    plays: details.plays,
+    jobs: details.jobs.map(x => ({id: x.id, name: x.name})),
+    task: details.task ?? null,
+    createdAt: details.mirror.createdAt.toISOString(),
+    updatedAt: details.mirror.updatedAt.toISOString(),
 });

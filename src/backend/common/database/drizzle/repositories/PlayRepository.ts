@@ -58,6 +58,8 @@ export interface JobPlayFilter {
     inQueue?: boolean
     /** only plays not fully compacted (input and transform) */
     uncompacted?: boolean
+    /** only plays of deleted jobs. Ignored with jobId */
+    orphaned?: boolean
 }
 
 export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
@@ -420,10 +422,12 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
     }
 
     protected jobPlayConditions = (args: JobPlayFilter) => {
-        const {componentId, jobId, inQueue, uncompacted = false} = args;
+        const {componentId, jobId, inQueue, uncompacted = false, orphaned = false} = args;
         const conditions: SQL[] = [eq(plays.componentId, componentId)];
         if (jobId !== undefined) {
             conditions.push(eq(plays.jobId, jobId));
+        } else if (orphaned) {
+            conditions.push(isNull(plays.jobId), sql`json_extract(${plays.play}, '$.meta.jobId') IS NOT NULL`);
         } else {
             // job plays keep meta.jobId after their job is deleted (and plays.jobId is nulled)
             conditions.push(or(isNotNull(plays.jobId), sql`json_extract(${plays.play}, '$.meta.jobId') IS NOT NULL`)!);

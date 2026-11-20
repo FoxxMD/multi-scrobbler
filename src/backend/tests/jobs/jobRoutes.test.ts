@@ -21,7 +21,8 @@ import { MirrorRepository } from '../../common/database/drizzle/repositories/Mir
 import { users } from '../../common/database/drizzle/schema/auth.ts';
 import { components } from '../../common/database/drizzle/schema/schema.ts';
 import { fixtureCreateComponent } from '../utils/databaseFixtures.ts';
-import type { JobApiJson, JobOptionsApiJson } from '../../../core/Job.ts';
+import type { JobApiJson, JobOptionsApiJson, MirrorApiJson } from '../../../core/Job.ts';
+import { mirrorLockKey } from '../../jobs/JobRunner.ts';
 import type { PlayTransformPartsConfigOptions } from '../../../core/Transform.ts';
 
 const fixture = (name: string) => path.resolve(projectRootDir, 'src/backend/tests/jobs/fixtures', name);
@@ -420,4 +421,108 @@ describe('Job API', function () {
             expect(stopped.body.targets[0].status).eq('stopped');
         });
     });
+
+    describe('Cleanup', function () {
+
+        const cleanupApp = async (tmpPath: string) => {
+            await copyFile(fixture('ghan.json'), path.join(tmpPath, 'export.json'));
+            const maloja = fakeClient(7, 'maloja');
+            const built = await buildApp(tmpPath, {7: maloja}, {clients: [maloja]});
+            await built.db.insert(components).values({...fixtureCreateComponent({mode: 'client', type: 'maloja', uid: 'maloja'}), id: 7});
+            const created = (await request(built.app).post('/api/jobs').send({name: 'imp', importFrom: {existingFile: 'export.json'}, mirror: {new: {name: 'm'}}, start: true})).body as JobApiJson;
+            const job = await waitForImport(built.app, created.id);
+            return {...built, job};
+        }
+        const until = async (fn: () => Promise<boolean>) => {
+            for (let i = 0; i < 100; i++) {
+                if (await fn()) {
+                    return;
+                }
+                await new Promise(r => setTimeout(r, 20));
+            }
+            throw new Error('timed out');
+        }
+        const mirrorIdle = (app: Express, id: number) => until(async () => (await request(app).get(`/api/mirrors/${id}`)).body.task === null);
+
+        it('lists, renames and cleans up mirrors by range', async function () {
+            await using tmp = await createTmpDir('cleanupMirror');
+            const {app, job} = await cleanupApp(tmp.path);
+            const list = (await request(app).get('/api/mirrors')).body as MirrorApiJson[];
+            expect(list.map(x => x.id)).eql([job.mirror.id]);
+            expect(list[0].plays).eq(job.imported);
+            expect(list[0].jobs).eql([{id: job.id, name: 'imp'}]);
+
+            const renamed = await request(app).patch(`/api/mirrors/${job.mirror.id}`).send({name: 'renamed'});
+            expect(renamed.body.name).eq('renamed');
+
+            // everything, in a range that covers it all
+            const res = await request(app).post(`/api/mirrors/${job.mirror.id}/cleanup`).send({action: 'delete', range: {from: '2000-01-01T00:00:00Z', to: dayjs().toISOString()}});
+            expect(res.status, JSON.stringify(res.body)).eq(202);
+            await mirrorIdle(app, job.mirror.id);
+            const after = (await request(app).get(`/api/mirrors/${job.mirror.id}`)).body as MirrorApiJson;
+            expect(after.plays).eq(0);
+
+            expect((await request(app).post(`/api/mirrors/${job.mirror.id}/cleanup`).send({action: 'delete', range: {from: dayjs().toISOString(), to: '2000-01-01T00:00:00Z'}})).status).eq(400);
+            expect((await request(app).post(`/api/mirrors/${job.mirror.id}/cleanup`).send({action: 'shred'})).status).eq(400);
+        });
+
+        it('deletes a mirror only once no job uses it', async function () {
+            await using tmp = await createTmpDir('cleanupMirrorDelete');
+            const {app, job} = await cleanupApp(tmp.path);
+            const refused = await request(app).delete(`/api/mirrors/${job.mirror.id}`);
+            expect(refused.status).eq(409);
+            expect(refused.body.error).to.include("'imp'");
+
+            expect((await request(app).delete(`/api/jobs/${job.id}`)).status).eq(204);
+            expect((await request(app).delete(`/api/mirrors/${job.mirror.id}`)).status).eq(202);
+            await until(async () => (await request(app).get(`/api/mirrors/${job.mirror.id}`)).status === 404);
+        });
+
+        it("hides other users' mirrors", async function () {
+            await using tmp = await createTmpDir('cleanupMirrorOther');
+            const {app, db} = await buildApp(tmp.path);
+            const other = (await db.insert(users).values({id: `other-${Date.now()}`, name: 'other', email: `other-${Date.now()}@x.local`, emailVerified: false, createdAt: new Date(), updatedAt: new Date()}).returning())[0];
+            const mirror = await new MirrorRepository(db).findOrCreate({userId: other.id, service: 'lastfm', account: null, name: 'other'});
+            expect((await request(app).get('/api/mirrors')).body).eql([]);
+            expect((await request(app).get(`/api/mirrors/${mirror.id}`)).status).eq(404);
+            expect((await request(app).patch(`/api/mirrors/${mirror.id}`).send({name: 'x'})).status).eq(404);
+            expect((await request(app).post(`/api/mirrors/${mirror.id}/cleanup`).send({action: 'delete'})).status).eq(404);
+            expect((await request(app).delete(`/api/mirrors/${mirror.id}`)).status).eq(404);
+        });
+
+        it("cleans up a job's mirror data and scrobbles, and deletes it with cleanup", async function () {
+            await using tmp = await createTmpDir('cleanupJob');
+            const {app, job} = await cleanupApp(tmp.path);
+            expect((await request(app).post(`/api/jobs/${job.id}/cleanup/historical`).send({action: 'compact'})).status).eq(202);
+            await mirrorIdle(app, job.mirror.id);
+            expect((await request(app).post(`/api/jobs/${job.id}/cleanup/scrobbles`).send({action: 'delete'})).status).eq(202);
+            await until(async () => (await request(app).get(`/api/jobs/${job.id}`)).body.runtime.cleanup === undefined);
+
+            expect((await request(app).delete(`/api/jobs/${job.id}?historical=nuke`)).status).eq(400);
+            expect((await request(app).delete(`/api/jobs/${job.id}?historical=delete&scrobbles=delete`)).status).eq(202);
+            await until(async () => (await request(app).get(`/api/jobs/${job.id}`)).status === 404);
+            expect(((await request(app).get(`/api/mirrors/${job.mirror.id}`)).body as MirrorApiJson).plays).eq(0);
+        });
+
+        it('refuses a new job on a mirror being cleaned up', async function () {
+            await using tmp = await createTmpDir('cleanupJobCreate');
+            const {app, jobs, job} = await cleanupApp(tmp.path);
+            jobs.locks.tryAcquire(mirrorLockKey(job.mirror.id), 'test');
+            const res = await request(app).post('/api/jobs').send({name: 'again', importFrom: {mirrorId: job.mirror.id}, targets: [7]});
+            expect(res.status).eq(409);
+            expect((await request(app).get('/api/jobs')).body).length(1);
+        });
+
+        it("summarizes and cleans up a Client's job plays", async function () {
+            await using tmp = await createTmpDir('cleanupClient');
+            const {app} = await cleanupApp(tmp.path);
+            const summary = await request(app).get('/api/components/7/job-plays/summary');
+            expect(summary.status).eq(200);
+            expect(summary.body).eql({total: 0, queued: 0, orphaned: 0, compacted: 0, exportingJobs: [], task: null});
+            expect((await request(app).post('/api/components/7/cleanup/job-plays').send({action: 'delete'})).status).eq(202);
+            expect((await request(app).get('/api/components/99/job-plays/summary')).status).eq(404);
+            expect((await request(app).post('/api/components/99/cleanup/job-plays').send({action: 'delete'})).status).eq(404);
+        });
+    });
 });
+

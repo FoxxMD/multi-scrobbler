@@ -57,10 +57,19 @@ describe('Job SSE events', function () {
 
             jobs.emitter.emit('jobUpdate', {jobId: 7, userId: 'someone-else', data: {name: 'not mine'}});
             jobs.emitter.emit('jobUpdate', {jobId: 8, userId: owner.id, data: {importStartedAt: dayjs('2014-01-03T04:36:11Z'), importError: new Error('boom')}});
+            jobs.emitter.emit('mirrorUpdate', {mirrorId: 3, userId: 'someone-else', data: {name: 'not my mirror'}});
+            jobs.emitter.emit('mirrorUpdate', {mirrorId: 4, userId: owner.id, data: {name: 'my mirror'}});
+            jobs.emitter.emit('mirrorDeleted', {mirrorId: 5, userId: owner.id});
+            jobs.emitter.emit('playsPurged', {componentId: 6});
+            jobs.emitter.emit('clientJobPlaysUpdate', {componentId: 6, data: {task: null}});
             jobs.emitter.emit('jobDeleted', {jobId: 9, userId: owner.id});
 
             await waitFor(() => received.includes('jobDeleted'), 'job events');
             expect(received).to.not.include('not mine');
+            expect(received).to.not.include('not my mirror');
+            for (const expected of ['"event":"mirrorUpdate","mirrorId":4', '"event":"mirrorDeleted","mirrorId":5', '"event":"playsPurged","componentId":6', '"event":"clientJobPlaysUpdate","componentId":6']) {
+                expect(received).to.include(expected);
+            }
             const update = received.split('\n').find(l => l.startsWith('data:') && l.includes('"jobId":8'))!;
             const data = JSON.parse(update.slice(5));
             expect(data.event).eq('jobUpdate');

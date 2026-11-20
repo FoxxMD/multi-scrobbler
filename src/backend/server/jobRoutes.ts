@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { lstat, mkdir, readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import * as z from "zod";
-import { jobCreateSchema, jobUpdateSchema, type JobApiJson, type JobOptionsApiJson } from "../../core/Job.ts";
+import { cleanupBodySchema, jobCreateSchema, jobDeleteQuerySchema, jobUpdateSchema, type JobApiJson, type JobOptionsApiJson } from "../../core/Job.ts";
 import { JobRepository, type JobSelect } from "../common/database/drizzle/repositories/JobRepository.ts";
 import { runTransaction } from "../common/database/drizzle/drizzleUtils.ts";
 import { MirrorRepository, type PlayMirrorSelect } from "../common/database/drizzle/repositories/MirrorRepository.ts";
@@ -17,7 +17,9 @@ import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import { toJobApiJson } from "../jobs/jobApi.ts";
 import { componentHookStages, isLastfmImportSource, JobConfigError, jobUploadsDir, type JobManager } from "../jobs/JobManager.ts";
-import { JobConflictError } from "../jobs/JobRunner.ts";
+import { JobConflictError, mirrorLockKey } from "../jobs/JobRunner.ts";
+import { mergeStatsMax } from "../jobs/JobPlayCleanup.ts";
+import type { StartedTask } from "../jobs/MirrorService.ts";
 import { detectLastfmFileFormat, UnsupportedFileError } from "../jobs/lastfm/lastfmFiles.ts";
 
 type Router = ReturnType<typeof createTypedRouter>;
@@ -60,8 +62,9 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
         const {targetRepo} = repos();
         const stored = preloaded.targets ?? await targetRepo.findByJob(job.id);
         // a completed target keeps its snapshot, others show what the client has now (IE queued plays draining while paused)
+        // merged with their snapshot so plays removed by a cleanup still count
         const live = stored.some(x => x.status !== 'completed') ? await targetRepo.playStats(job.id) : new Map();
-        const targets = stored.map(t => t.status === 'completed' ? t : {...t, stats: live.get(t.componentId) ?? {}});
+        const targets = stored.map(t => t.status === 'completed' ? t : {...t, stats: mergeStatsMax(t.stats, live.get(t.componentId) ?? {})});
         const mirrorPlaysInRange = await mirrorRepo.countInRange(job.mirrorId, [job.rangeFrom?.valueOf() ?? 0, job.rangeTo.valueOf()]);
         return toJobApiJson(job, mirror!, {componentName: componentName(job.componentFromId), runtime: jobs.getRuntime(job.id), targets, resolveClient: exportClient, mirrorPlaysInRange});
     }
@@ -330,10 +333,14 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
             }
 
             const job = await runTransaction(jobs.db, async () => {
+                const mirror = await resolveMirror();
+                if (jobs.locks.holder(mirrorLockKey(mirror.id)) !== undefined) {
+                    throw new JobConflictError(`Mirror '${mirror.name}' is being cleaned up or deleted. Try again when it finishes`);
+                }
                 const created = await jobRepo.create({
                     userId,
                     name: payload.name,
-                    mirrorId: (await resolveMirror()).id,
+                    mirrorId: mirror.id,
                     componentFromId,
                     importFile,
                     rangeFrom,
@@ -383,14 +390,62 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
         return res.json(await asApi(updated, mirrorRepo));
     });
 
-    router.delete('/jobs/:id', {docs: {operationId: 'delete-job'}, paramsSchema: idParams, tags: ['Jobs'], summary: 'Delete Job', description: 'Stops and deletes the job. Client plays it created are kept. An uploaded export file is deleted, a file you placed in the imports folder is kept.'}, async (req, res) => {
+    router.delete('/jobs/:id', {
+        docs: {operationId: 'delete-job'},
+        paramsSchema: idParams,
+        querySchema: jobDeleteQuerySchema,
+        tags: ['Jobs'],
+        summary: 'Delete Job',
+        description: 'Stops and deletes the job. An uploaded export file is deleted, a file you placed in the imports folder is kept. With only `keep` the job is deleted right away (204). Otherwise the cleanups run in the background (202) and `jobDeleted` is sent when done, or a `jobUpdate` with `deleteError`.'
+    }, async (req, res) => {
         const job = await userJob(req, res, req.params.id);
         if (job === undefined) {
             return;
         }
-        await jobs.deleteJob(job.id);
-        return res.status(204).send();
+        const {historical, scrobbles} = req.query;
+        let started: StartedTask;
+        try {
+            started = await jobs.deleteJobWithCleanup(job.id, {historical, scrobbles});
+        } catch (e) {
+            respondError(res, e);
+            return;
+        }
+        if (historical === 'keep' && scrobbles === 'keep') {
+            // nothing to clean up, so it's quick. Wait so the job is gone when the response arrives
+            const {error} = await started.done;
+            if (error !== undefined) {
+                return res.status(500).json({error});
+            }
+            return res.status(204).send();
+        }
+        return res.status(202).json({});
     });
+
+    for (const kind of ['historical', 'scrobbles'] as const) {
+        router.post(`/jobs/:id/cleanup/${kind}`, {
+            docs: {operationId: `cleanup-job-${kind}`},
+            paramsSchema: idParams,
+            middleware: [jsonParser],
+            bodySchema: cleanupBodySchema,
+            tags: ['Jobs'],
+            summary: kind === 'historical' ? 'Clean Up Job Mirror Data' : 'Clean Up Job Scrobbles',
+            description: kind === 'historical'
+                ? "Compact or delete the mirror's scrobbles in the job's range, in the background. 409 while any job using the mirror is importing or exporting"
+                : 'Compact or delete the scrobbles the job created in its Clients, in the background. Queued ones are removed from the queue first. 409 while any of its exports runs',
+        }, async (req, res) => {
+            const job = await userJob(req, res, req.params.id);
+            if (job === undefined) {
+                return;
+            }
+            try {
+                await (kind === 'historical' ? jobs.cleanupJobHistorical(job.id, req.body.action) : jobs.cleanupJobScrobbles(job.id, req.body.action));
+            } catch (e) {
+                respondError(res, e);
+                return;
+            }
+            return res.status(202).json({});
+        });
+    }
 
     type ControlReq = {params: {id: number, targetId?: number}, app: {locals: unknown}, auth?: {userId: string}};
     type ControlRes = {status: (n: number) => {json: (b: unknown) => unknown}, json: (b: unknown) => unknown};
