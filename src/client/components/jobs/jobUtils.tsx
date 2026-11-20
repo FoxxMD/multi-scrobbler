@@ -8,6 +8,7 @@ import { deriveJobStatus, type JobApiJson, type JobImportOriginJson, type JobPro
 import { capitalize } from "../../../core/StringUtils";
 import { tanQueries } from "../../queries";
 import { shortTodayAwareFormat } from "../../utils";
+import { toaster } from "../Toaster";
 
 const statusPalette: Record<JobProcessStatus, BadgeProps['colorPalette']> = {
     idle: 'gray',
@@ -129,6 +130,9 @@ export const useJobEvents = () => {
         }
         const listKey = tanQueries.jobs.list().queryKey;
         const detailKey = tanQueries.jobs.detail(event.jobId).queryKey;
+        if (typeof event.data.deleteError === 'string') {
+            toaster.create({type: 'error', title: 'Deleting the job failed', description: event.data.deleteError});
+        }
         if (event.event === 'jobDeleted') {
             queryClient.setQueryData<JobApiJson[]>(listKey, (old) => old?.filter(x => x.id !== event.jobId));
             queryClient.removeQueries({queryKey: detailKey});

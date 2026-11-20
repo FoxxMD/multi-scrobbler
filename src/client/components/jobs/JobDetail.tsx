@@ -1,10 +1,14 @@
-import { Box, Button, Card, Link as ChakraLink, Code, Collapsible, Container, DataList, Editable, Flex, Heading, HStack, IconButton, NumberInput, Separator, SkeletonText, Stack, Text } from '@chakra-ui/react';
+import { Box, Button, Card, Link as ChakraLink, RadioGroup, Code, Collapsible, Container, DataList, Editable, Flex, Heading, HStack, IconButton, NumberInput, Separator, SkeletonText, Stack, Text } from '@chakra-ui/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import ky from 'ky';
 import { useState, type ReactNode } from 'react';
 import { LuCheck, LuPencil, LuX } from 'react-icons/lu';
 import { Link, useNavigate, useParams } from "react-router";
-import { EXPORT_QUEUE_LIMIT_MAX, type JobApiJson, type JobTargetApiJson } from "../../../core/Job";
+import { type CleanupAction, EXPORT_QUEUE_LIMIT_MAX, type JobApiJson, type JobTargetApiJson } from "../../../core/Job";
+import { capitalize } from "../../../core/StringUtils";
+import { TextMuted } from "../TextMuted";
+import { CleanupProgress, taskText, useMirrorEvents } from "../mirrors/mirrorUtils";
+import { CleanupButtons } from "./CleanupButtons";
 import { tanQueries } from "../../queries";
 import { baseUrl } from "../../utils";
 import { ErrorAlert } from "../ErrorAlert";
@@ -85,31 +89,119 @@ export const JobName = (props: { job: JobApiJson }) => {
     );
 }
 
+type KeepOrCleanup = 'keep' | CleanupAction;
+
+const KeepChoice = (props: { label: string, help: string, value: KeepOrCleanup, onChange: (v: KeepOrCleanup) => void }) => (
+    <Stack gap="1">
+        <Text textStyle="sm" fontWeight="semibold">{props.label}</Text>
+        <TextMuted textStyle="xs">{props.help}</TextMuted>
+        <RadioGroup.Root size="sm" value={props.value} onValueChange={(d) => props.onChange(d.value as KeepOrCleanup)}>
+            <HStack gap="4">
+                {(['keep', 'compact', 'delete'] as const).map(x => <RadioGroup.Item key={x} value={x}>
+                    <RadioGroup.ItemHiddenInput/><RadioGroup.ItemIndicator/><RadioGroup.ItemText>{capitalize(x)}</RadioGroup.ItemText>
+                </RadioGroup.Item>)}
+            </HStack>
+        </RadioGroup.Root>
+    </Stack>
+);
+
 export const JobDelete = (props: { job: JobApiJson }) => {
     const {job} = props;
     const [confirming, setConfirming] = useState(false);
+    const [historical, setHistorical] = useState<KeepOrCleanup>('keep');
+    const [scrobbles, setScrobbles] = useState<KeepOrCleanup>('keep');
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const {mutate, isPending} = useMutation({
-        mutationFn: () => ky.delete(`jobs/${job.id}`, {baseUrl}),
-        onSuccess: () => {
-            queryClient.setQueryData<JobApiJson[]>(tanQueries.jobs.list().queryKey, (old) => old?.filter(x => x.id !== job.id));
+        mutationFn: () => ky.delete(`jobs/${job.id}`, {baseUrl, searchParams: {historical, scrobbles}}),
+        onSuccess: (res) => {
+            if (res.status === 204) {
+                queryClient.setQueryData<JobApiJson[]>(tanQueries.jobs.list().queryKey, (old) => old?.filter(x => x.id !== job.id));
+                queryClient.removeQueries({queryKey: tanQueries.jobs.detail(job.id).queryKey});
+            } else {
+                toaster.create({type: 'info', title: `Deleting ${job.name}`, description: 'The job disappears once its data is cleaned up.'});
+            }
             navigate('/jobs');
-            queryClient.removeQueries({queryKey: tanQueries.jobs.detail(job.id).queryKey});
         },
         onError: (e) => toaster.create({type: 'error', title: 'Delete failed', description: apiErrorMessage(e)}),
     });
+    if (job.runtime.deleting === true) {
+        return <Text textStyle="sm" color="fg.warning">Deleting...</Text>;
+    }
     if (!confirming) {
         return <Button size="sm" variant="subtle" colorPalette="red" onClick={() => setConfirming(true)}>Delete</Button>;
     }
     return (
-        <Stack gap="1" alignItems="flex-end">
-            <Text textStyle="sm">Delete this job? Scrobbles already imported into the mirror, and scrobbles already sent to Clients, are kept.{job.importFrom.kind === 'file' ? ' An uploaded file is deleted.' : ''}</Text>
-            <HStack>
-                <Button size="sm" variant="subtle" disabled={isPending} onClick={() => setConfirming(false)}>Cancel</Button>
-                <Button size="sm" colorPalette="red" loading={isPending} onClick={() => mutate()}>Delete</Button>
-            </HStack>
-        </Stack>
+        <Card.Root variant="outline" size="sm" maxWidth="md">
+            <Card.Body>
+                <Stack gap="3">
+                    <Text textStyle="sm">Delete this job? It is stopped first.{job.importFrom.kind === 'file' ? ' An uploaded file is deleted.' : ''}</Text>
+                    <KeepChoice label="Mirror data" help="Scrobbles in the mirror played in this job's range. Other jobs may use them too." value={historical} onChange={setHistorical}/>
+                    {job.targets.length > 0 ? <KeepChoice label="Scrobble records in Clients" help="What the Clients recorded for this job's scrobbles. Scrobbles already sent stay on the services." value={scrobbles} onChange={setScrobbles}/> : undefined}
+                    <HStack justify="flex-end">
+                        <Button size="sm" variant="subtle" disabled={isPending} onClick={() => setConfirming(false)}>Cancel</Button>
+                        <Button size="sm" colorPalette="red" loading={isPending} onClick={() => mutate()}>Delete</Button>
+                    </HStack>
+                </Stack>
+            </Card.Body>
+        </Card.Root>
+    );
+}
+
+const CleanupRow = (props: { title: string, description: ReactNode, children: ReactNode }) => (
+    <Stack gap="2">
+        <Text fontWeight="semibold">{props.title}</Text>
+        <TextMuted textStyle="sm">{props.description}</TextMuted>
+        {props.children}
+    </Stack>
+);
+
+export const CleanupPanel = (props: { job: JobApiJson }) => {
+    const {job} = props;
+    const mirror = useQuery(tanQueries.mirrors.detail(job.mirror.id));
+    const mirrorTask = mirror.data?.task ?? null;
+    const historical = useMutation({
+        mutationFn: (action: CleanupAction) => ky.post(`jobs/${job.id}/cleanup/historical`, {baseUrl, json: {action}}),
+        onSuccess: () => mirror.refetch(),
+        onError: (e) => toaster.create({type: 'error', title: 'Could not clean up mirror data', description: apiErrorMessage(e)}),
+    });
+    const scrobbles = useMutation({
+        mutationFn: (action: CleanupAction) => ky.post(`jobs/${job.id}/cleanup/scrobbles`, {baseUrl, json: {action}}),
+        onError: (e) => toaster.create({type: 'error', title: 'Could not clean up scrobble records', description: apiErrorMessage(e)}),
+    });
+    const cleanup = job.runtime.cleanup;
+    const exporting = job.targets.some(x => x.status === 'running');
+    const busy = job.status === 'running' ? 'Stop the job to clean up.' : undefined;
+    return (
+        <Card.Root variant="subtle">
+            <Card.Header><Heading size="lg">Clean Up</Heading></Card.Header>
+            <Card.Body>
+                <Stack gap="5">
+                    <CleanupRow title="Mirror data" description={<>The {job.mirrorPlaysInRange.toLocaleString()} scrobbles in <ChakraLink asChild><Link to={`/mirrors/${job.mirror.id}`}>{job.mirror.name}</Link></ChakraLink> played in this job's range. Other jobs using the mirror may need them.</>}>
+                        {mirrorTask !== null ? <CleanupProgress task={mirrorTask} text={taskText(mirrorTask)}/> : <CleanupButtons
+                            pending={historical.isPending}
+                            disabledReason={busy}
+                            explain={{
+                                compact: "Remove the raw Last.fm data saved with these scrobbles. They stay in the mirror and can still be exported.",
+                                delete: "Delete these scrobbles from the mirror. Importing this range again fetches them again.",
+                            }}
+                            onConfirm={(a) => historical.mutate(a)}
+                        />}
+                    </CleanupRow>
+                    {job.targets.length > 0 ? <CleanupRow title="Scrobble records in Clients" description="What the Clients recorded for the scrobbles this job sent them, shown in their activity lists. Scrobbles already sent stay on the services.">
+                        {cleanup !== undefined ? <CleanupProgress task={cleanup} text={`${cleanup.action === 'delete' ? 'Deleting' : 'Compacting'}: ${cleanup.done.toLocaleString()} of ${cleanup.total.toLocaleString()}`}/> : <CleanupButtons
+                            pending={scrobbles.isPending}
+                            disabledReason={exporting ? 'Stop the exports to clean up.' : undefined}
+                            explain={{
+                                compact: "Remove the raw data and transform details saved with these records. The records stay.",
+                                delete: "Delete these records from the Clients. Scrobbles still waiting in a Client's queue are removed from it and won't be sent.",
+                            }}
+                            onConfirm={(a) => scrobbles.mutate(a)}
+                        />}
+                    </CleanupRow> : undefined}
+                </Stack>
+            </Card.Body>
+        </Card.Root>
     );
 }
 
@@ -311,14 +403,17 @@ export const JobDetail = (props: { job: JobApiJson }) => {
                     <JobDelete job={job}/>
                 </HStack>
             </Flex>
+            {job.runtime.deleting === true ? <Text color="fg.warning">This job is being deleted.</Text> : undefined}
             <ImportPanel job={job}/>
             {job.targets.length > 0 ? <ExportPanel job={job}/> : undefined}
+            <CleanupPanel job={job}/>
         </Stack>
     );
 }
 
 export const JobDetailFetchable = (props: { jobId: number }) => {
     useJobEvents();
+    useMirrorEvents();
     const { isPending, isError, data, error } = useQuery(tanQueries.jobs.detail(props.jobId));
     if (isPending) {
         return <SkeletonText noOfLines={4}/>;

@@ -30,6 +30,7 @@ export const JobSummary = (props: { job: JobApiJson }) => {
                             <ImportProgressBar job={job}/>
                             <Text textStyle="sm">{job.imported.toLocaleString()} new of {job.importFetched.toLocaleString()} fetched{job.importTotal !== null ? ` (${job.importTotal.toLocaleString()} total)` : ''}</Text>
                         </> : undefined}
+                        {job.runtime.deleting === true ? <Text textStyle="sm" color="fg.warning">Deleting...</Text> : undefined}
                         {waiting !== undefined ? <Text textStyle="sm" color="fg.warning">Waiting: {waiting}</Text> : undefined}
                         {job.targets.length > 0 ? <Wrap gap="2" alignItems="center">
                             <TextMuted textStyle="sm">Export:</TextMuted>
