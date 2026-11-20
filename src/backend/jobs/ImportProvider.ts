@@ -8,6 +8,9 @@ export interface ImportRecord {
     /**
      * Dedupe key built from raw upstream fields, unique within an upstream account.
      * Stored as plays_historical.uid prefixed with the mirror id.
+     *
+     * New providers prefix it with their origin (IE `lz:...`) so keys of different origins never collide in a mixed mirror.
+     * The Last.fm schemes predate this and keep their unprefixed keys.
      * */
     key: string
 }
@@ -32,6 +35,11 @@ export interface ImportFetchArgs {
 
 export interface ImportProvider {
     readonly kind: string
+    /**
+     * Dedupe key scheme of its records (IE lastfm). Providers that build the same keys for the same scrobbles share one,
+     * like the Last.fm API and ghan.nl files. Stored on mirror rows and coverage segments.
+     * */
+    readonly origin: string
     /**
      * true => fetches by time range (API). The import loop computes gaps from mirror coverage and asks for each.
      * false => streams everything it has (files) and reports coverage on its final batch.

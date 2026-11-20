@@ -16,6 +16,7 @@ export const FILE_BATCH_SIZE = 500;
 export class LastfmFileImportProvider implements ImportProvider {
     readonly kind = 'lastfm-file';
     readonly gapDriven = false;
+    readonly origin: string;
 
     protected file: JobImportFile;
     protected range: TimeRange;
@@ -29,6 +30,8 @@ export class LastfmFileImportProvider implements ImportProvider {
 
     constructor(file: JobImportFile, range: TimeRange, opts: {batchSize?: number} = {}) {
         this.file = file;
+        // minute precision keys never match the second precision ones of the API and ghan files
+        this.origin = file.format === 'lastfm-benjamin-csv' ? 'lastfm-benjamin' : 'lastfm';
         this.range = range;
         this.batchSize = opts.batchSize ?? FILE_BATCH_SIZE;
     }

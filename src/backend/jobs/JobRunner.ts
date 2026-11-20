@@ -52,6 +52,13 @@ export interface JobRunnerDeps {
     resolveClient?: (componentId: number) => ExportClient | undefined
     /** parse a job's raw transform stages. Throws if any is invalid */
     parseStages?: (raw: unknown[]) => Promise<StageConfig[]>
+    /**
+     * Names of other jobs on the same mirror whose exports are running and overlap `range`.
+     * A replace import can't start while there are any: they would export the replaced plays again.
+     * */
+    replaceConflicts?: (job: JobSelect, range: TimeRange) => Promise<string[]>
+    /** Delete the mirror's plays in range (MirrorService.startCleanup). The caller holds the mirror lock as `holder` */
+    deleteMirrorRange?: (mirrorId: number, range: TimeRange, holder: string) => Promise<{error?: string}>
 }
 
 /** Not persisted. Explains what a running process is doing right now */
@@ -200,6 +207,9 @@ export class JobRunner {
                 throw new JobConflictError('Another import is already running for this mirror');
             }
             lockKey = key;
+            if(job.importOverlap === 'replace' && job.importReplacedAt === null) {
+                await this.assertNoReplaceConflicts(job);
+            }
             signal.throwIfAborted();
             await this.setImport({importStatus: 'running', importStartedAt: job.importStartedAt ?? dayjs(), importError: null});
             isStarted = true;
@@ -282,6 +292,12 @@ export class JobRunner {
 
         await this.withRetry(() => this.waitReady(provider, signal), signal);
 
+        const range: TimeRange = [job.rangeFrom?.valueOf() ?? 0, job.rangeTo.valueOf()];
+        if(job.importOverlap === 'replace' && job.importReplacedAt === null) {
+            // after ready, so a source that never becomes usable doesn't delete anything
+            await this.replaceRange(job, range, signal);
+        }
+
         let state = {
             importFetched: job.importFetched,
             imported: job.imported,
@@ -299,7 +315,7 @@ export class JobRunner {
                     // would loop forever (and without a real delay, starve the event loop)
                     throw new Error(`Import source made no progress, cursor did not move from ${JSON.stringify(cursor)}`);
                 }
-                state = await this.commitBatch(job, batch, cursor, state);
+                state = await this.commitBatch(job, provider, batch, cursor, state, skipCovered);
                 cursor = batch.cursor;
                 if(batch.done) {
                     return;
@@ -310,8 +326,13 @@ export class JobRunner {
             }
         }
 
+        // files are not gap-driven, skip their records in time the mirror already covers. API imports only fetch gaps
+        let skipCovered: TimeRange[] | undefined;
+        if(!provider.gapDriven && job.importOverlap === 'skip') {
+            skipCovered = (await this.mirrorRepo.getById(job.mirrorId))?.coverage ?? [];
+        }
+
         if(provider.gapDriven) {
-            const range: TimeRange = [job.rangeFrom?.valueOf() ?? 0, job.rangeTo.valueOf()];
             // newest first, Last.fm and most apis page newest -> oldest
             const gaps = (await this.mirrorRepo.getGaps(job.mirrorId, range)).reverse();
             if(gaps.length === 0) {
@@ -332,10 +353,15 @@ export class JobRunner {
         }
     }
 
-    protected async commitBatch(job: JobSelect, batch: ImportBatch, prevCursor: JobImportCursor, state: {importFetched: number, imported: number, importTotal: number | null, cursor: JobImportCursor | null}) {
-        const rows: (RepositoryCreatePlayHistoricalOpts & {uid: string})[] = batch.records.map(r => ({
+    protected async commitBatch(job: JobSelect, provider: ImportProvider, batch: ImportBatch, prevCursor: JobImportCursor, state: {importFetched: number, imported: number, importTotal: number | null, cursor: JobImportCursor | null}, skipCovered?: TimeRange[]) {
+        const records = skipCovered === undefined || skipCovered.length === 0 ? batch.records : batch.records.filter(r => {
+            const ts = r.play.data.playDate?.valueOf();
+            return ts === undefined || !skipCovered.some(([from, to]) => ts >= from && ts <= to);
+        });
+        const rows: (RepositoryCreatePlayHistoricalOpts & {uid: string})[] = records.map(r => ({
             uid: `m${job.mirrorId}:${r.key}`,
             mirrorId: job.mirrorId,
+            origin: provider.origin,
             play: r.play,
             input: r.play.original !== undefined ? {play: r.play.original.play as RepositoryCreatePlayHistoricalOpts['play'] | undefined, data: r.play.original.data as object} : undefined,
         }));
@@ -348,7 +374,7 @@ export class JobRunner {
         const next = await runTransaction(this.deps.db, async () => {
             const inserted = await this.historicalRepo.insertIgnoreDuplicates(rows, {persistInputs: job.persistInputs});
             if(batch.covered !== undefined) {
-                await this.mirrorRepo.addCoverage(job.mirrorId, batch.covered);
+                await this.mirrorRepo.addCoverage(job.mirrorId, batch.covered, {origin: provider.origin, jobId: job.id});
             }
             const updated = {
                 importFetched: state.importFetched + batch.records.length,
@@ -366,6 +392,45 @@ export class JobRunner {
             this.wake();
         }
         return next;
+    }
+
+    protected async assertNoReplaceConflicts(job: JobSelect) {
+        const range: TimeRange = [job.rangeFrom?.valueOf() ?? 0, job.rangeTo.valueOf()];
+        const conflicts = await this.deps.replaceConflicts?.(job, range) ?? [];
+        if(conflicts.length > 0) {
+            throw new JobConflictError(`This import replaces mirror data that ${conflicts.map(x => `'${x}'`).join(', ')} ${conflicts.length === 1 ? 'is' : 'are'} exporting. Stop ${conflicts.length === 1 ? 'its' : 'their'} exports first`);
+        }
+    }
+
+    /** Delete the mirror's plays in the job's range once, before importing. Exports of this job wait until it is done */
+    protected async replaceRange(job: JobSelect, range: TimeRange, signal: AbortSignal) {
+        if(this.deps.deleteMirrorRange === undefined) {
+            throw new Error('Replacing mirror data is not supported here');
+        }
+        const holder = `job-replace:${this.jobId}:${randomUUID()}`;
+        const key = mirrorLockKey(job.mirrorId);
+        if(!this.deps.locks.tryAcquire(key, holder)) {
+            throw new JobConflictError('A cleanup is running for this mirror');
+        }
+        try {
+            // again under the lock: an export may have started while waiting for the source to be ready
+            await this.assertNoReplaceConflicts(job);
+            signal.throwIfAborted();
+            this.runtime.import = {...this.runtime.import, waiting: 'Deleting the mirror plays in this range before importing'};
+            this.emitUpdate({runtime: this.runtime}, true);
+            const {error} = await this.deps.deleteMirrorRange(job.mirrorId, range, holder);
+            if(error !== undefined) {
+                throw new Error(`Could not delete the mirror plays to replace: ${error}`);
+            }
+            const importReplacedAt = dayjs();
+            await this.setImport({importReplacedAt});
+            job.importReplacedAt = importReplacedAt;
+            this.runtime.import = {...this.runtime.import, waiting: undefined};
+            this.logger.info(`Deleted mirror plays between ${dayjs(range[0]).toISOString()} and ${dayjs(range[1]).toISOString()} to replace them`);
+        } finally {
+            this.deps.locks.release(key, holder);
+        }
+        this.wake();
     }
 
     protected async waitReady(provider: ImportProvider, signal: AbortSignal): Promise<void> {
@@ -597,6 +662,11 @@ export class JobRunner {
 
             const range: TimeRange = [job.rangeFrom?.valueOf() ?? 0, job.rangeTo.valueOf()];
             const importDone = job.importStatus === 'completed' || (job.componentFromId === null && job.importFile === null);
+            if(!importDone && job.importOverlap === 'replace' && job.importReplacedAt === null) {
+                // the mirror still has the plays the import replaces
+                await wait('Waiting for the import to replace the mirror data in this range');
+                continue;
+            }
             let frontier: TimeRange | undefined = range;
             if(!importDone) {
                 // only export what is already mirrored without a gap from the starting edge, so nothing is skipped

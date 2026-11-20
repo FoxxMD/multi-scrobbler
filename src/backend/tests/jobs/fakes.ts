@@ -7,6 +7,7 @@ import { baseFormatPlayObj } from '../../utils/PlayTransformUtils.ts';
 /** Pages newest -> oldest by time like Last.fm, `to` inclusive */
 export class FakeTimeProvider implements ImportProvider {
     kind = 'fake';
+    origin = 'fake';
     gapDriven = true;
     fetches: ImportFetchArgs[] = [];
     failNext = 0;

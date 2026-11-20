@@ -166,6 +166,14 @@ export class JobManager {
                 timings: this.opts.timings,
                 pacer: this.opts.pacer,
                 resolveClient: this.opts.resolveClient,
+                replaceConflicts: async (job, range) => {
+                    const others = (await this.jobRepo.findByMirror(job.mirrorId)).filter(x => x.id !== job.id);
+                    return others.filter(x => {
+                        const exporting = (this.runners.get(x.id)?.exportsRunning.length ?? 0) > 0;
+                        return exporting && (x.rangeFrom?.valueOf() ?? 0) <= range[1] && x.rangeTo.valueOf() >= range[0];
+                    }).map(x => x.name);
+                },
+                deleteMirrorRange: async (mirrorId, range, holder) => (await this.mirrors.startCleanup(mirrorId, {action: 'delete', range, holder})).done,
                 parseStages: async (raw) => {
                     try {
                         return await pMap(raw, async (x) => this.transformerManager.parseTransformerConfig(x));

@@ -20,7 +20,7 @@ export const generateComponentEntity = (data: MarkOptional<ComponentNew, 'uid'>)
 }
 
 export type PlayEntityOpts = Partial<Pick<PlayNew, 'seenAt' | 'playedAt' | 'uid' | 'state' | 'parentId' | 'componentId' | 'jobId'>> & { error?: ErrorLike | null };
-export type PlayHistoricalEntityOpts = Partial<Pick<PlayHistoricalNew, 'seenAt' | 'playedAt' | 'uid' | 'componentId' | 'mirrorId'>>;
+export type PlayHistoricalEntityOpts = Partial<Pick<PlayHistoricalNew, 'seenAt' | 'playedAt' | 'uid' | 'componentId' | 'mirrorId' | 'origin'>>;
 
 export const generatePlayEntity = (play: PlayObject, opts: PlayEntityOpts = {}): PlayNew => {
     const {

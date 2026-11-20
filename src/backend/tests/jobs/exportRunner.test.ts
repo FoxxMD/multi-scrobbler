@@ -235,6 +235,18 @@ describe('Job export runner', function () {
         await runner.stopExport(target.id, 'stopped');
     });
 
+    it('waits until a replace import has deleted the old mirror plays', async function () {
+        const {runner, target, jobRepo, job, client} = await setup({importing: true});
+        await jobRepo.update(job.id, {importOverlap: 'replace'});
+        await runner.startExport(target.id);
+        await until(() => runner.runtime.exports[target.id]?.waiting === 'Waiting for the import to replace the mirror data in this range');
+        expect(client.queued).length(0);
+        await jobRepo.update(job.id, {importReplacedAt: dayjs()});
+        runner.wake();
+        await until(() => client.queued.length > 0);
+        await runner.stopExport(target.id, 'stopped');
+    });
+
     it('stops after too many failed scrobbles in a row', async function () {
         const {runner, target, targetRepo, client} = await setup({limit: 1, timestamps: Array.from({length: 15}, (_, i) => (i + 1) * 10)});
         client.failAll = true;

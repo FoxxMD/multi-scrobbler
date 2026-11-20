@@ -31,6 +31,7 @@ const asNumber = (val: string | number | undefined): number | undefined => {
  * */
 export class LastfmApiImportProvider implements ImportProvider {
     readonly kind = 'lastfm-api';
+    readonly origin = 'lastfm';
     readonly gapDriven = true;
 
     protected source: LastfmImportSource;
