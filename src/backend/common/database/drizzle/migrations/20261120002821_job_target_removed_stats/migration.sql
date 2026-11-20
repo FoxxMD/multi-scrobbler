@@ -1,0 +1,1 @@
+ALTER TABLE `job_targets` ADD `removedStats` text;

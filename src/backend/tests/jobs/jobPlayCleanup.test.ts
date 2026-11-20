@@ -5,12 +5,11 @@ import { loggerTest } from '@foxxmd/logging';
 import { eq } from 'drizzle-orm';
 import { MirrorRepository } from '../../common/database/drizzle/repositories/MirrorRepository.ts';
 import { JobRepository, type JobSelect } from '../../common/database/drizzle/repositories/JobRepository.ts';
-import { JobTargetRepository } from '../../common/database/drizzle/repositories/JobTargetRepository.ts';
+import { addStats, JobTargetRepository } from '../../common/database/drizzle/repositories/JobTargetRepository.ts';
 import { playInputs, plays, playsHistorical, queueStates } from '../../common/database/drizzle/schema/schema.ts';
 import { componentLockKey, type ExportClient, JobConflictError, mirrorLockKey } from '../../jobs/JobRunner.ts';
 import { DrizzlePlayHistoricalRepository } from '../../common/database/drizzle/repositories/PlayHistoricalRepository.ts';
 import { JobManager } from '../../jobs/JobManager.ts';
-import { mergeStatsMax } from '../../jobs/JobPlayCleanup.ts';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { fixtureCreatePlay } from '../utils/databaseFixtures.ts';
 import { TestScrobbler } from '../scrobbler/TestScrobbler.ts';
@@ -84,8 +83,10 @@ describe('Job play cleanup', function () {
             expect(scrobbler.queuedLength).eq(0);
             expect(scrobbler.deadLetterLength).eq(deadBefore);
             expect(events.some(x => x.name === 'playsPurged')).is.true;
-            // stats were saved before the plays were deleted, after dequeueing (never processed => failed)
-            expect((await targetRepo.getById(target.id))!.stats).to.deep.eq({failed: 2, scrobbled: 2});
+            // deleted plays are remembered so the export keeps its numbers (dequeued, never processed => failed)
+            const after = (await targetRepo.getById(target.id))!;
+            expect(after.removedStats).to.deep.eq({failed: 2, scrobbled: 2});
+            expect(after.stats).eq(null);
             expect(manager.getRuntime(job.id)?.cleanup).eq(undefined);
         } finally {
             await scrobbler[Symbol.asyncDispose]();
@@ -131,7 +132,9 @@ describe('Job play cleanup', function () {
         try {
             await targetRepo.update(target.id, {status: 'completed', stats: {scrobbled: 10}});
             await (await manager.cleanupClientJobPlays(componentId, 'delete')).done;
-            expect((await targetRepo.getById(target.id))!.stats).to.deep.eq({scrobbled: 10});
+            const after = (await targetRepo.getById(target.id))!;
+            expect(after.stats).to.deep.eq({scrobbled: 10});
+            expect(after.removedStats).eq(null);
         } finally {
             await scrobbler[Symbol.asyncDispose]();
         }
@@ -324,8 +327,23 @@ describe('Job play cleanup', function () {
         });
     });
 
-    it('merging stats keeps the larger final counts and the current queued count', function () {
-        expect(mergeStatsMax({scrobbled: 5, failed: 1, queued: 3}, {scrobbled: 2, duped: 1})).to.deep.eq({scrobbled: 5, failed: 1, duped: 1});
-        expect(mergeStatsMax(null, {queued: 2})).to.deep.eq({queued: 2});
+    it('removed stats add up over cleanups and compacting removes nothing', async function () {
+        const {scrobbler, componentId, job, manager, target, targetRepo} = await setup();
+        try {
+            await (await manager.cleanupClientJobPlays(componentId, 'compact')).done;
+            expect((await targetRepo.getById(target.id))!.removedStats).eq(null);
+            await (await manager.cleanupClientJobPlays(componentId, 'delete')).done;
+            expect((await targetRepo.getById(target.id))!.removedStats).to.deep.eq({scrobbled: 2});
+            // the queued ones, dequeued now
+            await (await manager.cleanupJobScrobbles(job.id, 'delete')).done;
+            expect((await targetRepo.getById(target.id))!.removedStats).to.deep.eq({scrobbled: 2, failed: 2});
+        } finally {
+            await scrobbler[Symbol.asyncDispose]();
+        }
+    });
+
+    it('adds stats per state', function () {
+        expect(addStats({scrobbled: 5, failed: 1}, {scrobbled: 2, duped: 1})).to.deep.eq({scrobbled: 7, failed: 1, duped: 1});
+        expect(addStats(undefined, null)).to.deep.eq({});
     });
 });

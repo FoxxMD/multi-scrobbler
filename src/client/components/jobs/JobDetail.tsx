@@ -172,13 +172,15 @@ export const CleanupPanel = (props: { job: JobApiJson }) => {
     });
     const cleanup = job.runtime.cleanup;
     const exporting = job.targets.some(x => x.status === 'running');
-    const busy = job.status === 'running' ? 'Stop the job to clean up.' : undefined;
+    // one cleanup at a time, and none while deleting
+    const blocked = job.runtime.deleting === true ? 'The job is being deleted.' : (cleanup !== undefined || mirrorTask !== null ? 'Wait for the running cleanup to finish.' : undefined);
+    const busy = blocked ?? (job.status === 'running' ? 'Stop the job to clean up.' : undefined);
     return (
         <Card.Root variant="subtle">
             <Card.Header><Heading size="lg">Clean Up</Heading></Card.Header>
             <Card.Body>
                 <Stack gap="5">
-                    <CleanupRow title="Mirror data" description={<>The {job.mirrorPlaysInRange.toLocaleString()} scrobbles in <ChakraLink asChild><Link to={`/mirrors/${job.mirror.id}`}>{job.mirror.name}</Link></ChakraLink> played in this job's range. Other jobs using the mirror may need them.</>}>
+                    <CleanupRow title="Mirror data" description={<>The {job.mirrorPlaysInRange.toLocaleString()} scrobbles in <ChakraLink asChild><Link to={`/mirrors/${job.mirror.id}`}>{job.mirror.name}</Link></ChakraLink> played in this job's range. Other jobs using the mirror may need them, and must be stopped too.</>}>
                         {mirrorTask !== null ? <CleanupProgress task={mirrorTask} text={taskText(mirrorTask)}/> : <CleanupButtons
                             pending={historical.isPending}
                             disabledReason={busy}
@@ -192,7 +194,7 @@ export const CleanupPanel = (props: { job: JobApiJson }) => {
                     {job.targets.length > 0 ? <CleanupRow title="Scrobble records in Clients" description="What the Clients recorded for the scrobbles this job sent them, shown in their activity lists. Scrobbles already sent stay on the services.">
                         {cleanup !== undefined ? <CleanupProgress task={cleanup} text={`${cleanup.action === 'delete' ? 'Deleting' : 'Compacting'}: ${cleanup.done.toLocaleString()} of ${cleanup.total.toLocaleString()}`}/> : <CleanupButtons
                             pending={scrobbles.isPending}
-                            disabledReason={exporting ? 'Stop the exports to clean up.' : undefined}
+                            disabledReason={blocked ?? (exporting ? 'Stop the exports to clean up.' : undefined)}
                             explain={{
                                 compact: "Remove the raw data and transform details saved with these records. The records stay.",
                                 delete: "Delete these records from the Clients. Scrobbles still waiting in a Client's queue are removed from it and won't be sent.",

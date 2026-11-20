@@ -12,6 +12,10 @@ import type { LockRegistry } from "./LockRegistry.ts";
 
 export type CleanupAction = 'compact' | 'delete';
 
+export class MirrorNotFoundError extends Error {
+    name = 'MirrorNotFoundError';
+}
+
 /** A cleanup or delete running on a mirror. Not persisted */
 export interface MirrorTask {
     kind: 'cleanup' | 'delete'
@@ -177,7 +181,7 @@ export class MirrorService {
     protected async getOrThrow(id: number): Promise<PlayMirrorSelect> {
         const mirror = await this.mirrorRepo.getById(id);
         if (mirror === undefined) {
-            throw new Error(`Mirror ${id} does not exist`);
+            throw new MirrorNotFoundError(`Mirror ${id} does not exist`);
         }
         return mirror;
     }

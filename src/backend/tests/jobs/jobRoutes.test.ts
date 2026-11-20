@@ -18,9 +18,11 @@ import { createTmpDir } from '../utils/tmpDir.ts';
 import LastfmApiClient from '../../common/vendor/LastfmApiClient.ts';
 import { JobRepository } from '../../common/database/drizzle/repositories/JobRepository.ts';
 import { MirrorRepository } from '../../common/database/drizzle/repositories/MirrorRepository.ts';
+import { JobTargetRepository } from '../../common/database/drizzle/repositories/JobTargetRepository.ts';
 import { users } from '../../common/database/drizzle/schema/auth.ts';
-import { components } from '../../common/database/drizzle/schema/schema.ts';
-import { fixtureCreateComponent } from '../utils/databaseFixtures.ts';
+import { components, plays, playsHistorical } from '../../common/database/drizzle/schema/schema.ts';
+import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
+import { fixtureCreateComponent, fixtureCreatePlay } from '../utils/databaseFixtures.ts';
 import type { JobApiJson, JobOptionsApiJson, MirrorApiJson } from '../../../core/Job.ts';
 import { mirrorLockKey } from '../../jobs/JobRunner.ts';
 import type { PlayTransformPartsConfigOptions } from '../../../core/Transform.ts';
@@ -431,8 +433,16 @@ describe('Job API', function () {
             await built.db.insert(components).values({...fixtureCreateComponent({mode: 'client', type: 'maloja', uid: 'maloja'}), id: 7});
             const created = (await request(built.app).post('/api/jobs').send({name: 'imp', importFrom: {existingFile: 'export.json'}, mirror: {new: {name: 'm'}}, start: true})).body as JobApiJson;
             const job = await waitForImport(built.app, created.id);
+            // what an export to component 7 would have left: 2 plays of this job and 1 of a deleted job
+            await new JobTargetRepository(built.db).createForJob(job.id, [7]);
+            await built.db.insert(plays).values([
+                fixtureCreatePlay({state: 'scrobbled', componentId: 7, jobId: job.id, play: generatePlay({}, {jobId: job.id})}),
+                fixtureCreatePlay({state: 'failed', componentId: 7, jobId: job.id, play: generatePlay({}, {jobId: job.id})}),
+                fixtureCreatePlay({state: 'scrobbled', componentId: 7, play: generatePlay({}, {jobId: 9999})}),
+            ]);
             return {...built, job};
         }
+        const clientPlays = async (db: Awaited<ReturnType<typeof buildApp>>['db']) => (await db.select().from(plays)).map(x => ({jobId: x.jobId, compacted: x.compacted}));
         const until = async (fn: () => Promise<boolean>) => {
             for (let i = 0; i < 100; i++) {
                 if (await fn()) {
@@ -492,11 +502,18 @@ describe('Job API', function () {
 
         it("cleans up a job's mirror data and scrobbles, and deletes it with cleanup", async function () {
             await using tmp = await createTmpDir('cleanupJob');
-            const {app, job} = await cleanupApp(tmp.path);
+            const {app, job, db} = await cleanupApp(tmp.path);
             expect((await request(app).post(`/api/jobs/${job.id}/cleanup/historical`).send({action: 'compact'})).status).eq(202);
             await mirrorIdle(app, job.mirror.id);
+            const historical = await db.select().from(playsHistorical);
+            expect(historical.length).eq(job.imported);
+            expect(historical.every(x => x.compacted === 'input')).is.true;
+
             expect((await request(app).post(`/api/jobs/${job.id}/cleanup/scrobbles`).send({action: 'delete'})).status).eq(202);
-            await until(async () => (await request(app).get(`/api/jobs/${job.id}`)).body.runtime.cleanup === undefined);
+            await until(async () => (await clientPlays(db)).length === 1);
+            // only the deleted job's play is left, and the job keeps its numbers
+            expect(await clientPlays(db)).eql([{jobId: null, compacted: null}]);
+            expect(((await request(app).get(`/api/jobs/${job.id}`)).body as JobApiJson).targets[0].stats).eql({scrobbled: 1, failed: 1});
 
             expect((await request(app).delete(`/api/jobs/${job.id}?historical=nuke`)).status).eq(400);
             expect((await request(app).delete(`/api/jobs/${job.id}?historical=delete&scrobbles=delete`)).status).eq(202);
@@ -515,11 +532,14 @@ describe('Job API', function () {
 
         it("summarizes and cleans up a Client's job plays", async function () {
             await using tmp = await createTmpDir('cleanupClient');
-            const {app} = await cleanupApp(tmp.path);
+            const {app, db} = await cleanupApp(tmp.path);
             const summary = await request(app).get('/api/components/7/job-plays/summary');
             expect(summary.status).eq(200);
-            expect(summary.body).eql({total: 0, queued: 0, orphaned: 0, compacted: 0, exportingJobs: [], task: null});
+            expect(summary.body).eql({total: 3, queued: 0, orphaned: 1, compacted: 0, exportingJobs: [], task: null});
+            expect((await request(app).post('/api/components/7/cleanup/job-plays').send({action: 'compact'})).status).eq(202);
+            await until(async () => (await request(app).get('/api/components/7/job-plays/summary')).body.compacted === 3);
             expect((await request(app).post('/api/components/7/cleanup/job-plays').send({action: 'delete'})).status).eq(202);
+            await until(async () => (await clientPlays(db)).length === 0);
             expect((await request(app).get('/api/components/99/job-plays/summary')).status).eq(404);
             expect((await request(app).post('/api/components/99/cleanup/job-plays').send({action: 'delete'})).status).eq(404);
         });

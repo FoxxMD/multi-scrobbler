@@ -455,6 +455,19 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return rows.map(x => x.id);
     }
 
+    /** Plays per job and state among these ids. Plays without a job are left out */
+    countStatesByJob = async (ids: number[]): Promise<Map<number, Partial<Record<string, number>>>> => {
+        const rows = ids.length === 0 ? [] : await this.db.select({jobId: plays.jobId, state: plays.state, count: count()}).from(plays).where(inArray(plays.id, ids)).groupBy(plays.jobId, plays.state);
+        const byJob = new Map<number, Partial<Record<string, number>>>();
+        for (const r of rows) {
+            if (r.jobId === null) {
+                continue;
+            }
+            byJob.set(r.jobId, {...byJob.get(r.jobId), [r.state]: r.count});
+        }
+        return byJob;
+    }
+
     countJobPlays = async (args: JobPlayFilter): Promise<number> => {
         const [row] = await this.db.select({count: count()}).from(plays).where(and(...this.jobPlayConditions(args)));
         return row?.count ?? 0;

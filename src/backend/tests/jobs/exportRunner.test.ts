@@ -258,6 +258,15 @@ describe('Job export runner', function () {
         expect(client.queued[0].original?.play?.data.track?.name).eq('T700');
     });
 
+    it('counts plays a cleanup deleted in the completed stats', async function () {
+        const {runner, target, targetRepo} = await setup();
+        await targetRepo.update(target.id, {removedStats: {scrobbled: 5}});
+        await runner.startExport(target.id);
+        await exportTask(runner, target.id);
+        // the fake client creates no plays, so only the removed ones count
+        expect((await targetRepo.getById(target.id))!.stats).to.deep.eq({scrobbled: 5});
+    });
+
     it('waits while a cleanup holds the client lock', async function () {
         const {runner, target, client, locks} = await setup();
         locks.tryAcquire(componentLockKey(client.componentId), 'cleanup');

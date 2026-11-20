@@ -9,6 +9,7 @@ import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import { toMirrorApiJson } from "../jobs/jobApi.ts";
 import type { JobManager } from "../jobs/JobManager.ts";
 import { JobConflictError } from "../jobs/JobRunner.ts";
+import { MirrorNotFoundError } from "../jobs/MirrorService.ts";
 
 type Router = ReturnType<typeof createTypedRouter>;
 type Res = {status: (n: number) => {json: (b: unknown) => unknown}};
@@ -22,6 +23,11 @@ export const setupCleanupRoutes = (router: Router, jobs: JobManager, clients: Sc
     const conflictOr = (res: Res, e: unknown) => {
         if (e instanceof JobConflictError) {
             res.status(409).json({error: e.message});
+            return;
+        }
+        if (e instanceof MirrorNotFoundError) {
+            // deleted while the request was handled
+            res.status(404).json({error: 'Mirror not found'});
             return;
         }
         throw e;

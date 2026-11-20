@@ -1,6 +1,5 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import { randomUUID } from "node:crypto";
-import type { JobTargetStats } from "../common/infrastructure/Job.ts";
 import type { DbConcrete } from "../common/database/drizzle/drizzleUtils.ts";
 import type { PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
 import { JobTargetRepository } from "../common/database/drizzle/repositories/JobTargetRepository.ts";
@@ -9,18 +8,6 @@ import type { WildcardEmitter } from "../common/WildcardEmitter.ts";
 import { componentLockKey, JobConflictError } from "./JobRunner.ts";
 import type { LockRegistry } from "./LockRegistry.ts";
 import type { CleanupAction } from "./MirrorService.ts";
-
-/**
- * Per final state, the larger of the two counts. `queued` is always the current count:
- * exports save live stats, so an older snapshot's queued plays may have finished or been dequeued since.
- * */
-export const mergeStatsMax = (prev: JobTargetStats | null, next: JobTargetStats): JobTargetStats => {
-    const {queued: _, ...merged}: JobTargetStats = {...(prev ?? {})};
-    for (const [state, n] of Object.entries(next) as [string, number][]) {
-        merged[state] = state === 'queued' ? n : Math.max(merged[state] ?? 0, n);
-    }
-    return merged;
-}
 
 /** The parts of a Client a job play cleanup uses */
 export interface CleanupClient {
@@ -102,14 +89,13 @@ export class JobPlayCleanup {
         }
         try {
             const playRepo = new DrizzlePlayRepository(this.deps.db, {logger: this.logger, componentId});
+            const targetRepo = new JobTargetRepository(this.deps.db, {logger: this.logger});
             const client = this.deps.resolveClient(componentId);
             const canCancel = queued === 'cancel' && isCleanupClient(client);
             let cancelled = 0;
             if (canCancel) {
                 cancelled = await this.cancelQueued(playRepo, client, {componentId, jobId});
             }
-            // after dequeueing, so the snapshot doesn't count those plays as queued forever
-            await this.snapshotStats(componentId, jobId);
 
             const filter: JobPlayFilter = {componentId, jobId, inQueue: false, uncompacted: action === 'compact'};
             const result: JobPlayCleanupResult = {action, done: 0, total: await playRepo.countJobPlays(filter), cancelled, skipped: 0};
@@ -121,7 +107,12 @@ export class JobPlayCleanup {
                     break;
                 }
                 if (action === 'delete') {
+                    // export stats count plays in the client, remember the ones that are about to be gone
+                    const removed = await playRepo.countStatesByJob(ids);
                     await playRepo.deleteByIds(ids);
+                    for (const [removedJobId, states] of removed) {
+                        await targetRepo.addRemoved(removedJobId, componentId, states);
+                    }
                 } else {
                     await playRepo.compactPlays(ids, ['input', 'transform']);
                 }
@@ -145,25 +136,6 @@ export class JobPlayCleanup {
         } finally {
             if (opts.holder === undefined) {
                 this.deps.locks.release(key, holder);
-            }
-        }
-    }
-
-    /** Job pages show target stats from plays in the Client, save them before the plays are gone */
-    protected async snapshotStats(componentId: number, jobId?: number) {
-        const targetRepo = new JobTargetRepository(this.deps.db, {logger: this.logger});
-        const targets = jobId !== undefined
-            ? (await targetRepo.findByJob(jobId)).filter(x => x.componentId === componentId)
-            : await targetRepo.findByComponent(componentId);
-        for (const t of targets) {
-            if (t.status === 'completed' && t.stats !== null) {
-                // snapshotted on completion. Recounting after an earlier cleanup would undercount
-                continue;
-            }
-            const stats = (await targetRepo.playStats(t.jobId, componentId)).get(componentId);
-            if (stats !== undefined || t.stats !== null) {
-                // a previous cleanup may have removed plays already, never lower its numbers
-                await targetRepo.update(t.id, {stats: mergeStatsMax(t.stats, stats ?? {})});
             }
         }
     }

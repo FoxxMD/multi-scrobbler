@@ -11,14 +11,13 @@ import { cleanupBodySchema, jobCreateSchema, jobDeleteQuerySchema, jobUpdateSche
 import { JobRepository, type JobSelect } from "../common/database/drizzle/repositories/JobRepository.ts";
 import { runTransaction } from "../common/database/drizzle/drizzleUtils.ts";
 import { MirrorRepository, type PlayMirrorSelect } from "../common/database/drizzle/repositories/MirrorRepository.ts";
-import { JobTargetRepository, type JobTargetSelect } from "../common/database/drizzle/repositories/JobTargetRepository.ts";
+import { addStats, JobTargetRepository, type JobTargetSelect } from "../common/database/drizzle/repositories/JobTargetRepository.ts";
 import type { JobImportFile } from "../common/infrastructure/Job.ts";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import { toJobApiJson } from "../jobs/jobApi.ts";
 import { componentHookStages, isLastfmImportSource, JobConfigError, jobUploadsDir, type JobManager } from "../jobs/JobManager.ts";
 import { JobConflictError, mirrorLockKey } from "../jobs/JobRunner.ts";
-import { mergeStatsMax } from "../jobs/JobPlayCleanup.ts";
 import type { StartedTask } from "../jobs/MirrorService.ts";
 import { detectLastfmFileFormat, UnsupportedFileError } from "../jobs/lastfm/lastfmFiles.ts";
 
@@ -62,9 +61,9 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
         const {targetRepo} = repos();
         const stored = preloaded.targets ?? await targetRepo.findByJob(job.id);
         // a completed target keeps its snapshot, others show what the client has now (IE queued plays draining while paused)
-        // merged with their snapshot so plays removed by a cleanup still count
+        // plus plays a cleanup deleted from the client
         const live = stored.some(x => x.status !== 'completed') ? await targetRepo.playStats(job.id) : new Map();
-        const targets = stored.map(t => t.status === 'completed' ? t : {...t, stats: mergeStatsMax(t.stats, live.get(t.componentId) ?? {})});
+        const targets = stored.map(t => t.status === 'completed' ? t : {...t, stats: addStats(live.get(t.componentId), t.removedStats)});
         const mirrorPlaysInRange = await mirrorRepo.countInRange(job.mirrorId, [job.rangeFrom?.valueOf() ?? 0, job.rangeTo.valueOf()]);
         return toJobApiJson(job, mirror!, {componentName: componentName(job.componentFromId), runtime: jobs.getRuntime(job.id), targets, resolveClient: exportClient, mirrorPlaysInRange});
     }

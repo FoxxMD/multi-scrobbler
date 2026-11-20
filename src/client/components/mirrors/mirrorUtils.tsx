@@ -55,9 +55,13 @@ export const useMirrorEvents = () => {
         queryClient.setQueryData<MirrorApiJson>(detailKey, merge);
         queryClient.setQueryData<MirrorApiJson[]>(listKey, (old) => old?.map(x => x.id === event.mirrorId ? merge(x)! : x));
         if (taskResult !== undefined) {
-            // counts and coverage changed, get them fresh
-            queryClient.invalidateQueries({queryKey: detailKey});
-            queryClient.invalidateQueries({queryKey: listKey});
+            // counts and coverage changed, get them fresh. A deleted mirror is already gone from the cache
+            if (taskResult.kind !== 'delete' || taskResult.error !== undefined) {
+                queryClient.invalidateQueries({queryKey: detailKey});
+                queryClient.invalidateQueries({queryKey: listKey});
+                // jobs show how many mirror scrobbles are in their range
+                queryClient.invalidateQueries({queryKey: tanQueries.jobs._def});
+            }
             if (taskResult.error !== undefined) {
                 toaster.create({type: 'error', title: 'Mirror cleanup failed', description: taskResult.error});
             } else if (taskResult.kind === 'cleanup') {

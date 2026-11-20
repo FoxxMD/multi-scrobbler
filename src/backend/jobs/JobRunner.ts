@@ -15,7 +15,7 @@ import { type DbConcrete, runTransaction } from "../common/database/drizzle/driz
 import { JobRepository, type JobSelect } from "../common/database/drizzle/repositories/JobRepository.ts";
 import { MirrorRepository } from "../common/database/drizzle/repositories/MirrorRepository.ts";
 import { DrizzlePlayHistoricalRepository, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
-import { JobTargetRepository, type JobTargetNew, type JobTargetSelect } from "../common/database/drizzle/repositories/JobTargetRepository.ts";
+import { addStats, JobTargetRepository, type JobTargetNew, type JobTargetSelect } from "../common/database/drizzle/repositories/JobTargetRepository.ts";
 import type { JobImportCursor, JobImportCursorApi, JobImportCursorFile, JobTargetBreaker, JobTargetCursor } from "../common/infrastructure/Job.ts";
 import type { WildcardEmitter } from "../common/WildcardEmitter.ts";
 import { contiguousCoveredFrom, type TimeRange } from "../utils/RangeUtils.ts";
@@ -612,7 +612,7 @@ export class JobRunner {
                     await wait(halted === undefined ? 'Waiting for the import to mirror more scrobbles' : `Waiting for the import, which is ${halted}`);
                     continue;
                 }
-                const stats = (await this.targetRepo.playStats(this.jobId, componentId)).get(componentId) ?? {};
+                const stats = addStats((await this.targetRepo.playStats(this.jobId, componentId)).get(componentId), initial.removedStats);
                 const left = stats.queued ?? 0;
                 if(left > 0) {
                     await this.setTarget(targetId, {stats, breaker});
@@ -639,7 +639,7 @@ export class JobRunner {
             cursor = {playedAt: last.playedAt, id: last.id} satisfies JobTargetCursor;
             exported += rows.length;
             queued += created.length;
-            const stats = (await this.targetRepo.playStats(this.jobId, componentId)).get(componentId) ?? {};
+            const stats = addStats((await this.targetRepo.playStats(this.jobId, componentId)).get(componentId), initial.removedStats);
             this.runtime.exports[targetId] = {};
             await this.setTarget(targetId, {cursor, exported, queued, stats, breaker});
             logger.verbose(`Exported ${rows.length} scrobbles, ${created.length} new to the client`);

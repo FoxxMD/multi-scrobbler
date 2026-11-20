@@ -3,7 +3,7 @@ import { useSSEAnyEvent, useSSEContext } from "@flamefrontend/sse-runtime-react"
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import ky from 'ky';
 import { Link } from "react-router";
-import { asCleanupSseEvent, type MsSseEvent } from "../../../core/Api";
+import { asCleanupSseEvent, asJobSseEvent, type MsSseEvent } from "../../../core/Api";
 import type { CleanupAction, ClientJobPlaysSummaryJson, JobCleanupProgressJson } from "../../../core/Job";
 import { tanQueries } from "../../queries";
 import { baseUrl } from "../../utils";
@@ -22,7 +22,21 @@ export const ClientJobPlays = (props: { componentId: number }) => {
 
     const sse = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(sse, (payload) => {
+        const job = asJobSseEvent(payload.data);
+        if (job !== undefined) {
+            // an export started or stopped, which decides if a cleanup can run
+            const targets = (job.data as {targetUpdates?: Record<string, {status?: string}>}).targetUpdates;
+            if (targets !== undefined && Object.values(targets).some(x => x.status !== undefined)) {
+                queryClient.invalidateQueries({queryKey: key});
+            }
+            return;
+        }
         const event = asCleanupSseEvent(payload.data);
+        if (event?.event === 'playsPurged' && event.componentId === componentId) {
+            // a job's own cleanup or delete changed the counts
+            queryClient.invalidateQueries({queryKey: key});
+            return;
+        }
         if (event?.event !== 'clientJobPlaysUpdate' || event.componentId !== componentId) {
             return;
         }

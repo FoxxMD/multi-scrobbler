@@ -295,6 +295,8 @@ export const jobTargets = sqliteTable("job_targets", {
   // plays the client created from them (some may be skipped as already queued/scrobbled)
   queued: integer().notNull().default(0),
   stats: text({ mode: 'json' }).$type<JobTargetStats>(),
+  // plays per state that a cleanup deleted from the client. Added to live stats so exports keep their numbers
+  removedStats: text({ mode: 'json' }).$type<JobTargetStats>(),
   error: ErrorLikeJson('error'),
   breaker: text({ mode: 'json' }).$type<JobTargetBreaker>().notNull().$defaultFn(() => ({failedInARow: 0})),
   startedAt: DayjsTimestamp('startedAt'),
