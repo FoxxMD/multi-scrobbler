@@ -48,10 +48,10 @@ In the **Export** section, select the Clients that get the Plays. Each Client ex
 Exported Plays go through a Client the same way as live scrobbles:
 
 * The Client applies its own [transforms](/configuration/transforms).
-* The Client skips Plays it already has. See [Duplicate Checks](#duplicate-checks).
+* The Client skips Plays that its service already has. See [Duplicate Checks](#duplicate-checks).
 * The Client sends the Plays to its service one at a time.
 
-Because the Client skips duplicates, you can export the same Plays two times without duplicates on the service.
+The Client always skips Plays that Multi-Scrobbler already sent to it. Because of this, you can export the same Plays two times without duplicates on the service.
 
 You can also set [**Transforms**](/configuration/transforms) for the Job. They modify Play data before they go to each Client, the same as a [`postCompare` hook](/configuration/transforms/#hook) on a Source. You can apply transforms from an existing Source/Client or use a [preset](/configuration/transforms#presets). Be aware that exports are only as fast the [slowest transform](#transforms-and-export-speed).
 
@@ -79,6 +79,8 @@ Select **Create**. The Job page shows the progress of the Import and of each Cli
 You can **Pause**, **Stop**, and **Resume** each part from the Job page.
 
 The [Scrobble Interval](/configuration/clients/#scrobble-interval) of a Client sets the export speed. The default is one Play each second. Lower it in the Client's configuration to export faster.
+
+The duplicate check against the Client's service also slows large exports. You can turn it off on the Job page while the Export runs. See [Duplicate Checks](#duplicate-checks).
 
 Exported Plays do not show in a Client's Play list by default. To see them, turn on **Plays from Export jobs** in the list filters.
 
@@ -188,14 +190,21 @@ Multi-Scrobbler exports Plays one at a time. Transforms that call external servi
 
 Before a Client sends a Play, it compares the Play against two lists:
 
-* The Plays that Multi-Scrobbler already sent to that Client. These are in the database, so this check is fast.
-* The scrobbles on the Client's service. The Client gets them from the service, so this check is slow for large exports.
+* The Plays that Multi-Scrobbler already sent to that Client. These are in the Multi-Scrobbler database, so this check is fast.
+* The scrobbles on the Client's service. The Client downloads them from the service, so this check is slow for large exports.
 
-To export faster, clear **Check services for duplicates** in the **Advanced** settings of the **Export** section. Then the Client uses only the database list. You can also change this setting on the Job page while the Export runs. The change applies to the Plays that the Export sends next. Plays already in the Client's queue keep the old setting.
+The setting **Check services for duplicates** controls the second list. It is on by default. If you clear it, the Client uses only the database list, and the Export is much faster.
+
+You can change the setting in two places:
+
+* When you create the Job, in the **Advanced** settings of the **Export** section.
+* On the Job page, in the **Export** section. You can change it while the Export runs.
+
+A change applies to the Plays that the Export sends next. Plays that are already in the Client's queue keep the old setting. The queue holds up to the Job's **Queue Limit** of Plays.
 
 <Aside type="caution">
 
-Clear this setting only if the service has no scrobbles for the Job's range that came from somewhere other than Multi-Scrobbler. Examples are the service's own Spotify connection and other scrobbler apps. The Client sends these Plays again, and the service gets duplicates.
+Be careful when disabling this setting if the service has scrobbles in the Job's range that did not come from Multi-Scrobbler. You will be relying on the scrobble service's own checks to detect a duplicate which may not be as robust as Multi-Scrobblers and could result in duplicates being stored downstream.
 
 </Aside>
 
