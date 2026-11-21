@@ -16,7 +16,7 @@ import { baseUrl } from "../../utils";
 import { ErrorAlert } from "../ErrorAlert";
 import { toaster } from "../Toaster";
 import { JobBackButton } from "./JobList";
-import { apiErrorMessage, exportProgress, ExportProgressBar, FILE_FORMAT_NAMES, formatJobDate, formatPlayedDate, ImportProgressBar, importOriginText, importProgress, JobStatusBadge, useJobEvents, useSetJob } from "./jobUtils";
+import { apiErrorMessage, exportProgress, ExportProgressBar, FILE_FORMAT_NAMES, formatJobDate, formatPlayedDate, ImportProgressBar, importOriginText, importProgress, JobStatusBadge, ProcessRateText, useProcessRate, useJobEvents, useSetJob } from "./jobUtils";
 
 type ControlAction = 'start' | 'pause' | 'stop';
 
@@ -269,6 +269,7 @@ export const ImportPanel = (props: { job: JobApiJson }) => {
     const {job} = props;
     const {runtime: {import: runtime}} = job;
     const progress = importProgress(job);
+    const rate = useProcessRate(job.importFetched, progress, job.importStatus === 'running');
     const position = cursorText(job);
     return (
         <Card.Root variant="subtle">
@@ -287,6 +288,7 @@ export const ImportPanel = (props: { job: JobApiJson }) => {
                             {job.importTotal !== null ? ` (${job.importTotal.toLocaleString()} total)` : ''}
                             {progress !== undefined ? ` - ${Math.floor(progress * 100)}%` : ''}
                         </Text>
+                        <ProcessRateText rate={rate}/>
                     </Stack>}
                     {runtime.waiting !== undefined ? <Text textStyle="sm" color="fg.warning">
                         {runtime.waiting}
@@ -331,6 +333,7 @@ export const ExportTarget = (props: { job: JobApiJson, target: JobTargetApiJson 
     const {job, target} = props;
     const runtime = job.runtime.exports[target.id];
     const progress = exportProgress(job, target);
+    const rate = useProcessRate(target.exported, progress, target.status === 'running');
     const queuedLeft = target.stats?.queued ?? 0;
     const stats = statsText(target.stats);
     return (
@@ -349,6 +352,7 @@ export const ExportTarget = (props: { job: JobApiJson, target: JobTargetApiJson 
                 {progress !== undefined ? ` - ${Math.floor(progress * 100)}%` : ''}
                 {target.cursor !== null && target.status !== 'completed' ? `, up to ${formatPlayedDate(target.cursor.playedAt)}` : ''}
             </Text>
+            <ProcessRateText rate={rate}/>
             {stats !== undefined ? <Text textStyle="sm" color="fg.muted">In the Client: {stats}</Text> : undefined}
             {target.exported > target.queued ? <Text textStyle="sm" color="fg.muted">{(target.exported - target.queued).toLocaleString()} were already in the Client and were skipped.</Text> : undefined}
             {runtime?.waiting !== undefined ? <Text textStyle="sm" color="fg.warning">{runtime.waiting}</Text> : undefined}

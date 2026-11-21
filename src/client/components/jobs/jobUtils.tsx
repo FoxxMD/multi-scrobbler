@@ -1,14 +1,16 @@
-import { Badge, Progress, type BadgeProps } from '@chakra-ui/react';
+import { Badge, Progress, Text, type BadgeProps } from '@chakra-ui/react';
 import { useSSEAnyEvent, useSSEContext } from "@flamefrontend/sse-runtime-react";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { HTTPError } from 'ky';
+import { useEffect, useState } from 'react';
 import { asJobSseEvent, type MsSseEvent } from "../../../core/Api";
 import { deriveJobStatus, type JobApiJson, type JobImportOriginJson, type JobProcessStatus, type JobTargetApiJson, type LastfmFileFormat } from "../../../core/Job";
 import { capitalize } from "../../../core/StringUtils";
 import { tanQueries } from "../../queries";
 import { isoToHuman, shortTodayAwareFormat } from "../../utils";
 import { toaster } from "../Toaster";
+import { addRateSample, estimateRate, type RateEstimate, type RateSample } from "../../../core/ProcessRate";
 
 const statusPalette: Record<JobProcessStatus, BadgeProps['colorPalette']> = {
     idle: 'gray',
@@ -71,6 +73,31 @@ export const ImportProgressBar = (props: { job: JobApiJson } & Omit<Progress.Roo
 }
 
 export const formatJobDate = (date: string | null | undefined): string => date === null || date === undefined ? '-' : shortTodayAwareFormat(dayjs(date));
+
+/** Plays per minute and finish time of a running process over the last minute of live updates. Starts over when the process stops running */
+export const useProcessRate = (count: number, progress: number | undefined, running: boolean): RateEstimate | undefined => {
+    const [samples, setSamples] = useState<RateSample[]>([]);
+    useEffect(() => {
+        // each live update is a sample stamped with the clock, an external system
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSamples(running ? s => addRateSample(s, {at: Date.now(), count, progress}) : []);
+    }, [running, count, progress]);
+    return running ? estimateRate(samples) : undefined;
+}
+
+export const ProcessRateText = (props: { rate: RateEstimate | undefined }) => {
+    const {rate} = props;
+    if (rate === undefined) {
+        return null;
+    }
+    const finish = rate.finishAt !== undefined ? dayjs(rate.finishAt) : undefined;
+    return (
+        <Text textStyle="sm" color="fg.muted">
+            {rate.perMinute.toLocaleString(undefined, {maximumFractionDigits: rate.perMinute < 10 ? 1 : 0})} Plays per minute
+            {finish !== undefined ? `, done around ${shortTodayAwareFormat(finish)} (${finish.fromNow()})` : ''}
+        </Text>
+    );
+}
 
 /** When a scrobble was played, IE mirror ranges and export positions. Always has the year since scrobble history spans years */
 export const formatPlayedDate = (date: string | number | Date): string => isoToHuman(dayjs(date).toISOString(), {includeDate: true});
