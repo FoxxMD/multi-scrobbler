@@ -20,7 +20,7 @@ import { NowPlayingScrobbler, TestAuthScrobbler, TestScrobbler } from "./TestScr
 import { type PaginatedTimeRangeOptions, REFRESH_STALE_DEFAULT } from '../../common/infrastructure/Atomic.ts';
 import type {PlayPlatformId} from '../../../core/Atomic.ts';
 import { shuffleArray } from '../../utils/DataUtils.ts';
-import { DEFAULT_CONSOLIDATE_DURATION, groupPlaysToTimeRanges } from '../../utils/ListenFetchUtils.ts';
+import { DEFAULT_CONSOLIDATE_DURATION, groupPlaysToTimeRanges, HISTORICAL_BUCKET_DURATION, HISTORICAL_BUCKET_FETCH_MAX, HISTORICAL_BUCKET_PADDING, historicalBucketRange } from '../../utils/ListenFetchUtils.ts';
 import { asPlay } from '../../../core/PlayMarshalUtils.ts';
 import { getRoot } from '../../ioc.ts';
 import { transientCache } from '../utils/TransientTestUtils.ts';
@@ -629,6 +629,49 @@ describe('Upstream Scrobbles', function() {
         processing.abort();
         expect(sp.calledTwice).is.true;
         return;
+    });
+
+    describe('Old plays', function () {
+        const width = HISTORICAL_BUCKET_DURATION.asSeconds();
+        const padding = HISTORICAL_BUCKET_PADDING.asSeconds();
+        // start of a bucket a few days ago
+        const bucketStart = () => dayjs.unix(Math.floor(dayjs().subtract(3, 'day').unix() / width) * width);
+
+        it('has no bucket for recent plays', function () {
+            expect(historicalBucketRange(dayjs().subtract(2, 'hour'))).is.undefined;
+        });
+
+        it('gives the same padded bucket for every play in it', function () {
+            const start = bucketStart();
+            const expected = {from: start.unix() - padding, to: start.unix() + width + padding};
+            expect(historicalBucketRange(start)).to.deep.eq(expected);
+            expect(historicalBucketRange(start.add(width - 1, 's'))).to.deep.eq(expected);
+            expect(historicalBucketRange(start.add(width, 's'))?.from).eq(start.unix() + width - padding);
+        });
+
+        it('fetches each bucket once, even for plays too far apart to share a queue range', async function () {
+            await using scrobbler = await generateTestScrobbler();
+            await scrobbler.initialize();
+            const sp = spy(scrobbler, 'getScrobblesForTimeRange');
+            const start = bucketStart();
+
+            // 4 hours apart, more than the 3 hour consolidation of queue ranges
+            for (const at of [start.add(1, 'hour'), start.add(5, 'hour'), start.add(2, 'hour')]) {
+                await scrobbler.getSOTScrobblesForPlay(generatePlay({playDate: at}));
+            }
+            expect(sp.callCount).eq(1);
+            expect(sp.firstCall.args[0]).to.deep.include({from: start.unix() - padding, to: start.unix() + width + padding, fetchMax: HISTORICAL_BUCKET_FETCH_MAX});
+
+            await scrobbler.getSOTScrobblesForPlay(generatePlay({playDate: start.add(7, 'hour')}));
+            expect(sp.callCount).eq(2);
+        });
+
+        it('fails when a bucket has too many scrobbles to compare against', async function () {
+            await using scrobbler = await generateTestScrobbler();
+            await scrobbler.initialize();
+            scrobbler.testRecentScrobbles = generatePlays(HISTORICAL_BUCKET_FETCH_MAX);
+            await expect(scrobbler.getSOTScrobblesForPlay(generatePlay({playDate: bucketStart().add(1, 'hour')}))).to.be.rejectedWith('Cannot get historical plays');
+        });
     });
 
 });

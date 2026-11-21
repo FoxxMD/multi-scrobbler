@@ -218,6 +218,28 @@ export const DEFAULT_GROUP_DURATION = dayjs.duration(15, 'm');
 export const DEFAULT_NEW_PADDING = dayjs.duration(10, 'm');
 export const DEFAULT_CONSOLIDATE_DURATION = dayjs.duration(3, 'h');
 
+/** Plays older than this get their upstream scrobbles from a fixed bucket instead of a range built from the queue */
+export const HISTORICAL_BUCKET_AFTER = dayjs.duration(1, 'd');
+/** Width of a bucket. Bounds how much service history one dupe check fetches, whatever the gaps between queued plays */
+export const HISTORICAL_BUCKET_DURATION = dayjs.duration(6, 'h');
+/** Added to both ends of a bucket so plays near its edges still find their duplicates */
+export const HISTORICAL_BUCKET_PADDING = dayjs.duration(10, 'm');
+/** Scrobbles that old don't change often, so a bucket is cached far longer than a recent range */
+export const HISTORICAL_BUCKET_TTL_MS = 60 * 60 * 1000;
+/** More scrobbles than this in one bucket means something is wrong, no one listens that much in 6 hours */
+export const HISTORICAL_BUCKET_FETCH_MAX = 1000;
+
+/** The fixed time range used to dupe check an old play, undefined if the play is recent */
+export const historicalBucketRange = (playDate: Dayjs, now: Dayjs = dayjs()): PaginatedTimeRangeOptions | undefined => {
+    if(now.diff(playDate, 's') < HISTORICAL_BUCKET_AFTER.asSeconds()) {
+        return undefined;
+    }
+    const width = HISTORICAL_BUCKET_DURATION.asSeconds();
+    const start = Math.floor(playDate.unix() / width) * width;
+    const padding = HISTORICAL_BUCKET_PADDING.asSeconds();
+    return {from: start - padding, to: start + width + padding};
+}
+
 export const groupPlaysToTimeRanges = (plays: PlayObject[], existingRanges: PaginatedTimeRangeOptions[], opts: GroupPlaysTimeRangeOptions = {}) => {
     const {
         groupDuration = DEFAULT_GROUP_DURATION,

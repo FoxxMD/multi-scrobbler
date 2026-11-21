@@ -52,7 +52,7 @@ import { statefulInvariantTransform } from "../../core/PlayUtils.ts";
 import type { Counter, Gauge } from 'prom-client';
 import { generateLoggableAbortReason, ScrobbleSubmitError, SimpleError, StageChangeError } from "../common/errors/MSErrors.ts";
 import { serializeError} from 'serialize-error';
-import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.ts";
+import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges, HISTORICAL_BUCKET_FETCH_MAX, HISTORICAL_BUCKET_TTL_MS, historicalBucketRange } from "../utils/ListenFetchUtils.ts";
 import { spawn, isAbortError, delay, waitForEvent } from 'abort-controller-x';
 import type { QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.ts";
 import type {PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
@@ -713,7 +713,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         if(playDate === undefined) {
             throw new Error(`Cannot get SOT scrobbles for a play without a playDate => ${buildTrackString(play)}`);
         }
-        let range: PaginatedTimeRangeOptions | undefined = this.scrobbleSOTRanges.find(x => x.from <= playDate.unix() && x.to > Math.min(dayjs().subtract(this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT, 's').unix(), playDate.unix()));
+        // old plays use a fixed bucket so its cache key stays the same for every play in it, no matter what else is queued
+        const bucket = historicalBucketRange(playDate);
+        let range: PaginatedTimeRangeOptions | undefined = bucket ?? this.scrobbleSOTRanges.find(x => x.from <= playDate.unix() && x.to > Math.min(dayjs().subtract(this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT, 's').unix(), playDate.unix()));
         if(range === undefined) {
             this.logger.warn(`No Scrobble SOT range found! Should have been handled before this. Creating a new one for ${buildTrackString(play)}`);
             range = {
@@ -737,9 +739,14 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             return cachedPlaysRes;
         }
         try {
-            const plays = (await this.getScrobblesForTimeRange(range)).map(x => ({...x, meta: {...x.meta, parsedFrom: PARSED_FROM.history}}));
+            const fetched = await this.getScrobblesForTimeRange(bucket === undefined ? range : {...range, fetchMax: HISTORICAL_BUCKET_FETCH_MAX});
+            if(bucket !== undefined && fetched.length >= HISTORICAL_BUCKET_FETCH_MAX) {
+                // a partial list would miss duplicates, so fail like any other fetch error
+                throw new Error(`Service returned ${HISTORICAL_BUCKET_FETCH_MAX} or more scrobbles between ${todayAwareFormat(dayjs.unix(range.from))} and ${todayAwareFormat(dayjs.unix(range.to))}, too many to compare against`);
+            }
+            const plays = fetched.map(x => ({...x, meta: {...x.meta, parsedFrom: PARSED_FROM.history}}));
             plays.sort(sortByOldestPlayDate);
-            await this.cache.cacheClientScrobbles.set<PlayObject[] | Error>(this.getScrobbleCacheKey(range.from, range.to), plays, (this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT) * 1000);
+            await this.cache.cacheClientScrobbles.set<PlayObject[] | Error>(this.getScrobbleCacheKey(range.from, range.to), plays, bucket !== undefined ? HISTORICAL_BUCKET_TTL_MS : (this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT) * 1000);
             return plays;
         } catch (e: any) {
             await this.cache.cacheClientScrobbles.set<PlayObject[] | Error>(this.getScrobbleCacheKey(range.from, range.to), e, '10s');
