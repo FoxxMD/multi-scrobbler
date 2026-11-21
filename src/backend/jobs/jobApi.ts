@@ -67,6 +67,7 @@ export const toJobApiJson = (job: JobSelect, mirror: PlayMirrorSelect, opts: {co
     transformSource: job.transformSource,
     exportOrder: job.exportOrder,
     exportQueueLimit: job.exportQueueLimit,
+    exportUpstreamCheck: job.exportUpstreamCheck,
     targets: (opts.targets ?? []).map(x => toJobTargetApiJson(x, opts.resolveClient?.(x.componentId), opts.records?.get(x.componentId))),
     mirrorPlaysInRange: opts.mirrorPlaysInRange ?? 0,
     importStatus: job.importStatus,

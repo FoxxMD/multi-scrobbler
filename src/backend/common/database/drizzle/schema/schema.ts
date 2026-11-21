@@ -271,6 +271,8 @@ export const jobs = sqliteTable("jobs", {
   exportOrder: text({enum: ['asc','desc']}).notNull().default('desc'),
   // export only sends more plays while a target client's queue (all plays) is shorter than this
   exportQueueLimit: integer().notNull().default(20),
+  // false => target clients skip fetching their service's scrobbles for the dupe check and only compare against their own db
+  exportUpstreamCheck: integer({mode: 'boolean'}).notNull().default(true),
   // raw stage config snapshot (always a list), parsed again when exporting
   transformOptions: text({ mode: 'json' }).$type<unknown[]>(),
   transformSource: text({ mode: 'json' }).$type<JobTransformSource>(),

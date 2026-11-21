@@ -31,6 +31,7 @@ class FakeClient implements ExportClient {
     queuedLength = 0;
     running = true;
     queued: PlayObject[] = [];
+    contexts: unknown[] = [];
     transformedWith: StageConfig[][] = [];
     /** emit a failed playUpdate for every queued play */
     failAll = false;
@@ -44,8 +45,9 @@ class FakeClient implements ExportClient {
         return this.running ? COMPONENT_STATE.RUNNING : COMPONENT_STATE.IDLE;
     }
 
-    async queuePlay(data: PlayObject[], _context?: unknown, opts: {jobId?: number} = {}) {
+    async queuePlay(data: PlayObject[], context?: unknown, opts: {jobId?: number} = {}) {
         this.queued.push(...data);
+        this.contexts.push(context);
         this.queuedLength += data.length;
         if (this.failAll) {
             for (let i = 0; i < data.length; i++) {
@@ -68,7 +70,7 @@ class FakeClient implements ExportClient {
     }
 }
 
-const setup = async (opts: {db?: DbConcrete, timestamps?: number[], limit?: number, order?: 'asc' | 'desc', rangeTo?: number, coverage?: [number, number][], importing?: boolean, transformOptions?: unknown[], realClient?: ExportClient} = {}) => {
+const setup = async (opts: {db?: DbConcrete, timestamps?: number[], limit?: number, order?: 'asc' | 'desc', rangeTo?: number, coverage?: [number, number][], importing?: boolean, transformOptions?: unknown[], upstreamCheck?: boolean, realClient?: ExportClient} = {}) => {
     const db = opts.db ?? await transientDb();
     const mirrors = new MirrorRepository(db);
     const mirror = await mirrors.findOrCreate({userId: null as unknown as string, service: 'lastfm', account: null, name: 'test'});
@@ -92,6 +94,7 @@ const setup = async (opts: {db?: DbConcrete, timestamps?: number[], limit?: numb
         importFile: opts.importing === true ? {path: '/nope', originalName: 'x.csv', format: 'lastfm-ghan-csv', size: 1, managed: false} : undefined,
         importStatus: opts.importing === true ? 'running' : 'idle',
         transformOptions: opts.transformOptions,
+        exportUpstreamCheck: opts.upstreamCheck,
     });
     const componentId = opts.realClient?.componentId ?? (await db.insert(components).values({type: 'test', name: 'fake', mode: 'client', uid: `fake-${Math.random()}`}).returning())[0].id;
     const targetRepo = new JobTargetRepository(db);
@@ -268,6 +271,18 @@ describe('Job export runner', function () {
         expect(client.transformedWith[0]).to.deep.eq(stages);
         expect(client.queued[0].data.track?.name).eq('T700 (transformed)');
         expect(client.queued[0].original?.play?.data.track?.name).eq('T700');
+    });
+
+    it('tells the client to skip its upstream dupe check only when the job opts out', async function () {
+        const checked = await setup();
+        await checked.runner.startExport(checked.target.id);
+        await exportTask(checked.runner, checked.target.id);
+        expect(checked.client.contexts[0]).is.undefined;
+
+        const skipped = await setup({upstreamCheck: false});
+        await skipped.runner.startExport(skipped.target.id);
+        await exportTask(skipped.runner, skipped.target.id);
+        expect(skipped.client.contexts[0]).to.deep.eq({upstreamCheck: false});
     });
 
     it('counts plays a cleanup deleted in the completed stats', async function () {

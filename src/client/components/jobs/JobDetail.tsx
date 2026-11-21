@@ -404,6 +404,7 @@ export const ExportPanel = (props: { job: JobApiJson }) => {
                     <DataList.Root orientation="horizontal" size="sm">
                         <DataItem label="Order">{job.exportOrder === 'desc' ? 'Newest first' : 'Oldest first'}</DataItem>
                         <DataItem label="Queue limit"><QueueLimit key={job.exportQueueLimit} job={job}/></DataItem>
+                        <DataItem label="Duplicate check">{job.exportUpstreamCheck ? 'Service and database' : 'Database only'}</DataItem>
                         <DataItem label="Transforms">
                             <Stack gap="1">
                                 <Text>{transformSourceText(job)}</Text>

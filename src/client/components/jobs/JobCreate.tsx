@@ -48,6 +48,7 @@ const formSchema = z.object({
     targets: z.array(z.number()),
     exportOrder: z.enum(['asc', 'desc']),
     exportQueueLimit: z.number().int().min(1, 'At least 1').max(EXPORT_QUEUE_LIMIT_MAX, `At most ${EXPORT_QUEUE_LIMIT_MAX}`),
+    upstreamCheck: z.boolean(),
     transforms: z.enum(['none', 'preset', 'component']),
     preset: z.string(),
     /** `componentId:hook` */
@@ -128,6 +129,7 @@ const formSchema = z.object({
             targets: v.targets,
             exportOrder: v.exportOrder,
             exportQueueLimit: v.exportQueueLimit,
+            upstreamCheck: v.upstreamCheck,
             transforms,
             start: v.start,
         },
@@ -218,6 +220,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                 targets: [] as number[],
                 exportOrder: 'desc' as JobExportOrder,
                 exportQueueLimit: EXPORT_QUEUE_LIMIT_DEFAULT,
+                upstreamCheck: true,
                 transforms: 'none' as TransformsKind,
                 preset: options.presets[0]?.name ?? '',
                 transformComponent: options.componentTransforms[0] !== undefined ? `${options.componentTransforms[0].componentId}:${options.componentTransforms[0].preCompare !== undefined ? 'preCompare' : 'postCompare'}` : '',
@@ -473,6 +476,11 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                                             name="exportQueueLimit"
                                             children={(field) => <FormNumberInput field={field} label="Queue Limit" min={1} max={EXPORT_QUEUE_LIMIT_MAX} empty={1} maxWidth="10rem"
                                                 helperText="More Plays are only sent while a Client's queue, live Plays included, holds fewer than this. Can be changed later."/>}
+                                        />
+                                        <form.Field
+                                            name="upstreamCheck"
+                                            children={(field) => <FormCheckbox field={field} label="Check services for duplicates"
+                                                helperText={<>Each Client gets its scrobbles from its service to skip Plays the service already has. Turn off for much faster exports. Then Clients only skip Plays that Multi-Scrobbler already sent, and Plays that reached the service another way can be duplicated. See the <ChakraLink textDecoration="underline" href={`${TRANSFER_DOCS}#duplicate-checks`} target="_blank">docs</ChakraLink>.</>}/>}
                                         />
                                     </Collapsible.Content>
                                 </Collapsible.Root>

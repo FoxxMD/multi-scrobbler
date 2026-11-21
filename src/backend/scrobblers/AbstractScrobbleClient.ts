@@ -1158,6 +1158,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             isRetry = false,
             transform = true,
             dupeCheck = true,
+            upstreamCheck = true,
         } = context ?? {};
 
         const isDead = queueState.retries > 0 || isRetry;
@@ -1187,7 +1188,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
             let historicalPlays: PlayObject[] = [];
 
-            if (dupeCheck && this.upstreamRefresh.refreshEnabled) {
+            if (dupeCheck && upstreamCheck && this.upstreamRefresh.refreshEnabled) {
                 await this.handleQueuedScrobbleRanges();
                 try {
                     historicalPlays = await this.getSOTScrobblesForPlay(playEntity.play, {useCache: !(isRetry || !useCache)});

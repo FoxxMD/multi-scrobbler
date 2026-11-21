@@ -103,6 +103,8 @@ export interface JobApiJson {
     exportOrder: JobExportOrder
     /** the export only sends more plays while a target client's queue (live plays included) holds fewer than this */
     exportQueueLimit: number
+    /** false => clients don't fetch their service's scrobbles to find duplicates, only plays they already have in the database */
+    exportUpstreamCheck: boolean
     targets: JobTargetApiJson[]
     /** mirror plays in the job's range, what an export will go through */
     mirrorPlaysInRange: number
@@ -248,6 +250,7 @@ export const jobCreateSchema = z.object({
     targets: z.array(z.int().positive()).default([]).meta({description: 'Component ids of the Clients to export the mirrored scrobbles to'}),
     exportOrder: z.enum(JOB_EXPORT_ORDERS).default('desc').meta({description: 'desc exports newest first and can start while the import runs. asc exports oldest first, after the oldest scrobbles are imported'}),
     exportQueueLimit: z.int().min(1).max(EXPORT_QUEUE_LIMIT_MAX).default(EXPORT_QUEUE_LIMIT_DEFAULT).meta({description: "The export only sends more scrobbles while a Client's queue (live scrobbles included) holds fewer than this"}),
+    upstreamCheck: z.boolean().default(true).meta({description: "Clients fetch scrobbles from their service to skip ones it already has. false only skips scrobbles the Client already has in the database, which is much faster for large exports but can duplicate scrobbles that reached the service some other way"}),
     start: z.boolean().default(false).meta({description: 'Start the import and all exports once created'}),
 }).meta({title: 'Create Job'});
 export type JobCreate = z.input<typeof jobCreateSchema>;

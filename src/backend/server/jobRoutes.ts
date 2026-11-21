@@ -351,6 +351,7 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                     importOverlap: 'mirrorId' in payload.importFrom ? 'skip' : payload.overlap,
                     exportOrder: payload.exportOrder,
                     exportQueueLimit: payload.exportQueueLimit,
+                    exportUpstreamCheck: payload.upstreamCheck,
                     ...transforms,
                 });
                 await repos().targetRepo.createForJob(created.id, targetIds);

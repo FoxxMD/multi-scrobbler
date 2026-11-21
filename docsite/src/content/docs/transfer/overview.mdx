@@ -48,7 +48,7 @@ In the **Export** section, select the Clients that get the Plays. Each Client ex
 Exported Plays go through a Client the same way as live scrobbles:
 
 * The Client applies its own [transforms](/configuration/transforms).
-* The Client skips Plays it already has.
+* The Client skips Plays it already has. See [Duplicate Checks](#duplicate-checks).
 * The Client sends the Plays to its service one at a time.
 
 Because the Client skips duplicates, you can export the same Plays two times without duplicates on the service.
@@ -183,6 +183,21 @@ Multi-Scrobbler never deletes files in this folder. Only one Job can use each fi
 ### Transforms and Export Speed
 
 Multi-Scrobbler exports Plays one at a time. Transforms that call external services (MusicBrainz, Rocksky) wait for each call. If you export thousands of Plays, these transforms slow the export a lot.
+
+### Duplicate Checks
+
+Before a Client sends a Play, it compares the Play against two lists:
+
+* The Plays that Multi-Scrobbler already sent to that Client. These are in the database, so this check is fast.
+* The scrobbles on the Client's service. The Client gets them from the service, so this check is slow for large exports.
+
+To export faster, clear **Check services for duplicates** in the **Advanced** settings of the **Export** section. Then the Client uses only the database list.
+
+<Aside type="caution">
+
+Clear this setting only if the service has no scrobbles for the Job's range that came from somewhere other than Multi-Scrobbler. Examples are the service's own Spotify connection and other scrobbler apps. The Client sends these Plays again, and the service gets duplicates.
+
+</Aside>
 
 ### Failed Plays
 

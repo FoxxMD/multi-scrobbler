@@ -77,6 +77,7 @@ export const generateJobApiJson = (data: Partial<JobApiJson> = {}): JobApiJson =
         transformSource: null,
         exportOrder: 'asc',
         exportQueueLimit: 20,
+        exportUpstreamCheck: true,
         targets,
         mirrorPlaysInRange: importFetched,
         importStatus: 'running',
