@@ -279,4 +279,5 @@ export const jobDeleteQuerySchema = z.object({
 export const jobUpdateSchema = z.object({
     name: z.string().trim().min(1).max(100).optional(),
     exportQueueLimit: z.int().min(1).max(EXPORT_QUEUE_LIMIT_MAX).optional(),
+    upstreamCheck: z.boolean().optional().meta({description: 'See upstreamCheck on Create Job. Applies to scrobbles exported after the change, ones already queued in a Client keep the old setting'}),
 }).meta({title: 'Update Job'});

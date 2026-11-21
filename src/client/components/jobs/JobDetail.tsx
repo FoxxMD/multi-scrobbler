@@ -1,4 +1,4 @@
-import { Box, Button, Card, CloseButton, Link as ChakraLink, RadioGroup, Code, Collapsible, Container, DataList, Dialog, Editable, Flex, Heading, HStack, IconButton, NumberInput, Separator, Portal, SkeletonText, Stack, Text } from '@chakra-ui/react';
+import { Box, Button, Card, Checkbox, CloseButton, Link as ChakraLink, RadioGroup, Code, Collapsible, Container, DataList, Dialog, Editable, Flex, Heading, HStack, IconButton, NumberInput, Separator, Portal, SkeletonText, Stack, Text } from '@chakra-ui/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import ky from 'ky';
 import { useSSEAnyEvent, useSSEContext } from "@flamefrontend/sse-runtime-react";
@@ -384,6 +384,26 @@ export const QueueLimit = (props: { job: JobApiJson }) => {
     );
 }
 
+export const UpstreamCheck = (props: { job: JobApiJson }) => {
+    const {job} = props;
+    const setJob = useSetJob();
+    const {mutate, isPending} = useMutation({
+        mutationFn: (upstreamCheck: boolean) => ky.patch(`jobs/${job.id}`, {baseUrl, json: {upstreamCheck}}).json<JobApiJson>(),
+        onSuccess: setJob,
+        onError: (e) => toaster.create({type: 'error', title: 'Could not change the duplicate check', description: apiErrorMessage(e)}),
+    });
+    return (
+        <Stack gap="1">
+            <Checkbox.Root size="sm" checked={job.exportUpstreamCheck} disabled={isPending} onCheckedChange={(d) => mutate(d.checked === true)}>
+                <Checkbox.HiddenInput/>
+                <Checkbox.Control/>
+                <Checkbox.Label>Check services for duplicates</Checkbox.Label>
+            </Checkbox.Root>
+            <Text textStyle="xs" color="fg.muted">Changes apply to Plays exported next. Plays already in a Client's queue keep the old setting.</Text>
+        </Stack>
+    );
+}
+
 const transformSourceText = (job: JobApiJson): string => {
     const src = job.transformSource;
     if (src === null) {
@@ -404,7 +424,7 @@ export const ExportPanel = (props: { job: JobApiJson }) => {
                     <DataList.Root orientation="horizontal" size="sm">
                         <DataItem label="Order">{job.exportOrder === 'desc' ? 'Newest first' : 'Oldest first'}</DataItem>
                         <DataItem label="Queue limit"><QueueLimit key={job.exportQueueLimit} job={job}/></DataItem>
-                        <DataItem label="Duplicate check">{job.exportUpstreamCheck ? 'Service and database' : 'Database only'}</DataItem>
+                        <DataItem label="Duplicate check"><UpstreamCheck job={job}/></DataItem>
                         <DataItem label="Transforms">
                             <Stack gap="1">
                                 <Text>{transformSourceText(job)}</Text>

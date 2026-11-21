@@ -429,6 +429,9 @@ describe('Job API', function () {
 
             const patched = await request(app).patch(`/api/jobs/${job.id}`).send({exportQueueLimit: 50});
             expect(patched.body.exportQueueLimit).eq(50);
+            expect(patched.body.exportUpstreamCheck).is.true;
+            const unchecked = await request(app).patch(`/api/jobs/${job.id}`).send({upstreamCheck: false});
+            expect(unchecked.body).to.deep.include({exportUpstreamCheck: false, exportQueueLimit: 50});
 
             // the client isn't running in this app so the export keeps waiting
             const started = await request(app).post(`/api/jobs/${job.id}/targets/${targetId}/start`);

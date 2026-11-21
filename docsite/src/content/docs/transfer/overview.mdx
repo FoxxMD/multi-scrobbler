@@ -191,7 +191,7 @@ Before a Client sends a Play, it compares the Play against two lists:
 * The Plays that Multi-Scrobbler already sent to that Client. These are in the database, so this check is fast.
 * The scrobbles on the Client's service. The Client gets them from the service, so this check is slow for large exports.
 
-To export faster, clear **Check services for duplicates** in the **Advanced** settings of the **Export** section. Then the Client uses only the database list.
+To export faster, clear **Check services for duplicates** in the **Advanced** settings of the **Export** section. Then the Client uses only the database list. You can also change this setting on the Job page while the Export runs. The change applies to the Plays that the Export sends next. Plays already in the Client's queue keep the old setting.
 
 <Aside type="caution">
 
