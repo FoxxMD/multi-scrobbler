@@ -631,6 +631,8 @@ export class JobRunner {
             }
         }
         let rateLimit: RateLimitStatusJson | undefined;
+        // pages are small once the client queue is full (one per dequeued play), so play counts refresh on a timer instead of each page
+        let statsAt = 0;
         const wait = async (reason: string) => {
             const current = this.runtime.exports[targetId];
             if(current?.waiting !== reason || current?.rateLimit?.remaining !== rateLimit?.remaining || current?.rateLimit?.limit !== rateLimit?.limit) {
@@ -728,9 +730,13 @@ export class JobRunner {
             cursor = {playedAt: last.playedAt, id: last.id} satisfies JobTargetCursor;
             exported += rows.length;
             queued += created.length;
-            const stats = addStats((await this.targetRepo.playStats(this.jobId, componentId)).get(componentId), initial.removedStats);
+            const update: Partial<JobTargetNew> = {cursor, exported, queued, breaker};
+            if(Date.now() - statsAt >= this.timings.exportStats) {
+                update.stats = addStats((await this.targetRepo.playStats(this.jobId, componentId)).get(componentId), initial.removedStats);
+                statsAt = Date.now();
+            }
             this.runtime.exports[targetId] = {rateLimit};
-            await this.setTarget(targetId, {cursor, exported, queued, stats, breaker});
+            await this.setTarget(targetId, update);
             logger.verbose(`Exported ${rows.length} scrobbles, ${created.length} new to the client`);
         }
     }

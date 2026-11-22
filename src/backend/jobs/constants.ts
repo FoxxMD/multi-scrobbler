@@ -12,6 +12,8 @@ export interface JobTimings {
     emitThrottle: number
     /** export fallback poll, when no client or import event wakes it sooner */
     exportPoll: number
+    /** min time between play count refreshes while exporting pages. Counting reads every play of the job */
+    exportStats: number
 }
 
 export const DEFAULT_JOB_TIMINGS: JobTimings = {
@@ -22,4 +24,5 @@ export const DEFAULT_JOB_TIMINGS: JobTimings = {
     readyPoll: 5000,
     emitThrottle: 1000,
     exportPoll: 5000,
+    exportStats: 5000,
 };

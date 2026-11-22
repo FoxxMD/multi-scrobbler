@@ -172,6 +172,26 @@ describe('Job export runner', function () {
         expect((await targetRepo.getById(target.id))!.status).eq('completed');
     });
 
+    it('refreshes play counts on a timer instead of every page, and always before completing', async function () {
+        const {runner, target, targetRepo, client} = await setup({limit: 1});
+        const repo = (runner as unknown as {targetRepo: JobTargetRepository}).targetRepo;
+        let counted = 0;
+        const playStats = repo.playStats;
+        repo.playStats = async (...args) => {
+            counted++;
+            return playStats(...args);
+        };
+        await runner.startExport(target.id);
+        for (let i = 0; i < 7; i++) {
+            await until(() => client.queued.length === i + 1);
+            client.process();
+        }
+        await exportTask(runner, target.id);
+        expect((await targetRepo.getById(target.id))!.status).eq('completed');
+        // first page, then the completion check. The other 6 pages are inside the default 5s window
+        expect(counted).eq(2);
+    });
+
     it('waits while the client rate limit is at the export reserve, and reports the rate limit', async function () {
         const {runner, target, targetRepo, client} = await setup();
         const budget = {limit: 5000, remaining: 900, reserve: 500, exportReserve: 1000, reset: Date.now() + 60_000, policy: '5000;w=3600', at: Date.now()};
