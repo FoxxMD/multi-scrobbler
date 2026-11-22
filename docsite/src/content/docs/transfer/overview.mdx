@@ -222,3 +222,15 @@ Multi-Scrobbler does not retry failed Plays from a Job by itself. To retry them,
 
 * On the Client page, turn on **Plays from Export jobs** in the **Plays** filters. Set **Played Between** to the Job's range. Then select **Retry All Unsuccessful** in the menu next to **Plays**.
 * Create a new Job with the same Mirror and export to the Client again. The Client sends the failed Plays and skips the Plays it already has.
+
+### Slow Exports
+
+If an Export is slower than you expect, collect its metrics before you open an issue:
+
+1. On the Job page, in the **Export** section, select **Show metrics**.
+2. Select the copy button. It copies the metrics as JSON.
+3. Add the JSON to your issue.
+
+The metrics show the time that each step of the Export takes, for example reading the Mirror, the duplicate checks, and the requests to the Client's service. The times cover the last 10 minutes, so copy them while the Export is slow. Select **Refresh** to get new values.
+
+The same timings are also available from the [Prometheus endpoint](/configuration#prometheus) as `multiscrobbler_export_stage_seconds`, `multiscrobbler_export_wait_seconds`, and `multiscrobbler_play_stage_seconds`.
