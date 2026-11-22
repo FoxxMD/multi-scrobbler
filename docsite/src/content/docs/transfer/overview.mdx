@@ -208,6 +208,12 @@ Be careful when disabling this setting if the service has scrobbles in the Job's
 
 </Aside>
 
+### Rate Limits
+
+The [Teal.fm](/configuration/clients/tealfm#configuration) and [Rocksky](/configuration/clients/rocksky#configuration) Clients write to your PDS. Your PDS has a rate limit for each account, and a large Export can use all of it. Then your other apps, for example Bluesky, cannot write to your account.
+
+These Clients keep a reserve of points free. When the reserve is reached, the Export waits until the limit resets. You can see the points that are used in the Export section of the Job page.
+
 ### Failed Plays
 
 If many exported Plays fail in a row, the Export stops and shows the last error. The limit is 10, or the Queue Limit if it is higher. This usually means that the Client configuration is wrong or its service is down. Fix the problem, then select **Resume**.
