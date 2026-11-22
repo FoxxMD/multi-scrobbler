@@ -86,11 +86,13 @@ export const plays = sqliteTable("plays", {
   compacted: text()
 }, (table) => [
   index("play_parent_id_idx").on(table.parentId),
-  index("play_component_id_idx").on(table.componentId),
+  // componentId first so it also serves componentId-only lookups
+  index("play_component_played_idx").on(table.componentId, table.playedAt),
   uniqueIndex("play_uid_idx").on(table.uid),
   index("play_playedAt_idx").on(table.playedAt),
   index("play_seenAt_idx").on(table.seenAt),
-  index("play_job_id_idx").on(table.jobId)
+  // covers job play counts per client and state without reading rows
+  index("play_job_component_state_idx").on(table.jobId, table.componentId, table.state)
 ]);
 
 export const playInputs = sqliteTable("play_inputs", {
@@ -195,7 +197,8 @@ export const queueStates = sqliteTable("play_queue_states", {
   createdAt: DayjsTimestamp('createdAt').notNull().$defaultFn(() => dayjs()),
   updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()).$onUpdate(() => dayjs())
 }, (table) => [
-  index('play_queue_state_id_idx').on(table.playId)
+  index('play_queue_state_id_idx').on(table.playId),
+  index('play_queue_state_component_idx').on(table.componentId, table.queueName, table.queueStatus)
 ]);
 
 // export const playQueueRelations = defineRelations({ plays, queueStates }, (r) => ({

@@ -1,6 +1,6 @@
 import { childLogger } from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
-import { and, asc, count, eq, exists, gt, inArray, isNotNull, isNull, ne, not, or, relationsFilterToSQL, type SQL, sql } from "drizzle-orm";
+import { and, asc, count, eq, exists, gt, inArray, isNotNull, isNull, lte, ne, not, or, relationsFilterToSQL, type SQL, type SQLWrapper, sql } from "drizzle-orm";
 import { EmptyFilter } from "drizzle-orm/relations";
 import assert from "node:assert";
 import type { MarkOptional, ElementOf } from "ts-essentials";
@@ -22,6 +22,23 @@ import type {CompareDateOp, PaginatedResponse, playWhereOptsSchema, queryPlaysOp
 import type * as z from "zod";
 import type {PaginatedQueryResponse} from "../../../../../core/Api.ts";
 import type { PlayEventTransform } from "../../../../../core/PlayEvent.ts";
+
+/**
+ * Where filter for plays that have a matching queue state, as `id IN (SELECT playId ...)`.
+ * The relational `queueStates` filter compiles to EXISTS, so SQLite walks every play of the component (slow once a component has many plays).
+ * This form reads play_queue_state_component_idx instead. It also filters plays by `componentId`, so callers must not.
+ * */
+const inQueue = (q: {componentId?: number | SQLWrapper, queueName: string | SQLWrapper, status: QueueStateSelect['queueStatus'] | SQLWrapper, retries?: number | SQLWrapper}) => (t: typeof plays): SQL => {
+    const conds = [
+        q.componentId === undefined ? undefined : eq(queueStates.componentId, q.componentId),
+        eq(queueStates.queueName, q.queueName),
+        eq(queueStates.queueStatus, q.status),
+        q.retries === undefined ? undefined : lte(queueStates.retries, q.retries),
+    ];
+    const inQueueSql = sql`${t.id} in (select ${queueStates.playId} from ${queueStates} where ${and(...conds)})`;
+    // unary + stops SQLite from scanning a plays componentId index, so it looks up the subquery ids by rowid instead
+    return q.componentId === undefined ? inQueueSql : sql`+${t.componentId} = ${q.componentId} and ${inQueueSql}`;
+}
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 
@@ -557,14 +574,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         // https://stackoverflow.com/a/78551796
         // cannot bind arrays in sqlite
         where: {
-            componentId: sql.placeholder('componentId'),
-            queueStates: {
-                queueName: sql.placeholder('queueName'),
-                queueStatus: sql.placeholder('status'),
-                retries: {
-                    lte: sql.placeholder('retries')
-                }
-            },
+            RAW: inQueue({componentId: sql.placeholder('componentId'), queueName: sql.placeholder('queueName'), status: sql.placeholder('status'), retries: sql.placeholder('retries')}),
         },
         with: {
             queueStates: {
@@ -603,14 +613,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                     id: {
                         notIn: notIds
                     },
-                    componentId: componentId ?? EmptyFilter,
-                    queueStates: {
-                        queueName: queueName,
-                        queueStatus: status,
-                        retries: {
-                            lte: retries
-                        }
-                    },
+                    RAW: inQueue({componentId, queueName, status, retries}),
                 },
                 with: {
                     queueStates: {
@@ -638,14 +641,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                     id: true
         },
         where: {
-            componentId: this.componentId ?? EmptyFilter,
-            queueStates: {
-                queueName: sql.placeholder('queueName'),
-                queueStatus: 'queued',
-                retries: {
-                    lte: sql.placeholder('retries')
-                }
-            }
+            RAW: inQueue({componentId: this.componentId, queueName: sql.placeholder('queueName'), status: 'queued', retries: sql.placeholder('retries')}),
         }
     }).prepare()
 
@@ -659,14 +655,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
     protected prepareGetQueuedScrobbleRange = () => this.db.query.plays.findMany({
         where: {
-            componentId: this.componentId ?? EmptyFilter,
-            queueStates: {
-                queueName: sql.placeholder('queueName'),
-                queueStatus: 'queued',
-                retries: {
-                    lte: sql.placeholder('retries')
-                }
-            },
+            RAW: inQueue({componentId: this.componentId, queueName: sql.placeholder('queueName'), status: 'queued', retries: sql.placeholder('retries')}),
         },
         orderBy: {
             seenAt: 'asc',
@@ -698,21 +687,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             hydrate
         } = opts;
         const where: FindWhere<'plays'> = {
-            componentId: componentId ?? EmptyFilter
-        }
-        if(retries !== undefined) {
-            where.queueStates = {
-                queueName,
-                queueStatus: 'queued',
-                retries: {
-                    lte: retries
-                }
-            }
-        } else {
-            where.queueStates = {
-                queueName,
-                queueStatus: 'queued'
-            }
+            RAW: inQueue({componentId, queueName, status: 'queued', retries}),
         }
         const res = await this.db.query.plays.findMany({
             where,
