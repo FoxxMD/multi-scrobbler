@@ -23,7 +23,8 @@ import { users } from '../../common/database/drizzle/schema/auth.ts';
 import { components, plays, playsHistorical } from '../../common/database/drizzle/schema/schema.ts';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { fixtureCreateComponent, fixtureCreatePlay } from '../utils/databaseFixtures.ts';
-import type { JobApiJson, JobOptionsApiJson, MirrorApiJson } from '../../../core/Job.ts';
+import type { JobApiJson, JobMetricsApiJson, JobOptionsApiJson, MirrorApiJson } from '../../../core/Job.ts';
+import { exportStageSeconds, playStageSeconds } from '../../common/playMetrics.ts';
 import { mirrorLockKey } from '../../jobs/JobRunner.ts';
 import { ensureOwner } from '../../common/auth/owner.ts';
 import type { PlayTransformPartsConfigOptions } from '../../../core/Transform.ts';
@@ -60,7 +61,7 @@ const waitForImport = async (app: Express, id: number, status = 'completed') => 
     throw new Error(`Job ${id} never reached ${status}`);
 }
 
-const fakeClient = (componentId: number, type: string, playTransform?: object) => ({componentId, name: `client ${componentId}`, type, databaseOK: true, isReady: () => true, config: {options: {playTransform}}});
+const fakeClient = (componentId: number, type: string, playTransform?: object) => ({componentId, name: `client ${componentId}`, getSafeExternalName: () => `client-${componentId}`, type, databaseOK: true, isReady: () => true, config: {options: {playTransform}}});
 const create = (app: Express, transforms: unknown) => request(app).post('/api/jobs').send({name: 'transforms', importFrom: {existingFile: 'export.json'}, mirror: {new: {name: 'm'}}, transforms});
 
 describe('Job API', function () {
@@ -299,6 +300,7 @@ describe('Job API', function () {
         const job = await new JobRepository(db).create({userId: other.id, name: 'theirs', mirrorId: mirror.id, rangeTo: dayjs()});
 
         expect((await request(app).get(`/api/jobs/${job.id}`)).status).eq(404);
+        expect((await request(app).get(`/api/jobs/${job.id}/metrics`)).status).eq(404);
         expect((await request(app).post(`/api/jobs/${job.id}/start`)).status).eq(404);
         expect((await request(app).delete(`/api/jobs/${job.id}`)).status).eq(404);
         expect((await request(app).get('/api/jobs')).body.map((x: JobApiJson) => x.id)).to.not.include(job.id);
@@ -388,6 +390,29 @@ describe('Job API', function () {
 
             const listed = (await request(app).get('/api/jobs')).body as JobApiJson[];
             expect(listed[0].targets.map(x => x.componentId)).eql([7]);
+        });
+
+        it('returns metrics for the job and its clients only', async function () {
+            await using tmp = await createTmpDir('jobMetrics');
+            const {app, db} = await exportApp(tmp.path);
+            const job = (await createWithTargets(app, {targets: [7]})).body as JobApiJson;
+            await db.insert(plays).values([fixtureCreatePlay({componentId: 7, state: 'scrobbled'}), fixtureCreatePlay({componentId: 7, state: 'scrobbled'})]);
+            exportStageSeconds.observe({job: String(job.id), client: 'client 7', stage: 'pass'}, 0.5);
+            exportStageSeconds.observe({job: String(job.id + 1000), client: 'client 7', stage: 'pass'}, 0.5);
+            playStageSeconds.observe({mode: 'client', name: 'client-7', job: '', stage: 'queue_next'}, 0.1);
+            playStageSeconds.observe({mode: 'client', name: 'client-8', job: '', stage: 'queue_next'}, 0.1);
+
+            const res = await request(app).get(`/api/jobs/${job.id}/metrics`);
+            expect(res.status, JSON.stringify(res.body)).eq(200);
+            const body = res.body as JobMetricsApiJson;
+            expect(body.job).to.deep.include({id: job.id, exportQueueLimit: job.exportQueueLimit});
+            expect(body.targets).length(1);
+            expect(body.targets[0]).to.deep.include({componentId: 7, name: 'client 7', clientPlays: 2});
+            expect(body.process.memory.rss).greaterThan(0);
+            const values = body.metrics.flatMap(m => m.values);
+            expect(values.some(v => v.labels.job === String(job.id) && v.labels.stage === 'pass')).is.true;
+            expect(values.some(v => v.labels.name === 'client-7' && v.labels.stage === 'queue_next')).is.true;
+            expect(values.some(v => v.labels.job === String(job.id + 1000) || v.labels.name === 'client-8')).is.false;
         });
 
         it('creates a job that only exports an existing mirror', async function () {

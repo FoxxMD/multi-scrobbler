@@ -6,7 +6,8 @@ import { asCleanupSseEvent, asJobSseEvent, type MsSseEvent } from "../../../core
 import { useState, type ReactNode } from 'react';
 import { LuCheck, LuPencil, LuX } from 'react-icons/lu';
 import { Link, useNavigate, useParams } from "react-router";
-import { type CleanupAction, EXPORT_QUEUE_LIMIT_MAX, type JobApiJson, type JobTargetApiJson } from "../../../core/Job";
+import { type CleanupAction, EXPORT_QUEUE_LIMIT_MAX, type JobApiJson, type JobMetricsApiJson, type JobTargetApiJson } from "../../../core/Job";
+import { ChakraClip } from "../ChakraClipboard";
 import { capitalize } from "../../../core/StringUtils";
 import { TextMuted } from "../TextMuted";
 import { CleanupProgress, taskText, useMirrorEvents } from "../mirrors/mirrorUtils";
@@ -421,6 +422,34 @@ const transformSourceText = (job: JobApiJson): string => {
     return src.kind === 'preset' ? `Preset: ${src.name}` : `Copied from ${src.componentName} (${src.hook})`;
 }
 
+/** Timings to copy into a bug report about a slow export */
+export const ExportMetrics = (props: { job: JobApiJson }) => {
+    const {job} = props;
+    const [open, setOpen] = useState(false);
+    const {data, error, isFetching, refetch} = useQuery({
+        queryKey: ['jobMetrics', job.id],
+        queryFn: () => ky.get(`jobs/${job.id}/metrics`, {baseUrl}).json<JobMetricsApiJson>(),
+        enabled: open,
+        gcTime: 0,
+    });
+    return (
+        <Collapsible.Root open={open} onOpenChange={(d) => setOpen(d.open)}>
+            <Collapsible.Trigger asChild><Button size="xs" variant="ghost" px="0">{open ? 'Hide metrics' : 'Show metrics'}</Button></Collapsible.Trigger>
+            <Collapsible.Content>
+                <Stack gap="2">
+                    <TextMuted textStyle="xs">Timings of each export step. If exports are slow, copy these and add them to your issue.</TextMuted>
+                    <HStack>
+                        {data !== undefined ? <ChakraClip value={data}/> : undefined}
+                        <Button size="xs" variant="subtle" loading={isFetching} onClick={() => refetch()}>Refresh</Button>
+                    </HStack>
+                    {error !== null ? <ErrorAlert error={error}/> : undefined}
+                    {data !== undefined ? <Code as="pre" display="block" whiteSpace="pre" overflow="auto" maxH="20rem" p="2" textStyle="xs">{JSON.stringify(data, null, 2)}</Code> : undefined}
+                </Stack>
+            </Collapsible.Content>
+        </Collapsible.Root>
+    );
+}
+
 export const ExportPanel = (props: { job: JobApiJson }) => {
     const {job} = props;
     return (
@@ -448,6 +477,7 @@ export const ExportPanel = (props: { job: JobApiJson }) => {
                         {i > 0 ? <Separator mb="4"/> : undefined}
                         <ExportTarget job={job} target={t}/>
                     </Box>)}
+                    {job.targets.length > 0 ? <ExportMetrics job={job}/> : undefined}
                 </Stack>
             </Card.Body>
         </Card.Root>

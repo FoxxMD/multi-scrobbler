@@ -132,6 +132,18 @@ export interface JobApiJson {
     }
 }
 
+/** Timings and counts to troubleshoot a slow Job, copied by the user into a bug report */
+export interface JobMetricsApiJson {
+    generatedAt: string
+    version?: string
+    uptimeSeconds: number
+    process: {memory: Record<string, number>, cpu: Record<string, number>}
+    job: {id: number, status: string, importStatus: string, exportOrder: string, exportQueueLimit: number, exportUpstreamCheck: boolean, mirrorPlaysInRange: number}
+    targets: {componentId: number, name?: string, status: string, exported: number, queued: number, stats: Partial<Record<string, number>> | null, clientPlays: number}[]
+    /** prom-client metrics (getMetricsAsJSON) filtered to this Job and its Clients */
+    metrics: {name: string, help: string, type: string, values: {labels: Record<string, string | number>, value: number, metricName?: string}[]}[]
+}
+
 export const CLEANUP_ACTIONS = ['compact', 'delete'] as const;
 export type CleanupAction = typeof CLEANUP_ACTIONS[number];
 

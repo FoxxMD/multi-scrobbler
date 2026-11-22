@@ -7,7 +7,12 @@ import { randomUUID } from "node:crypto";
 import { lstat, mkdir, readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import * as z from "zod";
-import { cleanupBodySchema, isLockedMirror, MIRROR_SERVICE_MIXED, jobCreateSchema, jobDeleteQuerySchema, jobUpdateSchema, type JobApiJson, type JobOptionsApiJson } from "../../core/Job.ts";
+import { cleanupBodySchema, deriveJobStatus, isLockedMirror, MIRROR_SERVICE_MIXED, jobCreateSchema, jobDeleteQuerySchema, jobUpdateSchema, type JobApiJson, type JobMetricsApiJson, type JobOptionsApiJson } from "../../core/Job.ts";
+import { eq } from "drizzle-orm";
+import prom from 'prom-client';
+import { plays } from "../common/database/drizzle/schema/schema.ts";
+import { exportStageSeconds, exportWaitSeconds, playStageSeconds } from "../common/playMetrics.ts";
+import { getRoot } from "../ioc.ts";
 import { JobRepository, type JobSelect } from "../common/database/drizzle/repositories/JobRepository.ts";
 import { runTransaction } from "../common/database/drizzle/drizzleUtils.ts";
 import { MirrorRepository, type PlayMirrorSelect } from "../common/database/drizzle/repositories/MirrorRepository.ts";
@@ -27,6 +32,8 @@ const MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024;
 
 /** services that refuse scrobbles older than about 14 days */
 const OLD_SCROBBLE_REJECTING_TYPES = ['lastfm', 'librefm'];
+
+const JOB_METRIC_NAMES = [exportStageSeconds, exportWaitSeconds, playStageSeconds].map(x => (x as unknown as {name: string}).name);
 
 const jsonParser = bodyParser.json({type: ['text/*', 'application/json']});
 
@@ -164,6 +171,53 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
             return;
         }
         return res.json(await asApi(job, repos(req).mirrorRepo));
+    });
+
+    router.get('/jobs/:id/metrics', {docs: {operationId: 'get-job-metrics'}, paramsSchema: idParams, tags: ['Jobs'], summary: 'Get Job Metrics', description: 'Stage timings and counts to troubleshoot a slow Job'}, async (req, res) => {
+        const job = await userJob(req, res, req.params.id);
+        if (job === undefined) {
+            return;
+        }
+        const {targetRepo, mirrorRepo} = repos(req);
+        const stored = await targetRepo.findByJob(job.id);
+        const live = await targetRepo.playStats(job.id);
+        const targets = await Promise.all(stored.map(async t => {
+            const client = exportClient(t.componentId);
+            return {
+                componentId: t.componentId,
+                name: client?.name,
+                // label value used by play stage metrics
+                metricName: client?.getSafeExternalName(),
+                status: t.status,
+                exported: t.exported,
+                queued: t.queued,
+                stats: t.status === 'completed' ? t.stats : addStats(live.get(t.componentId), t.removedStats),
+                clientPlays: await jobs.db.$count(plays, eq(plays.componentId, t.componentId)),
+            };
+        }));
+        const jobLabel = String(job.id);
+        const clientNames = new Set(targets.map(t => t.metricName).filter(x => x !== undefined));
+        const all = await prom.register.getMetricsAsJSON();
+        const metrics = all
+            .filter(m => JOB_METRIC_NAMES.includes(m.name))
+            .map(m => ({
+                name: m.name,
+                help: m.help,
+                type: String(m.type),
+                values: (m.values as {labels: Record<string, string | number>, value: number, metricName?: string}[])
+                    // this job's exports and plays, and the target clients' live plays to compare against
+                    .filter(v => v.labels.job === jobLabel || (v.labels.job === '' && v.labels.mode === 'client' && clientNames.has(String(v.labels.name)))),
+            }));
+        const mirrorPlaysInRange = await mirrorRepo.countInRange(job.mirrorId, [job.rangeFrom?.valueOf() ?? 0, job.rangeTo.valueOf()]);
+        return res.json({
+            generatedAt: dayjs().toISOString(),
+            version: getRoot().get('version'),
+            uptimeSeconds: Math.round(process.uptime()),
+            process: {memory: {...process.memoryUsage()}, cpu: {...process.cpuUsage()}},
+            job: {id: job.id, status: deriveJobStatus([job.importStatus, ...stored.map(x => x.status)]), importStatus: job.importStatus, exportOrder: job.exportOrder, exportQueueLimit: job.exportQueueLimit, exportUpstreamCheck: job.exportUpstreamCheck, mirrorPlaysInRange},
+            targets: targets.map(({metricName: _, ...t}) => t),
+            metrics,
+        } satisfies JobMetricsApiJson);
     });
 
     router.post('/jobs', {
