@@ -139,9 +139,58 @@ export interface JobMetricsApiJson {
     uptimeSeconds: number
     process: {memory: Record<string, number>, cpu: Record<string, number>}
     job: {id: number, status: string, importStatus: string, exportOrder: string, exportQueueLimit: number, exportUpstreamCheck: boolean, mirrorPlaysInRange: number}
-    targets: {componentId: number, name?: string, status: string, exported: number, queued: number, stats: Partial<Record<string, number>> | null, clientPlays: number}[]
-    /** prom-client metrics (getMetricsAsJSON) filtered to this Job and its Clients */
+    /** `metricName` is the `name` label of the Client's metrics */
+    targets: {componentId: number, name?: string, metricName?: string, status: string, exported: number, queued: number, stats: Partial<Record<string, number>> | null, clientPlays: number}[]
+    /** prom-client metrics filtered to this Job and its Clients */
     metrics: {name: string, help: string, type: string, values: {labels: Record<string, string | number>, value: number, metricName?: string}[]}[]
+}
+
+/** Average seconds per Play since startup, undefined if nothing was measured yet */
+export interface JobExportTimings {
+    /** reading, transforming and queueing a Play, plus processing it in the Client and saving the result. Excludes time waiting in the queue */
+    perPlay?: number
+    /** from taking the Play off the queue until just before the request to the service (transforms, duplicate checks) */
+    clientProcessing?: number
+    /** the request to the Client's service */
+    scrobbleRequest?: number
+}
+
+export const jobExportTimings = (data: JobMetricsApiJson, metricName: string): JobExportTimings => {
+    const job = String(data.job.id);
+    const totals = (metric: string, stage: string, labels: Record<string, string>) => {
+        let sum = 0;
+        let count = 0;
+        for (const v of data.metrics.find(m => m.name === metric)?.values ?? []) {
+            if (v.labels.stage !== stage || v.labels.name !== metricName || Object.entries(labels).some(([k, val]) => String(v.labels[k]) !== val)) {
+                continue;
+            }
+            if (v.metricName === `${metric}_sum`) {
+                sum += v.value;
+            } else if (v.metricName === `${metric}_count`) {
+                count += v.value;
+            }
+        }
+        return {sum, count};
+    }
+    const play = (stage: string, jobLabel = job) => totals('multiscrobbler_play_stage_seconds', stage, {mode: 'client', job: jobLabel});
+    const avg = (t: {sum: number, count: number}) => t.count === 0 ? undefined : t.sum / t.count;
+
+    const processTotal = play('process_total');
+    const scrobble = play('scrobble_request');
+    // the queue is read before the Play is known, so this is the Client's average for live and export Plays
+    const queueNext = avg(play('queue_next', ''));
+    // process_total includes the request, so take its total out
+    const clientProcessing = processTotal.count === 0 ? undefined : (processTotal.sum - scrobble.sum) / processTotal.count + (queueNext ?? 0);
+
+    // a pass queues a page of Plays, each Play queued runs one pre_queue_check
+    const passes = totals('multiscrobbler_export_stage_seconds', 'pass', {job});
+    const queued = play('pre_queue_check');
+    const exportSide = queued.count === 0 ? undefined : passes.sum / queued.count;
+    const processAvg = avg(processTotal);
+    const persistAvg = avg(play('persist'));
+    const perPlay = exportSide === undefined || processAvg === undefined ? undefined : exportSide + processAvg + (queueNext ?? 0) + (persistAvg ?? 0);
+
+    return {perPlay, clientProcessing, scrobbleRequest: avg(scrobble)};
 }
 
 export const CLEANUP_ACTIONS = ['compact', 'delete'] as const;

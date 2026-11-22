@@ -6,7 +6,7 @@ import { asCleanupSseEvent, asJobSseEvent, type MsSseEvent } from "../../../core
 import { useState, type ReactNode } from 'react';
 import { LuCheck, LuPencil, LuX } from 'react-icons/lu';
 import { Link, useNavigate, useParams } from "react-router";
-import { type CleanupAction, EXPORT_QUEUE_LIMIT_MAX, type JobApiJson, type JobMetricsApiJson, type JobTargetApiJson } from "../../../core/Job";
+import { type CleanupAction, EXPORT_QUEUE_LIMIT_MAX, type JobApiJson, type JobMetricsApiJson, type JobTargetApiJson, jobExportTimings } from "../../../core/Job";
 import { ChakraClip } from "../ChakraClipboard";
 import { capitalize } from "../../../core/StringUtils";
 import { TextMuted } from "../TextMuted";
@@ -422,6 +422,38 @@ const transformSourceText = (job: JobApiJson): string => {
     return src.kind === 'preset' ? `Preset: ${src.name}` : `Copied from ${src.componentName} (${src.hook})`;
 }
 
+const formatSeconds = (s: number | undefined): string => {
+    if (s === undefined) {
+        return 'Not measured yet';
+    }
+    return s < 1 ? `${Math.round(s * 1000).toLocaleString()} ms` : `${s.toLocaleString(undefined, {maximumFractionDigits: 2})} s`;
+}
+
+/** The main averages for each Client, readable without the JSON */
+const ExportTimings = (props: { data: JobMetricsApiJson }) => {
+    const {data} = props;
+    const targets = data.targets.filter(t => t.metricName !== undefined);
+    if (targets.length === 0) {
+        return null;
+    }
+    return (
+        <Stack gap="3">
+            {targets.map(t => {
+                const timings = jobExportTimings(data, t.metricName!);
+                return <Stack key={t.componentId} gap="1">
+                    {targets.length > 1 ? <Text textStyle="sm" fontWeight="medium">{t.name}</Text> : undefined}
+                    <DataList.Root orientation="horizontal" size="sm">
+                        <DataItem label="Export one Play"><Text>{formatSeconds(timings.perPlay)}</Text></DataItem>
+                        <DataItem label="Process in the Client"><Text>{formatSeconds(timings.clientProcessing)}</Text></DataItem>
+                        <DataItem label="Request to the service"><Text>{formatSeconds(timings.scrobbleRequest)}</Text></DataItem>
+                    </DataList.Root>
+                </Stack>;
+            })}
+            <TextMuted textStyle="xs">Averages since Multi-Scrobbler started. Export one Play is all the work for one Play, without the time it waits in the Client queue. Process in the Client is the transforms and duplicate checks before the request.</TextMuted>
+        </Stack>
+    );
+}
+
 /** Timings to copy into a bug report about a slow export */
 export const ExportMetrics = (props: { job: JobApiJson }) => {
     const {job} = props;
@@ -437,6 +469,7 @@ export const ExportMetrics = (props: { job: JobApiJson }) => {
             <Collapsible.Trigger asChild><Button size="xs" variant="ghost" px="0">{open ? 'Hide metrics' : 'Show metrics'}</Button></Collapsible.Trigger>
             <Collapsible.Content>
                 <Stack gap="2">
+                    {data !== undefined ? <ExportTimings data={data}/> : undefined}
                     <TextMuted textStyle="xs">Timings of each export step. If exports are slow, copy these and add them to your issue.</TextMuted>
                     <HStack>
                         {data !== undefined ? <ChakraClip value={data}/> : undefined}

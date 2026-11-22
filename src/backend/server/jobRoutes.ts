@@ -186,7 +186,6 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
             return {
                 componentId: t.componentId,
                 name: client?.name,
-                // label value used by play stage metrics
                 metricName: client?.getSafeExternalName(),
                 status: t.status,
                 exported: t.exported,
@@ -213,7 +212,7 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
             uptimeSeconds: Math.round(process.uptime()),
             process: {memory: {...process.memoryUsage()}, cpu: {...process.cpuUsage()}},
             job: {id: job.id, status: deriveJobStatus([job.importStatus, ...stored.map(x => x.status)]), importStatus: job.importStatus, exportOrder: job.exportOrder, exportQueueLimit: job.exportQueueLimit, exportUpstreamCheck: job.exportUpstreamCheck, mirrorPlaysInRange},
-            targets: targets.map(({metricName: _, ...t}) => t),
+            targets,
             metrics,
         } satisfies JobMetricsApiJson);
     });
