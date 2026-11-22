@@ -377,7 +377,12 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                                     <Checkbox.Control/>
                                     <Checkbox.Label>Save raw import data</Checkbox.Label>
                                 </Checkbox.Root>
-                                <Field.HelperText>Keeps the original data of every imported Play. Uses more disk space.</Field.HelperText>
+                                <Field.HelperText>Keeps the original data of every imported Play. Uses more disk space.
+                                    <InfoPopover question>
+                                        <Text>This is equivalent to the <strong>Source Data</strong> tab found in the Discovered event on a normal Play's Timeline.</Text>
+                                        <Text>There is nothing you can do with the raw data in this current release, but in a future release you will be able to export the original data.</Text>
+                                    </InfoPopover>
+                                    </Field.HelperText>
                             </Field.Root>}
                         /> : undefined}
                     </Stack>}
