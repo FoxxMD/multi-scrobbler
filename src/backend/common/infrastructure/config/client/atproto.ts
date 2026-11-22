@@ -36,3 +36,31 @@ export interface HandleData {
     pds: string
     handle: string
 }
+export const DEFAULT_RATE_LIMIT_RESERVE = 1000;
+
+export const atProtoRateLimitOptionsSchema = z.object({
+    /**
+     * Points of the PDS rate limit to keep free. Scrobbling waits until the limit resets when fewer points are left.
+     *
+     * The PDS rate limit is shared by every app that writes to your account (Bluesky posts, likes, other scrobblers).
+     *
+     * @default 1000
+     * */
+    rateLimitReserve: z.number().int().nonnegative().optional().meta({
+        description: "Points of the PDS rate limit to keep free. Scrobbling waits until the limit resets when fewer points are left.",
+        default: DEFAULT_RATE_LIMIT_RESERVE,
+        examples: [1000]
+    }),
+    /**
+     * Points of the PDS rate limit to keep free when exporting from an Import/Export Job. Exports wait until the limit resets when fewer points are left.
+     *
+     * @default 1000
+     * */
+    exportRateLimitReserve: z.number().int().nonnegative().optional().meta({
+        description: "Points of the PDS rate limit to keep free when exporting from a Job. Exports wait until the limit resets when fewer points are left.",
+        default: DEFAULT_RATE_LIMIT_RESERVE,
+        examples: [2000]
+    }),
+});
+
+export type ATProtoRateLimitOptions = z.infer<typeof atProtoRateLimitOptionsSchema>;

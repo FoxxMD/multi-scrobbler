@@ -15,6 +15,7 @@ import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
 
 import { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.ts";
 import type {TealClientConfig} from "../common/infrastructure/config/client/tealfm.ts";
+import { toWriteBudget, type WriteBudget } from "../common/vendor/atproto/WriteBudget.ts";
 import { ATProtoAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.ts";
 import { playToRecord, TealApiAuthenticatedClient } from "../common/vendor/teal/TealApiClient.ts";
 import { playToStatusRecord } from "../common/vendor/teal/TealApiClient.ts";
@@ -119,6 +120,10 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
             const authIssue = clientError !== undefined && [401,403].includes(clientError.status);
             throw new AuthError(`Failed to validate session${!authIssue ? ' due to network issues' : ''}`, {cause: e, unrecoverable: authIssue});
         }
+    }
+
+    override async writeBudget(): Promise<WriteBudget | undefined> {
+        return toWriteBudget(await this.client.client.getWriteRateLimit(), this.config.options);
     }
 
     getScrobblesForTimeRange = async (_: any) => {

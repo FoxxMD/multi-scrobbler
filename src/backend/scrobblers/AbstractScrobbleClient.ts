@@ -64,6 +64,8 @@ import { PLAY_EVENT_TYPE, type PlayEvent } from "../../core/PlayEvent.ts";
 import { dupeCheckToPlayEvent, queueCompletionStateToPlayEvent, scrobbleToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from "../common/database/drizzle/entityUtils.ts";
 import type { PlayProcessingResult } from "../common/infrastructure/PlayProcessing.ts";
 import { PlayProcessingError } from "../common/errors/PlayProcessingError.ts";
+import type { WriteBudget } from "../common/vendor/atproto/WriteBudget.ts";
+import { policyWindow } from "../../core/RateLimit.ts";
 
 type SourceMappedPlayer = {player: SourcePlayerObj, source: SourceIdentifier};
 type PlatformMappedPlays = Map<string, SourceMappedPlayer>;
@@ -77,6 +79,11 @@ const bufferNPUpdateReasonFragments: string[] = [
     'player in valid update state',
     'less than min threshold'
 ];
+
+/** Scrobbling stopped because the rate limit reserve is reached */
+export class RateLimitPauseError extends Error {
+    name = 'RateLimitPauseError';
+}
 
 export default abstract class AbstractScrobbleClient extends AbstractComponent implements Authenticatable {
 
@@ -116,6 +123,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     protected deadQueuePromise: Promise<void> | undefined;
     scrobbleRetries: number =  0;
     scrobbling: boolean = false;
+    /** set while scrobbling is stopped because the rate limit reserve is reached */
+    protected rateLimitPause?: {message: string, timer: ReturnType<typeof setTimeout>};
     deadQueueProcessing: boolean = false;
     //queuedLength: number = 0;
     deadLetterLength: number = 0;
@@ -331,7 +340,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 return false;
             }
         }
-        if(this.isReady() && !this.scrobbling) {
+        if(this.isReady() && !this.scrobbling && this.rateLimitPause === undefined) {
             this.logger.info({labels: 'Heartbeat'}, 'Should be processing scrobbles! Attempting to restart scrobbling...');
             this.initScrobbleMonitoring().catch((e) => this.logger.error('Failed to initialize scrobbler monitoring during heartbeat'));
             return true;
@@ -370,6 +379,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     public async stop(opts: { reason?: string | Error } = {}) {
         try {
             this.stopTasks();
+            this.clearRateLimitPause();
             await this.tryStopScrobbling(opts.reason);
             await this.tryStopDeadProcessing(opts.reason);
             this.nowPlayingLastPlay = undefined;
@@ -867,6 +877,44 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
     }
 
+    /** The service's write rate limit, for Clients that track one. Scrobbling and exports wait when few points are left */
+    public async writeBudget(): Promise<WriteBudget | undefined> {
+        return undefined;
+    }
+
+    /**
+     * Stop scrobbling and Now Playing until the rate limit resets, when fewer points than the reserve are left.
+     * The Client is IDLE while paused and restarts itself at the reset. Returns true when paused
+     * */
+    protected async pauseForWriteBudget(): Promise<boolean> {
+        const budget = await this.writeBudget();
+        if (budget === undefined || budget.remaining > budget.reserve) {
+            return false;
+        }
+        const window = policyWindow(budget.policy);
+        const message = `Paused, rate limit reserve reached with ${budget.remaining} of ${budget.limit} points left${window !== undefined ? ` per ${window}` : ''}. Resumes at ${todayAwareFormat(dayjs(budget.reset))}`;
+        clearTimeout(this.rateLimitPause?.timer);
+        const timer = setTimeout(() => this.resumeAfterRateLimit(), Math.max(budget.reset - Date.now(), 1000));
+        this.rateLimitPause = {message, timer};
+        this.setStatus(message);
+        this.logger.warn(message);
+        await this.notify({title: 'Scrobbling Paused', message, priority: 'warn'});
+        return true;
+    }
+
+    protected resumeAfterRateLimit() {
+        this.rateLimitPause = undefined;
+        if (this.isReady() && !this.scrobbling) {
+            this.logger.info('Rate limit has reset, resuming scrobbling');
+            this.initScrobbleMonitoring().catch((e) => this.logger.error(new Error('Failed to resume scrobbling after rate limit reset', {cause: e})));
+        }
+    }
+
+    protected clearRateLimitPause() {
+        clearTimeout(this.rateLimitPause?.timer);
+        this.rateLimitPause = undefined;
+    }
+
     protected abstract doScrobble(playObj: PlayObject, context?: QueueContext): Promise<ScrobbleActionResult & {play?: PlayObject}>
 
     public abstract playToClientPayload(playObject: PlayObject): object
@@ -907,6 +955,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 this.logger.info(err);
                 //this.logger.trace(e);
                 componentUpdate.status = 'Processing cancelled';
+            } else if (e instanceof RateLimitPauseError) {
+                componentUpdate.status = e.message;
             } else {
                 const err = new Error('Scrobble processing stopped with error', { cause: e });
                 this.logger.warn(err);
@@ -946,7 +996,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             try {
                 await this.doProcessing(signal);
             } catch (e: any) {
-                if(isAbortError(e)) {
+                if(isAbortError(e) || e instanceof RateLimitPauseError) {
                     throw e;
                 }
                 if(!this.isUsable()) {
@@ -1037,6 +1087,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 if(nextQueued !== undefined) {
                     let processed = 0;
                     while (nextQueued !== undefined) {
+                        if (await this.pauseForWriteBudget()) {
+                            // the Play stays queued
+                            throw new RateLimitPauseError(this.rateLimitPause?.message);
+                        }
                         await this.handlePlayProcessing(nextQueued, signal);
                         processed++;
                         if(this.errors.length > 0) {
@@ -1055,7 +1109,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 await delay(signal, this.scrobbleSleep);
             }
         } catch (e) {
-            if(!isAbortError(e)) {
+            if(!isAbortError(e) && !(e instanceof RateLimitPauseError)) {
                 this.logger.error('Scrobble processing interrupted');
                 this.logger.error(e);
             }
@@ -1383,6 +1437,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     queuePlayingNow = async (data: SourcePlayerObj, source: SourceIdentifier) => {
+        if(this.rateLimitPause !== undefined) {
+            this.logger.debug('Not queueing now playing because scrobbling is paused by the rate limit reserve');
+            return;
+        }
         if(!this.isReady()) {
             this.logger.debug('Not queueing now playing because scrobbler is not ready');
             return;
@@ -1409,7 +1467,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     processingPlayingNow = async (): Promise<void> => {
-        if(!this.supportsNowPlaying || !this.isReady()) {
+        if(!this.supportsNowPlaying || !this.isReady() || this.rateLimitPause !== undefined) {
             return;
         }
         if(this.nowPlayingInit === false) {

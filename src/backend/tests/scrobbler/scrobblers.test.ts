@@ -1,5 +1,5 @@
 import chai, { assert, expect } from 'chai';
-import {spy} from 'sinon';
+import {spy, stub} from 'sinon';
 import asPromised from 'chai-as-promised';
 import clone from 'clone';
 import dayjs from "dayjs";
@@ -9,6 +9,7 @@ import pEvent from 'p-event';
 import { INGRESS_QUEUE, QUEUE_STATUS_FAILED, SOURCE_SOT } from "../../../core/Atomic.ts";
 import type { PlayObject } from "../../../core/PlaySchema.ts";
 import { sleep, sortByOldestPlayDate } from "../../utils.ts";
+import { COMPONENT_STATE } from "../../../core/Api.ts";
 import { genGroupIdStr } from '../../../core/PlayUtils.ts';
 import mixedDuration from '../plays/mixedDuration.json' with { type: 'json' };
 import withDuration from '../plays/withDuration.json' with { type: 'json' };
@@ -934,6 +935,37 @@ describe('Manages scrobble queue', function() {
         expect(upstream.called).is.false;
         const [play] = await testScrobbler.playRepoTest.findPlays({uid: queued.map(x => x.uid)});
         expect(play.state).eq('scrobbled');
+    });
+
+    it('Pauses as IDLE while the rate limit is at the reserve, keeps the Play queued, and resumes at the reset', async function() {
+        await using testScrobbler = await generateTestScrobbler({name: 'test', id: 'test-ratelimit'});
+        await testScrobbler.initialize();
+        testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
+        testScrobbler.scrobbleSleep = 100;
+        testScrobbler.scrobbleDelay = 0;
+        const reset = Date.now() + 1200;
+        const budget = stub(testScrobbler, 'writeBudget');
+        budget.resolves({limit: 5000, remaining: 1000, reserve: 1000, exportReserve: 1000, reset, at: Date.now()});
+
+        const queued = await testScrobbler.queuePlay(generatePlay({playDate: dayjs().subtract(10, 'minutes')}));
+        testScrobbler.initScrobbleMonitoring().catch(() => undefined);
+        const pause = () => (testScrobbler as unknown as {rateLimitPause?: {message: string}}).rateLimitPause;
+        const start = Date.now();
+        // IDLE before it starts too, so wait for the pause first
+        while (pause() === undefined || testScrobbler.getRunningState() !== COMPONENT_STATE.IDLE) {
+            if (Date.now() - start > 1000) {
+                throw new Error('did not pause');
+            }
+            await sleep(20);
+        }
+        expect(pause()?.message).to.include('Paused, rate limit reserve reached with 1000 of 5000 points left');
+        const [paused] = await testScrobbler.playRepoTest.findPlays({uid: queued.map(x => x.uid)});
+        expect(paused.state).not.eq('scrobbled');
+
+        budget.resolves(undefined);
+        await pEvent(testScrobbler.emitter, 'scrobble', {timeout: 3000});
+        expect(Date.now()).to.be.gte(reset);
+        expect(testScrobbler.getRunningState()).eq(COMPONENT_STATE.RUNNING);
     });
 
     it('Does not Scrobble a duplicate of a Play scrobbled by MS when upstream refresh is disabled', async function() {

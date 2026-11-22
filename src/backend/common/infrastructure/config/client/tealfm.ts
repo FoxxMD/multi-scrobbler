@@ -1,7 +1,7 @@
 import * as z from "zod";
 import {componentTypeSchema} from "../../../../../core/Atomic.ts";
 import {requestRetryOptionsSchema} from "../common.ts";
-import {atProtoAppDataSchema, atProtoUserIdentifierDataSchema} from "./atproto.ts";
+import {atProtoAppDataSchema, atProtoRateLimitOptionsSchema, atProtoUserIdentifierDataSchema} from "./atproto.ts";
 import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, type EnvClientSchema} from "./index.ts";
 
 export const tealDataSchema = z.object({
@@ -49,6 +49,7 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, TealClientConfig>
 
 export const tealClientOptionsSchema = z.object({
     ...commonClientOptionsSchema.shape,
+    ...atProtoRateLimitOptionsSchema.shape,
 });
 
 export type TealClientOptions = z.infer<typeof tealClientOptionsSchema>;
