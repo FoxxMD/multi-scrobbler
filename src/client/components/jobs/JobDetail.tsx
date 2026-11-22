@@ -17,6 +17,7 @@ import { ErrorAlert } from "../ErrorAlert";
 import { toaster } from "../Toaster";
 import { JobBackButton } from "./JobList";
 import { apiErrorMessage, exportProgress, ExportProgressBar, FILE_FORMAT_NAMES, formatJobDate, formatPlayedDate, ImportProgressBar, importOriginText, importProgress, JobStatusBadge, ProcessRateText, useProcessRate, useJobEvents, useSetJob } from "./jobUtils";
+import { InfoPopover } from '../ToggleTip';
 
 type ControlAction = 'start' | 'pause' | 'stop';
 
@@ -384,7 +385,7 @@ export const QueueLimit = (props: { job: JobApiJson }) => {
     );
 }
 
-export const UpstreamCheck = (props: { job: JobApiJson }) => {
+export const DownstreamCheck = (props: { job: JobApiJson }) => {
     const {job} = props;
     const setJob = useSetJob();
     const {mutate, isPending} = useMutation({
@@ -397,9 +398,16 @@ export const UpstreamCheck = (props: { job: JobApiJson }) => {
             <Checkbox.Root size="sm" checked={job.exportUpstreamCheck} disabled={isPending} onCheckedChange={(d) => mutate(d.checked === true)}>
                 <Checkbox.HiddenInput/>
                 <Checkbox.Control/>
-                <Checkbox.Label>Check services for duplicates</Checkbox.Label>
+                <Checkbox.Label>Check downstream services for duplicates
+                    <InfoPopover question>
+                        <Stack>
+                            <Text>MS <strong>always</strong> checks for duplicates in its own database.</Text>
+                            <Text>When this check is enabled MS <strong>additionally</strong> pulls scrobbles from the downstream Client to "double check" for duplicates.</Text>
+                            <Text>If you are exporting to a Client with no prior history, or you are sure it does not have history in this Job's date range, you can disable this check to greatly speed up export speed.</Text>
+                            <Text textStyle="xs" color="fg.muted">Note: Changes apply to Plays exported next. Plays already in a Client's queue keep the old setting.</Text>
+                        </Stack>
+                    </InfoPopover></Checkbox.Label>
             </Checkbox.Root>
-            <Text textStyle="xs" color="fg.muted">Changes apply to Plays exported next. Plays already in a Client's queue keep the old setting.</Text>
         </Stack>
     );
 }
@@ -424,7 +432,7 @@ export const ExportPanel = (props: { job: JobApiJson }) => {
                     <DataList.Root orientation="horizontal" size="sm">
                         <DataItem label="Order">{job.exportOrder === 'desc' ? 'Newest first' : 'Oldest first'}</DataItem>
                         <DataItem label="Queue limit"><QueueLimit key={job.exportQueueLimit} job={job}/></DataItem>
-                        <DataItem label="Duplicate check"><UpstreamCheck job={job}/></DataItem>
+                        <DataItem label="Duplicate check"><DownstreamCheck job={job}/></DataItem>
                         <DataItem label="Transforms">
                             <Stack gap="1">
                                 <Text>{transformSourceText(job)}</Text>
