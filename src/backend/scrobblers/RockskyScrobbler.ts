@@ -12,7 +12,7 @@ import type {ListenPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
 
 import { isDebugMode } from "../utils.ts";
 import { durationToHuman } from '../../core/TimeUtils.ts';
-import { playToRockskyClientRecord, RockSkyApiClient, rockskyScrobbleToPlay, type RockskyScrobble } from "../common/vendor/RockSkyApiClient.ts";
+import { playToRockskyClientRecord, RockSkyApiClient, rockskyScrobbleToPlay, type RockskyScrobble, WRITE_PROBE_INTERVAL } from "../common/vendor/RockSkyApiClient.ts";
 import type {RockSkyClientConfig} from "../common/infrastructure/config/client/rocksky.ts";
 import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.ts";
 import { fromStream } from '@atcute/repo';
@@ -25,6 +25,7 @@ import { ATProtoUnauthenticatedApiClient } from "../common/vendor/atproto/ATProt
 import { playToRepositoryCreatePlayHistoricalOpts, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
 import { isAbortError } from "abort-controller-x";
 import { shouldClearNPStatus } from "./AbstractScrobbleClient.ts";
+import { toWriteBudget, type WriteBudget } from "../common/vendor/atproto/WriteBudget.ts";
 
 export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
 
@@ -130,6 +131,18 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
 
     public playToClientPayload(playObj: PlayObject): ListenPayload {
         return playToListenPayload(playObj);
+    }
+
+    /** Probed, because we can't see the headers of the Rocksky SDK's own writes */
+    override async writeBudget(): Promise<WriteBudget | undefined> {
+        let budget = toWriteBudget(await this.api.getWriteRateLimit(), this.config.options);
+        // remaining only goes down until the limit resets, so once both reserves are reached they stay reached without probing
+        const reached = budget !== undefined && budget.remaining <= Math.min(budget.reserve, budget.exportReserve);
+        if(budget === undefined || (!reached && Date.now() - budget.at >= WRITE_PROBE_INTERVAL)) {
+            await this.api.probeWriteRateLimit();
+            budget = toWriteBudget(await this.api.getWriteRateLimit(), this.config.options);
+        }
+        return budget;
     }
 
     doScrobble = async (playObj: PlayObject, context?: QueueContext) => {

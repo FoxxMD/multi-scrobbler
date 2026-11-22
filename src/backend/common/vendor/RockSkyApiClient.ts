@@ -35,6 +35,13 @@ import fsPromise from 'node:fs/promises';
 import { getDataDir } from "../index.ts";
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.ts";
 import { RockskyClientPool } from "./rocksky/RockskyClientPool.ts";
+import { Client } from "@atcute/client";
+import type {} from "@atcute/atproto";
+import type { AtprotoDid } from "@atcute/lexicons/syntax";
+import { getWriteRateLimit, recordWriteRateLimit, type WriteRateLimit } from "./atproto/WriteBudget.ts";
+
+/** shortest time between rate limit probes */
+export const WRITE_PROBE_INTERVAL = 30_000;
 
 interface SubmitOptions {
     log?: boolean
@@ -69,6 +76,9 @@ export class RockSkyApiClient extends AbstractApiClient {
     rsIndex: RockskyIndex;
 
     protected configDir: string;
+
+    protected lastProbeAt = 0;
+    protected probing?: Promise<void>;
 
     constructor(name: any, config: RockSkyData & RockSkyOptions, options: AbstractApiOptions & {configDir: string}) {
         super('RockSky', name, config, options);
@@ -245,6 +255,41 @@ export class RockSkyApiClient extends AbstractApiClient {
         } catch (e) {
             throw new ScrobbleSubmitError(`Error occurred while writing scrobble to PDS`, {cause: e, payload: payload});
         }
+    }
+
+    getWriteRateLimit = async (): Promise<WriteRateLimit | undefined> => {
+        if(this.rsAgent === undefined) {
+            return undefined;
+        }
+        return await getWriteRateLimit(this.cache.cacheAuth, this.rsAgent.did);
+    }
+
+    /**
+     * The Rocksky SDK does not give us response headers, so read the PDS rate limit from our own write.
+     * Deleting a record that does not exist costs 1 write point and makes no commit.
+     * At most once per WRITE_PROBE_INTERVAL, failed probes included.
+     * */
+    probeWriteRateLimit = async (): Promise<void> => {
+        if(this.probing !== undefined) {
+            return await this.probing;
+        }
+        const agent = this.rsAgent;
+        if(agent === undefined || Date.now() - this.lastProbeAt < WRITE_PROBE_INTERVAL) {
+            return;
+        }
+        this.lastProbeAt = Date.now();
+        this.probing = (async () => {
+            try {
+                const rpc = new Client({handler: agent.session});
+                const res = await rpc.post('com.atproto.repo.deleteRecord', {input: {repo: agent.did as AtprotoDid, collection: 'app.rocksky.scrobble', rkey: 'msratelimitprobe'}});
+                await recordWriteRateLimit(this.cache.cacheAuth, agent.did, res.headers);
+            } catch (e) {
+                this.logger.warn(new Error('Could not read the PDS rate limit', {cause: e}));
+            } finally {
+                this.probing = undefined;
+            }
+        })();
+        return await this.probing;
     }
 
     updateNowPlaying = async (play?: PlayObject): Promise<void> => {

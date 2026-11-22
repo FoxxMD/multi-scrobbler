@@ -1,7 +1,7 @@
 import * as z from "zod";
 import {requestRetryOptionsSchema} from "../common.ts";
 import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, nowPlayingOptionsSchema, type EnvClientSchema} from "./index.ts";
-import { atProtoAppDataSchema } from "./atproto.ts";
+import { atProtoAppDataSchema, atProtoRateLimitOptionsSchema } from "./atproto.ts";
 
 export const rockSkyDataSchema = z.object({
 
@@ -75,6 +75,7 @@ export const rockSkyClientOptionsSchema = z.object({
     ...rockSkyOptionsSchema.shape,
     ...commonClientOptionsSchema.shape,
     ...nowPlayingOptionsSchema.shape,
+    ...atProtoRateLimitOptionsSchema.shape,
 });
 
 export type RockSkyClientOptions = z.infer<typeof rockSkyClientOptionsSchema>;
