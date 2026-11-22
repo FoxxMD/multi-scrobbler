@@ -44,6 +44,8 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         if(this.api.url.url.hostname !== LASTFM_HOST) {
             this.logger.debug(`Detected non-official LFM server, scrobble interval floor is disabled`);
             this.scrobbleDelayFloor = 0;
+        } else {
+            this.logger.warn('Last.fm API Keys for non-pro (paid) accounts will STOP WORKING on December 1st! Make sure you have backed up your history before then. See docs for more information.');
         }
         return true;
     }
