@@ -1,3 +1,4 @@
+import { playStageSeconds, timed } from "./playMetrics.ts";
 import { childLogger, type Logger } from "@foxxmd/logging";
 import { randomBytes } from "node:crypto";
 import {
@@ -198,6 +199,11 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     }
     public getSafeExternalId() {
         return `${this.type}-${normalizeStr(this.name, {keepSingleWhitespace: false})}`;
+    }
+
+    /** Labels for playStageSeconds. `job` is empty for live plays */
+    protected playStageLabels(play: PlayObject, stage: string) {
+        return {mode: this.componentType, name: this.getSafeExternalName(), job: play.meta?.jobId !== undefined ? String(play.meta.jobId) : '', stage};
     }
 
     protected getPrometheusLabels() {
@@ -940,7 +946,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
             await pMap(playDatas, async (queueablePlay) => {
                 try {
-                    const existing = await this.findPreQueueExistingPlay(queueablePlay, context);
+                    const existing = await timed(playStageSeconds, this.playStageLabels(queueablePlay, 'pre_queue_check'), () => this.findPreQueueExistingPlay(queueablePlay, context));
                     if(existing !== undefined) {
                         return;
                     }
@@ -998,8 +1004,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         
         let res: PlayProcessingResult | undefined = undefined;
         let err: Error | undefined;
+        const queuedAt = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE)?.updatedAt;
+        if(queuedAt !== undefined) {
+            playStageSeconds.observe(this.playStageLabels(playEntity.play, 'queue_wait'), Math.max(dayjs().diff(queuedAt), 0) / 1000);
+        }
         try {
-            res = await this.processPlay(playEntity, signal);
+            res = await timed(playStageSeconds, this.playStageLabels(playEntity.play, 'process_total'), () => this.processPlay(playEntity, signal));
         } catch (e: unknown | Error | PlayProcessingError) {
             if(isAbortError(e)) {
                 const abortSignal = signal ?? this.ingressQueueAbortController?.signal;
@@ -1029,6 +1039,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             this.emitEvent('playDequeued', { queuedScrobble: playEntity });
 
             if(res !== undefined) {
+                const endPersist = playStageSeconds.startTimer(this.playStageLabels(playEntity.play, 'persist'));
 
                 let queueStates: QueueStateSelect[];
                 const initialRetries = res.queue?.retries ?? 0;
@@ -1083,6 +1094,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                     events: asPlayEvents(((res.playEntity as unknown as PlayWith<'events'>).events ?? []).concat(createdEvents)),
                     queueStates
                 });
+                endPersist();
             }
         }
     }

@@ -17,6 +17,7 @@ import { type DbConcrete, runTransaction } from "../common/database/drizzle/driz
 import { JobRepository, type JobSelect } from "../common/database/drizzle/repositories/JobRepository.ts";
 import { MirrorRepository } from "../common/database/drizzle/repositories/MirrorRepository.ts";
 import { DrizzlePlayHistoricalRepository, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
+import { exportStageSeconds, exportWaitSeconds, timed } from "../common/playMetrics.ts";
 import { addStats, JobTargetRepository, type JobTargetNew, type JobTargetSelect } from "../common/database/drizzle/repositories/JobTargetRepository.ts";
 import type { JobImportCursor, JobImportCursorApi, JobImportCursorFile, JobTargetBreaker, JobTargetCursor } from "../common/infrastructure/Job.ts";
 import type { WildcardEmitter } from "../common/WildcardEmitter.ts";
@@ -633,17 +634,27 @@ export class JobRunner {
         let rateLimit: RateLimitStatusJson | undefined;
         // pages are small once the client queue is full (one per dequeued play), so play counts refresh on a timer instead of each page
         let statsAt = 0;
-        const wait = async (reason: string) => {
+        const jobLabel = String(this.jobId);
+        let clientLabel = String(componentId);
+        /** @param key fixed reason for metrics, `reason` can hold numbers and dates */
+        const wait = async (reason: string, key: string = reason) => {
+            const waitStart = performance.now();
             const current = this.runtime.exports[targetId];
             if(current?.waiting !== reason || current?.rateLimit?.remaining !== rateLimit?.remaining || current?.rateLimit?.limit !== rateLimit?.limit) {
                 this.runtime.exports[targetId] = {waiting: reason, rateLimit};
                 this.emitUpdate({runtime: this.runtime});
             }
-            await this.sleep(signal, this.timings.exportPoll);
+            try {
+                await this.sleep(signal, this.timings.exportPoll);
+            } finally {
+                exportWaitSeconds.inc({job: jobLabel, client: clientLabel, reason: key}, (performance.now() - waitStart) / 1000);
+            }
         }
+        const stage = <T>(name: string, fn: () => Promise<T>) => timed(exportStageSeconds, {job: jobLabel, client: clientLabel, stage: name}, fn);
 
         while(true) {
             signal.throwIfAborted();
+            const passStart = performance.now();
             // reloaded each pass: import progress and the queue limit can change while exporting
             const job = await this.getJob();
 
@@ -652,6 +663,7 @@ export class JobRunner {
                 await wait('Client is not configured');
                 continue;
             }
+            clientLabel = client.name;
             if(listening !== client.emitter) {
                 listen(client.emitter);
             }
@@ -664,7 +676,7 @@ export class JobRunner {
             rateLimit = budget === undefined ? undefined : {limit: budget.limit, remaining: budget.remaining, reserve: budget.exportReserve, reset: budget.reset, policy: budget.policy};
             if(budget !== undefined && budget.remaining <= budget.exportReserve) {
                 const window = policyWindow(budget.policy);
-                await wait(`Rate limit reserve for exports reached, ${budget.remaining.toLocaleString()} of ${budget.limit.toLocaleString()} points left${window !== undefined ? ` per ${window}` : ''}. Waiting until ${todayAwareFormat(dayjs(budget.reset))}`);
+                await wait(`Rate limit reserve for exports reached, ${budget.remaining.toLocaleString()} of ${budget.limit.toLocaleString()} points left${window !== undefined ? ` per ${window}` : ''}. Waiting until ${todayAwareFormat(dayjs(budget.reset))}`, 'Rate limit reserve for exports reached');
                 continue;
             }
             if(client.getRunningState() !== COMPONENT_STATE.RUNNING) {
@@ -695,19 +707,19 @@ export class JobRunner {
                 const covered = contiguousCoveredFrom(job.exportOrder === 'desc' ? range[1] : range[0], job.exportOrder, mirror?.coverage ?? []);
                 frontier = covered === undefined ? undefined : [Math.max(covered[0], range[0]), Math.min(covered[1], range[1])];
             }
-            const rows = frontier === undefined ? [] : await this.historicalRepo.findPageForExport({mirrorId: job.mirrorId, range: frontier, order: job.exportOrder, after: cursor ?? undefined, limit: room});
+            const rows = frontier === undefined ? [] : await stage('page_read', () => this.historicalRepo.findPageForExport({mirrorId: job.mirrorId, range: frontier, order: job.exportOrder, after: cursor ?? undefined, limit: room}));
 
             if(rows.length === 0) {
                 if(!importDone) {
                     const halted = job.importStatus === 'idle' || job.importStatus === 'running' ? undefined : job.importStatus;
-                    await wait(halted === undefined ? 'Waiting for the import to mirror more scrobbles' : `Waiting for the import, which is ${halted}`);
+                    await wait(halted === undefined ? 'Waiting for the import to mirror more scrobbles' : `Waiting for the import, which is ${halted}`, 'Waiting for the import');
                     continue;
                 }
                 const stats = addStats((await this.targetRepo.playStats(this.jobId, componentId)).get(componentId), initial.removedStats);
                 const left = stats.queued ?? 0;
                 if(left > 0) {
                     await this.setTarget(targetId, {stats, breaker});
-                    await wait(`${left} exported scrobbles are still queued in the client`);
+                    await wait(`${left} exported scrobbles are still queued in the client`, 'Exported scrobbles are still queued in the client');
                     continue;
                 }
                 return (await this.setTarget(targetId, {status: 'completed', completedAt: dayjs(), stats, breaker}, true))!;
@@ -715,28 +727,29 @@ export class JobRunner {
 
             let plays: PlayObject[] = rows.map(r => ({...r.play, original: {play: r.play}}));
             if(stages !== undefined) {
-                plays = await pMap(plays, async (p) => {
+                plays = await stage('job_transform', () => pMap(plays, async (p) => {
                     const {lifecycle: _, ...transformed} = await client.transformPlay(p, 'postCompare', {stages});
                     return transformed;
-                }, {concurrency: 5});
+                }, {concurrency: 5}));
             }
             signal.throwIfAborted();
             if(this.cleanupLocked(componentId, job.mirrorId)) {
                 // a cleanup started while this page was read, the next pass waits for it and reads the page again
                 continue;
             }
-            const created = await client.queuePlay(plays, job.exportUpstreamCheck ? undefined : {upstreamCheck: false}, {jobId: this.jobId});
+            const created = await stage('queue_play', () => client.queuePlay(plays, job.exportUpstreamCheck ? undefined : {upstreamCheck: false}, {jobId: this.jobId}));
             const last = rows[rows.length - 1];
             cursor = {playedAt: last.playedAt, id: last.id} satisfies JobTargetCursor;
             exported += rows.length;
             queued += created.length;
             const update: Partial<JobTargetNew> = {cursor, exported, queued, breaker};
             if(Date.now() - statsAt >= this.timings.exportStats) {
-                update.stats = addStats((await this.targetRepo.playStats(this.jobId, componentId)).get(componentId), initial.removedStats);
+                update.stats = addStats((await stage('stats', () => this.targetRepo.playStats(this.jobId, componentId))).get(componentId), initial.removedStats);
                 statsAt = Date.now();
             }
             this.runtime.exports[targetId] = {rateLimit};
             await this.setTarget(targetId, update);
+            exportStageSeconds.observe({job: jobLabel, client: clientLabel, stage: 'pass'}, (performance.now() - passStart) / 1000);
             logger.verbose(`Exported ${rows.length} scrobbles, ${created.length} new to the client`);
         }
     }

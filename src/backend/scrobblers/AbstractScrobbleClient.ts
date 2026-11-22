@@ -1,3 +1,4 @@
+import { playStageSeconds, timed } from "../common/playMetrics.ts";
 import type { WebhookPayload } from "../common/infrastructure/config/health/webhooks.ts";
 import { asJsonPlayer } from "../../core/PlayMarshalUtils.ts";
 import { childLogger, type Logger, type LogLevel } from "@foxxmd/logging";
@@ -1068,6 +1069,16 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return true;
     }
 
+    protected timedQueueNext = async () => {
+        // the play is unknown until found so this stage has no job label
+        const end = playStageSeconds.startTimer({mode: this.componentType, name: this.getSafeExternalName(), job: '', stage: 'queue_next'});
+        try {
+            return await this.playRepo.getQueueNext(INGRESS_QUEUE);
+        } finally {
+            end();
+        }
+    }
+
     protected doProcessing = async (signal: AbortSignal): Promise<true | undefined> => {
         signal.throwIfAborted();
         this.logger.info('Scrobble processing started');
@@ -1083,7 +1094,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             while (true) {
                 signal.throwIfAborted();
                 //let queueEmpty = await this.playRepo.hasQueueNext(CLIENT_INGRESS_QUEUE); // this.queuedLength; // this.queuedScrobbles.length === 0;
-                let nextQueued = await this.playRepo.getQueueNext(INGRESS_QUEUE);
+                let nextQueued = await this.timedQueueNext();
                 if(nextQueued !== undefined) {
                     let processed = 0;
                     while (nextQueued !== undefined) {
@@ -1098,7 +1109,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                             this.errors = [];
                             this.emitComponentUpdate<Partial<ComponentClientApiJson>>({errors: []});
                         }
-                        nextQueued = await this.playRepo.getQueueNext(INGRESS_QUEUE)
+                        nextQueued = await this.timedQueueNext();
                     }
                     // emitted only after draining at least one queued Play (unlike Source's queueEmptied, emitted on every idle poll)
                     // so waiting for it after queueing a Play means "that Play has been processed". processed = Plays handled in this drain
@@ -1240,7 +1251,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
 
             if(transform) {
-                const {lifecycle = [], ...rest} = await this.transformPlay(playEntity.play, TRANSFORM_HOOK.preCompare, {useCachedResult: useCache});
+                const {lifecycle = [], ...rest} = await timed(playStageSeconds, this.playStageLabels(playEntity.play, 'transform'), () => this.transformPlay(playEntity.play, TRANSFORM_HOOK.preCompare, {useCachedResult: useCache}));
                 if(lifecycle.length > 0) {
                     events.push({...transformToPlayEvent(lifecycle), createdAt: dayjs()});
                 }
@@ -1250,9 +1261,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             let historicalPlays: PlayObject[] = [];
 
             if (dupeCheck && upstreamCheck && this.upstreamRefresh.refreshEnabled) {
-                await this.handleQueuedScrobbleRanges();
+                await timed(playStageSeconds, this.playStageLabels(playEntity.play, 'upstream_fetch'), () => this.handleQueuedScrobbleRanges());
                 try {
-                    historicalPlays = await this.getSOTScrobblesForPlay(playEntity.play, {useCache: !(isRetry || !useCache)});
+                    historicalPlays = await timed(playStageSeconds, this.playStageLabels(playEntity.play, 'upstream_fetch'), () => this.getSOTScrobblesForPlay(playEntity.play, {useCache: !(isRetry || !useCache)}));
                 } catch (e: any) {
 
                     let historicalError: Error;
@@ -1278,14 +1289,14 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
             let isDupe = false;
             if(dupeCheck) {
-                const { summary, ...matchResult } = await this.existingPlay({...playEntity.play, id: playEntity.id, uid: playEntity.uid}, historicalPlays);
+                const { summary, ...matchResult } = await timed(playStageSeconds, this.playStageLabels(playEntity.play, 'dupe_check'), () => this.existingPlay({...playEntity.play, id: playEntity.id, uid: playEntity.uid}, historicalPlays));
                 events.push(dupeCheckToPlayEvent({ summary, ...matchResult, createdAt: dayjs().toISOString() }));
                 isDupe = matchResult.match;
             }
 
             signal?.throwIfAborted();
             if (!isDupe) {
-                const transformedScrobble = transform ? await this.transformPlay(playEntity.play, TRANSFORM_HOOK.postCompare, {useCachedResult: useCache}) : playEntity.play;
+                const transformedScrobble = transform ? await timed(playStageSeconds, this.playStageLabels(playEntity.play, 'transform'), () => this.transformPlay(playEntity.play, TRANSFORM_HOOK.postCompare, {useCachedResult: useCache})) : playEntity.play;
                 const { lifecycle = [], ...restPlay } = transformedScrobble;
                 playEntity.play = restPlay;
                 const psLifecycle = lifecycle.filter(x => x.hook === TRANSFORM_HOOK.postCompare);
@@ -1294,7 +1305,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 }
                 signal?.throwIfAborted();
                 try {
-                    const scrobbledPlay = await this.scrobble(transformedScrobble, { signal, ...(context ?? {})});
+                    const scrobbledPlay = await timed(playStageSeconds, this.playStageLabels(playEntity.play, 'scrobble_request'), () => this.scrobble(transformedScrobble, { signal, ...(context ?? {})}));
                     const { scrobble } = scrobbledPlay;
                     if(scrobble !== undefined) {
                         events.push(scrobbleToPlayEvent(scrobble));

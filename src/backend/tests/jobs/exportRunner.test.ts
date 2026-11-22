@@ -21,6 +21,8 @@ import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { nameToCredit } from '../../../core/MusicMetadata.ts';
 import { TestScrobbler } from '../scrobbler/TestScrobbler.ts';
 import type { WriteBudget } from '../../common/vendor/atproto/WriteBudget.ts';
+import { exportStageSeconds, exportWaitSeconds, playStageSeconds } from '../../common/playMetrics.ts';
+import type prom from 'prom-client';
 
 const timings = {importPageDelay: 0, importRetries: 0, importRetryBase: 1, readyTimeout: 10, readyPoll: 5, emitThrottle: 0, exportPoll: 20};
 
@@ -133,6 +135,12 @@ const until = async (fn: () => boolean | Promise<boolean>, ms = 2000) => {
 
 const exportTask = (runner: JobRunner, targetId: number) => (runner as unknown as {exportTasks: Map<number, {promise: Promise<void>}>}).exportTasks.get(targetId)?.promise;
 
+/** stage label values that have a count sample matching `labels` */
+const stagesOf = async (metric: prom.Summary<string>, labels: Record<string, string>) => {
+    const {values} = await metric.get();
+    return new Set(values.filter(x => x.metricName?.endsWith('_count') && x.value > 0 && Object.entries(labels).every(([k, v]) => x.labels[k] === v)).map(x => x.labels.stage));
+}
+
 const titles = (plays: PlayObject[]) => plays.map(x => x.data.track?.name);
 
 describe('Job export runner', function () {
@@ -190,6 +198,21 @@ describe('Job export runner', function () {
         expect((await targetRepo.getById(target.id))!.status).eq('completed');
         // first page, then the completion check. The other 6 pages are inside the default 5s window
         expect(counted).eq(2);
+    });
+
+    it('records timings for export stages and waits', async function () {
+        const {runner, target, client, job} = await setup({limit: 1, transformOptions: [{type: 'user'}]});
+        await runner.startExport(target.id);
+        await until(() => runner.runtime.exports[target.id]?.waiting === 'Client queue is full');
+        for (let i = 0; i < 7; i++) {
+            await until(() => client.queued.length === i + 1);
+            client.process();
+        }
+        await exportTask(runner, target.id);
+        const labels = {job: String(job.id), client: 'fake'};
+        expect([...await stagesOf(exportStageSeconds, labels)]).to.have.members(['page_read', 'job_transform', 'queue_play', 'stats', 'pass']);
+        const waits = (await exportWaitSeconds.get()).values.filter(x => x.labels.job === String(job.id));
+        expect(waits.find(x => x.labels.reason === 'Client queue is full')?.value).greaterThan(0);
     });
 
     it('waits while the client rate limit is at the export reserve, and reports the rate limit', async function () {
@@ -409,6 +432,8 @@ describe('Job export runner', function () {
             expect(done.stats).to.deep.eq({scrobbled: 3});
             const plays = await scrobbler.playRepoTest.findPlays({jobId: job.id});
             expect(plays.every(x => x.parentId === null && x.play.meta.jobId === job.id)).is.true;
+            const stages = await stagesOf(playStageSeconds, {mode: 'client', job: String(job.id)});
+            expect([...stages]).to.include.members(['pre_queue_check', 'queue_wait', 'process_total', 'transform', 'dupe_check', 'scrobble_request', 'persist']);
         } finally {
             await scrobbler[Symbol.asyncDispose]();
         }
