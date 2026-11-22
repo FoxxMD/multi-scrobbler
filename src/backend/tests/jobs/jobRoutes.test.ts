@@ -397,8 +397,8 @@ describe('Job API', function () {
             const {app, db} = await exportApp(tmp.path);
             const job = (await createWithTargets(app, {targets: [7]})).body as JobApiJson;
             await db.insert(plays).values([fixtureCreatePlay({componentId: 7, state: 'scrobbled'}), fixtureCreatePlay({componentId: 7, state: 'scrobbled'})]);
-            exportStageSeconds.observe({job: String(job.id), client: 'client 7', stage: 'pass'}, 0.5);
-            exportStageSeconds.observe({job: String(job.id + 1000), client: 'client 7', stage: 'pass'}, 0.5);
+            exportStageSeconds.observe({job: String(job.id), name: 'client-7', stage: 'pass'}, 0.5);
+            exportStageSeconds.observe({job: String(job.id + 1000), name: 'client-7', stage: 'pass'}, 0.5);
             playStageSeconds.observe({mode: 'client', name: 'client-7', job: '', stage: 'queue_next'}, 0.1);
             playStageSeconds.observe({mode: 'client', name: 'client-8', job: '', stage: 'queue_next'}, 0.1);
 

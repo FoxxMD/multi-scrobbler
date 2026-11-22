@@ -33,6 +33,8 @@ export type HaltStatus = Extract<JobProcessStatus, 'paused' | 'stopped'>;
 export interface ExportClient {
     componentId: number
     name: string
+    /** name used in metric labels, same as the Client's play stage metrics */
+    getSafeExternalName(): string
     /** shared by all clients, events carry the emitting client's componentId */
     emitter: EventEmitter
     /** plays waiting in the client's queue (not retries) */
@@ -635,6 +637,7 @@ export class JobRunner {
         // pages are small once the client queue is full (one per dequeued play), so play counts refresh on a timer instead of each page
         let statsAt = 0;
         const jobLabel = String(this.jobId);
+        // component id until the client resolves, a client that is not configured has no name
         let clientLabel = String(componentId);
         /** @param key fixed reason for metrics, `reason` can hold numbers and dates */
         const wait = async (reason: string, key: string = reason) => {
@@ -647,10 +650,10 @@ export class JobRunner {
             try {
                 await this.sleep(signal, this.timings.exportPoll);
             } finally {
-                exportWaitSeconds.inc({job: jobLabel, client: clientLabel, reason: key}, (performance.now() - waitStart) / 1000);
+                exportWaitSeconds.inc({job: jobLabel, name: clientLabel, reason: key}, (performance.now() - waitStart) / 1000);
             }
         }
-        const stage = <T>(name: string, fn: () => Promise<T>) => timed(exportStageSeconds, {job: jobLabel, client: clientLabel, stage: name}, fn);
+        const stage = <T>(name: string, fn: () => Promise<T>) => timed(exportStageSeconds, {job: jobLabel, name: clientLabel, stage: name}, fn);
 
         while(true) {
             signal.throwIfAborted();
@@ -663,7 +666,7 @@ export class JobRunner {
                 await wait('Client is not configured');
                 continue;
             }
-            clientLabel = client.name;
+            clientLabel = client.getSafeExternalName();
             if(listening !== client.emitter) {
                 listen(client.emitter);
             }
@@ -750,7 +753,7 @@ export class JobRunner {
             this.runtime.exports[targetId] = {rateLimit};
             await this.setTarget(targetId, update);
             // only passes that exported a page, waits are in exportWaitSeconds
-            exportStageSeconds.observe({job: jobLabel, client: clientLabel, stage: 'pass'}, (performance.now() - passStart) / 1000);
+            exportStageSeconds.observe({job: jobLabel, name: clientLabel, stage: 'pass'}, (performance.now() - passStart) / 1000);
             logger.verbose(`Exported ${rows.length} scrobbles, ${created.length} new to the client`);
         }
     }

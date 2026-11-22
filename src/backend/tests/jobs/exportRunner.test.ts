@@ -45,6 +45,10 @@ class FakeClient implements ExportClient {
         this.componentId = componentId;
     }
 
+    getSafeExternalName() {
+        return this.name;
+    }
+
     getRunningState() {
         return this.running ? COMPONENT_STATE.RUNNING : COMPONENT_STATE.IDLE;
     }
@@ -210,7 +214,7 @@ describe('Job export runner', function () {
             client.process();
         }
         await exportTask(runner, target.id);
-        const labels = {job: String(job.id), client: 'fake'};
+        const labels = {job: String(job.id), name: 'fake'};
         expect([...await stagesOf(exportStageSeconds, labels)]).to.have.members(['page_read', 'job_transform', 'queue_play', 'stats', 'pass']);
         const waits = (await exportWaitSeconds.get()).values.filter(x => x.labels.job === String(job.id));
         expect(waits.find(x => x.labels.reason === 'Client queue is full')?.value).greaterThan(0);
