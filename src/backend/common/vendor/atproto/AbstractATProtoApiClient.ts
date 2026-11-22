@@ -137,9 +137,10 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
                 this.logger.warn({headers}, 'PDS does not implement rate limiting or is using some non-standard rate limit headers. Rate limiting will be ignored. Expected headers: ratelimit-limit, ratelimit-remaining, ratelimit-reset');
                 this.resetMissing = true;
             }
-            if (info !== null) {
+            if (info !== null && info.reset.getTime() > Date.now()) {
                 const secUntilReset = dayjs(info.reset).diff(dayjs(), 's');
-                await this.cache.cacheAuth.set<RateLimitInfo>(`${this.getAuthCacheKey()}-rateLimitInfo`, { limit: info.limit, remaining: info.remaining, reset: info.reset.valueOf() }, Math.min(secUntilReset, 3600));
+                // number TTL is ms
+                await this.cache.cacheAuth.set<RateLimitInfo>(`${this.getAuthCacheKey()}-rateLimitInfo`, { limit: info.limit, remaining: info.remaining, reset: info.reset.valueOf() }, Math.max(Math.min(secUntilReset, 3600), 1) * 1000);
             }
         } catch (e) {
             this.logger.warn(new Error('Failed to parse or set rate limit data', { cause: e }));
