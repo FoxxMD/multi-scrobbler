@@ -182,6 +182,7 @@ describe('Job export runner', function () {
 
     it('refreshes play counts on a timer instead of every page, and always before completing', async function () {
         const {runner, target, targetRepo, client} = await setup({limit: 1});
+        (runner as unknown as {timings: {exportStats: number}}).timings.exportStats = 60_000;
         const repo = (runner as unknown as {targetRepo: JobTargetRepository}).targetRepo;
         let counted = 0;
         const playStats = repo.playStats;
@@ -196,7 +197,7 @@ describe('Job export runner', function () {
         }
         await exportTask(runner, target.id);
         expect((await targetRepo.getById(target.id))!.status).eq('completed');
-        // first page, then the completion check. The other 6 pages are inside the default 5s window
+        // first page, then the completion check. The other 6 pages are inside the stats window
         expect(counted).eq(2);
     });
 

@@ -749,6 +749,7 @@ export class JobRunner {
             }
             this.runtime.exports[targetId] = {rateLimit};
             await this.setTarget(targetId, update);
+            // only passes that exported a page, waits are in exportWaitSeconds
             exportStageSeconds.observe({job: jobLabel, client: clientLabel, stage: 'pass'}, (performance.now() - passStart) / 1000);
             logger.verbose(`Exported ${rows.length} scrobbles, ${created.length} new to the client`);
         }

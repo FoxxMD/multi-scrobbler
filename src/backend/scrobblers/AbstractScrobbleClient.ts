@@ -1261,7 +1261,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             let historicalPlays: PlayObject[] = [];
 
             if (dupeCheck && upstreamCheck && this.upstreamRefresh.refreshEnabled) {
-                await timed(playStageSeconds, this.playStageLabels(playEntity.play, 'upstream_fetch'), () => this.handleQueuedScrobbleRanges());
+                await timed(playStageSeconds, this.playStageLabels(playEntity.play, 'upstream_ranges'), () => this.handleQueuedScrobbleRanges());
                 try {
                     historicalPlays = await timed(playStageSeconds, this.playStageLabels(playEntity.play, 'upstream_fetch'), () => this.getSOTScrobblesForPlay(playEntity.play, {useCache: !(isRetry || !useCache)}));
                 } catch (e: any) {
