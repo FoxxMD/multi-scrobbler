@@ -16,7 +16,7 @@ import { baseUrl } from "../../utils";
 import { ErrorAlert } from "../ErrorAlert";
 import { toaster } from "../Toaster";
 import { JobBackButton } from "./JobList";
-import { apiErrorMessage, exportProgress, ExportProgressBar, FILE_FORMAT_NAMES, formatJobDate, formatPlayedDate, ImportProgressBar, importOriginText, importProgress, JobStatusBadge, ProcessRateText, useProcessRate, useJobEvents, useSetJob } from "./jobUtils";
+import { apiErrorMessage, exportProgress, ExportProgressBar, FILE_FORMAT_NAMES, formatJobDate, formatPlayedDate, ImportProgressBar, importOriginText, importProgress, JobStatusBadge, ProcessRateText, RateLimitText, useProcessRate, useJobEvents, useSetJob } from "./jobUtils";
 import { InfoPopover } from '../ToggleTip';
 
 type ControlAction = 'start' | 'pause' | 'stop';
@@ -354,6 +354,7 @@ export const ExportTarget = (props: { job: JobApiJson, target: JobTargetApiJson 
                 {target.cursor !== null && target.status !== 'completed' ? `, up to ${formatPlayedDate(target.cursor.playedAt)}` : ''}
             </Text>
             <ProcessRateText rate={rate}/>
+            {target.status === 'running' ? <RateLimitText rateLimit={runtime?.rateLimit}/> : undefined}
             {stats !== undefined ? <Text textStyle="sm" color="fg.muted">In the Client: {stats}</Text> : undefined}
             {target.exported > target.queued ? <Text textStyle="sm" color="fg.muted">{(target.exported - target.queued).toLocaleString()} were already in the Client and were skipped.</Text> : undefined}
             {runtime?.waiting !== undefined ? <Text textStyle="sm" color="fg.warning">{runtime.waiting}</Text> : undefined}

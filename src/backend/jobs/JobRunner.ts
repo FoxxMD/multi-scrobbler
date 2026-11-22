@@ -8,6 +8,8 @@ import type { EventEmitter } from "node:events";
 import { COMPONENT_STATE, type ComponentState } from "../../core/Api.ts";
 import type { QueueContext } from "../../core/Atomic.ts";
 import type { JobProcessStatus } from "../../core/Job.ts";
+import { policyWindow, type RateLimitStatusJson } from "../../core/RateLimit.ts";
+import { todayAwareFormat } from "../../core/TimeUtils.ts";
 import type { PlayObject } from "../../core/PlaySchema.ts";
 import type { StageConfig } from "../../core/Transform.ts";
 import type { WebhookPayload } from "../common/infrastructure/config/health/webhooks.ts";
@@ -18,6 +20,7 @@ import { DrizzlePlayHistoricalRepository, type RepositoryCreatePlayHistoricalOpt
 import { addStats, JobTargetRepository, type JobTargetNew, type JobTargetSelect } from "../common/database/drizzle/repositories/JobTargetRepository.ts";
 import type { JobImportCursor, JobImportCursorApi, JobImportCursorFile, JobTargetBreaker, JobTargetCursor } from "../common/infrastructure/Job.ts";
 import type { WildcardEmitter } from "../common/WildcardEmitter.ts";
+import type { WriteBudget } from "../common/vendor/atproto/WriteBudget.ts";
 import { contiguousCoveredFrom, type TimeRange } from "../utils/RangeUtils.ts";
 import { DEFAULT_JOB_TIMINGS, type JobTimings } from "./constants.ts";
 import { fullImportPacer, type ImportBatch, type ImportPacer, type ImportProvider, isApiCursor } from "./ImportProvider.ts";
@@ -36,6 +39,8 @@ export interface ExportClient {
     getRunningState(): ComponentState
     queuePlay(data: PlayObject[], context?: QueueContext, opts?: {jobId?: number}): Promise<unknown[]>
     transformPlay(play: PlayObject, hookType: 'postCompare', opts: {stages?: StageConfig[]}): Promise<PlayObject>
+    /** the service's write rate limit, for Clients that track one */
+    writeBudget?(): Promise<WriteBudget | undefined>
 }
 
 export interface JobRunnerDeps {
@@ -68,6 +73,8 @@ export interface JobProcessRuntime {
     nextRetryAt?: string
     /** 0..1 for imports that can't know a record total (files) */
     progress?: number
+    /** the export Client's rate limit, when it reports one */
+    rateLimit?: RateLimitStatusJson
 }
 
 /** A cleanup of the job's scrobbles in its Clients. Not persisted */
@@ -623,9 +630,11 @@ export class JobRunner {
                 cleanup.push(() => emitter.off(name, fn));
             }
         }
+        let rateLimit: RateLimitStatusJson | undefined;
         const wait = async (reason: string) => {
-            if(this.runtime.exports[targetId]?.waiting !== reason) {
-                this.runtime.exports[targetId] = {waiting: reason};
+            const current = this.runtime.exports[targetId];
+            if(current?.waiting !== reason || current?.rateLimit?.remaining !== rateLimit?.remaining || current?.rateLimit?.limit !== rateLimit?.limit) {
+                this.runtime.exports[targetId] = {waiting: reason, rateLimit};
                 this.emitUpdate({runtime: this.runtime});
             }
             await this.sleep(signal, this.timings.exportPoll);
@@ -647,6 +656,14 @@ export class JobRunner {
             if(breaker.failedInARow >= breakerThreshold(job.exportQueueLimit)) {
                 await this.targetRepo.update(targetId, {breaker: {...breaker, trippedAt: Date.now()}});
                 throw new Error(`Stopped after ${breaker.failedInARow} failed scrobbles in a row${lastFailure !== undefined ? `. Last error: ${lastFailure}` : ''}`);
+            }
+            // before the running check: a Client paused by its own rate limit reserve is not running
+            const budget = await client.writeBudget?.();
+            rateLimit = budget === undefined ? undefined : {limit: budget.limit, remaining: budget.remaining, reserve: budget.exportReserve, reset: budget.reset, policy: budget.policy};
+            if(budget !== undefined && budget.remaining <= budget.exportReserve) {
+                const window = policyWindow(budget.policy);
+                await wait(`Rate limit reserve for exports reached, ${budget.remaining.toLocaleString()} of ${budget.limit.toLocaleString()} points left${window !== undefined ? ` per ${window}` : ''}. Waiting until ${todayAwareFormat(dayjs(budget.reset))}`);
+                continue;
             }
             if(client.getRunningState() !== COMPONENT_STATE.RUNNING) {
                 await wait('Client is not running');
@@ -712,7 +729,7 @@ export class JobRunner {
             exported += rows.length;
             queued += created.length;
             const stats = addStats((await this.targetRepo.playStats(this.jobId, componentId)).get(componentId), initial.removedStats);
-            this.runtime.exports[targetId] = {};
+            this.runtime.exports[targetId] = {rateLimit};
             await this.setTarget(targetId, {cursor, exported, queued, stats, breaker});
             logger.verbose(`Exported ${rows.length} scrobbles, ${created.length} new to the client`);
         }

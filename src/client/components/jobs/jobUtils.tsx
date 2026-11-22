@@ -11,6 +11,7 @@ import { tanQueries } from "../../queries";
 import { isoToHuman, shortTodayAwareFormat } from "../../utils";
 import { toaster } from "../Toaster";
 import { addRateSample, estimateRate, type RateEstimate, type RateSample } from "../../../core/ProcessRate";
+import { policyWindow, type RateLimitStatusJson } from "../../../core/RateLimit";
 
 const statusPalette: Record<JobProcessStatus, BadgeProps['colorPalette']> = {
     idle: 'gray',
@@ -204,4 +205,18 @@ export const countComponentJobs = (jobs: Pick<JobApiJson, 'importFrom' | 'target
 export const useComponentJobCount = (componentId: number, enabled = true): number | undefined => {
     const {data} = useQuery({...tanQueries.jobs.list(), enabled});
     return data === undefined ? undefined : countComponentJobs(data, componentId);
+}
+
+/** The export Client's rate limit, as used / total points next to the point where exports wait */
+export const RateLimitText = (props: { rateLimit: RateLimitStatusJson | undefined }) => {
+    const {rateLimit} = props;
+    if (rateLimit === undefined) {
+        return null;
+    }
+    const window = policyWindow(rateLimit.policy);
+    return (
+        <Text textStyle="sm" color="fg.muted">
+            Rate limit: {(rateLimit.limit - rateLimit.remaining).toLocaleString()} / {rateLimit.limit.toLocaleString()} points used{window !== undefined ? ` per ${window}` : ''}, exports wait at {(rateLimit.limit - rateLimit.reserve).toLocaleString()}. Resets {shortTodayAwareFormat(dayjs(rateLimit.reset))}
+        </Text>
+    );
 }

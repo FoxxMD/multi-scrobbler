@@ -20,6 +20,7 @@ import type { StageConfig } from '../../../core/Transform.ts';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { nameToCredit } from '../../../core/MusicMetadata.ts';
 import { TestScrobbler } from '../scrobbler/TestScrobbler.ts';
+import type { WriteBudget } from '../../common/vendor/atproto/WriteBudget.ts';
 
 const timings = {importPageDelay: 0, importRetries: 0, importRetryBase: 1, readyTimeout: 10, readyPoll: 5, emitThrottle: 0, exportPoll: 20};
 
@@ -36,6 +37,7 @@ class FakeClient implements ExportClient {
     /** emit a failed playUpdate for every queued play */
     failAll = false;
     jobId?: number;
+    budget?: WriteBudget;
 
     constructor(componentId: number) {
         this.componentId = componentId;
@@ -61,6 +63,10 @@ class FakeClient implements ExportClient {
     async transformPlay(play: PlayObject, _hook: 'postCompare', opts: {stages?: StageConfig[]}) {
         this.transformedWith.push(opts.stages ?? []);
         return {...play, data: {...play.data, track: nameToCredit(`${play.data.track?.name} (transformed)`)}};
+    }
+
+    async writeBudget() {
+        return this.budget;
     }
 
     /** dequeue n plays like the client processed them */
@@ -164,6 +170,22 @@ describe('Job export runner', function () {
         client.process();
         await exportTask(runner, target.id);
         expect((await targetRepo.getById(target.id))!.status).eq('completed');
+    });
+
+    it('waits while the client rate limit is at the export reserve, and reports the rate limit', async function () {
+        const {runner, target, targetRepo, client} = await setup();
+        const budget = {limit: 5000, remaining: 900, reserve: 500, exportReserve: 1000, reset: Date.now() + 60_000, policy: '5000;w=3600', at: Date.now()};
+        client.budget = budget;
+        await runner.startExport(target.id);
+        await until(() => runner.runtime.exports[target.id]?.waiting?.startsWith('Rate limit reserve for exports reached, 900 of 5,000 points left per hour') === true);
+        expect(client.queued).length(0);
+        expect(runner.runtime.exports[target.id]?.rateLimit).to.deep.eq({limit: 5000, remaining: 900, reserve: 1000, reset: budget.reset, policy: '5000;w=3600'});
+
+        client.budget = {...budget, remaining: 1001};
+        runner.wake();
+        await exportTask(runner, target.id);
+        expect((await targetRepo.getById(target.id))!.status).eq('completed');
+        expect(client.queued).length(7);
     });
 
     it('fills a large queue limit in one batch', async function () {

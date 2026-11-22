@@ -1,5 +1,6 @@
 import * as z from "zod";
 import type { ErrorObject } from "serialize-error";
+import type { RateLimitStatusJson } from "./RateLimit.ts";
 
 /**
  * Status of a job process (import, or export to one target).
@@ -43,6 +44,8 @@ export interface JobProcessRuntimeJson {
     retryAttempt?: number
     nextRetryAt?: string
     progress?: number
+    /** the export Client's rate limit, when it reports one */
+    rateLimit?: RateLimitStatusJson
 }
 
 export type JobImportOriginJson = { kind: 'component', componentId: number | null, name?: string }
