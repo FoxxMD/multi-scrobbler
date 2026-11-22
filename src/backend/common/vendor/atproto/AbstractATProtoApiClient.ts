@@ -13,6 +13,7 @@ import type {AtprotoDid} from "@atcute/lexicons/syntax";
 import { todayAwareFormat } from "../../../../core/TimeUtils.ts";
 import dayjs from "dayjs";
 import type {Millisecond} from "../../../../core/Atomic.ts";
+import { getWriteRateLimit, recordWriteRateLimit, type WriteRateLimit } from "./WriteBudget.ts";
 
 export interface RateLimitInfo {
     limit: number
@@ -94,10 +95,26 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
         try {
             const res = await func(this.client);
             this.setRateLimitsFromResponse(res.headers);
+            await this.recordWriteRateLimit(res.headers);
             return res;
         } catch (e: any) {
+            if (e instanceof ClientResponseError || ('headers' in e)) {
+                await this.recordWriteRateLimit(e.headers as Headers);
+            }
             throw await this.handleError(e);
         }
+    }
+
+    protected async recordWriteRateLimit(headers?: Headers) {
+        try {
+            await recordWriteRateLimit(this.cache.cacheAuth, this.userData?.did ?? this.config.did, headers);
+        } catch (e) {
+            this.logger.warn(new Error('Failed to store write rate limit', { cause: e }));
+        }
+    }
+
+    public async getWriteRateLimit(): Promise<WriteRateLimit | undefined> {
+        return await getWriteRateLimit(this.cache.cacheAuth, this.userData?.did ?? this.config.did);
     }
     public async get<T extends ReturnType<Client['get']>>(func: (client: Client) => T): Promise<T> {
         await this.checkRateLimit();
@@ -137,9 +154,10 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
                 this.logger.warn({headers}, 'PDS does not implement rate limiting or is using some non-standard rate limit headers. Rate limiting will be ignored. Expected headers: ratelimit-limit, ratelimit-remaining, ratelimit-reset');
                 this.resetMissing = true;
             }
-            if (info !== null) {
+            if (info !== null && info.reset.getTime() > Date.now()) {
                 const secUntilReset = dayjs(info.reset).diff(dayjs(), 's');
-                await this.cache.cacheAuth.set<RateLimitInfo>(`${this.getAuthCacheKey()}-rateLimitInfo`, { limit: info.limit, remaining: info.remaining, reset: info.reset.valueOf() }, Math.min(secUntilReset, 3600));
+                // number TTL is ms
+                await this.cache.cacheAuth.set<RateLimitInfo>(`${this.getAuthCacheKey()}-rateLimitInfo`, { limit: info.limit, remaining: info.remaining, reset: info.reset.valueOf() }, Math.max(Math.min(secUntilReset, 3600), 1) * 1000);
             }
         } catch (e) {
             this.logger.warn(new Error('Failed to parse or set rate limit data', { cause: e }));

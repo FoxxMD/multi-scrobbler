@@ -90,6 +90,13 @@ describe('#LFM Track to Play', function() {
         expect(formatPlayObj(toArtName).data.artists![0].name).to.eq(toArtName.artist.name);
     });
 
+    it('should use artist name when #text is missing and artist has an mbid (extended response)', function () {
+        const extended = generateLastfmTrackObject();
+        delete (extended.artist as Partial<typeof extended.artist>)['#text'];
+        extended.artist.mbid = '0b0c25f4-f31c-46a5-a4fb-ccbf53d663bd';
+        expect(formatPlayObj(extended).data.artists![0].name).to.eq(extended.artist.name);
+    });
+
 });
 
 describe('#LFM Error Response Handling', function () {

@@ -30,6 +30,10 @@ export default class LibrefmScrobbler extends LastfmScrobbler {
             this.api = new LastfmApiClient(this.name, {...this.config.data, rateLimit: {points: 1, duration: 1.5}}, {...this.internalOptions, logger: this.logger});
             this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this.api, this.api.logger);
             await this.api.initialize();
+            if(this.api.url.url.hostname !== LIBREFM_HOST) {
+                this.logger.debug(`Detected non-official Libre.fm server, scrobble interval floor is disabled`);
+                this.scrobbleDelayFloor = 0;
+            }
             return true;
         }
 

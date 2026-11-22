@@ -1,5 +1,5 @@
 import chai, { assert, expect } from 'chai';
-import {spy} from 'sinon';
+import {spy, stub} from 'sinon';
 import asPromised from 'chai-as-promised';
 import clone from 'clone';
 import dayjs from "dayjs";
@@ -9,6 +9,7 @@ import pEvent from 'p-event';
 import { INGRESS_QUEUE, QUEUE_STATUS_FAILED, SOURCE_SOT } from "../../../core/Atomic.ts";
 import type { PlayObject } from "../../../core/PlaySchema.ts";
 import { sleep, sortByOldestPlayDate } from "../../utils.ts";
+import { COMPONENT_STATE } from "../../../core/Api.ts";
 import { genGroupIdStr } from '../../../core/PlayUtils.ts';
 import mixedDuration from '../plays/mixedDuration.json' with { type: 'json' };
 import withDuration from '../plays/withDuration.json' with { type: 'json' };
@@ -20,13 +21,14 @@ import { NowPlayingScrobbler, TestAuthScrobbler, TestScrobbler } from "./TestScr
 import { type PaginatedTimeRangeOptions, REFRESH_STALE_DEFAULT } from '../../common/infrastructure/Atomic.ts';
 import type {PlayPlatformId} from '../../../core/Atomic.ts';
 import { shuffleArray } from '../../utils/DataUtils.ts';
-import { DEFAULT_CONSOLIDATE_DURATION, groupPlaysToTimeRanges } from '../../utils/ListenFetchUtils.ts';
+import { DEFAULT_CONSOLIDATE_DURATION, groupPlaysToTimeRanges, HISTORICAL_BUCKET_DURATION, HISTORICAL_BUCKET_FETCH_MAX, HISTORICAL_BUCKET_PADDING, historicalBucketRange } from '../../utils/ListenFetchUtils.ts';
 import { asPlay } from '../../../core/PlayMarshalUtils.ts';
 import { getRoot } from '../../ioc.ts';
 import { transientCache } from '../utils/TransientTestUtils.ts';
 import { generateArray } from '../../../core/DataUtils.ts';
 import type {RepositoryCreatePlayOpts} from '../../common/database/drizzle/repositories/PlayRepository.ts';
 import { fixtureCreatePlay } from '../utils/databaseFixtures.ts';
+import { jobs, playMirrors } from '../../common/database/drizzle/schema/schema.ts';
 import { isAbortError } from 'abort-controller-x';
 import { nameToCredit } from "../../../core/MusicMetadata.ts";
 import { namesToCredits } from "../../../core/MusicMetadata.ts";
@@ -630,6 +632,49 @@ describe('Upstream Scrobbles', function() {
         return;
     });
 
+    describe('Old plays', function () {
+        const width = HISTORICAL_BUCKET_DURATION.asSeconds();
+        const padding = HISTORICAL_BUCKET_PADDING.asSeconds();
+        // start of a bucket a few days ago
+        const bucketStart = () => dayjs.unix(Math.floor(dayjs().subtract(3, 'day').unix() / width) * width);
+
+        it('has no bucket for recent plays', function () {
+            expect(historicalBucketRange(dayjs().subtract(2, 'hour'))).is.undefined;
+        });
+
+        it('gives the same padded bucket for every play in it', function () {
+            const start = bucketStart();
+            const expected = {from: start.unix() - padding, to: start.unix() + width + padding};
+            expect(historicalBucketRange(start)).to.deep.eq(expected);
+            expect(historicalBucketRange(start.add(width - 1, 's'))).to.deep.eq(expected);
+            expect(historicalBucketRange(start.add(width, 's'))?.from).eq(start.unix() + width - padding);
+        });
+
+        it('fetches each bucket once, even for plays too far apart to share a queue range', async function () {
+            await using scrobbler = await generateTestScrobbler();
+            await scrobbler.initialize();
+            const sp = spy(scrobbler, 'getScrobblesForTimeRange');
+            const start = bucketStart();
+
+            // 4 hours apart, more than the 3 hour consolidation of queue ranges
+            for (const at of [start.add(1, 'hour'), start.add(5, 'hour'), start.add(2, 'hour')]) {
+                await scrobbler.getSOTScrobblesForPlay(generatePlay({playDate: at}));
+            }
+            expect(sp.callCount).eq(1);
+            expect(sp.firstCall.args[0]).to.deep.include({from: start.unix() - padding, to: start.unix() + width + padding, fetchMax: HISTORICAL_BUCKET_FETCH_MAX});
+
+            await scrobbler.getSOTScrobblesForPlay(generatePlay({playDate: start.add(7, 'hour')}));
+            expect(sp.callCount).eq(2);
+        });
+
+        it('fails when a bucket has too many scrobbles to compare against', async function () {
+            await using scrobbler = await generateTestScrobbler();
+            await scrobbler.initialize();
+            scrobbler.testRecentScrobbles = generatePlays(HISTORICAL_BUCKET_FETCH_MAX);
+            await expect(scrobbler.getSOTScrobblesForPlay(generatePlay({playDate: bucketStart().add(1, 'hour')}))).to.be.rejectedWith('Cannot get historical plays');
+        });
+    });
+
 });
 
 describe('Dead Scrobbles', function() {
@@ -876,6 +921,53 @@ describe('Manages scrobble queue', function() {
         expect(play.state).eq('duped');
     });
 
+    it('Skips fetching upstream scrobbles when the queue context opts out of the upstream check', async function() {
+        await using testScrobbler = await normalizedMonitoringScrobbler();
+        const upstream = spy(testScrobbler, 'getScrobblesForTimeRange');
+
+        // only exists upstream, so without the upstream check it is scrobbled
+        const upstreamDup = clone(normalizedWithMixedDur[normalizedWithMixedDur.length - 3]);
+        upstreamDup.data.playDate = upstreamDup.data.playDate!.add(2, 'seconds');
+
+        const processed = drained(testScrobbler);
+        const queued = await testScrobbler.queuePlay(upstreamDup, {upstreamCheck: false});
+        await processed;
+        expect(upstream.called).is.false;
+        const [play] = await testScrobbler.playRepoTest.findPlays({uid: queued.map(x => x.uid)});
+        expect(play.state).eq('scrobbled');
+    });
+
+    it('Pauses as IDLE while the rate limit is at the reserve, keeps the Play queued, and resumes at the reset', async function() {
+        await using testScrobbler = await generateTestScrobbler({name: 'test', id: 'test-ratelimit'});
+        await testScrobbler.initialize();
+        testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
+        testScrobbler.scrobbleSleep = 100;
+        testScrobbler.scrobbleDelay = 0;
+        const reset = Date.now() + 1200;
+        const budget = stub(testScrobbler, 'writeBudget');
+        budget.resolves({limit: 5000, remaining: 1000, reserve: 1000, exportReserve: 1000, reset, at: Date.now()});
+
+        const queued = await testScrobbler.queuePlay(generatePlay({playDate: dayjs().subtract(10, 'minutes')}));
+        testScrobbler.initScrobbleMonitoring().catch(() => undefined);
+        const pause = () => (testScrobbler as unknown as {rateLimitPause?: {message: string}}).rateLimitPause;
+        const start = Date.now();
+        // IDLE before it starts too, so wait for the pause first
+        while (pause() === undefined || testScrobbler.getRunningState() !== COMPONENT_STATE.IDLE) {
+            if (Date.now() - start > 1000) {
+                throw new Error('did not pause');
+            }
+            await sleep(20);
+        }
+        expect(pause()?.message).to.include('Paused, rate limit reserve reached with 1000 of 5000 points left');
+        const [paused] = await testScrobbler.playRepoTest.findPlays({uid: queued.map(x => x.uid)});
+        expect(paused.state).not.eq('scrobbled');
+
+        budget.resolves(undefined);
+        await pEvent(testScrobbler.emitter, 'scrobble', {timeout: 3000});
+        expect(Date.now()).to.be.gte(reset);
+        expect(testScrobbler.getRunningState()).eq(COMPONENT_STATE.RUNNING);
+    });
+
     it('Does not Scrobble a duplicate of a Play scrobbled by MS when upstream refresh is disabled', async function() {
         await using testScrobbler = await generateTestScrobbler({name: 'test', id: 'test-norefresh', options: {refreshEnabled: false}});
         const upstream = spy(testScrobbler, 'getScrobblesForTimeRange');
@@ -936,6 +1028,25 @@ describe('Manages scrobble queue', function() {
 
         // generous upper bound, waiting the full delay again would be >= 1000ms
         expect(Date.now() - start).to.be.lt(500);
+    });
+
+    it('Uses scrobbleInterval from config as scrobble delay', async function () {
+        await using testScrobbler = await generateTestScrobbler({name: 'test', id: 'test-interval', options: {scrobbleInterval: 300}});
+        expect(testScrobbler.scrobbleDelay).eq(300);
+    });
+
+    it('Uses scrobbleDelayFloor when scrobbleInterval is lower', async function () {
+        await using testScrobbler = new TestScrobbler({name: 'test', options: {scrobbleInterval: 300}});
+        testScrobbler.scrobbleDelayFloor = 500;
+        await testScrobbler.initialize();
+        expect(testScrobbler.scrobbleDelay).eq(500);
+    });
+
+    it('Uses scrobbleInterval when it is at or above scrobbleDelayFloor', async function () {
+        await using testScrobbler = new TestScrobbler({name: 'test', options: {scrobbleInterval: 800}});
+        testScrobbler.scrobbleDelayFloor = 500;
+        await testScrobbler.initialize();
+        expect(testScrobbler.scrobbleDelay).eq(800);
     });
 });
 
@@ -1421,4 +1532,115 @@ describe('Scrobble Clients Behavior', function() {
 
     });
 
+});
+describe('Import job plays', function() {
+
+    /** a job (and its mirror) in the scrobbler's db so plays can reference it */
+    const createJob = async (scrobbler: TestScrobbler): Promise<number> => {
+        const db = scrobbler.playRepoTest.db;
+        const [mirror] = await db.insert(playMirrors).values({service: 'lastfm', account: null, name: 'test'}).returning();
+        const [job] = await db.insert(jobs).values({name: 'job', mirrorId: mirror.id, rangeTo: dayjs()}).returning();
+        return job.id;
+    }
+
+    /** a job play as the export loop builds it: transformed data, untransformed mirror play as original */
+    const jobPlay = (mirrorPlay: PlayObject, title: string): PlayObject => {
+        const play = clone(mirrorPlay);
+        play.data.track = nameToCredit(title);
+        play.original = {play: mirrorPlay};
+        return play;
+    }
+
+    it('links the play to the job and persists job meta', async function() {
+        await using testScrobbler = await generateTestScrobbler();
+        const jobId = await createJob(testScrobbler);
+
+        const created = await testScrobbler.queuePlay(jobPlay(generatePlay({}, {parsedFrom: 'history', newFromSource: true}), 'A'), undefined, {jobId});
+        expect(created).length(1);
+        const [row] = await testScrobbler.playRepoTest.findPlays({uid: [created[0].uid]});
+        expect(row.jobId).eq(jobId);
+        expect(row.parentId).is.null;
+        expect(row.play.meta.jobId).eq(jobId);
+        expect(row.play.meta.parsedFrom).eq('job');
+        expect(row.play.meta.newFromSource).is.false;
+        // existing plays keep their job
+        await expect(testScrobbler.queuePlay([{...row, queueStates: []}], undefined, {jobId})).to.be.rejectedWith(/jobId/);
+    });
+
+    it('skips re-queueing the same mirror play even when job transforms changed its data', async function() {
+        await using testScrobbler = await generateTestScrobbler();
+        const jobId = await createJob(testScrobbler);
+        const mirrorPlay = generatePlay();
+
+        expect(await testScrobbler.queuePlay(jobPlay(mirrorPlay, 'First transform'), undefined, {jobId})).length(1);
+        expect(await testScrobbler.queuePlay(jobPlay(mirrorPlay, 'Second transform'), undefined, {jobId})).length(0);
+        // a different mirror play is still queued
+        expect(await testScrobbler.queuePlay(jobPlay(generatePlay(), 'Second transform'), undefined, {jobId})).length(1);
+    });
+
+    it('queues a job play again when the existing client play failed', async function() {
+        await using testScrobbler = await generateTestScrobbler();
+        const jobId = await createJob(testScrobbler);
+        const mirrorPlay = generatePlay();
+
+        const [first] = await testScrobbler.queuePlay(jobPlay(mirrorPlay, 'A'), undefined, {jobId});
+        await testScrobbler.playRepoTest.setStateById('failed', [first.id]);
+        expect(await testScrobbler.queuePlay(jobPlay(mirrorPlay, 'A'), undefined, {jobId})).length(1);
+        // the new play is not failed so it blocks another copy
+        expect(await testScrobbler.queuePlay(jobPlay(mirrorPlay, 'A'), undefined, {jobId})).length(0);
+    });
+
+    it('counts scrobbled job plays as non-live', async function() {
+        await using testScrobbler = await normalizedMonitoringScrobbler();
+        const jobId = await createJob(testScrobbler);
+        const play = generatePlay({playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate!.add(3, 'seconds')});
+
+        // 'scrobble' is emitted before the count is updated, wait for processing to finish
+        const processed = pEvent(testScrobbler.emitter, 'queueEmptied', {timeout: 3000, filter: (e: {data: {processed: number}}) => e.data.processed > 0});
+        await testScrobbler.queuePlay(jobPlay(play, play.data.track!.name), undefined, {jobId});
+        await processed;
+        expect((await testScrobbler.playRepoTest.findPlays({jobId}))[0].state).eq('scrobbled');
+
+        const component = testScrobbler['dbComponent'];
+        expect(component.countNonLive).eq(1);
+        expect(component.countLive).eq(0);
+        expect(testScrobbler.tracksScrobbledTotal).eq(0);
+        expect(testScrobbler.tracksScrobbled).eq(0);
+    });
+
+    it('does not notify per play for job plays', async function() {
+        await using testScrobbler = await generateTestScrobbler();
+        const notify = spy(testScrobbler, 'notify');
+        const payload = {title: 'Scrobble Error', message: 'failed', priority: 'error' as const};
+
+        await testScrobbler['notifyScrobbleFailure'](generatePlay({}, {jobId: 1}), payload);
+        expect(notify.called).is.false;
+        await testScrobbler['notifyScrobbleFailure'](generatePlay(), payload);
+        expect(notify.calledOnce).is.true;
+    });
+
+    it('scheduled dead letter processing skips job plays, user retries include them', async function() {
+        await using testScrobbler = await generateTestScrobbler();
+        testScrobbler.testRecentScrobbles = [];
+        const jobId = await createJob(testScrobbler);
+
+        const created = await testScrobbler.playRepoTest.createPlays([
+            {...fixtureCreatePlay(), state: 'failed', input: {}},
+            {...fixtureCreatePlay(), jobId, state: 'failed', input: {}},
+        ] as RepositoryCreatePlayOpts[]);
+        await testScrobbler.queueRepoTest.createMany(created.map(x => ({queueName: INGRESS_QUEUE, queueStatus: QUEUE_STATUS_FAILED, retries: 1, playId: x.id, componentId: testScrobbler.componentId})));
+
+        const queuedIds = async () => (await testScrobbler.playRepoTest.findPlays({queues: [{queueName: INGRESS_QUEUE, queueStatus: 'queued'}]})).map(x => x.id);
+
+        testScrobbler.deadLetterQueued = 2;
+        await testScrobbler.processDeadLetterQueue(undefined, 'system', false, {excludeJobPlays: true});
+        await testScrobbler['deadQueuePromise'];
+        expect(await queuedIds()).eql([created[0].id]);
+        // still counts the job play, like every other path that tracks it (one play was re-queued)
+        expect(testScrobbler.deadLetterQueued).eq(1);
+
+        await testScrobbler.processDeadLetterQueue(undefined, 'user');
+        await testScrobbler['deadQueuePromise'];
+        expect((await queuedIds()).sort()).eql(created.map(x => x.id).sort());
+    });
 });

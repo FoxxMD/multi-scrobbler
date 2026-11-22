@@ -631,6 +631,32 @@ More succinctly:
 ```
 :::
 
+## Presets {#presets}
+
+Import/Export jobs can apply transforms to scrobbles they [export](/transfer/overview#how-to-export). Define reusable lists of [Stages](#stage) for them in the top-level `transformersPresets` block of your [AIO Config](/configuration?configType=aio#configuration-types). Each key is a preset name, and its value is the list of Stages to run, written the same way as a [hook](#hook).
+
+```json5 title="config.json"
+{
+  // ...your AIO Config
+  "transformersPresets": {
+    "cleanTitles": [
+      {
+        "type": "user",
+        "title": ["(Remastered)", "(Album Version)"]
+      }
+    ],
+    "musicbrainz": [
+      {
+        "type": "musicbrainz",
+        "name": "myMB" // a named Stage from `transformers`
+      }
+    ]
+  }
+}
+```
+
+Choose a preset under **Transforms** when creating a job. Invalid presets are logged at startup and are not offered.
+
 ## Logging
 
 MS can log a diff of Stage transformations if/when they occur. In the `playTransform` object of a Source/Client config use `log`:

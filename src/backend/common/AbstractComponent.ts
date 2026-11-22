@@ -1,3 +1,4 @@
+import { playStageSeconds, timed } from "./playMetrics.ts";
 import { childLogger, type Logger } from "@foxxmd/logging";
 import { randomBytes } from "node:crypto";
 import {
@@ -200,6 +201,11 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         return `${this.type}-${normalizeStr(this.name, {keepSingleWhitespace: false})}`;
     }
 
+    /** Labels for playStageSeconds. `job` is empty for live plays */
+    protected playStageLabels(play: PlayObject, stage: string) {
+        return {mode: this.componentType, name: this.getSafeExternalName(), job: play.meta?.jobId !== undefined ? String(play.meta.jobId) : '', stage};
+    }
+
     protected getPrometheusLabels() {
         return {name: this.getSafeExternalName(), type: this.type};
     }
@@ -230,6 +236,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         this.dbComponent.countLive = await this.componentRepo.incrementCountLive(this.dbComponent.id, by, listened);
         this.dbComponent.listenedLive += listened;
         return this.dbComponent.countLive;
+    }
+
+    /** Add to this component's lifetime backlog/job total, in the database and on the in-memory row */
+    protected async incrementCountNonLive(by: number = 1): Promise<number> {
+        this.dbComponent.countNonLive = await this.componentRepo.incrementCountNonLive(this.dbComponent.id, by);
+        return this.dbComponent.countNonLive;
     }
 
     protected async doBuildDatabase(): Promise<true | string | undefined> {
@@ -372,6 +384,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
     }
 
+    /** Recount queue stats from the db (IE after plays were cancelled or deleted in bulk) and send them to the UI */
+    public refreshQueueStats = async () => {
+        await this.updateQueueStats([INGRESS_QUEUE, DEAD_QUEUE]);
+        this.emitEvent('componentUpdate', {queued: this.queuedLength, deadLetterPlays: this.deadLetterQueued, deadLetterPlaysTotal: this.deadLetterLength});
+    }
+
     public abstract stop(opts?: {reason?: string | Error}):  Promise<void>
     public abstract start(opts?: {forceInit?: boolean}):  Promise<boolean>
 
@@ -413,19 +431,23 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         return await pMap(partArr, async (x) => this.transformManager.parseTransformerConfig(x));
     }
 
-    public transformPlay = async (play: PlayObject, hookType: TransformHook, transformOpts: {log?: boolean | 'all'} & OptionalCacheUsage = {}) => {
+    /**
+     * @param transformOpts.stages Run these stages instead of this component's own rules for the hook (IE an import job's transforms)
+     * */
+    public transformPlay = async (play: PlayObject, hookType: TransformHook, transformOpts: {log?: boolean | 'all', stages?: StageConfig[]} & OptionalCacheUsage = {}) => {
 
         const {
             log,
+            stages,
             useCachedResult = true
         } = transformOpts;
 
         let logger!: Logger;
 
         try {
-            let hook: StageConfig[] | undefined;
+            let hook: StageConfig[] | undefined = stages;
 
-            switch (hookType) {
+            switch (stages === undefined ? hookType : undefined) {
                 case TRANSFORM_HOOK.preCompare:
                     hook = this.transformRules.preCompare;
                     break;
@@ -449,7 +471,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
             const shouldLog = log ?? this.config.options?.playTransform?.log ?? isDebugMode();
 
-            const transformHash = `playTransform-${hashObject(hook)}-${playContentCacheHash(play)}`;
+            // hookType is part of the key so cached steps from the same stages run on another hook keep their own hook in the lifecycle
+            const transformHash = `playTransform-${hookType}-${hashObject(hook)}-${playContentCacheHash(play)}`;
             const cachedSteps = useCachedResult ?  await this.cache.cacheTransform.get<LifecycleStep[]>(transformHash) : undefined;
             if(cachedSteps !== undefined) {
                 logger.trace(`Cache hit for Steps => ${transformHash}`);
@@ -858,7 +881,14 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         return this.config.options?.deadLetterRetries ?? DEAD_LETTER_RETRIES_DEFAULT;
     }
 
-    queuePlay = async (data: (PlayObject | PlayObject[]) | (PlaySelectWithQueueStates | PlaySelectWithQueueStates[]), context?: QueueContext) => {
+    /**
+     * @param opts.jobId plays are exported by this import job. They are linked to the job (not a parent Source play) and marked as job plays in meta
+     * */
+    queuePlay = async (data: (PlayObject | PlayObject[]) | (PlaySelectWithQueueStates | PlaySelectWithQueueStates[]), context?: QueueContext, opts: {jobId?: number} = {}) => {
+        const {jobId} = opts;
+        if (jobId !== undefined && (Array.isArray(data) ? data : [data]).some(x => entityIsPlayEntity(x))) {
+            throw new Error('jobId can only be given for new plays, existing plays keep their job');
+        }
         const createdQueuedPlays: PlaySelect[] = [];
 
         const dataArray = Array.isArray(data) ? data : [data];
@@ -911,11 +941,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             // we add this state signal to the play meta data and queue it
             // this way we persist the play and dupe it in queue processing so the user has an audit trail
             const monitoring = this.getMonitoringStatus();
-            const playDatas = dataArray.map(x => ({ ...x, meta: { ...x.meta, wasMonitored: monitoring.monitoring, seenAt: dayjs() } }));
+            const jobMeta = jobId !== undefined ? {jobId, parsedFrom: 'job' as const, newFromSource: false} : {};
+            const playDatas = dataArray.map(x => ({ ...x, meta: { ...x.meta, ...jobMeta, wasMonitored: monitoring.monitoring, seenAt: dayjs() } }));
 
             await pMap(playDatas, async (queueablePlay) => {
                 try {
-                    const existing = await this.findPreQueueExistingPlay(queueablePlay, context);
+                    const existing = await timed(playStageSeconds, this.playStageLabels(queueablePlay, 'pre_queue_check'), () => this.findPreQueueExistingPlay(queueablePlay, context));
                     if(existing !== undefined) {
                         return;
                     }
@@ -939,8 +970,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                     },
                     componentId: this.dbComponent.id,
                     state: 'queued',
-                    // only exists on plays from Source
-                    parentId: queueablePlay.id
+                    // only exists on plays from Source. A job play's id (if any) is a mirror row, not a play
+                    parentId: jobId === undefined ? queueablePlay.id : undefined,
+                    jobId,
                 });
 
                 const playRow = await this.playRepo.createPlays([createPlayData]);
@@ -972,8 +1004,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         
         let res: PlayProcessingResult | undefined = undefined;
         let err: Error | undefined;
+        const queuedAt = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE)?.updatedAt;
+        if(queuedAt !== undefined) {
+            playStageSeconds.observe(this.playStageLabels(playEntity.play, 'queue_wait'), Math.max(dayjs().diff(queuedAt), 0) / 1000);
+        }
         try {
-            res = await this.processPlay(playEntity, signal);
+            res = await timed(playStageSeconds, this.playStageLabels(playEntity.play, 'process_total'), () => this.processPlay(playEntity, signal));
         } catch (e: unknown | Error | PlayProcessingError) {
             if(isAbortError(e)) {
                 const abortSignal = signal ?? this.ingressQueueAbortController?.signal;
@@ -1003,60 +1039,65 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             this.emitEvent('playDequeued', { queuedScrobble: playEntity });
 
             if(res !== undefined) {
+                const endPersist = playStageSeconds.startTimer(this.playStageLabels(playEntity.play, 'persist'));
+                try {
 
-                let queueStates: QueueStateSelect[];
-                const initialRetries = res.queue?.retries ?? 0;
-                const last = res.playEntity.events.findLast(x => x.eventName === 'playStateChange' && (x as PlayEventPlayStateChange).data.state !== 'queued');
-                const lastWasNonFailureState = last === undefined || (last as PlayEventPlayStateChange).data.state !== 'failed';
-                if(err !== undefined) {
-                    res.queue.retries = (initialRetries + 1);
-                    res.queue.updatedAt = dayjs();
-                    if(lastWasNonFailureState) {
-                        // play moved from non-failure state to failure
-                        // so we should increment total failed
-                        this.emitEvent('deadLetter', res.playEntity);
-                        this.deadLetterGauge.labels(this.getPrometheusLabels()).inc();
-                        this.deadLetterLength += 1;
-                    }
-                    let shouldDeleteQueue = false;
-                    if(res.queue.retries > this.getDefaultDeadLetterRetries()) {
-                        shouldDeleteQueue = true;
-                    } else if((res.queue.context ?? {}).isRetry === true) {
-                        // isRetry is initiated by the user
-                        // so we only want this play to be processed once
-                        shouldDeleteQueue = true;
-                    }
-                    if(shouldDeleteQueue) {
-                        queueStates = res.playEntity.queueStates.filter(x => x.queueName !== res?.queue.queueName)
-                        await this.queueRepo.deleteByIds([res.queue.id]);
+                    let queueStates: QueueStateSelect[];
+                    const initialRetries = res.queue?.retries ?? 0;
+                    const last = res.playEntity.events.findLast(x => x.eventName === 'playStateChange' && (x as PlayEventPlayStateChange).data.state !== 'queued');
+                    const lastWasNonFailureState = last === undefined || (last as PlayEventPlayStateChange).data.state !== 'failed';
+                    if(err !== undefined) {
+                        res.queue.retries = (initialRetries + 1);
+                        res.queue.updatedAt = dayjs();
+                        if(lastWasNonFailureState) {
+                            // play moved from non-failure state to failure
+                            // so we should increment total failed
+                            this.emitEvent('deadLetter', res.playEntity);
+                            this.deadLetterGauge.labels(this.getPrometheusLabels()).inc();
+                            this.deadLetterLength += 1;
+                        }
+                        let shouldDeleteQueue = false;
+                        if(res.queue.retries > this.getDefaultDeadLetterRetries()) {
+                            shouldDeleteQueue = true;
+                        } else if((res.queue.context ?? {}).isRetry === true) {
+                            // isRetry is initiated by the user
+                            // so we only want this play to be processed once
+                            shouldDeleteQueue = true;
+                        }
+                        if(shouldDeleteQueue) {
+                            queueStates = res.playEntity.queueStates.filter(x => x.queueName !== res?.queue.queueName)
+                            await this.queueRepo.deleteByIds([res.queue.id]);
+                        } else {
+                            await this.queueRepo.updateById(res.queue.id, {
+                                ...res.queue,
+                            });
+                            // play may have already have been in failure state
+                            // but failed this queue run so is back to fail queued
+                            this.deadLetterQueued += 1;
+                            this.emitEvent('deadQueued', res.playEntity);
+                            queueStates = res.playEntity.queueStates.filter(x => x.queueName !== res?.queue.queueName).concat([res.queue]);
+                        }
                     } else {
-                        await this.queueRepo.updateById(res.queue.id, {
-                            ...res.queue,
-                        });
-                        // play may have already have been in failure state
-                        // but failed this queue run so is back to fail queued
-                        this.deadLetterQueued += 1;
-                        this.emitEvent('deadQueued', res.playEntity);
-                        queueStates = res.playEntity.queueStates.filter(x => x.queueName !== res?.queue.queueName).concat([res.queue]);
+                        await this.queueRepo.deleteByIds([res.queue.id]);
+                        if(res.queue.retries > 0 || !lastWasNonFailureState) {
+                            // play had retries or last non-queue state was failure, so it was counted in failure count
+                            // now we remove it
+                            this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();
+                            this.deadLetterLength -= 1;
+                            this.emitEvent('deadLetterRemoved', { dead: { id: res.playEntity.uid } });
+                        }
+                        queueStates = res.playEntity.queueStates.filter(x => x.queueName !== res?.queue.queueName)
                     }
-                } else {
-                    await this.queueRepo.deleteByIds([res.queue.id]);
-                    if(res.queue.retries > 0 || !lastWasNonFailureState) {
-                        // play had retries or last non-queue state was failure, so it was counted in failure count
-                        // now we remove it
-                        this.deadLetterGauge.labels(this.getPrometheusLabels()).dec();
-                        this.deadLetterLength -= 1;
-                        this.emitEvent('deadLetterRemoved', { dead: { id: res.playEntity.uid } });
-                    }
-                    queueStates = res.playEntity.queueStates.filter(x => x.queueName !== res?.queue.queueName)
+                    this.playRepo.updateById(playEntity.id, {play: res.playEntity.play, state: res.playEntity.state, error: res.playEntity.error});
+                    const createdEvents = await this.playEventsRepo.createMany(res.events.map(x => ({...x, playId: playEntity.id}))) as PlayEventSelect[];
+                    this.emitPlayUpdate({
+                        ...res.playEntity, 
+                        events: asPlayEvents(((res.playEntity as unknown as PlayWith<'events'>).events ?? []).concat(createdEvents)),
+                        queueStates
+                    });
+                } finally {
+                    endPersist();
                 }
-                this.playRepo.updateById(playEntity.id, {play: res.playEntity.play, state: res.playEntity.state, error: res.playEntity.error});
-                const createdEvents = await this.playEventsRepo.createMany(res.events.map(x => ({...x, playId: playEntity.id}))) as PlayEventSelect[];
-                this.emitPlayUpdate({
-                    ...res.playEntity, 
-                    events: asPlayEvents(((res.playEntity as unknown as PlayWith<'events'>).events ?? []).concat(createdEvents)),
-                    queueStates
-                });
             }
         }
     }

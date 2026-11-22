@@ -224,8 +224,9 @@ export const playMetaUrlSchema = z.looseObject({
     origin: z.string().optional()
 })
 
-export const parsedFromSchema = z.enum(['backlog','now playing','player','history','ingress'])
-export type PARSED_FROM_TYPE = z.infer<typeof parsedFromSchema>;// 'backlog' | 'now playing' | 'player' | 'history' | 'ingress';
+// 'job' => exported to a Client by an import job
+export const parsedFromSchema = z.enum(['backlog','now playing','player','history','ingress','job'])
+export type PARSED_FROM_TYPE = z.infer<typeof parsedFromSchema>;
 export const PARSED_FROM = parsedFromSchema.enum;
 
 export const playMetaSchema = z.looseObject({
@@ -493,6 +494,8 @@ export const DEAD_LETTER_RETRIES_DEFAULT = 3;
 export const queueContextSchema = z.object({
     transform: z.boolean().optional(),
     dupeCheck: z.boolean().optional(),
+    /** false => the dupe check skips fetching scrobbles from the Client's service and only compares against plays in the database */
+    upstreamCheck: z.boolean().optional(),
     useCache: z.boolean().optional(),
     reason: z.string().optional(),
     isRetry: z.boolean().optional()

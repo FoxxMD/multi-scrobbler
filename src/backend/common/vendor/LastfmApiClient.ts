@@ -772,8 +772,9 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
     // last.fm has no concept of multiple artists. A single artist mbid means last.fm matched the whole artist string
     // to one musicbrainz artist (ie "Earth, Wind & Fire") so it should not be split
     // otherwise splitting on comma is an arbitrary decision yikes
+    // extended=1 responses (user.getRecentTracks) have artist.name instead of #text
     const artistStrings = artistMbids?.length === 1
-        ? [artists]
+        ? [artists ?? artistName]
         : splitByFirstFound(artists, [','], artistName === undefined || artistName.trim() === '' ? [] : [artistName]).map((x: string) => x.trim());
     let al: string | undefined = album;
     if(al !== undefined) {

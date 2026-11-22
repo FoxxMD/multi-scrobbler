@@ -1,6 +1,6 @@
 import type {DBQueryConfig, DBQueryConfigWith, KnownKeysOnly, RelationFieldsFilterInternals, BuildQueryResult, RelationsFilter} from "drizzle-orm";
 import type { EmptyFilter } from "drizzle-orm/relations";
-import type { components, componentMigrations, playInputs, plays, queueStates, relations, playsHistorical, playEvents } from "./schema/schema.ts";
+import type { components, componentMigrations, playInputs, plays, queueStates, relations, playsHistorical, playEvents, historicalPlayInputs } from "./schema/schema.ts";
 import type {TSchema, TableName} from "./schema/schema.ts";
 
 
@@ -24,6 +24,10 @@ export type PlayNew = typeof plays.$inferInsert;
 
 export type PlayHistoricalSelect = typeof playsHistorical.$inferSelect;
 export type PlayHistoricalNew = typeof playsHistorical.$inferInsert;
+export type PlayHistoricalWith<K extends keyof TSchema['playsHistorical']["relations"]> = GenericRelationResult<'playsHistorical', K>;
+
+export type HistoricalPlayInputNew = typeof historicalPlayInputs.$inferInsert;
+export type HistoricalPlayInputSelect = typeof historicalPlayInputs.$inferSelect;
 
 export type PlayEventSelect = typeof playEvents.$inferSelect;
 export type PlayEventNew = typeof playEvents.$inferInsert;

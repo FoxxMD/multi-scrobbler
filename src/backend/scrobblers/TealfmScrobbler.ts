@@ -15,6 +15,7 @@ import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
 
 import { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.ts";
 import type {TealClientConfig} from "../common/infrastructure/config/client/tealfm.ts";
+import { toWriteBudget, type WriteBudget } from "../common/vendor/atproto/WriteBudget.ts";
 import { ATProtoAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.ts";
 import { playToRecord, TealApiAuthenticatedClient } from "../common/vendor/teal/TealApiClient.ts";
 import { playToStatusRecord } from "../common/vendor/teal/TealApiClient.ts";
@@ -73,6 +74,9 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
             throw new Error('Must provide an identifier');
         }
         await this.client.client.initClient();
+        if((this.config.options?.scrobbleInterval ?? this.scrobbleDelay) < this.scrobbleDelay) {
+            this.logger.warn(`Scrobble interval is LOWER than recommended ${this.scrobbleDelay}ms . You should only be using this if you are sure your PDS allows higher request rates.`)
+        }
         return true;
     }
 
@@ -118,6 +122,10 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         }
     }
 
+    override async writeBudget(): Promise<WriteBudget | undefined> {
+        return toWriteBudget(await this.client.client.getWriteRateLimit(), this.config.options);
+    }
+
     getScrobblesForTimeRange = async (_: any) => {
         try {
             const {data} = await this.client.getPagelessTimeRangeListens({limit: 100})
@@ -144,7 +152,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
             }
             return res;
         } catch (e: any) {
-            await this.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
+            await this.notifyScrobbleFailure(playObj, {title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             throw e;
         }
     }

@@ -12,6 +12,7 @@ import JsonConfig from '@site/../config/tealfm.json.example?raw';
 import Bluesky from "@site/src/components/snippets/_bluesky.mdx";
 import Handle from "@site/src/components/snippets/_atmosphere_id.mdx";
 import ENVConfig from "@site/src/content/docs/configuration/clients/_env_configs/_tealfm.md";
+import RateLimitReserve from "@site/src/components/snippets/_rate_limit_reserve.mdx";
 
 :::tip[Other Uses]
 
@@ -56,6 +57,12 @@ If you don't know what a PDS is or how to find this just use Bluesky:
 
 <DetailsAdmo type="tip" summary="Determining Your Atmosphere Handle/Identifier">
 <Handle/>
+</DetailsAdmo>
+
+<DetailsAdmo type="note" summary="Rate Limit Reserve">
+
+<RateLimitReserve env="TEALFM"/>
+
 </DetailsAdmo>
 
 <Config config="TealClientConfig" fileContent={JsonConfig} client ambiguous name="tealfm">

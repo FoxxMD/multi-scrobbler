@@ -1,0 +1,1 @@
+ALTER TABLE `jobs` ADD `exportUpstreamCheck` integer DEFAULT true NOT NULL;

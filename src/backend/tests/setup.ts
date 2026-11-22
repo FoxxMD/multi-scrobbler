@@ -12,6 +12,15 @@ import timezone from 'dayjs/plugin/timezone.js';
 import week from 'dayjs/plugin/weekOfYear.js';
 import utc from 'dayjs/plugin/utc.js';
 import { retryTiming } from '../common/infrastructure/Atomic.ts';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+// tests that load .env would otherwise write data files (rsindex dirs, ...) into the real data dir (DATA_DIR=./config)
+// dotenv does not override an env var that is already set
+const testDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ms-test-data-'));
+process.env.DATA_DIR = testDataDir;
+process.on('exit', () => fs.rmSync(testDataDir, {recursive: true, force: true}));
 
 // register globally so every test file has chai-as-promised assertions,
 // even when run alone or in a parallel worker before any file that registers it itself

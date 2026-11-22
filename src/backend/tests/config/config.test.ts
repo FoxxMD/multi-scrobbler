@@ -246,13 +246,19 @@ describe('Sample Configs', function () {
                         case 'rocksky':
                             zocObj = zocObj.supply(envSchema.env.shape.ROCKSKY_HANDLE, 'foxxmd.dev')
                             zocObj = zocObj.supply(envSchema.env.shape.ROCKSKY_TOKEN, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQ')
+                            zocObj = zocObj.supply(envSchema.env.shape.ROCKSKY_RATE_LIMIT_RESERVE, 500)
+                            zocObj = zocObj.supply(envSchema.env.shape.ROCKSKY_EXPORT_RATE_LIMIT_RESERVE, 1500)
+                            break;
+                        case 'tealfm':
+                            zocObj = zocObj.supply(envSchema.env.shape.TEALFM_RATE_LIMIT_RESERVE, 500)
+                            zocObj = zocObj.supply(envSchema.env.shape.TEALFM_EXPORT_RATE_LIMIT_RESERVE, 1500)
                             break;
                         case 'discord':
                             zocObj = zocObj.supply(envSchema.env.shape.DISCORD_STATUS_OVERRIDE_ALLOW, 'online');
                             zocObj = zocObj.supply(envSchema.env.shape.DISCORD_IPC_LOCATIONS, '/path/to/ipc,192.168.0.100:8999')
                     }
                     const componentMockData = zocObj.generate();
-                    const primitives = generateCommonComponentEnvConfigSchema(envSchema.prefix.toLocaleUpperCase());
+                    const primitives = generateCommonComponentEnvConfigSchema(envSchema.prefix.toLocaleUpperCase(), 'client');
                     const primitiveMockData = zocker(primitives).generate();
                     primitiveMockData[`${envSchema.prefix.toLocaleUpperCase()}_ENABLE`] = true;
 
@@ -280,6 +286,10 @@ describe('Sample Configs', function () {
                     expect(clients.instantiateErrors, `${clients.instantiateErrors.map(x => JSON.stringify(serializeError(x), undefined, 2)).join('\n')}`).is.empty;
                     expect(clients.clients).length(1);
                     expect(clients.clients[0].type).eq(componentType);
+                    expect(clients.clients[0].config.options?.scrobbleInterval).eq(primitiveMockData[`${envSchema.prefix.toLocaleUpperCase()}_SCROBBLE_INTERVAL`]);
+                    if(componentType === 'tealfm' || componentType === 'rocksky') {
+                        expect(clients.clients[0].config.options).to.include({rateLimitReserve: 500, exportRateLimitReserve: 1500});
+                    }
                 });
             }
         });

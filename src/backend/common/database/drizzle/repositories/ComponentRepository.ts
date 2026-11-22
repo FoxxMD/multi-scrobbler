@@ -60,4 +60,13 @@ export class DrizzleComponentRepository extends DrizzleBaseRepository<'component
             .returning({ countLive: components.countLive });
         return res[0].countLive;
     }
+
+    /** Like incrementCountLive, for plays from backlog/jobs */
+    incrementCountNonLive = async (id: number, by: number = 1): Promise<number> => {
+        const res = await this.db.update(components)
+            .set({ countNonLive: sql`${components.countNonLive} + ${by}` })
+            .where(eq(components.id, id))
+            .returning({ countNonLive: components.countNonLive });
+        return res[0].countNonLive;
+    }
 }
