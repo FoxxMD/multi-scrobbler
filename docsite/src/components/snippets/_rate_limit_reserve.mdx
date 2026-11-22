@@ -16,13 +16,28 @@ The **rate limit reserve** is the number of points that Multi-Scrobbler keeps fr
 * An [Export](/transfer/overview) to the Client waits. The Job page shows the points that are used and the point where the Export waits.
 * At the reset time of the limit, the Client and the Export start again automatically.
 
-Set the reserve in the `options` of the Client configuration:
+Set the reserve in the `options` of the Client configuration, or with ENV:
 
-| Option | Default | Points to keep free when... |
-|---|---|---|
-| `rateLimitReserve` | `1000` | the Client scrobbles |
-| `exportRateLimitReserve` | `1000` | a Job exports to the Client |
+| Option | ENV | Default | Points to keep free when... |
+|---|---|---|---|
+| `rateLimitReserve` | <code>{props.env}_RATE_LIMIT_RESERVE</code> | `1000` | the Client scrobbles |
+| `exportRateLimitReserve` | <code>{props.env}_EXPORT_RATE_LIMIT_RESERVE</code> | `1000` | a Job exports to the Client |
 
 On a Bluesky PDS, use a reserve of 1500 or lower.
 
 If your PDS does not send rate limit headers, Multi-Scrobbler does not pause.
+
+```json5 label="file" title="Example File or AIO Config"
+[
+  {
+    // ...your Client configuration
+    "configureAs": "client",
+    "data": { /* ... */ },
+    // [!code focus:4]
+    "options": {
+      "rateLimitReserve": 1000,  // [!ref] Live scrobbling pauses with a generous buffer so other activities (Bluesky likes, posts, etc..) aren't interrupted.
+      "exportRateLimitReserve": 1500 // [!ref] Exports pause before live scrobbling.
+    }
+  }
+]
+```

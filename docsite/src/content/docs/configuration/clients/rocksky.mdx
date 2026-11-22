@@ -225,22 +225,8 @@ The rate limit reserve works only with the [PDS approach](#setup). With the Serv
 
 </Aside>
 
-<RateLimitReserve/>
+<RateLimitReserve env="ROCKSKY"/>
 
-```json5 title="rocksky.json"
-[
-  {
-    // ...your Client configuration
-    "configureAs": "client",
-    "data": { /* ... */ },
-    // [!code focus:4]
-    "options": {
-      "rateLimitReserve": 1000,  // [!ref] Live scrobbling pauses with a generous buffer so other activities (Bluesky likes, posts, etc..) aren't interrupted.
-      "exportRateLimitReserve": 1500 // [!ref] Exports pause before live scrobbling.
-    }
-  }
-]
-```
 </DetailsAdmo>
 
 <Config config="RockSkyClientConfig" fileContent={JsonConfig} client ambiguous name="rocksky">

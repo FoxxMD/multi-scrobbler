@@ -61,22 +61,8 @@ If you don't know what a PDS is or how to find this just use Bluesky:
 
 <DetailsAdmo type="note" summary="Rate Limit Reserve">
 
-<RateLimitReserve/>
+<RateLimitReserve env="TEALFM"/>
 
-```json5 title="tealfm.json"
-[
-  {
-    // ...your Client configuration
-    "configureAs": "client",
-    "data": { /* ... */ },
-    // [!code focus:4]
-    "options": {
-      "rateLimitReserve": 1000,  // [!ref] Live scrobbling pauses with a generous buffer so other activities (Bluesky likes, posts, etc..) aren't interrupted.
-      "exportRateLimitReserve": 1500 // [!ref] Exports pause before live scrobbling.
-    }
-  }
-]
-```
 </DetailsAdmo>
 
 <Config config="TealClientConfig" fileContent={JsonConfig} client ambiguous name="tealfm">

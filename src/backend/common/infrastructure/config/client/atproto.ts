@@ -64,3 +64,9 @@ export const atProtoRateLimitOptionsSchema = z.object({
 });
 
 export type ATProtoRateLimitOptions = z.infer<typeof atProtoRateLimitOptionsSchema>;
+
+const reserveEnv = (opt: z.ZodOptional<z.ZodNumber>) => z.coerce.number().int().nonnegative().optional().meta(opt.meta() ?? {});
+export const atProtoRateLimitEnvSchemas = {
+    reserve: () => reserveEnv(atProtoRateLimitOptionsSchema.shape.rateLimitReserve),
+    exportReserve: () => reserveEnv(atProtoRateLimitOptionsSchema.shape.exportRateLimitReserve),
+};
