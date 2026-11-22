@@ -25,6 +25,7 @@ import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { fixtureCreateComponent, fixtureCreatePlay } from '../utils/databaseFixtures.ts';
 import type { JobApiJson, JobMetricsApiJson, JobOptionsApiJson, MirrorApiJson } from '../../../core/Job.ts';
 import { exportStageSeconds, playStageSeconds } from '../../common/playMetrics.ts';
+import prom from 'prom-client';
 import { mirrorLockKey } from '../../jobs/JobRunner.ts';
 import { ensureOwner } from '../../common/auth/owner.ts';
 import type { PlayTransformPartsConfigOptions } from '../../../core/Transform.ts';
@@ -402,7 +403,14 @@ describe('Job API', function () {
             playStageSeconds.observe({mode: 'client', name: 'client-7', job: '', stage: 'queue_next'}, 0.1);
             playStageSeconds.observe({mode: 'client', name: 'client-8', job: '', stage: 'queue_next'}, 0.1);
 
-            const res = await request(app).get(`/api/jobs/${job.id}/metrics`);
+            // other metrics' collect() is never run, some need state only the /metrics route sets up
+            new prom.Gauge({name: 'test_broken_collect', help: 'x', collect() { throw new Error('not set up'); }});
+            let res;
+            try {
+                res = await request(app).get(`/api/jobs/${job.id}/metrics`);
+            } finally {
+                prom.register.removeSingleMetric('test_broken_collect');
+            }
             expect(res.status, JSON.stringify(res.body)).eq(200);
             const body = res.body as JobMetricsApiJson;
             expect(body.job).to.deep.include({id: job.id, exportQueueLimit: job.exportQueueLimit});

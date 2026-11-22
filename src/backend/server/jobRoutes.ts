@@ -9,7 +9,6 @@ import path from "node:path";
 import * as z from "zod";
 import { cleanupBodySchema, deriveJobStatus, isLockedMirror, MIRROR_SERVICE_MIXED, jobCreateSchema, jobDeleteQuerySchema, jobUpdateSchema, type JobApiJson, type JobMetricsApiJson, type JobOptionsApiJson } from "../../core/Job.ts";
 import { eq } from "drizzle-orm";
-import prom from 'prom-client';
 import { plays } from "../common/database/drizzle/schema/schema.ts";
 import { exportStageSeconds, exportWaitSeconds, playStageSeconds } from "../common/playMetrics.ts";
 import { getRoot } from "../ioc.ts";
@@ -33,7 +32,8 @@ const MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024;
 /** services that refuse scrobbles older than about 14 days */
 const OLD_SCROBBLE_REJECTING_TYPES = ['lastfm', 'librefm'];
 
-const JOB_METRIC_NAMES = [exportStageSeconds, exportWaitSeconds, playStageSeconds].map(x => (x as unknown as {name: string}).name);
+// read one by one: register.getMetricsAsJSON() also runs every other metric's collect(), some of which need state only the /metrics route sets up
+const JOB_METRICS = [exportStageSeconds, exportWaitSeconds, playStageSeconds];
 
 const jsonParser = bodyParser.json({type: ['text/*', 'application/json']});
 
@@ -197,9 +197,7 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
         }));
         const jobLabel = String(job.id);
         const clientNames = new Set(targets.map(t => t.metricName).filter(x => x !== undefined));
-        const all = await prom.register.getMetricsAsJSON();
-        const metrics = all
-            .filter(m => JOB_METRIC_NAMES.includes(m.name))
+        const metrics = (await Promise.all(JOB_METRICS.map(m => m.get())))
             .map(m => ({
                 name: m.name,
                 help: m.help,
