@@ -149,6 +149,8 @@ export interface JobMetricsApiJson {
 export interface JobExportTimings {
     /** reading, transforming and queueing a Play, plus processing it in the Client and saving the result. Excludes time waiting in the queue */
     perPlay?: number
+    /** reading a Play from the Mirror, the Job's transforms, and adding it to the Client queue */
+    mirrorToQueue?: number
     /** from taking the Play off the queue until just before the request to the service (transforms, duplicate checks) */
     clientProcessing?: number
     /** the request to the Client's service */
@@ -185,12 +187,12 @@ export const jobExportTimings = (data: JobMetricsApiJson, metricName: string): J
     // a pass queues a page of Plays, each Play queued runs one pre_queue_check
     const passes = totals('multiscrobbler_export_stage_seconds', 'pass', {job});
     const queued = play('pre_queue_check');
-    const exportSide = queued.count === 0 ? undefined : passes.sum / queued.count;
+    const mirrorToQueue = queued.count === 0 ? undefined : passes.sum / queued.count;
     const processAvg = avg(processTotal);
     const persistAvg = avg(play('persist'));
-    const perPlay = exportSide === undefined || processAvg === undefined ? undefined : exportSide + processAvg + (queueNext ?? 0) + (persistAvg ?? 0);
+    const perPlay = mirrorToQueue === undefined || processAvg === undefined ? undefined : mirrorToQueue + processAvg + (queueNext ?? 0) + (persistAvg ?? 0);
 
-    return {perPlay, clientProcessing, scrobbleRequest: avg(scrobble)};
+    return {perPlay, mirrorToQueue, clientProcessing, scrobbleRequest: avg(scrobble)};
 }
 
 export const CLEANUP_ACTIONS = ['compact', 'delete'] as const;

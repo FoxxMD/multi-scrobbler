@@ -40,9 +40,10 @@ describe('Job export timings', function () {
         expect(timings.clientProcessing).closeTo(0.21, 1e-9);
         // 2 / 10 export side + 0.5 processing + 0.01 queue read + 0.1 persist
         expect(timings.perPlay).closeTo(0.81, 1e-9);
+        expect(timings.mirrorToQueue).closeTo(0.2, 1e-9);
     });
 
     it('is undefined before anything was measured', function () {
-        expect(jobExportTimings(data({}), 'client-a')).eql({perPlay: undefined, clientProcessing: undefined, scrobbleRequest: undefined});
+        expect(jobExportTimings(data({}), 'client-a')).eql({perPlay: undefined, mirrorToQueue: undefined, clientProcessing: undefined, scrobbleRequest: undefined});
     });
 });

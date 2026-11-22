@@ -443,13 +443,14 @@ const ExportTimings = (props: { data: JobMetricsApiJson }) => {
                 return <Stack key={t.componentId} gap="1">
                     {targets.length > 1 ? <Text textStyle="sm" fontWeight="medium">{t.name}</Text> : undefined}
                     <DataList.Root orientation="horizontal" size="sm">
-                        <DataItem label="Export one Play"><Text>{formatSeconds(timings.perPlay)}</Text></DataItem>
+                        <DataItem label="Process one Play (inclusive)"><Text>{formatSeconds(timings.perPlay)}</Text></DataItem>
+                        <DataItem label="Mirror to Client queue"><Text>{formatSeconds(timings.mirrorToQueue)}</Text></DataItem>
                         <DataItem label="Process in the Client"><Text>{formatSeconds(timings.clientProcessing)}</Text></DataItem>
                         <DataItem label="Request to the service"><Text>{formatSeconds(timings.scrobbleRequest)}</Text></DataItem>
                     </DataList.Root>
                 </Stack>;
             })}
-            <TextMuted textStyle="xs">Averages since Multi-Scrobbler started. Export one Play is all the work for one Play, without the time it waits in the Client queue. Process in the Client is the transforms and duplicate checks before the request.</TextMuted>
+            <TextMuted textStyle="xs">Averages since Multi-Scrobbler started. Process one Play is all the work for one Play, from the Mirror until it is scrobbled, without the time it waits in the Client queue. Mirror to Client queue is reading the Play from the Mirror and adding it to the Client queue. Process in the Client is the transforms and duplicate checks before the request.</TextMuted>
         </Stack>
     );
 }
