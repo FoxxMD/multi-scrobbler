@@ -163,9 +163,11 @@ export const playMetaSchema = z.object({
     /** Was the component activitely monitoring when this Play was created? */
     wasMonitored: z.boolean().optional().meta({description: 'Was the component activitely monitoring when this Play was created?'}),
     lifecycleInputs: z.custom<LifecycleInput>().array().optional(),
+    playlistId: z.string().optional().meta({description: 'ID of the playlist the track was played from'}),
+    playlistName: z.string().optional().meta({description: 'Name of the playlist the track was played from'}),
 }).meta({id: 'PlayMeta'});
 
-/** Play without original/scrobble/lifecycle. Used for plays nested inside another play's original/scrobble */
+/** Play without original/scrobble. Used for plays nested inside another play's original/scrobble */
 export const playObjectMinimalSchema = z.object({
     id: z.int().optional(),
     uid: z.string().optional(),
@@ -213,8 +215,6 @@ export const scrobbleResultSchema = z.object({
 export const playObjectSchema = playObjectMinimalSchema.extend({
     original: playOriginalSchema.optional(),
     scrobble: scrobbleResultSchema.optional(),
-    // has no dates to convert so it is passed through as-is
-    lifecycle: z.custom<LifecycleStep>().array().optional(),
 }).meta({id: 'Play'});
 
 // Loose versions of the schemas above, used for (de)serializing stored/received plays so unknown keys are passed through as-is.
@@ -234,7 +234,6 @@ export const playObjectInternalSchema = playMinimalInternalSchema.extend({
         match: playMatchResultInternalSchema.optional(),
         mergedScrobble: playMinimalInternalSchema.optional(),
     }).loose().optional(),
-    lifecycle: playObjectSchema.shape.lifecycle,
 }).loose().meta({id: 'PlayLoose'});
 
 export const sourcePlayerSchema = z.object({
@@ -383,10 +382,10 @@ type PlayMetaInternalKeys = 'sourceSOT' | 'scrobbleTsSOC' | 'comment' | 'wasMoni
 export const publicPlayMetaSchema = playMetaSchema.pick({
     source: true, seenAt: true, musicService: true, parsedFrom: true, trackId: true, playId: true, newFromSource: true,
     user: true, mediaType: true, server: true, library: true, trackProgressPosition: true, mediaPlayerName: true,
-    mediaPlayerVersion: true, deviceId: true, sessionId: true, nowPlaying: true, url: true,
+    mediaPlayerVersion: true, deviceId: true, sessionId: true, nowPlaying: true, url: true, playlistId: true, playlistName: true,
 });
 
-type PlayInternalKeys = 'id' | 'original' | 'scrobble' | 'lifecycle';
+type PlayInternalKeys = 'id' | 'original' | 'scrobble';
 export const publicPlaySchema = z.object({
     uid: playObjectSchema.shape.uid,
     data: publicPlayDataSchema,

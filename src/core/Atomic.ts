@@ -2,7 +2,8 @@ import type { Dayjs } from "dayjs";
 import type { AdditionalTrackInfoResponse } from "./vendor/listenbrainz/interfaces.ts";
 import type { StrictOmit } from "ts-essentials";
 import type {ErrorObject} from "serialize-error";
-import type { FlowControlTerm, TransformHook } from "./Transform.ts";
+import type { ActionTerm, FlowControlTerm, TransformHook } from "./Transform.ts";
+import type { PlayObject } from "./PlaySchema.ts";
 import type {Changeset} from "json-diff-ts";
 import type {IParseBaseOptions} from 'qs';
 import * as z from "zod";
@@ -253,10 +254,19 @@ export interface LifecycleStep {
     flowResult?: FlowControlTerm
     flowReason?: string
     flowKnownState?: 'skip' | 'prereq'
+    actionResult?: ActionTerm
+    actionReason?: string
     error?: ErrorLike
     patch?: Changeset
     inputs?: LifecycleInput[]
     createdAt: string
+}
+
+/** Result of running a Hook's Stages on a Play */
+export interface TransformPlayResult {
+    play: PlayObject
+    /** Only the steps generated (or reused from cache) by this run */
+    steps: LifecycleStep[]
 }
 
 export type ScrobblePayload = object | string;
@@ -375,23 +385,6 @@ export const JOINERS_FINAL: FinalJoiners[] = ['&'];
 export type Feat = 'ft' | 'feat' | 'vs' | 'ft.' | 'feat.' | 'vs.' | 'featuring'
 export const FEAT: Feat[] = ['ft','feat','vs','ft.','feat.','vs.','featuring'];
 
-export interface TransformOptions {
-        failOnFetch?: boolean;
-        throwOnFailure?: boolean | ('artists' | 'title' | 'albumArtists' | 'album' | 'duration' | 'meta' | 'art')[];
-        ttl?: string
-}
-export interface TransformerCommonConfig<T = Record<string, any>, Y = Record<string, any>> {
-    defaults?: T;
-    data?: Y
-    type: string;
-    name?: string;
-    options?: TransformOptions
-}
-
-export interface TransformerCommon<T = Record<string, any>, Y = Record<string, any>> extends TransformerCommonConfig<T,Y> {
-    name: string
-}
-
 export const rockskyRequiredFields = z.enum(['track','artists','album']);
 export type RockskyRequiredFields = z.infer<typeof rockskyRequiredFields>;
 export const rockskyConfidenceFields = z.enum(['isrc','mbid','spotify']);
@@ -473,8 +466,8 @@ export type TypesAreEqual<T, U, Y=unknown, N=never> =
 export type MBID = `${string}-${string}-${string}-${string}-${string}`
 
 // ['queued','discovered','discarded','scrobbled','failed','duped']
-export type PlayStateCommon = 'queued' |'discarded' | 'failed' | 'duped';
-export const PLAY_STATE_COMMON: PlayStateCommon[] = ['queued', 'discarded', 'failed', 'duped'];
+export type PlayStateCommon = 'queued' |'discarded' | 'failed' | 'duped' | 'review';
+export const PLAY_STATE_COMMON: PlayStateCommon[] = ['queued', 'discarded', 'failed', 'duped','review'];
 export type PlaySourceState = PlayStateCommon | 'discovered';
 export const PLAY_SOURCE_STATE: PlaySourceState[] = [...PLAY_STATE_COMMON, 'discovered'];
 export type PlayClientState = PlayStateCommon | 'scrobbled';
@@ -498,7 +491,9 @@ export const queueContextSchema = z.object({
     upstreamCheck: z.boolean().optional(),
     useCache: z.boolean().optional(),
     reason: z.string().optional(),
-    isRetry: z.boolean().optional()
+    isRetry: z.boolean().optional(),
+    /** Do not change Play state based on Stage actions (onSuccessAction...) */
+    ignoreActions: z.boolean().optional()
 }).meta({title: 'Queue Context'});
 
 export type QueueContext = z.infer<typeof queueContextSchema>;

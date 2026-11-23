@@ -20,7 +20,7 @@ import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvC
 import type { CommonClientConfig } from '../common/infrastructure/config/client/index.ts';
 import { getClientEnvSchema, validateClientAIOJson, validateClientJson, type ClientTypeConfigMap } from '../common/infrastructure/config/client/clientsMap.ts';
 import type { MSBackendEventMap } from '../common/infrastructure/MSBackendEventMap.ts';
-import { transformPresetEnv } from "../utils/PlayTransformUtils.ts";
+import { transformPresetEnv } from "../common/transforms/stageSchemas.ts";
 
 type UnparsedClientConfig = UnparsedConfig<ClientType>;
 

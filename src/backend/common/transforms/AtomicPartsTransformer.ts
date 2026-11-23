@@ -1,13 +1,20 @@
 import type { Credit, TrackMeta, TrackMetaIsrc } from "../../../core/Atomic.ts";
 import { isPlayObject, type ObjectPlayData, type PlayObject } from "../../../core/PlaySchema.ts";
-import type {AtomicStageConfig, PlayTransformPartsAtomic, StageConfig} from "../../../core/Transform.ts";
+import type {RulePart, StageCommon} from "../../../core/Transform.ts";
 import AbstractTransformer from "./AbstractTransformer.ts";
 import { testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import type { CreditRules } from "../../../core/MusicMetadata.ts";
 
-type PartName = keyof PlayTransformPartsAtomic<unknown>;
+type PartName = RulePart;
 
-export default abstract class AtomicPartsTransformer<Y, T = any, Z extends AtomicStageConfig<Y> = StageConfig> extends AbstractTransformer<T, Z> {
+/**
+ * Transformer that applies its transformed data to a Play per-part (title, artists, album...) based on the Stage's Rules
+ *
+ * @template Y Rule term (value of each part) the Stage uses
+ * @template T Transformer data fetched for a Play
+ * @template Z Parsed Stage
+ * */
+export default abstract class AtomicPartsTransformer<Y, T = any, Z extends StageCommon & Partial<Record<RulePart, unknown>> = StageCommon> extends AbstractTransformer<T, Z> {
 
         /**
          * Does this transformer add metadata (service ids) or images to credits?
@@ -17,7 +24,7 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
         protected readonly hydratesCredits: boolean = false;
 
         /** A rule is enabled if it is defined, not false, and any `when` condition it has is met */
-        protected ruleEnabled(play: PlayObject, name: PartName, part: unknown): boolean {
+        protected ruleEnabled(play: PlayObject, name: string, part: unknown): boolean {
             if (part === undefined || part === null || part === false) {
                 return false;
             }

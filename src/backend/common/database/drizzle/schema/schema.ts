@@ -77,7 +77,7 @@ export const plays = sqliteTable("plays", {
   seenAt: DayjsTimestamp('seenAt'),
   updatedAt: DayjsTimestamp('updatedAt').notNull().$defaultFn(() => dayjs()).$onUpdate(() => dayjs()),
   play: PlayJson('play').notNull(), //  text({ mode: 'json' }).notNull().$type<PlayObject>(),
-  state: text({enum: ['queued','discovered','discarded','scrobbled','failed','duped']}).notNull(),
+  state: text({enum: ['queued','discovered','discarded','scrobbled','failed','duped','review']}).notNull(),
   // https://orm.drizzle.team/docs/indexes-constraints#foreign-key
   parentId: integer().references((): AnySQLiteColumn => plays.id, {onDelete: 'set null', onUpdate: 'cascade'}),
   jobId: integer().references(() => jobs.id, {onDelete: 'cascade', onUpdate: 'cascade'}),
@@ -276,6 +276,8 @@ export const jobs = sqliteTable("jobs", {
   exportQueueLimit: integer().notNull().default(20),
   // false => target clients skip fetching their service's scrobbles for the dupe check and only compare against their own db
   exportUpstreamCheck: integer({mode: 'boolean'}).notNull().default(true),
+  // true => plays a job transform discarded are created in target clients in the discarded state, false => they are not sent
+  exportDiscarded: integer({mode: 'boolean'}).notNull().default(false),
   // raw stage config snapshot (always a list), parsed again when exporting
   transformOptions: text({ mode: 'json' }).$type<unknown[]>(),
   transformSource: text({ mode: 'json' }).$type<JobTransformSource>(),

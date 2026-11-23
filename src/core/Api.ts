@@ -358,8 +358,13 @@ export const componentStateBodySchema = z.object({
 
 export type ComponentStateBody = z.infer<typeof componentStateBodySchema>;
 
+/** States a user can move a Play to, removing it from any queue */
+export const dequeuedPlayStateSchema = z.enum(["discarded", "review"]);
+export type DequeuedPlayState = z.infer<typeof dequeuedPlayStateSchema>;
+
 export const playStateBodySchema = z.object({
-    state: z.enum(["discarded"]),
+    // any Play state, unsupported states are rejected by the route
+    state: z.enum(PLAY_STATES as [PlayState, ...PlayState[]]),
     reason: z.string().optional()
 });
 

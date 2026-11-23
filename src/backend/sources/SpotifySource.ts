@@ -104,6 +104,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
         let isrcString: string | undefined;
         let trackNumber: number | undefined;
         let scrobbleTsSOC: ScrobbleTsSOC;
+        let playlistId: string | undefined = undefined;
 
 
         if (asPlayHistoryObject(obj)) {
@@ -155,6 +156,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
                     name: deviceName
                 } = {},
                 item,
+                context,
             } = obj;
             const {
                 artists: art,
@@ -188,6 +190,7 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
             deviceId = combinePartsToString([shortDeviceId(deviceIdentifier), deviceName]);
             isrcString = isrc;
             trackNumber = track_number
+            playlistId = context?.uri !== undefined ? parseSpotifyPlaylistId(context?.uri) : undefined;
 
         } else {
             throw new Error('Could not determine format of spotify response data');
@@ -235,7 +238,8 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
                 newFromSource,
                 url: {
                     web: url
-                }
+                },
+                playlistId
             }
         };
 
@@ -695,6 +699,26 @@ export default class SpotifySource extends MemoryPositionalSource implements Pag
     }
 
     protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) => await this.getPlayHistory({formatted: true, ...options})
+}
+
+/**
+ * Get a playlist ID from a playlist ID, URI (spotify:playlist:ID) or share URL (https://open.spotify.com/playlist/ID?si=...)
+ * */
+export const parseSpotifyPlaylistId = (value: string): string | undefined => {
+    const trimmed = value.trim();
+    const uriMatch = trimmed.match(/^spotify:(?:user:[^:]+:)?playlist:([A-Za-z0-9]+)$/);
+    if(uriMatch !== null) {
+        return uriMatch[1];
+    }
+    const urlMatch = trimmed.match(/^https?:\/\/open\.spotify\.com\/(?:[^/]+\/)?playlist\/([A-Za-z0-9]+)/);
+    if(urlMatch !== null) {
+        return urlMatch[1];
+    }
+    // bare playlist IDs are 22 base62 characters, requiring that catches playlist names entered by mistake
+    if(/^[A-Za-z0-9]{22}$/.test(trimmed)) {
+        return trimmed;
+    }
+    return undefined;
 }
 
 const asPlayHistoryObject = (obj: object): obj is SpotifyApi.PlayHistoryObject => 'played_at' in obj

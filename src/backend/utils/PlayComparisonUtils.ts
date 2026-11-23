@@ -1,5 +1,5 @@
 import { getListDiff, type ListDiff } from "@donedeal0/superdiff";
-import { type AcceptableTemporalDuringReference, type Credit, SOURCE_SOT, type SOURCE_SOT_TYPES, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy } from "../../core/Atomic.ts";
+import { type AcceptableTemporalDuringReference, type Credit, SOURCE_SOT, type SOURCE_SOT_TYPES, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy, type TransformPlayResult } from "../../core/Atomic.ts";
 import type { PlayMatchResult, PlayObject, PlayObjectMinimal, TrackStringOptions } from "../../core/PlaySchema.ts";
 import { capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
@@ -468,7 +468,7 @@ export const playDateWithinDurationOfAny = (play: PlayObject, plays:  PlayObject
 }
 
 export interface ExistingScrobbleOpts {
-    transformPlay?: (play: PlayObject, hookType: TransformHook) => Promise<PlayObject>
+    transformPlay?: (play: PlayObject, hookType: TransformHook) => Promise<TransformPlayResult>
     existingSubmitted?: (play: PlayObject) => Promise<[ScrobbledPlayObject?, ScrobbledPlayObject[]?]>
     existingExternal?: (play: PlayObject) => Promise<{reason?: string, match: boolean, data?: string | Record<string, any>}>
     transformRules?: PlayTransformRules
@@ -479,7 +479,7 @@ export interface ExistingScrobbleOpts {
 export const existingScrobble = async (playObjPre: PlayObject, existingScrobbles: PlayObject[], opts: ExistingScrobbleOpts = {}, log?: boolean): Promise<PlayMatchResult> => {
 
     const {
-        transformPlay = (play, hook) => play,
+        transformPlay = async (play, hook) => ({play, steps: []}),
         existingSubmitted = (play) => [undefined, undefined],
         existingExternal,
         transformRules,
@@ -495,7 +495,7 @@ export const existingScrobble = async (playObjPre: PlayObject, existingScrobbles
             createdAt: dayjs().toISOString()
         };
 
-        const playObj = await transformPlay(playObjPre, TRANSFORM_HOOK.candidate);
+        const {play: playObj} = await transformPlay(playObjPre, TRANSFORM_HOOK.candidate);
         if(transformRules?.compare?.candidate !== undefined) {
             result.transformedPlay = playObj;
         }
@@ -564,7 +564,7 @@ export const existingScrobble = async (playObjPre: PlayObject, existingScrobbles
             
             existingScrobble = await findAsyncSequential(existingScrobbles, async (xPre) => {
 
-                const x = await transformPlay(xPre, TRANSFORM_HOOK.existing);
+                const {play: x} = await transformPlay(xPre, TRANSFORM_HOOK.existing);
 
                 //const referenceMatch = referenceApiScrobbleResponse !== undefined && playObjDataMatch(x, referenceApiScrobbleResponse);
 

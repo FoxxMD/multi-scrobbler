@@ -10,7 +10,7 @@ import type {CacheConfigOptions} from "./common/infrastructure/Atomic.ts";
 import type { MusicBrainzSingletonMap, CovertArtSingletonMap } from './common/vendor/musicbrainz/MusicbrainzTypes.ts';
 import { MSCache } from "./common/Cache.ts";
 import TransformerManager from "./common/transforms/TransformerManager.ts";
-import type {TransformerCommonConfig} from "../core/Atomic.ts";
+import type {TransformerCommonConfig} from "../core/Transform.ts";
 import prom from 'prom-client';
 import { CoverArtApiClient } from "./common/vendor/musicbrainz/CoverArtApiClient.ts";
 import { version, stable } from "./version.ts";
@@ -19,7 +19,7 @@ import type { MSBackendEventMap } from "./common/infrastructure/MSBackendEventMa
 import { setRootCommon } from "./iocCommon.ts";
 import type { RockskySingletonMap } from "./common/vendor/rocksky/RockskyClientWrapped.ts";
 import type { AuthConfig, MetadataConfig } from "./common/infrastructure/config/aioConfig.ts";
-import { playTransformPartsConfigOptionsSchema, type PlayTransformPartsConfigOptions } from "../core/Transform.ts";
+import { playTransformHookSchema, type PlayTransformHookConfig } from "./common/transforms/stageSchemas.ts";
 import * as z from "zod";
 let root: ReturnType<typeof createRoot>;
 export interface RootOptions {
@@ -73,19 +73,19 @@ const scrobbledCounter = new prom.Counter({
 });
 
 /** Keeps presets that are valid stage config. An invalid one is logged and dropped so it can't break startup */
-export const parseTransformersPresets = (raw: unknown, logger: Logger): Record<string, PlayTransformPartsConfigOptions> => {
-    const presets: Record<string, PlayTransformPartsConfigOptions> = {};
+export const parseTransformersPresets = (raw: unknown, logger: Logger): Record<string, PlayTransformHookConfig> => {
+    const presets: Record<string, PlayTransformHookConfig> = {};
     if(raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
         logger.error('transformersPresets must be an object of named presets, ignoring it');
         return presets;
     }
     for(const [name, value] of Object.entries(raw)) {
-        const res = playTransformPartsConfigOptionsSchema.safeParse(value);
+        const res = playTransformHookSchema.safeParse(value);
         if(res.success && Array.isArray(value) && value.length === 0) {
             logger.error(`Transformers preset '${name}' has no stages and will not be available`);
         } else if(res.success) {
             // the original, the schema may not model every field a transformer accepts
-            presets[name] = value as PlayTransformPartsConfigOptions;
+            presets[name] = value as PlayTransformHookConfig;
         } else {
             logger.error(`Transformers preset '${name}' is invalid and will not be available:\n${z.prettifyError(res.error)}`);
         }

@@ -11,7 +11,7 @@ import { asPlayEvents, scrobbleToPlayEvent, stateChangeToPlayEvent } from '../..
 describe('Play Marshalling', function () {
 
     it('round trips a Play through JSON', async function () {
-        const play = await playWithLifecycleScrobble(generatePlayWithLifecycle());
+        const play = await playWithLifecycleScrobble(generatePlayWithLifecycle().play);
         play.data = {...play.data, ...generatePlay({}, {}, {listenRanges: true, playDateCompleted: true}).data};
 
         const json = JSON.parse(JSON.stringify(asJsonPlayObject(play)));
@@ -28,7 +28,7 @@ describe('Play Marshalling', function () {
     });
 
     it('converts dates in nested plays and leaves raw Source data untouched', async function () {
-        const play = await playWithLifecycleScrobble(generatePlayWithLifecycle());
+        const play = await playWithLifecycleScrobble(generatePlayWithLifecycle().play);
         play.original = {data: {releaseDate: '2020-01-01T00:00:00Z'}, play: statefulInvariantTransform(generatePlay())};
         play.scrobble!.match!.closestMatchedPlay = statefulInvariantTransform(generatePlay(), true);
 
@@ -40,11 +40,10 @@ describe('Play Marshalling', function () {
         expect(dayjs.isDayjs(decoded.scrobble!.mergedScrobble!.data.playDate)).to.be.true;
         expect(dayjs.isDayjs(decoded.scrobble!.match!.closestMatchedPlay!.data.playDate)).to.be.true;
         expect((decoded.original!.data as Record<string, unknown>).releaseDate).to.eq('2020-01-01T00:00:00Z');
-        expect(decoded.lifecycle).to.deep.eq(json.lifecycle);
     });
 
     it('does not mutate the Play when encoding', async function () {
-        const play = await playWithLifecycleScrobble(generatePlayWithLifecycle());
+        const play = await playWithLifecycleScrobble(generatePlayWithLifecycle().play);
         asJsonPlayObject(play);
         expect(dayjs.isDayjs(play.scrobble!.createdAt)).to.be.true;
     });
@@ -66,7 +65,7 @@ describe('Play Marshalling', function () {
     });
 
     it('round trips Play Events through JSON', async function () {
-        const play = await playWithLifecycleScrobble(generatePlayWithLifecycle());
+        const play = await playWithLifecycleScrobble(generatePlayWithLifecycle().play);
         const events = [
             {...scrobbleToPlayEvent(play.scrobble!), playId: 1},
             {...stateChangeToPlayEvent({state: 'scrobbled'}), playId: 1, createdAt: dayjs()},
@@ -81,7 +80,7 @@ describe('Play Marshalling', function () {
     });
 
     it('decodes Play Event rows with JSON data', async function () {
-        const play = await playWithLifecycleScrobble(generatePlayWithLifecycle());
+        const play = await playWithLifecycleScrobble(generatePlayWithLifecycle().play);
         const createdAt = dayjs();
         const {createdAt: _, ...event} = scrobbleToPlayEvent(play.scrobble!);
         // data column is stored as JSON so dates come back as strings, createdAt column is a Dayjs

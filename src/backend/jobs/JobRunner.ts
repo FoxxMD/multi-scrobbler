@@ -6,12 +6,13 @@ import pMap from "p-map";
 import { randomUUID } from "node:crypto";
 import type { EventEmitter } from "node:events";
 import { COMPONENT_STATE, type ComponentState } from "../../core/Api.ts";
-import type { QueueContext } from "../../core/Atomic.ts";
+import type { LifecycleStep, QueueContext, TransformPlayResult } from "../../core/Atomic.ts";
 import type { JobProcessStatus } from "../../core/Job.ts";
 import { policyWindow, type RateLimitStatusJson } from "../../core/RateLimit.ts";
 import { todayAwareFormat } from "../../core/TimeUtils.ts";
 import type { PlayObject } from "../../core/PlaySchema.ts";
-import type { StageConfig } from "../../core/Transform.ts";
+import { buildTrackString } from "../../core/MusicMetadata.ts";
+import type { StageCommon } from "../../core/Transform.ts";
 import type { WebhookPayload } from "../common/infrastructure/config/health/webhooks.ts";
 import { type DbConcrete, runTransaction } from "../common/database/drizzle/drizzleUtils.ts";
 import { JobRepository, type JobSelect } from "../common/database/drizzle/repositories/JobRepository.ts";
@@ -23,6 +24,7 @@ import type { JobImportCursor, JobImportCursorApi, JobImportCursorFile, JobTarge
 import type { WildcardEmitter } from "../common/WildcardEmitter.ts";
 import type { WriteBudget } from "../common/vendor/atproto/WriteBudget.ts";
 import { contiguousCoveredFrom, type TimeRange } from "../utils/RangeUtils.ts";
+import { getLastLifecycleStepWithAction } from "../utils/PlayTransformUtils.ts";
 import { DEFAULT_JOB_TIMINGS, type JobTimings } from "./constants.ts";
 import { fullImportPacer, type ImportBatch, type ImportPacer, type ImportProvider, isApiCursor } from "./ImportProvider.ts";
 import type { LockRegistry } from "./LockRegistry.ts";
@@ -40,8 +42,8 @@ export interface ExportClient {
     /** plays waiting in the client's queue (not retries) */
     queuedLength: number
     getRunningState(): ComponentState
-    queuePlay(data: PlayObject[], context?: QueueContext, opts?: {jobId?: number}): Promise<unknown[]>
-    transformPlay(play: PlayObject, hookType: 'postCompare', opts: {stages?: StageConfig[]}): Promise<PlayObject>
+    queuePlay(data: PlayObject[], context?: QueueContext, opts?: {jobId?: number, steps?: Map<PlayObject, LifecycleStep[]>}): Promise<unknown[]>
+    transformPlay(play: PlayObject, hookType: 'postCompare', opts: {stages?: StageCommon[]}): Promise<TransformPlayResult>
     /** the service's write rate limit, for Clients that track one */
     writeBudget?(): Promise<WriteBudget | undefined>
     /** for Clients that check duplicates against their own mirror (Teal, Rocksky): resolves once it covers ranges. signal stops waiting. The ranges are kept until releaseCoverage(hold) */
@@ -62,7 +64,7 @@ export interface JobRunnerDeps {
     /** the running Client for a target, undefined if it is not configured */
     resolveClient?: (componentId: number) => ExportClient | undefined
     /** parse a job's raw transform stages. Throws if any is invalid */
-    parseStages?: (raw: unknown[]) => Promise<StageConfig[]>
+    parseStages?: (raw: unknown[]) => Promise<StageCommon[]>
     /**
      * Names of other jobs on the same mirror whose exports are running and overlap `range`.
      * A replace import can't start while there are any: they would export the replaced plays again.
@@ -601,7 +603,7 @@ export class JobRunner {
     }
 
     /** Returns the completed target */
-    protected async runExport(initial: JobTargetSelect, stages: StageConfig[] | undefined, signal: AbortSignal, logger: Logger, cleanup: (() => void)[]): Promise<JobTargetSelect> {
+    protected async runExport(initial: JobTargetSelect, stages: StageCommon[] | undefined, signal: AbortSignal, logger: Logger, cleanup: (() => void)[]): Promise<JobTargetSelect> {
         const targetId = initial.id;
         const {componentId} = initial;
         let {cursor, exported, queued} = initial;
@@ -761,18 +763,36 @@ export class JobRunner {
             }
 
             let plays: PlayObject[] = rows.map(r => ({...r.play, original: {play: r.play}}));
+            let discarded = 0;
+            const jobSteps = new Map<PlayObject, LifecycleStep[]>();
+            let review = 0;
             if(stages !== undefined) {
-                plays = await stage('job_transform', () => pMap(plays, async (p) => {
-                    const {lifecycle: _, ...transformed} = await client.transformPlay(p, 'postCompare', {stages});
-                    return transformed;
-                }, {concurrency: 5}));
+                const results = await stage('job_transform', () => pMap(plays, async (p) => client.transformPlay(p, 'postCompare', {stages}), {concurrency: 5}));
+                plays = [];
+                for(const {play, steps} of results) {
+                    const step = getLastLifecycleStepWithAction(steps);
+                    if(step?.actionResult === 'discard') {
+                        discarded++;
+                        if(!job.exportDiscarded) {
+                            logger.verbose(`Not exporting ${buildTrackString(play)}, discarded by Stage ${step.stageName}${step.actionReason !== undefined ? `: ${step.actionReason}` : ''}`);
+                            continue;
+                        }
+                    }
+                    if(step?.actionResult === 'review') {
+                        review++;
+                    }
+                    if(steps.length > 0) {
+                        jobSteps.set(play, steps);
+                    }
+                    plays.push(play);
+                }
             }
             signal.throwIfAborted();
             if(this.cleanupLocked(componentId, job.mirrorId)) {
                 // a cleanup started while this page was read, the next pass waits for it and reads the page again
                 continue;
             }
-            const created = await stage('queue_play', () => client.queuePlay(plays, job.exportUpstreamCheck ? undefined : {upstreamCheck: false}, {jobId: this.jobId}));
+            const created = await stage('queue_play', () => client.queuePlay(plays, job.exportUpstreamCheck ? undefined : {upstreamCheck: false}, {jobId: this.jobId, steps: jobSteps.size > 0 ? jobSteps : undefined}));
             const last = rows[rows.length - 1];
             cursor = {playedAt: last.playedAt, id: last.id} satisfies JobTargetCursor;
             exported += rows.length;
@@ -786,7 +806,7 @@ export class JobRunner {
             await this.setTarget(targetId, update);
             // only passes that exported a page, waits are in exportWaitSeconds
             exportStageSeconds.observe({job: jobLabel, name: clientLabel, stage: 'pass'}, (performance.now() - passStart) / 1000);
-            logger.verbose(`Exported ${rows.length} scrobbles, ${created.length} new to the client`);
+            logger.verbose(`Exported ${rows.length} scrobbles, ${created.length} new to the client${discarded > 0 ? `, ${discarded} discarded by transforms` : ''}${review > 0 ? `, ${review} set for review by transforms` : ''}`);
         }
     }
 

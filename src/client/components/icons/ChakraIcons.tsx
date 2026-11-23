@@ -42,12 +42,13 @@ import {
     LuLogIn,
     LuLogOut,
 } from "react-icons/lu"
-import { VscDebugRestart } from 'react-icons/vsc';
+import { VscDebugRestart, VscDebugStepOver } from 'react-icons/vsc';
 import { HiMiniStop } from "react-icons/hi2";
 import { FaTrashCan, FaFlagCheckered } from "react-icons/fa6";
 import { MdOutlineFiberNew } from "react-icons/md";
 import { RiZzzFill } from "react-icons/ri";
 import { SiGoogledocs } from "react-icons/si";
+import { TbPencilQuestion } from "react-icons/tb";
 import type { Clipboard, IconProps} from "@chakra-ui/react";
 import { IconButton, useClipboard, Spinner, Icon, StackSeparator, HStack, Badge, Box } from "@chakra-ui/react"
 import type {ComponentProps, PropsWithChildren, ReactNode} from 'react';
@@ -210,6 +211,8 @@ export const DebugCopy = (props: {value: Clipboard.RootProps['value']} & Compone
 }
 
 export const RetryIcon = VscDebugRestart;
+/** Retry while bypassing normal processing (EX ignore Stage actions) */
+export const RetryForceIcon = VscDebugStepOver;
 export const RetryButton = makeIconButton(RetryIcon);
 
 export const PowerIcon = LuPower;
@@ -427,4 +430,8 @@ export const LoginButton = makeIconButton(LuLogIn);
 export const LogoutIconRaw = LuLogOut;
 export const LogoutIcon = makeChakraIcon(LuLogOut);
 export const LogoutButton = makeIconButton(LuLogOut);
+
+export const ReviewIconRaw = TbPencilQuestion;
+export const ReviewIcon = makeChakraIcon(TbPencilQuestion);
+export const ReviewButton = makeIconButton(TbPencilQuestion);
 export const IconWrapper = (props: { children: ReactNode; }) => <Box paddingX="1" marginX="1" display="inline-block" rounded="md" backgroundColor="bg.emphasized">{props.children}</Box>;

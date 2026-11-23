@@ -5,7 +5,8 @@ import {webhookConfigSchema} from "./health/webhooks.ts";
 import {commonSourceOptionsSchema, fileLogOptionsSchema, logLevelSchema, sourceRetryOptionsSchema} from "./source/index.ts";
 import {cacheConfigUserSchema, durationValueSchema} from "../Atomic.ts";
 import {retentionConfigDurationValueSchema} from "./database.ts";
-import { metadataPreferredProviderSchema, playTransformPartsConfigOptionsSchema } from "../../../../core/Transform.ts";
+import { metadataPreferredProviderSchema, transformerConfigSchema } from "../../../../core/Transform.ts";
+import { playTransformHookSchema } from "../../transforms/stageSchemas.ts";
 
 export const sourceDefaultsSchema = z.object({
     ...commonSourceOptionsSchema.shape,
@@ -19,24 +20,8 @@ export const clientDefaultsSchema = z.object({
 
 export type ClientDefaults = z.infer<typeof clientDefaultsSchema>;
 
-const transformOptionsSchema = z.object({
-    failOnFetch: z.boolean().optional(),
-    throwOnFailure: z.union([
-        z.boolean(),
-        z.array(z.union([z.literal('artists'), z.literal('title'), z.literal('albumArtists'), z.literal('album'), z.literal('duration'), z.literal('meta'), z.literal('art')])),
-    ]).optional(),
-    ttl: z.string().optional(),
-});
-
 const looseComponent = z.looseObject({ type: z.string(), configureAs: z.string().optional() });
 
-const transformerCommonConfigSchema = z.object({
-    defaults: z.record(z.string(), z.any()).optional(),
-    data: z.record(z.string(), z.any()).optional(),
-    type: z.string(),
-    name: z.string().optional(),
-    options: transformOptionsSchema.optional(),
-});
 
 export const metadaConfigSchema = z.object({
     preferred: metadataPreferredProviderSchema.optional()
@@ -144,8 +129,8 @@ export const aioConfigSchema = z.object({
 
     cache: cacheConfigUserSchema.optional().meta({description: 'Configuration for Caching'}),
 
-    transformers: z.array(transformerCommonConfigSchema).optional(),
-    transformersPresets: z.record(z.string(), playTransformPartsConfigOptionsSchema).optional().meta({
+    transformers: z.array(transformerConfigSchema).optional(),
+    transformersPresets: z.record(z.string(), playTransformHookSchema).optional().meta({
         description: 'Named transform stages that import jobs can apply to plays they export. Each value is one stage or a list of stages, the same as a playTransform hook.',
         examples: [{cleanTitles: [{type: 'user', title: ['(Remastered)']}, {type: 'native'}]}]
     }),

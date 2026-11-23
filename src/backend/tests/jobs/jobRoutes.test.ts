@@ -28,7 +28,7 @@ import { exportStageSeconds, playStageSeconds } from '../../common/playMetrics.t
 import prom from 'prom-client';
 import { mirrorLockKey } from '../../jobs/JobRunner.ts';
 import { ensureOwner } from '../../common/auth/owner.ts';
-import type { PlayTransformPartsConfigOptions } from '../../../core/Transform.ts';
+import type { PlayTransformHookConfig } from '../../common/transforms/stageSchemas.ts';
 
 const fixture = (name: string) => path.resolve(projectRootDir, 'src/backend/tests/jobs/fixtures', name);
 const internalConfig = { localUrl: new URL('http://localhost:9078'), configDir: 'fake', dataDir: 'fake', logger: loggerTest, version: 'test' };
@@ -39,7 +39,7 @@ const fakeLastfmComponent = (user: string | undefined) => {
     return {type: 'lastfm', name: 'My Last.fm', api, isReady: () => true};
 }
 
-const buildApp = async (importsDir: string, components: Record<number, object> = {}, opts: {transformersPresets?: Record<string, PlayTransformPartsConfigOptions>, clients?: object[]} = {}) => {
+const buildApp = async (importsDir: string, components: Record<number, object> = {}, opts: {transformersPresets?: Record<string, PlayTransformHookConfig>, clients?: object[]} = {}) => {
     const sources = new ScrobbleSources(new WildcardEmitter(), internalConfig, loggerTest);
     const clients = new ScrobbleClients(new WildcardEmitter(), new WildcardEmitter(), internalConfig, loggerTest);
     clients.clients.push(...(opts.clients ?? []) as typeof clients.clients);
@@ -314,7 +314,7 @@ describe('Job API', function () {
 
     describe('Transforms', function () {
 
-        const presets = {clean: [{type: 'user', title: ['(Remastered)']}], bad: {type: 'nope'}, unknownName: {type: 'musicbrainz', name: 'doesNotExist'}, empty: []} as unknown as Record<string, PlayTransformPartsConfigOptions>;
+        const presets = {clean: [{type: 'user', title: ['(Remastered)']}], bad: {type: 'nope'}, unknownName: {type: 'musicbrainz', name: 'doesNotExist'}, empty: []} as unknown as Record<string, PlayTransformHookConfig>;
 
         const transformApp = async (tmpPath: string) => {
             await copyFile(fixture('ghan.json'), path.join(tmpPath, 'export.json'));
@@ -380,12 +380,13 @@ describe('Job API', function () {
         it('creates targets with export options', async function () {
             await using tmp = await createTmpDir('jobExportCreate');
             const {app} = await exportApp(tmp.path);
-            const res = await createWithTargets(app, {targets: [7, 7], exportOrder: 'asc', exportQueueLimit: 5, upstreamCheck: false});
+            const res = await createWithTargets(app, {targets: [7, 7], exportOrder: 'asc', exportQueueLimit: 5, upstreamCheck: false, exportDiscarded: true});
             expect(res.status, JSON.stringify(res.body)).eq(201);
             const job = res.body as JobApiJson;
             expect(job.exportOrder).eq('asc');
             expect(job.exportQueueLimit).eq(5);
             expect(job.exportUpstreamCheck).is.false;
+            expect(job.exportDiscarded).is.true;
             expect(job.targets).length(1);
             expect(job.targets[0]).to.deep.include({componentId: 7, name: 'client 7', type: 'maloja', status: 'idle', exported: 0, cursor: null});
 
@@ -464,7 +465,9 @@ describe('Job API', function () {
             expect(patched.body.exportQueueLimit).eq(50);
             expect(patched.body.exportUpstreamCheck).is.true;
             const unchecked = await request(app).patch(`/api/jobs/${job.id}`).send({upstreamCheck: false});
-            expect(unchecked.body).to.deep.include({exportUpstreamCheck: false, exportQueueLimit: 50});
+            expect(unchecked.body).to.deep.include({exportUpstreamCheck: false, exportQueueLimit: 50, exportDiscarded: false});
+            const keepDiscarded = await request(app).patch(`/api/jobs/${job.id}`).send({exportDiscarded: true});
+            expect(keepDiscarded.body).to.deep.include({exportDiscarded: true, exportUpstreamCheck: false});
 
             // the client isn't running in this app so the export keeps waiting
             const started = await request(app).post(`/api/jobs/${job.id}/targets/${targetId}/start`);

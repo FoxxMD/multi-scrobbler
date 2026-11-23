@@ -5,17 +5,20 @@ import {
     cacheFunctions,
 } from "@foxxmd/regex-buddy-core";
 import type EventEmitter from "events";
-import { COMPONENT_TYPE_CLIENT, DEAD_LETTER_RETRIES_DEFAULT, DEAD_QUEUE, INGRESS_QUEUE, MONITORING_ORIGIN_SYSTEM, MONITORING_ORIGIN_USER, QUEUE_STATUS_COMPLETED, type ComponentType, type LifecycleInput, type LifecycleStep } from "../../core/Atomic.ts";
+import { COMPONENT_TYPE_CLIENT, DEAD_LETTER_RETRIES_DEFAULT, DEAD_QUEUE, INGRESS_QUEUE, MONITORING_ORIGIN_SYSTEM, MONITORING_ORIGIN_USER, QUEUE_STATUS_COMPLETED, type ComponentType, type LifecycleInput, type LifecycleStep, type TransformPlayResult } from "../../core/Atomic.ts";
 import { isPlayObject, type PlayData, type PlayObject } from "../../core/PlaySchema.ts";
 import { capitalize } from "../../core/StringUtils.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
+import { getLastLifecycleStepWithAction } from "../utils/PlayTransformUtils.ts";
 import type {CommonClientConfig} from "./infrastructure/config/client/index.ts";
 import type {CommonSourceConfig} from "./infrastructure/config/source/index.ts";
 import { generateLoggableAbortReason, mergeSimpleError, PlayParkedError, SimpleError, SkipTransformStageError, StageChangeError, StagePrerequisiteError, StageTransformError, TransformRulesError } from "./errors/MSErrors.ts";
 import {
-    FLOW_CONTROL_TERM,
+    actionTermPlayState,
+    actionTermSchema,
+    flowControlTermSchema,
     type PlayTransformRules,
-    type StageConfig,
+    type StageCommon,
     TRANSFORM_HOOK,
     type TransformHook
 } from "../../core/Transform.ts";
@@ -44,14 +47,16 @@ import type { PlayMatchResult } from "../../core/PlaySchema.ts";
 import type {SourceType} from "../../core/Atomic.ts";
 import { DrizzleComponentRepository } from "./database/drizzle/repositories/ComponentRepository.ts";
 import dayjs, { type Dayjs } from "dayjs";
-import { COMPONENT_STATE, type ComponentCommonApiJson, type ComponentState, type PaginatedResponse, type PlayApiCommonDetailed } from "../../core/Api.ts";
+import { COMPONENT_STATE, type ComponentCommonApiJson, type ComponentState, type DequeuedPlayState, type PaginatedResponse, type PlayApiCommonDetailed } from "../../core/Api.ts";
 import type {WebhookPayload} from "./infrastructure/config/health/webhooks.ts";
 import type { ElementOf, MarkRequired } from "ts-essentials";
 import { serializeError } from "serialize-error";
 import { DrizzleQueueRepository } from "./database/drizzle/repositories/QueueRepository.ts";
 import { DrizzlePlayEventsRepository } from "./database/drizzle/repositories/PlayEventsRepository.ts";
-import { asPlayEvents, entityIsPlayEntity, playUpdateToEvent, queueCompletionStateToPlayEvent, queueStateToPlayEvent, stateChangeToPlayEvent } from "./database/drizzle/entityUtils.ts";
+import { asPlayEvents, entityIsPlayEntity, playUpdateToEvent, queueCompletionStateToPlayEvent, queueStateToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from "./database/drizzle/entityUtils.ts";
 import pMap from "p-map";
+import { prettifyError } from "zod";
+import { playTransformSchema } from "./transforms/stageSchemas.ts";
 import type { Gauge } from 'prom-client';
 import type { PlayProcessingResult } from "./infrastructure/PlayProcessing.ts";
 import { isAbortError } from "abort-controller-x";
@@ -301,75 +306,58 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             return;
         }
 
+        const res = playTransformSchema.safeParse(playTransform);
+        if(!res.success) {
+            throw new SimpleError(`playTransform is not valid:\n${prettifyError(res.error)}`, {cause: res.error});
+        }
         const {
-            preCompare: preConfig,
+            preCompare,
             compare: {
-                candidate: candidateConfig,
-                existing: existingConfig,
+                candidate,
+                existing,
             } = {},
-            postCompare: postConfig
-        } = playTransform;
-
-        let preCompare: StageConfig[] | undefined,
-            candidate: StageConfig[] | undefined,
-            existing: StageConfig[] | undefined,
-            postCompare: StageConfig[] | undefined;
+            postCompare,
+        } = res.data;
 
         const builtHooks: string[] = [];
         const emptyHooks: string[] = [];
-        try {
-            preCompare = await this.transformPartToStrong(preConfig);
-            if(preCompare === undefined) {
-                emptyHooks.push('preCompare')
-            } else {
-                builtHooks.push(`preCompare => ${preCompare.map(x => `${x.type}${x.name !== undefined ? `-${x.name}` : ''}`)}`);
-            }
-        } catch (e) {
-            throw new Error('preCompare was not valid', {cause: e});
-        }
+        const built: Record<'preCompare' | 'candidate' | 'existing' | 'postCompare', StageCommon[] | undefined> = {
+            preCompare: undefined,
+            candidate: undefined,
+            existing: undefined,
+            postCompare: undefined,
+        };
 
-        try {
-            candidate = await this.transformPartToStrong(candidateConfig);
-            if(candidate === undefined) {
-                emptyHooks.push('candidate')
-            } else {
-                builtHooks.push(`canidate => ${candidate.map(x => `${x.type}${x.name !== undefined ? `-${x.name}` : ''}`)}`);
+        for(const [hook, stages] of Object.entries({preCompare, candidate, existing, postCompare}) as [keyof typeof built, unknown[] | undefined][]) {
+            if(stages === undefined) {
+                emptyHooks.push(hook);
+                continue;
             }
-        } catch (e) {
-            throw new Error('candidate was not valid', {cause: e});
-        }
-
-        try {
-            existing = await this.transformPartToStrong(existingConfig);
-             if(existing === undefined) {
-                emptyHooks.push('existing')
-            } else {
-                builtHooks.push(`existing => ${existing.map(x => `${x.type}${x.name !== undefined ? `-${x.name}` : ''}`)}`);
+            try {
+                const parsed = await pMap(stages, async (x) => this.transformManager.parseTransformerConfig(x));
+                if(hook === 'candidate' || hook === 'existing') {
+                    for(const stage of parsed) {
+                        if(stage.onSuccessAction !== undefined || stage.onFailureAction !== undefined || stage.onSkipAction !== undefined) {
+                            this.logger.warn(`Stage ${stage.type}${stage.name !== undefined ? `-${stage.name}` : ''} in compare.${hook} has an action (onSuccessAction/onFailureAction/onSkipAction) but actions are ignored in compare hooks`);
+                        }
+                    }
+                }
+                built[hook] = parsed;
+                builtHooks.push(`${hook} => ${parsed.map(x => `${x.type}${x.name !== undefined ? `-${x.name}` : ''}`)}`);
+            } catch (e) {
+                throw new Error(`${hook} was not valid`, {cause: e});
             }
-        } catch (e) {
-            throw new Error('existing was not valid', {cause: e});
-        }
-
-        try {
-            postCompare = await this.transformPartToStrong(postConfig);
-             if(postCompare === undefined) {
-                emptyHooks.push('postCompare')
-            } else {
-                builtHooks.push(`postCompare => ${postCompare.map(x => `${x.type}${x.name !== undefined ? `-${x.name}` : ''}`)}`);
-            }
-        } catch (e) {
-            throw new Error('postCompare was not valid', {cause: e});
         }
 
         this.logger.debug(`Hooks built! Empty: ${emptyHooks.join(', ')} | Configured: ${builtHooks.length === 0 ? 'None' : `\n${builtHooks.join('\n')}`}`);
 
         this.transformRules = {
-            preCompare,
+            preCompare: built.preCompare,
             compare: {
-                candidate,
-                existing,
+                candidate: built.candidate,
+                existing: built.existing,
             },
-            postCompare,
+            postCompare: built.postCompare,
         }
     }
 
@@ -424,19 +412,10 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
     }
 
-    protected async transformPartToStrong(data: any) {
-        if(data === undefined) {
-            return undefined;
-        }
-        const partArr = (Array.isArray(data) ? data : [data]);
-
-        return await pMap(partArr, async (x) => this.transformManager.parseTransformerConfig(x));
-    }
-
     /**
      * @param transformOpts.stages Run these stages instead of this component's own rules for the hook (IE an import job's transforms)
      * */
-    public transformPlay = async (play: PlayObject, hookType: TransformHook, transformOpts: {log?: boolean | 'all', stages?: StageConfig[]} & OptionalCacheUsage = {}) => {
+    public transformPlay = async (play: PlayObject, hookType: TransformHook, transformOpts: {log?: boolean | 'all', stages?: StageCommon[]} & OptionalCacheUsage = {}): Promise<TransformPlayResult> => {
 
         const {
             log,
@@ -447,7 +426,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         let logger!: Logger;
 
         try {
-            let hook: StageConfig[] | undefined = stages;
+            let hook: StageCommon[] | undefined = stages;
 
             switch (stages === undefined ? hookType : undefined) {
                 case TRANSFORM_HOOK.preCompare:
@@ -465,7 +444,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             }
 
             if (hook === undefined) {
-                return play;
+                return {play, steps: []};
             }
 
             const asyncId = nanoid(6);
@@ -521,11 +500,10 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                     const [step, stepPlay] = await this.generateStepFromStage(transformedPlay, hookItem, hookType, opts);
                     steps.push(step);
                     cacheOk = step.error === undefined || (step.error !== undefined && step.flowKnownState !== undefined);
-                    if(step.flowResult === FLOW_CONTROL_TERM.stop) {
+                    if(step.flowResult === flowControlTermSchema.enum.stop) {
                         if(step.error !== undefined && step.flowKnownState !== 'skip' && !step.returnPartial) {
                             // revert to original play but keep steps for paper trail
                             transformedPlay = play;
-                            transformedPlay.lifecycle = steps;
                         } else {
                             transformedPlay = stepPlay;
                         }
@@ -539,29 +517,13 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             const historyToDiff: {name: string, data?: PlayData}[] = [
                 {name: 'Pre Transform', data: play.data}
             ];
-            let isNew = false,
-            diffFailure = false;
-            if(steps.length > 0 && transformedPlay.lifecycle === undefined) {
-                transformedPlay.lifecycle = steps;
-                isNew = true;
-            }
-            const lifecycle = transformedPlay.lifecycle ?? [];
-            transformedPlay.lifecycle = lifecycle;
+            let diffFailure = false;
             steps.forEach((s, index) => {
                 if(diffFailure) {
                     return;
                 }
                 const stepIdHint = `${s.source}-${s.hook}-${s.stageType}-${s.stageName}`;
                 try {
-                if(!isNew) {
-                    const existingStepIndex = lifecycle.findIndex(x => x.stageName === s.stageName && x.stageType === s.stageType && x.hook === s.hook && x.source === this.getIdentifier());
-                    if(existingStepIndex !== -1) {
-                        lifecycle[existingStepIndex] = s;
-                    } else {
-                        lifecycle.push(s);
-                    }
-                }
-
                 if(shouldLog === 'all') {
                     if(s.patch === undefined) {
                         historyToDiff.push({name: `${stepIdHint}`});
@@ -636,7 +598,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 await this.cache.cacheTransform.set<LifecycleStep[]>(transformHash, steps, '2m');
             }
 
-            return transformedPlay;
+            return {play: transformedPlay, steps};
         } catch (e) {
             const err = new Error(`Unexpected error occurred, returning original play.`, {cause: e});
             if(logger === undefined) {
@@ -644,15 +606,18 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             } else {
                 logger.warn(err);
             }
-            return play;
+            return {play, steps: []};
         }
     }
 
-    protected generateStepFromStage = async (playTruth: PlayObject, hookItem: StageConfig, hookType: TransformHook, opts: { logger?: Logger, asyncId?: string } & OptionalCacheUsage = {}): Promise<[LifecycleStep, PlayObject]> => {
+    protected generateStepFromStage = async (playTruth: PlayObject, hookItem: StageCommon, hookType: TransformHook, opts: { logger?: Logger, asyncId?: string } & OptionalCacheUsage = {}): Promise<[LifecycleStep, PlayObject]> => {
         const {
             onSuccess = 'continue',
+            onSuccessAction,
             onFailure = 'stop',
+            onFailureAction,
             onSkip = 'continue',
+            onSkipAction,
             failureReturnPartial = false,
         } = hookItem;
 
@@ -662,13 +627,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             useCachedResult
         } = opts;
 
-        const {
-            lifecycle = []
-        } = playTruth;
-
-        //const stepName = `${hookType} - ${hookItem.type} - ${hookItem.name}`
-        const existingStepIndex = lifecycle.findIndex(x => x.hook === hookType && hookItem.name === x.stageName && x.stageType === hookItem.type && x.source === this.getIdentifier());
-        const step: LifecycleStep = existingStepIndex !== -1 && lifecycle[existingStepIndex] !== undefined ? lifecycle[existingStepIndex] : {
+        const step: LifecycleStep = {
             // overwritten below with resolved stage name
             stageName: hookItem.name ?? 'Unnamed',
             hook: hookType,
@@ -708,6 +667,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 let skipMsg = `Stage '${stageName}' was skipped`;
                 step.flowResult = onSkip;
                 step.flowKnownState = 'skip';
+                step.actionResult = onSkipAction;
 
                 if (onSkip === 'stop') {
                     skipMsg += ' and will stop transform due to onSkip: stop';
@@ -740,11 +700,13 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                     logger[reqError !== undefined ? 'warn' : 'error'](merged, reason);
                 }
                 step.flowReason = reason;
+                step.actionResult = onFailureAction;
 
                 return [step, playTruth];
             }
         } else {
             step.flowResult = onSuccess;
+            step.actionResult = onSuccessAction;
 
             if (!objectsEqual(playTruth.data, newTransformedPlay.data)) {
                 const o = JSON.parse(JSON.stringify(playTruth.data));
@@ -886,10 +848,13 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     /**
      * @param opts.jobId plays are exported by this import job. They are linked to the job (not a parent Source play) and marked as job plays in meta
      * */
-    queuePlay = async (data: (PlayObject | PlayObject[]) | (PlaySelectWithQueueStates | PlaySelectWithQueueStates[]), context?: QueueContext, opts: {jobId?: number} = {}) => {
-        const {jobId} = opts;
-        if (jobId !== undefined && (Array.isArray(data) ? data : [data]).some(x => entityIsPlayEntity(x))) {
-            throw new Error('jobId can only be given for new plays, existing plays keep their job');
+    /**
+     * @param opts.steps Transform steps already run on new plays (IE by an import job), saved as a transform event. A play whose last Stage action is discard or review is created in that state instead of queued
+     * */
+    queuePlay = async (data: (PlayObject | PlayObject[]) | (PlaySelectWithQueueStates | PlaySelectWithQueueStates[]), context?: QueueContext, opts: {jobId?: number, steps?: Map<PlayObject, LifecycleStep[]>} = {}) => {
+        const {jobId, steps} = opts;
+        if ((jobId !== undefined || steps !== undefined) && (Array.isArray(data) ? data : [data]).some(x => entityIsPlayEntity(x))) {
+            throw new Error('jobId and steps can only be given for new plays, existing plays keep their job and state');
         }
         const createdQueuedPlays: PlaySelect[] = [];
 
@@ -946,7 +911,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             const jobMeta = jobId !== undefined ? {jobId, parsedFrom: 'job' as const, newFromSource: false} : {};
             const playDatas = dataArray.map(x => ({ ...x, meta: { ...x.meta, ...jobMeta, wasMonitored: monitoring.monitoring, seenAt: dayjs() } }));
 
-            await pMap(playDatas, async (queueablePlay) => {
+            await pMap(playDatas, async (queueablePlay, index) => {
                 try {
                     const existing = await timed(playStageSeconds, this.playStageLabels(queueablePlay, 'pre_queue_check'), () => this.findPreQueueExistingPlay(queueablePlay, context));
                     if(existing !== undefined) {
@@ -958,6 +923,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 }
 
                 // not in queue, doesn't exist elsewhere, or existing queued check failed for some reason and we don't want to lose Play
+                const priorSteps = steps?.get(dataArray[index] as PlayObject) ?? [];
+                const actionStep = getLastLifecycleStepWithAction(priorSteps);
+                const actionState = actionStep === undefined || actionStep.actionResult === actionTermSchema.enum.approve ? undefined : actionTermPlayState[actionStep.actionResult];
                 const {
                     data,
                     meta,
@@ -971,15 +939,27 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                         original
                     },
                     componentId: this.dbComponent.id,
-                    state: 'queued',
+                    state: actionState ?? 'queued',
                     // only exists on plays from Source. A job play's id (if any) is a mirror row, not a play
                     parentId: jobId === undefined ? queueablePlay.id : undefined,
                     jobId,
                 });
 
                 const playRow = await this.playRepo.createPlays([createPlayData]);
+                const transformEvents = priorSteps.length > 0 ? [{ playId: playRow[0].id, ...transformToPlayEvent(priorSteps) }] : [];
+                if (actionState !== undefined) {
+                    const actionEvents = await this.playEventsRepo.createMany([
+                        ...transformEvents,
+                        { playId: playRow[0].id, ...stateChangeToPlayEvent({ state: actionState, reason: actionStep?.actionReason ?? 'Triggered by a Stage' }), createdAt: (playRow[0].seenAt ?? dayjs()).add(1, 'ms') },
+                    ]) as PlayEventSelect[];
+                    createdQueuedPlays.push(playRow[0]);
+                    this.logger.debug(`Added ${buildTrackString(queueablePlay)} as ${actionState} because of Stage ${actionStep?.stageName}`);
+                    this.emitPlayInsert({ ...playRow[0], queueStates: [], events: asPlayEvents(actionEvents) });
+                    return;
+                }
                 const queueState = await this.queueRepo.create({ componentId: this.dbComponent.id, playId: playRow[0].id, queueName: INGRESS_QUEUE, context }) as QueueStateSelect;
                 const createdEvents = await this.playEventsRepo.createMany([
+                    ...transformEvents,
                     { playId: playRow[0].id, ...stateChangeToPlayEvent({ state: 'queued' }), createdAt: (playRow[0].seenAt ?? dayjs()).add(1, 'ms') },
                     { playId: playRow[0].id, ...queueStateToPlayEvent(queueState), createdAt: queueState.createdAt }
                 ]) as PlayEventSelect[];
@@ -1136,31 +1116,34 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         this.emitPlayUpdate({...playEntity, events: asPlayEvents(playEntity.events.concat(createdEvents))});
     }
 
-    markPlayDiscarded = async (dead: PlayWith<'events' | 'queueStates'>) => {
+    /**
+     * Remove a Play from the ingress queue (if queued) and set it to a user-chosen state (discarded, review...)
+     *
+     * Updates queue/dead letter stats based on the state the Play was in before
+     * */
+    dequeuePlayWithState = async (dead: PlayWith<'events' | 'queueStates'>, state: DequeuedPlayState, reason: string = `Play marked as ${state} by user`) => {
 
         const queueState = dead.queueStates.find(x => x.queueName === INGRESS_QUEUE);
         const last = dead.events.findLast(x => x.eventName === 'playStateChange' && (x as PlayEventPlayStateChange).data.state !== 'queued');
         const lastWasNonFailureState = last === undefined || (last as PlayEventPlayStateChange).data.state !== 'failed';
 
-        this.setStatus(`Marking Play ${dead.uid} as discarded`);
+        this.setStatus(`Marking Play ${dead.uid} as ${state}`);
 
         const lastState = dead.state;
         const events: PlayEventNew[] = [];
 
-        if(dead.state !== 'discarded') {
-            dead.state = 'discarded';
-            this.playRepo.updateById(dead.id, {state: 'discarded'});
+        if(dead.state !== state) {
+            dead.state = state;
+            await this.playRepo.updateById(dead.id, {state});
             events.push(
-                { playId: dead.id, ...stateChangeToPlayEvent({ state: 'discarded', reason: 'Play marked as discarded by user' }) }
+                { playId: dead.id, ...stateChangeToPlayEvent({ state, reason }) }
             )
         }
         
         if(queueState !== undefined) {
             events.push(
-                { playId: dead.id, ...queueCompletionStateToPlayEvent({...queueState, error: undefined, queueStatus: QUEUE_STATUS_COMPLETED, context: {reason: 'Play marked as discarded by user'}}) }
+                { playId: dead.id, ...queueCompletionStateToPlayEvent({...queueState, error: undefined, queueStatus: QUEUE_STATUS_COMPLETED, context: {reason}}) }
             );
-        }
-        if(queueState !== undefined) {
             await this.queueRepo.deleteByIds([queueState.id]);
         }
         
@@ -1206,7 +1189,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         await pMap(ids, async (id) => {
             const entity = await this.playRepo.findByIdWith<'queueStates' | 'events'>(id, ['queues','events']);
             if(entity !== undefined) {
-                await this.markPlayDiscarded(entity);
+                await this.dequeuePlayWithState(entity, 'discarded');
             }
         }, {concurrency: 10});
         this.deadLogger.info('Finished processing failed scrobbles.');

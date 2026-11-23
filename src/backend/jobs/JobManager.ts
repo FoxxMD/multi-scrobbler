@@ -22,7 +22,7 @@ import LastfmApiClient from "../common/vendor/LastfmApiClient.ts";
 import pMap from "p-map";
 import type * as z from "zod";
 import type { JobTransformSource, jobTransformsSchema } from "../../core/Job.ts";
-import type { PlayTransformPartsConfigOptions } from "../../core/Transform.ts";
+import type { PlayTransformHookConfig } from "../common/transforms/stageSchemas.ts";
 import type TransformerManager from "../common/transforms/TransformerManager.ts";
 import { getRoot } from "../ioc.ts";
 
@@ -41,7 +41,7 @@ export interface JobManagerOpts {
     timings?: Partial<JobTimings>
     pacer?: ImportPacer
     /** validated transformersPresets from the config. Defaults to the root container's */
-    transformersPresets?: Record<string, PlayTransformPartsConfigOptions>
+    transformersPresets?: Record<string, PlayTransformHookConfig>
     /** validates job transform stages. Defaults to the root container's */
     transformerManager?: TransformerManager
     /** plays per cleanup batch. Default 1000 */
@@ -188,7 +188,7 @@ export class JobManager {
         return runner;
     }
 
-    get transformersPresets(): Record<string, PlayTransformPartsConfigOptions> {
+    get transformersPresets(): Record<string, PlayTransformHookConfig> {
         return this.opts.transformersPresets ?? getRoot().items.transformersPresets;
     }
 

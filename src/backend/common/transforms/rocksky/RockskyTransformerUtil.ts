@@ -1,6 +1,30 @@
 import { MaybeLogger } from "../../MaybeLogger.ts";
-import type { RockskyTransformerConfig, RockskyTransformerData, SearchType } from "../../vendor/rocksky/interfaces.ts";
-import { DEFAULT_TRANSFORMER_ENV_NAME } from "../../../../core/Transform.ts";
+import { type RockskyApiClientConfig, type SearchType, searchType } from "../../vendor/rocksky/interfaces.ts";
+import { applyTermSchema, buildRulesSchema, buildStageSchema, DEFAULT_TRANSFORMER_ENV_NAME, type TransformerCommon, type TransformOptions } from "../../../../core/Transform.ts";
+import { rockskyMissingFields } from "../../../../core/Atomic.ts";
+import * as z from 'zod';
+
+/** Rocksky Stage options. Used for transformer `defaults` and for overrides in a Stage. Values are normalized by `parseStageConfig` */
+export const rockskyStageOptionsSchema = z.object({
+    searchWhenMissing: z.array(rockskyMissingFields).optional().meta({description: `Search if Play is missing any of: ${rockskyMissingFields.options.join(', ')}`}),
+    forceSearch: z.boolean().optional().meta({description: 'Always search, even if nothing is missing'}),
+    score: z.number().optional().meta({description: 'Minimum match score (0-100). Default 90'}),
+    allowNoMatch: z.boolean().optional().meta({description: 'Do not fail if no match is found'}),
+    searchOrder: z.array(z.string()).optional().meta({description: `Search methods, in order. Any of: ${searchType.options.join(', ')}`}),
+    searchArtistMethod: z.enum(['naive', 'native']).optional().meta({description: "Artist parsing for 'artist' search. Default native"}),
+});
+
+export type RockskyTransformerData = z.input<typeof rockskyStageOptionsSchema>;
+
+export type RockskyTransformerConfig = TransformerCommon & { defaults?: RockskyTransformerData, data?: RockskyApiClientConfig, options?: TransformOptions & { logUrl?: boolean } };
+
+export const rockskyStageSchema = buildStageSchema(
+    'rocksky',
+    buildRulesSchema(applyTermSchema, {title: true, artists: true, albumArtists: true, album: true, duration: true, meta: true, art: true}),
+    rockskyStageOptionsSchema
+).meta({title: 'Rocksky Stage'});
+
+export type RockskyStage = z.output<typeof rockskyStageSchema>;
 
 export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
     const rsEnv = process.env.RS_PRESETS;
@@ -19,7 +43,7 @@ export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
             defaults: {}
         };
         const presets = rsEnv.split(',').map(x => x.trim().toLocaleLowerCase());
-        const soSet = new Set<SearchType>();
+        const soSet = new Set<string>();
         for (const pName of presets) {
             const p = PRESETS[pName];
             if (p === undefined) {

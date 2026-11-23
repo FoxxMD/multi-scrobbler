@@ -1,0 +1,1 @@
+ALTER TABLE `jobs` ADD `exportDiscarded` integer DEFAULT false NOT NULL;

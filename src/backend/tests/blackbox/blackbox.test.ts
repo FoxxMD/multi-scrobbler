@@ -43,7 +43,6 @@ describe('Blackbox Payloads', function () {
     it('redacts internal properties from Play and Player', async function () {
         const play = generatePlay({}, {deviceId: 'device1', comment: 'secret', sourceSOT: 'player', lifecycleInputs: [{type: 'x', input: 'y'}], url: {web: 'https://example.com', internal: 'leak'} as any});
         play.id = 123;
-        play.lifecycle = [];
         play.data.meta = {brainz: {trackNumber: 1}};
 
         const pub = toPublicPlay(play) as Record<string, any>;

@@ -18,10 +18,6 @@ const blockedPaths: BlockPaths = [
   {
     parent: 'data',
     key: 'meta'
-  },
-  {
-    parent: 'lifecycle',
-    key: 'input'
   }
 ];
 
