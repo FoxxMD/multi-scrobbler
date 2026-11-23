@@ -719,12 +719,23 @@ See [Examples](#examples) for more complex usage of Play State Control
 The [Transforms of a Job](/transfer/overview#3-export-to-a-client) also use Play State Control. The Job runs its Stages on each Play before it sends the Play to a Client. The last action of the Stages decides what happens to the Play:
 
 * `approve` - The Job sends the Play to the Client, and the Client queues it.
-* `discard` - The Job does not send the Play. The Client has no record of it. Multi-Scrobbler writes the Play to the log at the `verbose` level.
+* `discard` - By default, the Job does not send the Play. The Client has no record of it. Multi-Scrobbler writes the Play to the log at the `verbose` level. To keep a record, see [Keep Discarded Plays](#keep-discarded-plays).
 * `review` - The Job adds the Play to the Client in the **Needs Review** state. The Client does not scrobble the Play.
 
 The Job page shows the number of Plays in **Needs Review** for each Client. To find them on the Client page, turn on **Plays from Export jobs** in the **Plays** filters.
 
-When you retry a Play in **Needs Review**, the Client does not run the Job's Stages again. It runs only its own `playTransform` Stages. The Client applies Play State Control from its own Stages to exported Plays, the same as to other Plays.
+When you retry a Play in **Needs Review** or **Discarded**, the Client does not run the Job's Stages again. It runs only its own `playTransform` Stages. The Client applies Play State Control from its own Stages to exported Plays, the same as to other Plays.
+
+#### Keep Discarded Plays {#keep-discarded-plays}
+
+The **Keep discarded Plays in the Client** option changes what the Job does with a Play that a Stage discards. When the option is on, the Job adds the Play to the Client in the **Discarded** state. The Client does not scrobble the Play. The Play history shows the Stage that discarded it.
+
+Turn the option on to keep a record of each discarded Play. Keep it off to skip these Plays and keep the Client's Play list shorter. The option is off by default.
+
+You can set the option in two places:
+
+* When you create the Job, in the **Transforms** section of **Export**. The option shows after you select Transforms.
+* On the Job page, in **Discarded Plays** of the **Export** section. A change applies to the Plays that the Job exports next.
 
 ## Presets {#presets}
 
