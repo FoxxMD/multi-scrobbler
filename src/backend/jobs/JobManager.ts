@@ -10,11 +10,12 @@ import type { ImportPacer, ImportProvider } from "./ImportProvider.ts";
 import { componentLockKey, type ExportClient, type HaltStatus, JobConflictError, JobRunner, type JobRuntime, mirrorLockKey } from "./JobRunner.ts";
 import { JobTargetRepository } from "../common/database/drizzle/repositories/JobTargetRepository.ts";
 import { LockRegistry } from "./LockRegistry.ts";
-import { type CleanupAction, MirrorService, type StartedTask } from "./MirrorService.ts";
+import { type CleanupAction, lockedMessage, MirrorService, type StartedTask } from "./MirrorService.ts";
+import { MirrorRepository } from "../common/database/drizzle/repositories/MirrorRepository.ts";
 import { JobPlayCleanup, type JobPlayCleanupProgress, type JobPlayCleanupResult } from "./JobPlayCleanup.ts";
 import { randomUUID } from "node:crypto";
 import { DrizzlePlayRepository } from "../common/database/drizzle/repositories/PlayRepository.ts";
-import type { ClientJobPlaysSummaryJson } from "../../core/Job.ts";
+import { type ClientJobPlaysSummaryJson, isLockedMirror } from "../../core/Job.ts";
 import { LastfmFileImportProvider } from "./lastfm/LastfmFileImportProvider.ts";
 import { LastfmApiImportProvider, type LastfmImportSource } from "./lastfm/LastfmApiImportProvider.ts";
 import LastfmApiClient from "../common/vendor/LastfmApiClient.ts";
@@ -452,6 +453,12 @@ export class JobManager {
         const job = await this.jobRepo.getById(jobId);
         if (job === undefined) {
             throw new Error(`Job ${jobId} does not exist`);
+        }
+        if (historical !== 'keep') {
+            const mirror = await new MirrorRepository(this.db, {logger: this.logger}).getById(job.mirrorId);
+            if (mirror !== undefined && isLockedMirror(mirror)) {
+                throw new JobConflictError(lockedMessage(mirror));
+            }
         }
         const targets = scrobbles === 'keep' ? [] : await this.targetRepo.findByJob(jobId);
         const otherJobs = historical === 'keep' ? [] : (await this.jobRepo.findByMirror(job.mirrorId)).filter(x => x.id !== jobId);

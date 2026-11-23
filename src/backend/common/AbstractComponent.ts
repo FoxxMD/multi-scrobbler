@@ -11,7 +11,7 @@ import { capitalize } from "../../core/StringUtils.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
 import type {CommonClientConfig} from "./infrastructure/config/client/index.ts";
 import type {CommonSourceConfig} from "./infrastructure/config/source/index.ts";
-import { generateLoggableAbortReason, mergeSimpleError, SimpleError, SkipTransformStageError, StageChangeError, StagePrerequisiteError, StageTransformError, TransformRulesError } from "./errors/MSErrors.ts";
+import { generateLoggableAbortReason, mergeSimpleError, PlayParkedError, SimpleError, SkipTransformStageError, StageChangeError, StagePrerequisiteError, StageTransformError, TransformRulesError } from "./errors/MSErrors.ts";
 import {
     FLOW_CONTROL_TERM,
     type PlayTransformRules,
@@ -80,6 +80,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     public playRepo!: DrizzlePlayRepository;
     protected queueRepo!: DrizzleQueueRepository;
     protected playEventsRepo!: DrizzlePlayEventsRepository;
+    /** ids of queued plays the queue skips for now, see parkPlay */
+    protected parkedPlays = new Set<number>();
     componentId!: number;
 
     /**
@@ -1004,12 +1006,19 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         
         let res: PlayProcessingResult | undefined = undefined;
         let err: Error | undefined;
+        let parked: PlayParkedError | undefined;
         const queuedAt = playEntity.queueStates.find(x => x.queueName === INGRESS_QUEUE)?.updatedAt;
         if(queuedAt !== undefined) {
             playStageSeconds.observe(this.playStageLabels(playEntity.play, 'queue_wait'), Math.max(dayjs().diff(queuedAt), 0) / 1000);
         }
         try {
-            res = await timed(playStageSeconds, this.playStageLabels(playEntity.play, 'process_total'), () => this.processPlay(playEntity, signal));
+            res = await timed(playStageSeconds, this.playStageLabels(playEntity.play, 'process_total'), () => this.processPlay(playEntity, signal)).catch((e) => {
+                if(e instanceof PlayParkedError) {
+                    parked = e;
+                    return undefined;
+                }
+                throw e;
+            });
         } catch (e: unknown | Error | PlayProcessingError) {
             if(isAbortError(e)) {
                 const abortSignal = signal ?? this.ingressQueueAbortController?.signal;
@@ -1034,9 +1043,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         } finally {
             // every play handled by this function was previously added to queuedLength and emitted a 'playQueued' event
             // it also already emitted 'deadLetterDequeued' when it was queued
-            this.queuedGauge.labels(this.getPrometheusLabels()).dec();
-            this.queuedLength -= 1;
-            this.emitEvent('playDequeued', { queuedScrobble: playEntity });
+            // a parked play is still queued
+            if(parked === undefined) {
+                this.queuedGauge.labels(this.getPrometheusLabels()).dec();
+                this.queuedLength -= 1;
+                this.emitEvent('playDequeued', { queuedScrobble: playEntity });
+            }
 
             if(res !== undefined) {
                 const endPersist = playStageSeconds.startTimer(this.playStageLabels(playEntity.play, 'persist'));
@@ -1100,6 +1112,28 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 }
             }
         }
+        if(parked !== undefined) {
+            await this.parkPlay(playEntity, parked);
+            return true;
+        }
+        return false;
+    }
+
+    /** Skip a play in the queue until parked.until settles, it stays queued. Records why */
+    protected parkPlay = async (playEntity: PlayWith<'queueStates'|'events'>, parked: PlayParkedError) => {
+        this.parkedPlays.add(playEntity.id);
+        const unpark = () => {
+            this.parkedPlays.delete(playEntity.id);
+        };
+        parked.until.then(unpark, unpark);
+        this.logger.verbose(`Play ${playEntity.uid} skipped for now: ${parked.message}`);
+        const last = playEntity.events.findLast(x => x.eventName === 'playStateChange') as PlayEventPlayStateChange | undefined;
+        if(last?.data.state === 'queued' && last.data.reason === parked.message) {
+            // parked again for the same reason, IE every backoff while the PDS is down
+            return;
+        }
+        const createdEvents = await this.playEventsRepo.createMany([{playId: playEntity.id, ...stateChangeToPlayEvent({state: 'queued', reason: parked.message})}]) as PlayEventSelect[];
+        this.emitPlayUpdate({...playEntity, events: asPlayEvents(playEntity.events.concat(createdEvents))});
     }
 
     markPlayDiscarded = async (dead: PlayWith<'events' | 'queueStates'>) => {

@@ -14,6 +14,17 @@ export abstract class NamedError extends Error {
 
 export abstract class StageError extends NamedError {}
 
+/** A queued Play that can't be processed yet. It stays queued, and its queue skips it until `until` settles */
+export class PlayParkedError extends NamedError {
+    name = 'PlayParkedError';
+    until: Promise<unknown>;
+
+    constructor(reason: string, until: Promise<unknown>) {
+        super(reason);
+        this.until = until;
+    }
+}
+
 export class BuildDataError extends StageError {
     name = 'Init Build Data';
 }

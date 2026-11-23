@@ -70,3 +70,20 @@ export const atProtoRateLimitEnvSchemas = {
     reserve: () => reserveEnv(atProtoRateLimitOptionsSchema.shape.rateLimitReserve),
     exportReserve: () => reserveEnv(atProtoRateLimitOptionsSchema.shape.exportRateLimitReserve),
 };
+
+export const atProtoHistoryOptionsSchema = z.object({
+    /**
+     * Keep every scrobble of your account in the multi-scrobbler database, instead of only the last 30 days.
+     *
+     * Older scrobbles are otherwise mirrored only when a dupe check needs them, then removed again. Keeping all of them makes the database bigger.
+     *
+     * @default false
+     * */
+    keepAllHistory: z.boolean().optional().meta({
+        description: "Keep every scrobble of your account in the multi-scrobbler database, instead of only the last 30 days. Older scrobbles are otherwise mirrored only when a dupe check needs them, then removed again.",
+        default: false,
+        examples: [true]
+    }),
+});
+
+export type ATProtoHistoryOptions = z.infer<typeof atProtoHistoryOptionsSchema>;

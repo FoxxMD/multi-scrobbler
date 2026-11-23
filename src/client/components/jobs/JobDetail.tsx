@@ -160,7 +160,7 @@ export const JobDelete = (props: { job: JobApiJson }) => {
                             <Dialog.Body>
                                 <Stack gap="4">
                                     <Text textStyle="sm">Delete this job? It is stopped first.{job.importFrom.kind === 'file' ? ' An uploaded file is deleted.' : ''}</Text>
-                                    <KeepChoice label="Mirror data" help="Plays imported into the mirror by this job. Other jobs may use them too." value={historical} onChange={setHistorical}/>
+                                    {job.mirror.locked ? undefined : <KeepChoice label="Mirror data" help="Plays imported into the mirror by this job. Other jobs may use them too." value={historical} onChange={setHistorical}/>}
                                     {job.targets.length > 0 ? <KeepChoice label="Plays in Clients" help="All Plays exported to Clients. Note: Does not affect data in the actual services, just data in MS." value={scrobbles} onChange={setScrobbles}/> : undefined}
                                 </Stack>
                             </Dialog.Body>
@@ -209,7 +209,7 @@ export const CleanupPanel = (props: { job: JobApiJson }) => {
             <Card.Header><Heading size="lg">Clean Up</Heading></Card.Header>
             <Card.Body>
                 <Stack gap="5">
-                    <CleanupRow title="Mirror data" description={<>This job imported {job.mirrorPlaysInRange.toLocaleString()} Plays into Mirror <ChakraLink asChild><Link to={`/mirrors/${job.mirror.id}`}>{job.mirror.name}</Link></ChakraLink>. Other jobs using the mirror may need them, and must be stopped too.</>}>
+                    {job.mirror.locked ? undefined : <CleanupRow title="Mirror data" description={<>This job imported {job.mirrorPlaysInRange.toLocaleString()} Plays into Mirror <ChakraLink asChild><Link to={`/mirrors/${job.mirror.id}`}>{job.mirror.name}</Link></ChakraLink>. Other jobs using the mirror may need them, and must be stopped too.</>}>
                         {mirrorTask !== null ? <CleanupProgress task={mirrorTask} text={taskText(mirrorTask)}/> : <CleanupButtons
                             pending={historical.isPending}
                             disabledReason={busy}
@@ -219,7 +219,7 @@ export const CleanupPanel = (props: { job: JobApiJson }) => {
                             }}
                             onConfirm={(a) => historical.mutate(a)}
                         />}
-                    </CleanupRow>
+                    </CleanupRow>}
                     {job.targets.length > 0 ? <CleanupRow title="Plays in Clients" description={`${records.toLocaleString()} total Plays were exported to MS Clients. Note: Cleanup actions do not affect data in the actual services, just data in MS.`}>
                         {cleanup !== undefined ? <CleanupProgress task={cleanup} text={`${cleanup.action === 'delete' ? 'Deleting' : 'Compacting'}: ${cleanup.done.toLocaleString()} of ${cleanup.total.toLocaleString()}`}/> : <CleanupButtons
                             pending={scrobbles.isPending}
@@ -536,7 +536,7 @@ export const JobDetail = (props: { job: JobApiJson }) => {
             {job.runtime.deleting === true ? <Text color="fg.warning">This job is being deleted.</Text> : undefined}
             <ImportPanel job={job}/>
             {job.targets.length > 0 ? <ExportPanel job={job}/> : undefined}
-            <CleanupPanel job={job}/>
+            {job.mirror.locked && job.targets.length === 0 ? undefined : <CleanupPanel job={job}/>}
         </Stack>
     );
 }

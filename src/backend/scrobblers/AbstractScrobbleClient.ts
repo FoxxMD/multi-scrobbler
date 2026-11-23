@@ -51,7 +51,7 @@ import pMap from "p-map";
 import { existingScrobble, type ExistingScrobbleOpts } from "../utils/PlayComparisonUtils.ts";
 import { statefulInvariantTransform } from "../../core/PlayUtils.ts";
 import type { Counter, Gauge } from 'prom-client';
-import { generateLoggableAbortReason, ScrobbleSubmitError, SimpleError, StageChangeError } from "../common/errors/MSErrors.ts";
+import { generateLoggableAbortReason, PlayParkedError, ScrobbleSubmitError, SimpleError, StageChangeError } from "../common/errors/MSErrors.ts";
 import { serializeError} from 'serialize-error';
 import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges, HISTORICAL_BUCKET_FETCH_MAX, HISTORICAL_BUCKET_TTL_MS, historicalBucketRange } from "../utils/ListenFetchUtils.ts";
 import { spawn, isAbortError, delay, waitForEvent } from 'abort-controller-x';
@@ -1073,7 +1073,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         // the play is unknown until found so this stage has no job label
         const end = playStageSeconds.startTimer({mode: this.componentType, name: this.getSafeExternalName(), job: '', stage: 'queue_next'});
         try {
-            return await this.playRepo.getQueueNext(INGRESS_QUEUE);
+            return await this.playRepo.getQueueNext(INGRESS_QUEUE, this.parkedPlays.size > 0 ? {notIds: [...this.parkedPlays]} : {});
         } finally {
             end();
         }
@@ -1102,8 +1102,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                             // the Play stays queued
                             throw new RateLimitPauseError(this.rateLimitPause?.message);
                         }
-                        await this.handlePlayProcessing(nextQueued, signal);
-                        processed++;
+                        if(!(await this.handlePlayProcessing(nextQueued, signal))) {
+                            processed++;
+                        }
                         if(this.errors.length > 0) {
                             // we made it through a scrobble without any issues so clear any issue we may have previously had
                             this.errors = [];
@@ -1113,7 +1114,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     }
                     // emitted only after draining at least one queued Play (unlike Source's queueEmptied, emitted on every idle poll)
                     // so waiting for it after queueing a Play means "that Play has been processed". processed = Plays handled in this drain
-                    this.emitEvent('queueEmptied', {processed});
+                    // parked Plays are still queued, so a drain that only parked Plays is not an emptied queue
+                    if(processed > 0) {
+                        this.emitEvent('queueEmptied', {processed});
+                    }
                     this.setStatus('Waiting for Plays from Sources');
                 }
                 this.updateDates({lastActiveAt: dayjs(), lastReadyAt: dayjs()});
@@ -1265,6 +1269,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 try {
                     historicalPlays = await timed(playStageSeconds, this.playStageLabels(playEntity.play, 'upstream_fetch'), () => this.getSOTScrobblesForPlay(playEntity.play, {useCache: !(isRetry || !useCache)}));
                 } catch (e: any) {
+                    if(e instanceof PlayParkedError) {
+                        throw e;
+                    }
 
                     let historicalError: Error;
                     if (e.message === 'Cannot get historical plays due to cached error') {
@@ -1364,7 +1371,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 return {playEntity, events, queue: queueState};
             }
         } catch (e: any) {
-            if(e instanceof PlayProcessingError) {
+            if(e instanceof PlayProcessingError || e instanceof PlayParkedError) {
                 throw e;
             }
             if(isAbortError(e)) {

@@ -92,7 +92,7 @@ export interface JobApiJson {
     name: string
     /** overall status derived from its processes */
     status: JobProcessStatus
-    mirror: { id: number, name: string, service: string, account: string | null }
+    mirror: { id: number, name: string, service: string, account: string | null, locked: boolean }
     importFrom: JobImportOriginJson
     rangeFrom: string | null
     rangeTo: string

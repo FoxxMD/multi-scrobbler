@@ -248,10 +248,12 @@ describe('Sample Configs', function () {
                             zocObj = zocObj.supply(envSchema.env.shape.ROCKSKY_TOKEN, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQ')
                             zocObj = zocObj.supply(envSchema.env.shape.ROCKSKY_RATE_LIMIT_RESERVE, 500)
                             zocObj = zocObj.supply(envSchema.env.shape.ROCKSKY_EXPORT_RATE_LIMIT_RESERVE, 1500)
+                            zocObj = zocObj.supply(envSchema.env.shape.ROCKSKY_KEEP_ALL_HISTORY, 'true')
                             break;
                         case 'tealfm':
                             zocObj = zocObj.supply(envSchema.env.shape.TEALFM_RATE_LIMIT_RESERVE, 500)
                             zocObj = zocObj.supply(envSchema.env.shape.TEALFM_EXPORT_RATE_LIMIT_RESERVE, 1500)
+                            zocObj = zocObj.supply(envSchema.env.shape.TEALFM_KEEP_ALL_HISTORY, 'true')
                             break;
                         case 'discord':
                             zocObj = zocObj.supply(envSchema.env.shape.DISCORD_STATUS_OVERRIDE_ALLOW, 'online');

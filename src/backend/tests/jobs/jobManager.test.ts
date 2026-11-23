@@ -1,3 +1,4 @@
+import { MIRROR_SERVICE_MIXED } from '../../../core/Job.ts';
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 import dayjs from 'dayjs';
@@ -22,7 +23,7 @@ const timings = {importPageDelay: 0, importRetries: 0, importRetryBase: 1, ready
 const setup = async () => {
     const db = await transientDb();
     const owner = await ensureOwner(db);
-    const mirror = await new MirrorRepository(db).findOrCreate({userId: owner.id, service: 'lastfm', account: 'foxx', name: 'foxx'});
+    const mirror = await new MirrorRepository(db).findOrCreate({userId: owner.id, service: MIRROR_SERVICE_MIXED, account: null, name: 'foxx'});
     const jobs = new JobRepository(db);
     const newJob = (name = 'job') => jobs.create({userId: owner.id, name, mirrorId: mirror.id, rangeTo: dayjs(1000), componentFromId: undefined, importStatus: 'running'});
     const manager = (provider: () => ImportProvider) => new JobManager({db, logger: loggerTest, timings, createProvider: provider});

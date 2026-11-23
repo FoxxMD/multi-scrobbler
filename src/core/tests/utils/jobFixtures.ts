@@ -56,7 +56,7 @@ export const generateJobTargetApiJson = (data: Partial<JobTargetApiJson> = {}): 
 export const generateJobApiJson = (data: Partial<JobApiJson> = {}): JobApiJson => {
     const mirror = data.mirror ?? (() => {
         const m = generateMirrorApiJson();
-        return {id: m.id, name: m.name, service: m.service, account: m.account};
+        return {id: m.id, name: m.name, service: m.service, account: m.account, locked: m.locked};
     })();
     const importTotal = data.importTotal !== undefined ? data.importTotal : faker.number.int({min: 5000, max: 100000});
     const importFetched = data.importFetched ?? Math.floor((importTotal ?? 10000) * faker.number.float({min: 0.1, max: 0.9}));

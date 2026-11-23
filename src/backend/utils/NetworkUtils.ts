@@ -10,6 +10,10 @@ import type { CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket'
 import { WEBSOCKET_CLOSE_CODE_REASONS } from "../common/infrastructure/Atomic.ts";
 import { loggerNoop } from "../common/MaybeLogger.ts";
 import { formatBytes } from "./DataUtils.ts";
+import { createWriteStream } from "node:fs";
+import { Readable, Transform } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import type { ReadableStream as WebReadableStream } from "node:stream/web";
 
 export interface PortReachableOpts {
     host: string,
@@ -303,17 +307,14 @@ export type StreamBodyOpts = {
     headers?: Headers
 }
 
-export const streamBodyProgress = async (stream: ReadableStream<Uint8Array<ArrayBufferLike>>, opts: StreamBodyOpts = {}) => {
+/** Stream a response body into a file, logging progress. Returns the bytes written */
+export const streamBodyToFile = async (stream: ReadableStream<Uint8Array<ArrayBufferLike>>, filename: string, opts: StreamBodyOpts = {}): Promise<number> => {
     const {
         logger = loggerNoop,
         chunkDefaultSize = 1024 * 1024 * 10, // default to every 10MB, when we don't know response size
         fileHint = 'file',
         headers
     } = opts;
-    let loading = true,
-    chunks: any[] = [];
-    const reader = stream.getReader();
-
     let length: number,
     chunkReportSize: number = chunkDefaultSize,
     lastReportedSize: number = 0;
@@ -340,38 +341,20 @@ export const streamBodyProgress = async (stream: ReadableStream<Uint8Array<Array
     }
 
     let received = 0;
-
-    // Loop through the response stream and extract data chunks
-    while (loading) {
-      const { done, value } = await reader.read();
-      if (done) {
-        // Finish loading 
-        loading = false;
-      } else {
-        // Push values to the chunk array
-        chunks.push(value);
-
-        received += value.length;
-        lastReportedSize += value.length;
-        if(lastReportedSize >= chunkReportSize) {
-            logger.trace(`Downloaded ${formatBytes(received)[0]}...`);
-            lastReportedSize = 0;
+    const progress = new Transform({
+        transform(chunk: Uint8Array, _, cb) {
+            received += chunk.length;
+            lastReportedSize += chunk.length;
+            if(lastReportedSize >= chunkReportSize) {
+                logger.trace(`Downloaded ${formatBytes(received)[0]}...`);
+                lastReportedSize = 0;
+            }
+            cb(null, chunk);
         }
-      }
-    }
+    });
+    await pipeline(Readable.fromWeb(stream as WebReadableStream<Uint8Array>), progress, createWriteStream(filename));
     logger.trace(`Finished download!`);
-
-    // Concat the chunks into a single array
-    const body = new Uint8Array(received);
-    let position = 0;
-
-    // Order the chunks by their respective position
-    for (const chunk of chunks) {
-      body.set(chunk, position);
-      position += chunk.length;
-    }
-
-    return body;
+    return received;
 }
 
 /**

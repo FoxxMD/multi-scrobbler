@@ -1,3 +1,4 @@
+import { MIRROR_SERVICE_MIXED } from '../../../core/Job.ts';
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 import dayjs from 'dayjs';
@@ -27,7 +28,7 @@ const setup = async () => {
     await scrobbler.initialize();
     const db = scrobbler.playRepoTest.db;
     const componentId = scrobbler.componentId;
-    const mirror = await new MirrorRepository(db).findOrCreate({userId: null as unknown as string, service: 'lastfm', account: null, name: 'm'});
+    const mirror = await new MirrorRepository(db).findOrCreate({userId: null as unknown as string, service: MIRROR_SERVICE_MIXED, account: null, name: 'm'});
     const jobRepo = new JobRepository(db);
     const job = await jobRepo.create({name: 'export', mirrorId: mirror.id, rangeTo: dayjs(), importStatus: 'completed'}) as JobSelect;
     const targetRepo = new JobTargetRepository(db);

@@ -1,4 +1,4 @@
-import { childLogger, type Logger } from "@foxxmd/logging";
+import { type Logger } from "@foxxmd/logging";
 import type EventEmitter from "events";
 import { COMPONENT_AUTH_TYPE, type ComponentAuthType, type QueueContext } from "../../core/Atomic.ts";
 import type { PlayObject, SourcePlayerObj } from "../../core/PlaySchema.ts";
@@ -12,13 +12,11 @@ import type {ListenPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
 
 import { isDebugMode } from "../utils.ts";
 import { durationToHuman } from '../../core/TimeUtils.ts';
-import { playToRockskyClientRecord, RockSkyApiClient, rockskyScrobbleToPlay, type RockskyScrobble, WRITE_PROBE_INTERVAL } from "../common/vendor/RockSkyApiClient.ts";
+import { indexRockskyRecord, playToRockskyClientRecord, RockSkyApiClient, rockskyScrobbleToPlay, type RockskyScrobble, WRITE_PROBE_INTERVAL } from "../common/vendor/RockSkyApiClient.ts";
 import type {RockSkyClientConfig} from "../common/infrastructure/config/client/rocksky.ts";
-import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.ts";
+import AbstractHistoricalScrobbleClient, { inRanges, type ParseCarOpts } from "./AbstractHistoricalScrobbleClient.ts";
 import { fromStream } from '@atcute/repo';
-import fsPromise from 'node:fs/promises';
 import fs from 'node:fs';
-import path from 'path';
 import dayjs from "dayjs";
 import { Readable } from 'stream';
 import { ATProtoUnauthenticatedApiClient } from "../common/vendor/atproto/ATProtoUnauthenticatedApiClient.ts";
@@ -56,6 +54,9 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         // PDS rate limit for operations is ~2/sec
         this.scrobbleDelay = 2000;
         this.dataDir = options.dataDir;
+        if(config.options?.keepAllHistory) {
+            this.historicalWindowMs = undefined;
+        }
         this.existingPlayOpts = {
             logger: this.dupeLogger,
             transformRules: this.transformRules,
@@ -189,65 +190,36 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         }
     }
 
-    protected async doHydrateHistoricalScrobbles(opts: {allowFailures?: boolean, signal?: AbortSignal } = {}) {
-        try {
-            const logger =  childLogger(this.logger, ['Historical Plays']);
-            const {
-                allowFailures = false,
-                signal
-            } = opts;
-            let file: string;
-            try {
-                logger.verbose('Fetching scrobbles from PDS...');
-                file = await this.api.fetchCarToFile()
-                signal?.throwIfAborted();
-            } catch (e) {
-                throw new Error('Failed to fetch repo CAR', {cause: e});
-            }
-
-            try {
-                await this.parseScrobblesFromCar(file, 100, {allowFailures, logger: logger, signal});
-            } catch (e) {
-                throw new Error('Failed to convert CAR without any error', {cause: e});
-            } finally {
-                await fsPromise.rm(file);
-            }
-        } catch (e) {
-            const historicalWarnings = new Error('Unable to hydrate historical plays. The client will still work but may not be able to catch all duplicates.', {cause: e});
-            this.warnings.push(historicalWarnings);
-            this.logger.warn(historicalWarnings);
-        }
+    protected getMirrorAccount(): string | undefined {
+        return this.api.userData?.did;
     }
 
-    async fetchCarToFile() {
+    protected async downloadCar(filename: string) {
         // TODO use `since` to get CAR diff instead of entire repo
-        // can use last import date from migrations table
         const {userData} = this.api;
         if(userData === undefined) {
             throw new Error('Cannot fetch CAR because atproto identifier has not been resolved');
         }
-        const filename = path.resolve(this.dataDir, `${this.getSafeExternalId()}-${dayjs().unix()}.car`);
         const atClient = new ATProtoUnauthenticatedApiClient('rocksky', { handleData: userData, identifier: this.config.data.handle }, { logger: this.logger });
         await atClient.initClient();
-        await fsPromise.writeFile(filename, Buffer.from(await atClient.getCAR(userData.did)));
-        return filename;
+        await atClient.getCARToFile(userData.did, filename);
     }
 
-    async parseScrobblesFromCar(filename: string, batchSize: number, opts: { allowFailures?: boolean, logger?: Logger, signal?: AbortSignal } = {}) {
+    async parseScrobblesFromCar(filename: string, batchSize: number, opts: ParseCarOpts = {}) {
 
         if(this.api.userData === undefined) {
             throw new Error('Cannot parse CAR because atproto identifier has not been resolved');
         }
         const {did} = this.api.userData;
 
-        if(this.api.rsAgent !== undefined) {
-            await this.api.syncSdkRepo(filename);
-        }
+        // the SDK index (exact-match dupe checks) is only used with PDS auth
+        const index = this.api.rsAgent !== undefined ? this.api.rsIndex : undefined;
 
         const {
             allowFailures = false,
             logger = this.logger,
-            signal
+            signal,
+            ranges
         } = opts;
 
         const stream = Readable.toWeb(fs.createReadStream(filename));
@@ -263,10 +235,13 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         logger.info('Starting CAR conversion to historical plays...');
 
         for await (const entry of repo) {
+            if (index !== undefined) {
+                await indexRockskyRecord(index, did, entry.collection, entry.rkey, entry.record as Record<string, unknown>);
+            }
             if (entry.collection === 'app.rocksky.scrobble') {
                 let play: PlayObject;
                 try {
-                    play = rockskyScrobbleToPlay(entry.record as RockskyScrobble, {user: did, playId: entry.rkey, web: `${did}/app.rocksky.scrobble/${entry.rkey}`})
+                    play = rockskyScrobbleToPlay(entry.record as RockskyScrobble, {user: did, playId: entry.rkey, web: `https://atproto.at/viewer?uri=${did}/app.rocksky.scrobble/${entry.rkey}`})
                     if (isDebugMode()) {
                         logger.trace(`(${count}) rKey ${entry.rkey} => ${buildTrackString(play)}`);
                     }
@@ -287,6 +262,9 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
                     }
                 }
 
+                if(ranges !== undefined && !inRanges(play.data.playDate?.valueOf(), ranges)) {
+                    continue;
+                }
                 const existing = await this.playsHistoricalRepo.hasByUid(entry.rkey);
                 if (!existing) {
                     batch.push(playToRepositoryCreatePlayHistoricalOpts({ play }));
