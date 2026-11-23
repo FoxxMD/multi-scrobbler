@@ -6,7 +6,7 @@ import type {ErrorIsh} from "../../core/ErrorUtils.ts";
 import { DrizzlePlayHistoricalRepository, playToRepositoryCreatePlayHistoricalOpts, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
 import { spawn, isAbortError, abortable } from 'abort-controller-x';
 import { generateLoggableAbortReason, PlayParkedError } from "../common/errors/MSErrors.ts";
-import type {Logger} from "@foxxmd/logging";
+import { childLogger, type Logger } from "@foxxmd/logging";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
 import type { PlayObject } from "../../core/PlaySchema.ts";
 import { todayAwareFormat } from "../../core/TimeUtils.ts";
@@ -14,7 +14,7 @@ import type { ComponentClientApiJson } from "../../core/Api.ts";
 import fsPromise from 'node:fs/promises';
 import path from 'node:path';
 import { AsyncTask, SimpleIntervalJob } from "toad-scheduler";
-import { addRange, subtractRanges, type TimeRange } from "../utils/RangeUtils.ts";
+import { addRange, mergeRanges, subtractRanges, type TimeRange } from "../utils/RangeUtils.ts";
 import { HISTORICAL_BUCKET_AFTER, HISTORICAL_BUCKET_DURATION, HISTORICAL_BUCKET_PADDING } from "../utils/ListenFetchUtils.ts";
 import { DEAD_QUEUE, INGRESS_QUEUE } from "../../core/Atomic.ts";
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -23,6 +23,9 @@ import { MirrorRepository, type CoverageTag } from "../common/database/drizzle/r
 /** How long a downloaded repo CAR is kept for reuse before it is deleted */
 export const CAR_KEEP_MS = 60 * 60 * 1000;
 const CAR_DELETE_JOB = 'carDelete';
+const PRUNE_JOB = 'historicalPrune';
+/** How far back the full sync mirrors, older plays are mirrored on demand and pruned again */
+export const HISTORICAL_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
 /** Coverage origin of ranges an ensure pass mirrored. Not a sync, so it never extends coverage to now */
 export const COVERAGE_ORIGIN_DUPE_CHECK = 'dupe-check';
@@ -117,7 +120,10 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
         return synced.length === 0 ? undefined : Math.max(...synced.map(x => x.range[1]));
     }
 
-    async ensureCoverage(ranges: TimeRange[], signal?: AbortSignal): Promise<void> {
+    async ensureCoverage(ranges: TimeRange[], signal?: AbortSignal, hold?: string): Promise<void> {
+        if(hold !== undefined) {
+            this.coverageHolds.set(hold, ranges);
+        }
         while(true) {
             const missing = await this.uncoveredRanges(ranges);
             if(missing.length === 0) {
@@ -136,6 +142,58 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
             }
             await (signal !== undefined ? abortable(signal, this.coveragePass) : this.coveragePass);
         }
+    }
+
+    /** Stop keeping the ranges held by ensureCoverage when pruning */
+    releaseCoverage(hold: string) {
+        this.coverageHolds.delete(hold);
+    }
+
+    /** Coverage the plays in the ingress and dead queues need */
+    protected async queuedCoverage(): Promise<TimeRange[]> {
+        const queued = [...await this.playRepo.getQueuedScrobbleRange(INGRESS_QUEUE, {limit: 1000}), ...await this.playRepo.getQueuedScrobbleRange(DEAD_QUEUE, {retries: 3, limit: 1000})];
+        return queued.flatMap(x => {
+            const r = coverageForPlay(x);
+            return r === undefined ? [] : [r];
+        });
+    }
+
+    /**
+     * Delete mirrored plays older than the window, and their coverage, except what queued plays and running exports need.
+     * Call inside withCarLock. A full sync passes its own windowStart, so pruning never cuts into what it just covered. Returns how many plays were deleted
+     * */
+    protected async pruneOutsideWindow(windowStart: number = Date.now() - this.historicalWindowMs): Promise<number> {
+        if(this.mirrorId === undefined) {
+            return 0;
+        }
+        const keep = mergeRanges([...await this.queuedCoverage(), ...[...this.coverageHolds.values()].flat()]);
+        let deleted = 0;
+        for(const range of subtractRanges([0, windowStart - 1], keep)) {
+            // first, so an interrupted prune never claims plays that are gone
+            await this.mirrorRepo.removeCoverage(this.mirrorId, range);
+            while(true) {
+                const ids = await this.playsHistoricalRepo.findMirrorIds({mirrorId: this.mirrorId, range, limit: 1000});
+                if(ids.length === 0) {
+                    break;
+                }
+                await this.playsHistoricalRepo.deleteWithInputs(ids);
+                deleted += ids.length;
+            }
+        }
+        if(deleted > 0) {
+            this.logger.info(`Pruned ${deleted} mirrored plays older than ${todayAwareFormat(dayjs(windowStart))}`);
+        }
+        return deleted;
+    }
+
+    /** Daily prune, first run now */
+    protected schedulePrune() {
+        if(this.scheduler.existsById(PRUNE_JOB)) {
+            return;
+        }
+        this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({hours: 24, runImmediately: true}, new AsyncTask('Prune historical plays', async () => {
+            await this.withCarLock(() => this.pruneOutsideWindow());
+        }, (err) => this.logger.warn(new Error('Failed to prune mirrored plays', {cause: err}))), {id: PRUNE_JOB}));
     }
 
     /** Run fn after any other work on the repo CAR finished */
@@ -224,7 +282,29 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
     protected carWork: Promise<void> = Promise.resolve();
     protected carFileTask?: Promise<string>;
 
-    protected abstract doHydrateHistoricalScrobbles(opts: {allowFailures?: boolean, signal?: AbortSignal }): Promise<void>;
+    /** ms before now that the full sync mirrors and pruning keeps */
+    protected historicalWindowMs = HISTORICAL_WINDOW_MS;
+    /** ranges an export job needs until it ends, pruning keeps them. By hold key */
+    protected coverageHolds = new Map<string, TimeRange[]>();
+
+    /** One pass over the repo CAR that stores the plays in ranges. Throws on failure */
+    protected async doHydrateHistoricalScrobbles(opts: {allowFailures?: boolean, signal?: AbortSignal, ranges?: TimeRange[]} = {}): Promise<void> {
+        const logger = childLogger(this.logger, ['Historical Plays']);
+        const {allowFailures = false, signal, ranges} = opts;
+        let file: string;
+        try {
+            logger.verbose('Fetching scrobbles from PDS...');
+            file = await this.getCarFile();
+            signal?.throwIfAborted();
+        } catch (e) {
+            throw new Error('Failed to fetch repo CAR', {cause: e});
+        }
+        try {
+            await this.parseScrobblesFromCar(file, 100, {allowFailures, logger, signal, ranges});
+        } catch (e) {
+            throw new Error('Failed to convert CAR without any error', {cause: e});
+        }
+    }
 
     public getApiData(): ComponentClientApiJson {
         return {
@@ -255,14 +335,16 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
         
             const newImport: ComponentMigrationSelect = await this.migrationRepo.create({name: 'historicalImport', componentId: this.dbComponent.id}) as ComponentMigrationSelect;
             const startedAt = Date.now();
+            const windowStart = startedAt - this.historicalWindowMs;
             try {
                 this.setStatus('Starting full mirror rebuild...');
                 // coverage inside the lock, so a waiting pass sees what this sync covered
                 await this.withCarLock(async () => {
-                    await this.doHydrateHistoricalScrobbles({signal, allowFailures});
+                    await this.doHydrateHistoricalScrobbles({signal, allowFailures, ranges: [[windowStart, startedAt]]});
                     if(this.mirrorId !== undefined) {
-                        await this.mirrorRepo.addCoverage(this.mirrorId, [0, startedAt], this.coverageTag);
+                        await this.mirrorRepo.addCoverage(this.mirrorId, [windowStart, startedAt], this.coverageTag);
                     }
+                    await this.pruneOutsideWindow(windowStart);
                 });
                 await this.migrationRepo.updateById(newImport.id, {success: true});
                 this.logger.info('Sync complete');
@@ -270,6 +352,8 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
                 this.synced = true;
                 this.lastImportSuccess = dayjs();
             } catch (e: any) {
+                // live scrobbles still work: they are checked against the recent sync and what is stored, older plays wait for a pass
+                this.warnings.push(new Error('Unable to mirror historical plays. Live scrobbles are still checked for duplicates against recent plays.', {cause: e}));
                 await this.migrationRepo.updateById(newImport.id, {success: false, error: e});
                 this.logger.warn(new Error('Failed to hydrate historical scrobbles', {cause: e}));
                 this.syncError = e;
@@ -421,8 +505,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
         const needed = coverageForPlay(play);
         if(needed !== undefined && (await this.uncoveredRanges([needed])).length > 0) {
             // one pass for this play and every other queued play that needs one
-            const queued = [...await this.playRepo.getQueuedScrobbleRange(INGRESS_QUEUE, {limit: 1000}), ...await this.playRepo.getQueuedScrobbleRange(DEAD_QUEUE, {retries: 3, limit: 1000})];
-            const pass = this.ensureCoverage([needed, ...queued.flatMap(x => { const r = coverageForPlay(x); return r === undefined ? [] : [r]; })]);
+            const pass = this.ensureCoverage([needed, ...await this.queuedCoverage()]);
             // the parked play's queue handles the result
             pass.catch(() => undefined);
             throw new PlayParkedError(`Waiting for scrobbles around ${todayAwareFormat(play.data.playDate!)} to be mirrored from the repo CAR for the dupe check`, pass);
@@ -503,6 +586,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
                 }
             }
 
+            this.schedulePrune();
         })
         .then(() => null)
         .catch((e) => this.logger.warn(new Error('Failed to complete post-init historical database sync but continuing anyway', {cause: e})));

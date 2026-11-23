@@ -44,8 +44,9 @@ export interface ExportClient {
     transformPlay(play: PlayObject, hookType: 'postCompare', opts: {stages?: StageConfig[]}): Promise<PlayObject>
     /** the service's write rate limit, for Clients that track one */
     writeBudget?(): Promise<WriteBudget | undefined>
-    /** for Clients that check duplicates against their own mirror (Teal, Rocksky): resolves once it covers ranges. signal stops waiting */
-    ensureCoverage?(ranges: TimeRange[], signal?: AbortSignal): Promise<void>
+    /** for Clients that check duplicates against their own mirror (Teal, Rocksky): resolves once it covers ranges. signal stops waiting. The ranges are kept until releaseCoverage(hold) */
+    ensureCoverage?(ranges: TimeRange[], signal?: AbortSignal, hold?: string): Promise<void>
+    releaseCoverage?(hold: string): void
 }
 
 export interface JobRunnerDeps {
@@ -642,6 +643,8 @@ export class JobRunner {
         // component id until the client resolves, a client that is not configured has no name
         let clientLabel = String(componentId);
         let coverageEnsured = false;
+        let coverageHeld = false;
+        const coverageHold = `job-${this.jobId}-target-${targetId}`;
         /** @param key fixed reason for metrics, `reason` can hold numbers and dates */
         const wait = async (reason: string, key: string = reason) => {
             const waitStart = performance.now();
@@ -699,8 +702,13 @@ export class JobRunner {
                 this.runtime.exports[targetId] = {waiting: 'Client is mirroring its scrobbles in the job range for dupe checks', rateLimit};
                 this.emitUpdate({runtime: this.runtime});
                 let failure: unknown;
+                if(!coverageHeld) {
+                    coverageHeld = true;
+                    // the Client prunes older plays, keep the job's until the export ends
+                    cleanup.push(() => client.releaseCoverage?.(coverageHold));
+                }
                 try {
-                    await client.ensureCoverage([[job.rangeFrom?.valueOf() ?? 0, job.rangeTo.valueOf()]], signal);
+                    await client.ensureCoverage([[job.rangeFrom?.valueOf() ?? 0, job.rangeTo.valueOf()]], signal, coverageHold);
                     coverageEnsured = true;
                 } catch (e) {
                     failure = e;

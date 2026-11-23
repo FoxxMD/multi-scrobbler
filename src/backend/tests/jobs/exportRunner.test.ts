@@ -41,6 +41,7 @@ class FakeClient implements ExportClient {
     jobId?: number;
     budget?: WriteBudget;
     ensureCoverage?: ExportClient['ensureCoverage'];
+    releaseCoverage?: ExportClient['releaseCoverage'];
 
     constructor(componentId: number) {
         this.componentId = componentId;
@@ -170,8 +171,12 @@ describe('Job export runner', function () {
         const {runner, target, targetRepo, client} = await setup();
         const calls: unknown[] = [];
         let release!: () => void;
-        client.ensureCoverage = async (ranges) => {
+        const holds: unknown[] = [];
+        const released: string[] = [];
+        client.releaseCoverage = (hold) => released.push(hold);
+        client.ensureCoverage = async (ranges, _signal, hold) => {
             calls.push(ranges);
+            holds.push(hold);
             if (calls.length === 1) {
                 throw new Error('PDS down');
             }
@@ -185,6 +190,9 @@ describe('Job export runner', function () {
         await exportTask(runner, target.id);
         expect(calls).eql([[[0, 1000]], [[0, 1000]]]);
         expect((await targetRepo.getById(target.id))!.exported).eq(7);
+        // the job's range is held while exporting, released once at the end
+        expect(holds).eql([`job-${runner.jobId}-target-${target.id}`, `job-${runner.jobId}-target-${target.id}`]);
+        expect(released).eql([`job-${runner.jobId}-target-${target.id}`]);
     });
 
     it('never puts more than the queue limit in the client queue', async function () {

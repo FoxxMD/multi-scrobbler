@@ -1,4 +1,4 @@
-import { childLogger, type Logger } from "@foxxmd/logging";
+import { type Logger } from "@foxxmd/logging";
 import type EventEmitter from "events";
 import { COMPONENT_AUTH_TYPE, type ComponentAuthType, type QueueContext } from "../../core/Atomic.ts";
 import type { PlayObject, SourcePlayerObj } from "../../core/PlaySchema.ts";
@@ -184,34 +184,6 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
             await this.api.updateNowPlaying(isClearing ? undefined : data.play);
         } catch (e) {
             throw e;
-        }
-    }
-
-    protected async doHydrateHistoricalScrobbles(opts: {allowFailures?: boolean, signal?: AbortSignal } = {}) {
-        try {
-            const logger =  childLogger(this.logger, ['Historical Plays']);
-            const {
-                allowFailures = false,
-                signal
-            } = opts;
-            let file: string;
-            try {
-                logger.verbose('Fetching scrobbles from PDS...');
-                file = await this.getCarFile();
-                signal?.throwIfAborted();
-            } catch (e) {
-                throw new Error('Failed to fetch repo CAR', {cause: e});
-            }
-
-            try {
-                await this.parseScrobblesFromCar(file, 100, {allowFailures, logger: logger, signal});
-            } catch (e) {
-                throw new Error('Failed to convert CAR without any error', {cause: e});
-            }
-        } catch (e) {
-            const historicalWarnings = new Error('Unable to hydrate historical plays. The client will still work but may not be able to catch all duplicates.', {cause: e});
-            this.warnings.push(historicalWarnings);
-            this.logger.warn(historicalWarnings);
         }
     }
 
