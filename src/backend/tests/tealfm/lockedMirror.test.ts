@@ -9,7 +9,7 @@ import { eq } from 'drizzle-orm';
 import { loggerTest } from '@foxxmd/logging';
 import TealScrobbler from '../../scrobblers/TealfmScrobbler.ts';
 import { PlayParkedError } from '../../common/errors/MSErrors.ts';
-import { COVERAGE_ORIGIN_DUPE_CHECK, coverageForPlay } from '../../scrobblers/AbstractHistoricalScrobbleClient.ts';
+import { COVERAGE_GIVE_UP_FAILURES, COVERAGE_ORIGIN_DUPE_CHECK, coverageForPlay } from '../../scrobblers/AbstractHistoricalScrobbleClient.ts';
 import { ensureOwner } from '../../common/auth/owner.ts';
 import { MirrorRepository } from '../../common/database/drizzle/repositories/MirrorRepository.ts';
 import { playToRepositoryCreatePlayHistoricalOpts } from '../../common/database/drizzle/repositories/PlayHistoricalRepository.ts';
@@ -254,5 +254,32 @@ describe('#tealfm Locked mirror', function () {
         expect([...t.coverageHolds.keys()]).eql(['job-1']);
         t.releaseCoverage('job-1');
         expect(t.coverageHolds.size).eq(0);
+    });
+
+    it('after repeated failed passes, checks older plays against what is mirrored with a warning, until a pass works again', async function () {
+        const {t} = await buildTeal();
+        await t.useLockedMirror();
+        t.coverageFailureBackoffMs = 0;
+        t.getCarFile = async () => 'car';
+        let fail = true;
+        t.parseScrobblesFromCar = async () => {
+            if (fail) {
+                throw new Error('bad CAR');
+            }
+        };
+        for (let i = 1; i < COVERAGE_GIVE_UP_FAILURES; i++) {
+            await expect(t.ensureCoverage([[100, 200]])).rejectedWith('Could not mirror scrobbles for older plays');
+        }
+        expect(t.warnings).length(0);
+        // the last failure gives up: resolves uncovered so exports continue
+        await t.ensureCoverage([[100, 200]]);
+        expect(t.warnings.map((x: Error) => x.message)[0]).match(/Could not mirror older scrobbles 3 times in a row/);
+        // not parked, checked against what is mirrored
+        expect(await t.getSOTScrobblesForPlay(generatePlay({playDate: dayjs().subtract(1, 'year')}))).eql([]);
+
+        fail = false;
+        await t.ensureCoverage([[100, 200]]);
+        expect(t.warnings).length(0);
+        expect(t.coverageGaveUp).undefined;
     });
 });

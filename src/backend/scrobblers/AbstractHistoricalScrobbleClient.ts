@@ -27,6 +27,9 @@ const PRUNE_JOB = 'historicalPrune';
 /** How far back the full sync mirrors, older plays are mirrored on demand and pruned again */
 export const HISTORICAL_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
+/** Failed passes in a row after which plays are checked against what is mirrored instead of waiting (IE a PDS whose CAR can't be read) */
+export const COVERAGE_GIVE_UP_FAILURES = 3;
+
 /** Coverage origin of ranges an ensure pass mirrored. Not a sync, so it never extends coverage to now */
 export const COVERAGE_ORIGIN_DUPE_CHECK = 'dupe-check';
 
@@ -112,7 +115,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
 
     /**
      * Resolve once the mirror covers ranges. Uncovered ranges wait for an ensure pass: one CAR pass that stores the plays of every range requested before it started.
-     * Rejects if the pass fails. signal stops waiting, not the pass.
+     * Rejects if the pass fails, unless passes failed COVERAGE_GIVE_UP_FAILURES times in a row: then it resolves uncovered. signal stops waiting, not the pass.
      * */
     /** End of the last range a sync covered */
     protected syncedTail(segments: {range: TimeRange, origin: string}[]): number | undefined {
@@ -140,7 +143,15 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
                 pass.catch(() => undefined);
                 this.coveragePass = pass;
             }
-            await (signal !== undefined ? abortable(signal, this.coveragePass) : this.coveragePass);
+            try {
+                await (signal !== undefined ? abortable(signal, this.coveragePass) : this.coveragePass);
+            } catch (e) {
+                if(this.coverageGaveUp !== undefined && !isAbortError(e)) {
+                    // continue without it, like getSOTScrobblesForPlay does
+                    return;
+                }
+                throw e;
+            }
         }
     }
 
@@ -236,11 +247,22 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
                 await this.mirrorRepo.addCoverage(this.mirrorId, r, {origin: COVERAGE_ORIGIN_DUPE_CHECK, jobId: null});
             }
             this.coverageFailure = undefined;
+            if(this.coverageGaveUp !== undefined) {
+                this.warnings = this.warnings.filter(x => x !== this.coverageGaveUp);
+                this.coverageGaveUp = undefined;
+                this.logger.info('Mirroring older scrobbles works again, older plays wait for their dupe check again');
+            }
             this.setStatus(`Mirrored scrobbles for ${ranges.length} older time ranges`);
         } catch (e) {
             this.setStatus('Mirroring older scrobbles failed');
             const error = new Error('Could not mirror scrobbles for older plays', {cause: e});
-            this.coverageFailure = {error, at: Date.now()};
+            const failures = (this.coverageFailure?.failures ?? 0) + 1;
+            this.coverageFailure = {error, at: Date.now(), failures};
+            if(failures >= COVERAGE_GIVE_UP_FAILURES && this.coverageGaveUp === undefined) {
+                this.coverageGaveUp = new Error(`Could not mirror older scrobbles ${failures} times in a row. Until it works again, older plays are only checked for duplicates against scrobbles already mirrored and may be scrobbled twice.`, {cause: error});
+                this.logger.warn(this.coverageGaveUp);
+                this.warnings.push(this.coverageGaveUp);
+            }
             throw error;
         }
     }
@@ -277,7 +299,9 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
     protected coverageFailureBackoffMs = 15 * 60 * 1000;
     protected pendingCoverage: TimeRange[] = [];
     protected coveragePass?: Promise<void>;
-    protected coverageFailure?: {error: Error, at: number};
+    protected coverageFailure?: {error: Error, at: number, failures: number};
+    /** set after COVERAGE_GIVE_UP_FAILURES failed passes in a row: plays are not parked anymore, until a pass works */
+    protected coverageGaveUp?: Error;
     /** serializes work on the repo CAR: full syncs and ensure passes */
     protected carWork: Promise<void> = Promise.resolve();
     protected carFileTask?: Promise<string>;
@@ -508,6 +532,11 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
             const pass = this.ensureCoverage([needed, ...await this.queuedCoverage()]);
             // the parked play's queue handles the result
             pass.catch(() => undefined);
+            if(this.coverageGaveUp !== undefined) {
+                // the pass still runs, so this recovers once mirroring works again
+                this.logger.verbose(`Checking ${buildTrackString(play)} for duplicates only against mirrored scrobbles, mirroring older scrobbles keeps failing`);
+                return this.getMirroredScrobblesForPlay(play);
+            }
             throw new PlayParkedError(`Waiting for scrobbles around ${todayAwareFormat(play.data.playDate!)} to be mirrored from the repo CAR for the dupe check`, pass);
         }
         return this.getMirroredScrobblesForPlay(play);
