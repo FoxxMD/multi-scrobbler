@@ -266,7 +266,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
             if (entry.collection === 'app.rocksky.scrobble') {
                 let play: PlayObject;
                 try {
-                    play = rockskyScrobbleToPlay(entry.record as RockskyScrobble, {user: did, playId: entry.rkey, web: `${did}/app.rocksky.scrobble/${entry.rkey}`})
+                    play = rockskyScrobbleToPlay(entry.record as RockskyScrobble, {user: did, playId: entry.rkey, web: `https://atproto.at/viewer?uri=${did}/app.rocksky.scrobble/${entry.rkey}`})
                     if (isDebugMode()) {
                         logger.trace(`(${count}) rKey ${entry.rkey} => ${buildTrackString(play)}`);
                     }

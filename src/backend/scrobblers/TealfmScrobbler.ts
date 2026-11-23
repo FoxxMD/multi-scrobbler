@@ -242,7 +242,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
                 let play: PlayObject;
                 try {
                     play = recordToPlay(entry.record as FmTealAlphaFeedPlay.Main | FmTealFeedPlay.Main, {
-                        web: did !== undefined ? `at://did:plc:${did}/${entry.collection}/${entry.rkey}` : undefined,
+                        web: did !== undefined ? `https://atproto.at/viewer?uri=${did}/${entry.collection}/${entry.rkey}` : undefined,
                         playId: entry.rkey,
                         user: did
                     });
