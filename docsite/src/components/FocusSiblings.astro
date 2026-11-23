@@ -1,0 +1,55 @@
+---
+/**
+ * Copied from Moonarc's FocusSiblings https://moonarc.dev/components/focus-siblings/
+ *
+ * A group whose item pointed at or focused stays as it is while its siblings step back: dimmed, and
+ * a little smaller or softer if you ask. One :has() rule on the group reads which child is pointed at; the items are
+ * the group's own children, whatever they are (cards, rows, list items). The pointer only counts on a screen that can
+ * hover; the keyboard's focus counts everywhere. Zero JavaScript.
+ */
+import type { HTMLAttributes } from 'astro/types';
+
+interface Props extends HTMLAttributes<'div'> {
+  /** The group's element: a list when its children are <li>. */
+  as?: 'div' | 'ul' | 'ol';
+  /** The opacity of the items stepped back, 0 to 1. */
+  dim?: number;
+  /** How far they blur, a CSS length: '0px' for none. */
+  blur?: string;
+  /** How far they shrink, 1 for not at all. */
+  scale?: number;
+  /** How far they turn grey, 0 to 1: a step back that keeps the text's contrast, where `dim` lowers it. */
+  grey?: number;
+  /** A name for the group, when it is a list a screen reader should name. */
+  label?: string;
+}
+
+const { as: Tag = 'div', dim = 0.4, blur = '0px', scale = 1, grey = 0, label, class: className, style, ...rest } = Astro.props;
+const vars = [`--ma-fsib-dim:${dim}`, `--ma-fsib-blur:${blur}`, `--ma-fsib-scale:${scale}`, `--ma-fsib-grey:${grey}`, typeof style === 'string' ? style : ''].filter(Boolean).join(';');
+---
+
+<Tag class:list={['ma-fsib', className]} aria-label={label} style={vars} {...rest}><slot /></Tag>
+
+<style is:global>
+  @layer components {
+    :where(.ma-fsib) { --ma-fsib-dim: 0.4; --ma-fsib-blur: 0px; --ma-fsib-scale: 1; --ma-fsib-grey: 0; }
+    :where(ul.ma-fsib, ol.ma-fsib) { margin: 0; padding: 0; list-style: none; }
+    :where(.ma-fsib > *) {
+      transition:
+        opacity 250ms ease-out,
+        filter 250ms ease-out,
+        scale 250ms ease-out;
+    }
+    /* the pointer, where there is one that hovers: a tap on a touch screen leaves :hover behind on the item it hit */
+    @media (hover: hover) {
+      :where(.ma-fsib:has(> :hover) > :not(:hover)) { opacity: var(--ma-fsib-dim); filter: blur(var(--ma-fsib-blur)) grayscale(var(--ma-fsib-grey)); scale: var(--ma-fsib-scale); }
+    }
+    /* the keyboard: a focus ring inside an item steps the others back, a click's focus does not */
+    :where(.ma-fsib:has(:focus-visible) > :not(:focus-within)) { opacity: var(--ma-fsib-dim); filter: blur(var(--ma-fsib-blur)) grayscale(var(--ma-fsib-grey)); scale: var(--ma-fsib-scale); }
+    @media (prefers-reduced-motion: reduce) {
+      /* the others still step back, at once and in place */
+      :where(.ma-fsib > *) { transition: none; }
+      :where(.ma-fsib:has(> :hover) > *), :where(.ma-fsib:has(:focus-visible) > *) { scale: 1; }
+    }
+  }
+</style>

@@ -1,7 +1,7 @@
 import { before, afterEach, describe, it } from 'mocha';
 import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
-import withLocalTmpDir from 'with-local-tmp-dir';
+import { createTmpDir } from '../utils/tmpDir.ts';
 import {constants, copyFile, access} from 'node:fs/promises';
 import path from "path";
 import ScrobbleClients from '../../scrobblers/ScrobbleClients.ts';
@@ -51,7 +51,7 @@ describe('Sample Configs', function () {
     describe('Parse and Validate Correctly', function () {
 
         describe('Source Configs', function () {
-            let reset: any;
+            let tmp: Awaited<ReturnType<typeof createTmpDir>>;
             let ogKeys: string[] = [];
 
             before(function() {
@@ -59,11 +59,11 @@ describe('Sample Configs', function () {
             });
 
             beforeEach(async function() {
-                reset = await withLocalTmpDir({unsafeCleanup: true, postfix: 'sourceConfigParse'});
+                tmp = await createTmpDir('sourceConfigParse');
             });
 
             afterEach(async function() {
-                await reset();
+                await tmp.remove();
                 const envKeys = Object.keys(process.env);
                 const addedKeys = difference(envKeys, ogKeys);
                 for(const k of addedKeys) {
@@ -78,9 +78,9 @@ describe('Sample Configs', function () {
                 it(`Sample ${componentType}.json parses and validates in isolation`, async function () {
                     this.timeout(5000);
 
-                    await copyFile(samplePath(componentType), `${componentType}.json`);
+                    await copyFile(samplePath(componentType), path.join(tmp.path, `${componentType}.json`));
 
-                    let fileContents = await readJson(`${componentType}.json`);
+                    let fileContents = await readJson(path.join(tmp.path, `${componentType}.json`));
                     fileContents = fileContents.filter((x: any) => x.configureAs === undefined || x.configureAs === 'source');
                     for (const [i,rawConf] of fileContents.entries()) {
                         try {
@@ -99,11 +99,11 @@ describe('Sample Configs', function () {
                     this.timeout(5000);
 
                     const emitter = new WildcardEmitter<MSBackendEventMap>();
-                    await copyFile(samplePath(componentType), `${componentType}.json`);
+                    await copyFile(samplePath(componentType), path.join(tmp.path, `${componentType}.json`));
                     const sources = new ScrobbleSources(emitter, {
                         localUrl: new URL('http://example.com'),
-                        configDir: process.cwd(),
-                        dataDir: process.cwd(),
+                        configDir: tmp.path,
+                        dataDir: tmp.path,
                         version: 'test'
                     }, loggerTest);
 
@@ -157,8 +157,8 @@ describe('Sample Configs', function () {
 
                     const sources = new ScrobbleSources(emitter, {
                         localUrl: new URL('http://example.com'),
-                        configDir: process.cwd(),
-                        dataDir: process.cwd(),
+                        configDir: tmp.path,
+                        dataDir: tmp.path,
                         version: 'test'
                     }, loggerTest);
                     await sources.buildSourcesFromConfig()
@@ -174,15 +174,19 @@ describe('Sample Configs', function () {
         });
 
         describe('Client Configs', function () {
-            let reset: any;
+            let tmp: Awaited<ReturnType<typeof createTmpDir>>;
             let ogKeys: string[] = [];
 
+            before(function() {
+                ogKeys = Object.keys(process.env);
+            });
+
             beforeEach(async function() {
-                reset = await withLocalTmpDir({unsafeCleanup: true, postfix: 'clientConfigParse'});
+                tmp = await createTmpDir('clientConfigParse');
             });
 
             afterEach(async function() {
-                await reset();
+                await tmp.remove();
                 const envKeys = Object.keys(process.env);
                 const addedKeys = difference(envKeys, ogKeys);
                 for(const k of addedKeys) {
@@ -196,9 +200,9 @@ describe('Sample Configs', function () {
                     this.timeout(5000);
 
                     const emitter = new EventEmitter();
-                    await copyFile(samplePath(componentType), `${componentType}.json`);
+                    await copyFile(samplePath(componentType), path.join(tmp.path, `${componentType}.json`));
 
-                    let fileContents = await readJson(`${componentType}.json`);
+                    let fileContents = await readJson(path.join(tmp.path, `${componentType}.json`));
                     fileContents = fileContents.filter((x: any) => x.configureAs === undefined || x.configureAs === 'client');
                     for (const [i,rawConf] of fileContents.entries()) {
                         try {
@@ -217,11 +221,11 @@ describe('Sample Configs', function () {
                     this.timeout(500000);
 
                     const emitter = new WildcardEmitter<MSBackendEventMap>();
-                    await copyFile(samplePath(componentType), `${componentType}.json`);
+                    await copyFile(samplePath(componentType), path.join(tmp.path, `${componentType}.json`));
                     const clients = new ScrobbleClients(emitter, new WildcardEmitter<MSBackendEventMap>, {
                         localUrl: new URL('http://example.com'),
-                        configDir: process.cwd(),
-                        dataDir: process.cwd(),
+                        configDir: tmp.path,
+                        dataDir: tmp.path,
                         version: 'test'
                     },
                     loggerTest);
@@ -242,13 +246,21 @@ describe('Sample Configs', function () {
                         case 'rocksky':
                             zocObj = zocObj.supply(envSchema.env.shape.ROCKSKY_HANDLE, 'foxxmd.dev')
                             zocObj = zocObj.supply(envSchema.env.shape.ROCKSKY_TOKEN, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaWQ')
+                            zocObj = zocObj.supply(envSchema.env.shape.ROCKSKY_RATE_LIMIT_RESERVE, 500)
+                            zocObj = zocObj.supply(envSchema.env.shape.ROCKSKY_EXPORT_RATE_LIMIT_RESERVE, 1500)
+                            zocObj = zocObj.supply(envSchema.env.shape.ROCKSKY_KEEP_ALL_HISTORY, 'true')
+                            break;
+                        case 'tealfm':
+                            zocObj = zocObj.supply(envSchema.env.shape.TEALFM_RATE_LIMIT_RESERVE, 500)
+                            zocObj = zocObj.supply(envSchema.env.shape.TEALFM_EXPORT_RATE_LIMIT_RESERVE, 1500)
+                            zocObj = zocObj.supply(envSchema.env.shape.TEALFM_KEEP_ALL_HISTORY, 'true')
                             break;
                         case 'discord':
                             zocObj = zocObj.supply(envSchema.env.shape.DISCORD_STATUS_OVERRIDE_ALLOW, 'online');
                             zocObj = zocObj.supply(envSchema.env.shape.DISCORD_IPC_LOCATIONS, '/path/to/ipc,192.168.0.100:8999')
                     }
                     const componentMockData = zocObj.generate();
-                    const primitives = generateCommonComponentEnvConfigSchema(envSchema.prefix.toLocaleUpperCase());
+                    const primitives = generateCommonComponentEnvConfigSchema(envSchema.prefix.toLocaleUpperCase(), 'client');
                     const primitiveMockData = zocker(primitives).generate();
                     primitiveMockData[`${envSchema.prefix.toLocaleUpperCase()}_ENABLE`] = true;
 
@@ -266,8 +278,8 @@ describe('Sample Configs', function () {
 
                     const clients = new ScrobbleClients(emitter, new WildcardEmitter<MSBackendEventMap>, {
                         localUrl: new URL('http://example.com'),
-                        configDir: process.cwd(),
-                        dataDir: process.cwd(),                        
+                        configDir: tmp.path,
+                        dataDir: tmp.path,                        
                         version: 'test'
                     },
                     loggerTest);
@@ -276,6 +288,10 @@ describe('Sample Configs', function () {
                     expect(clients.instantiateErrors, `${clients.instantiateErrors.map(x => JSON.stringify(serializeError(x), undefined, 2)).join('\n')}`).is.empty;
                     expect(clients.clients).length(1);
                     expect(clients.clients[0].type).eq(componentType);
+                    expect(clients.clients[0].config.options?.scrobbleInterval).eq(primitiveMockData[`${envSchema.prefix.toLocaleUpperCase()}_SCROBBLE_INTERVAL`]);
+                    if(componentType === 'tealfm' || componentType === 'rocksky') {
+                        expect(clients.clients[0].config.options).to.include({rateLimitReserve: 500, exportRateLimitReserve: 1500});
+                    }
                 });
             }
         });
@@ -285,12 +301,18 @@ describe('Sample Configs', function () {
 describe('Global ENVs with Config', function () {
 
     let baseEnvKeys: string[] = [];
+    let tmp: Awaited<ReturnType<typeof createTmpDir>>;
 
     before(function() {
         baseEnvKeys = Array.from(Object.keys(process.env));
     });
 
-    afterEach(function() {
+    beforeEach(async function() {
+        tmp = await createTmpDir('globalEnvConfig');
+    });
+
+    afterEach(async function() {
+        await tmp.remove();
         const modified = difference(Array.from(Object.keys(process.env)), baseEnvKeys);
         for(const key of modified) {
             delete process.env[key];
@@ -305,8 +327,8 @@ describe('Global ENVs with Config', function () {
         const emitter = new WildcardEmitter<MSBackendEventMap>();
         const sources = new ScrobbleSources(emitter, {
             localUrl: new URL('http://example.com'),
-            configDir: process.cwd(),
-            dataDir: process.cwd(),
+            configDir: tmp.path,
+            dataDir: tmp.path,
             version: 'test'
         }, loggerTest);
         await sources.buildSourcesFromConfig();
@@ -323,8 +345,8 @@ describe('Global ENVs with Config', function () {
         const emitter = new WildcardEmitter<MSBackendEventMap>();
         const sources = new ScrobbleSources(emitter, {
             localUrl: new URL('http://example.com'),
-            configDir: process.cwd(),
-            dataDir: process.cwd(),
+            configDir: tmp.path,
+            dataDir: tmp.path,
             version: 'test'
         }, loggerTest);
         await sources.buildSourcesFromConfig();

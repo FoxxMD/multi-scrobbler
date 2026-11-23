@@ -1,10 +1,11 @@
 import type EventEmitter from "events";
-import { COMPONENT_AUTH_TYPE, PARSED_FROM, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, PARSED_FROM, SOURCE_SOT } from "../../core/Atomic.ts";
+import type { PlayObject } from "../../core/PlaySchema.ts";
 import type {FormatPlayObjectOptions, InternalConfig, TimeRangeListensFetcher} from "../common/infrastructure/Atomic.ts";
 import type {ComponentAuthType, PlayPlatformId} from '../../core/Atomic.ts';
 import type {SourceType} from "../../core/Atomic.ts";
 import type {LastfmSourceConfig} from "../common/infrastructure/config/source/lastfm.ts";
-import LastfmApiClient, { formatPlayObj } from "../common/vendor/LastfmApiClient.ts";
+import LastfmApiClient, { formatPlayObj, LASTFM_HOST } from "../common/vendor/LastfmApiClient.ts";
 import { sortByOldestPlayDate } from "../utils.ts";
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import MemorySource from "./MemorySource.ts";
@@ -53,7 +54,11 @@ export default class LastfmSource extends MemorySource {
         const {logger, ...internalRest} = this.internalOptions
         this.api = new LastfmApiClient(this.name, this.config.data, {logger: this.logger, type: 'lastfm', ...internalRest});
         this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this.api, this.api.logger);
-        return await this.api.initialize();
+        await this.api.initialize();
+        if(this.api.url.url.hostname === LASTFM_HOST) {
+            this.logger.warn('Last.fm API Keys for non-pro (paid) accounts will STOP WORKING on December 1st! Make sure you have backed up your history before then. See docs for more information.');
+        }
+        return true;
     }
 
     protected async doCheckConnection(): Promise<true | string | undefined> {

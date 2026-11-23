@@ -1,7 +1,8 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import type EventEmitter from "events";
 import normalizeUrl from "normalize-url";
-import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject} from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, type ComponentAuthType } from "../../core/Atomic.ts";
+import type { PlayObject } from "../../core/PlaySchema.ts";
 import { capitalize } from "../../core/StringUtils.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
@@ -104,7 +105,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             }
             return result;
         } catch (e: any) {
-            await this.notify({ title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error' });
+            await this.notifyScrobbleFailure(playObj, { title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error' });
             throw e;
         }
     }

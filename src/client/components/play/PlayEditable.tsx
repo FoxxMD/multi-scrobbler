@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { PlayData, type PlayInfoProps } from "./PlayData";
 import { PlayEdit, type PlayEditProps } from "./PlayEdit";
 import { useMutation } from "@tanstack/react-query";
-import type { PlayObjectMinimal } from "../../../core/Atomic";
+import type { PlayObjectMinimal } from "../../../core/PlaySchema";
 import ky from "ky";
 
 export type PlayEditableProps = PlayInfoProps & PlayEditProps & {

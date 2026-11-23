@@ -1,17 +1,22 @@
 import { type ComponentProps, useState, useCallback, useEffect, type ReactNode, type PropsWithChildren } from "react"
-import { Badge, Stat, HStack, type BadgeProps } from '@chakra-ui/react';
-import type {ComponentClientApiJson, ComponentCommonApiJson, MsSseEvent} from "../../../core/Api.js";
+import { Badge, Box, Stat, HStack, Popover, Portal, Stack, Span, Text, type BadgeProps } from '@chakra-ui/react';
+import {asSseEvent, type ComponentClientApiJson, type ComponentCommonApiJson, type MsSseEvent} from "../../../core/Api.js";
 import { TextMuted } from "../TextMuted.js";
 import type { IconBaseProps } from "react-icons/lib";
-import { DownArrowIcon, UpArrowIcon } from "../icons/ChakraIcons.js";
+import { DownArrowIcon, EllipsisChakraIcon, IconWrapper, UpArrowIcon } from "../icons/ChakraIcons.js";
 import { useTimeout } from 'react-use-timeout';
 import {
     useSSEContext,
     useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
 import dayjs from "dayjs";
-import { shortTodayAwareFormat } from "../../../core/TimeUtils.js";
+import { shortTodayAwareFormat } from "../../utils/index.js";
 import { TextTip } from "../ToggleTip.js";
+import { useQuery } from '@tanstack/react-query';
+import { tanQueries } from "../../queries/index.js";
+import { useComponentJobCount } from "../jobs/jobUtils.js";
+import { NumberValueText } from "../AbbreviatedNumber.js";
+import { ClientJobPlaysCountsFetchable } from "./ClientJobPlays.js";
 
 type Color = BadgeProps['colorPalette'] & IconBaseProps['color'];
 
@@ -144,8 +149,9 @@ export const CountIndicatorStreamable = (props: { data: Pick<ComponentCommonApiJ
 
     const client = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(client, (payload) => {
-        if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === data.id) {
-            switch (payload.type) {
+        const event = asSseEvent(payload.data);
+        if (event?.componentId === data.id) {
+            switch (event.event) {
                 case 'scrobble':
                 case 'discovered':
                     setStatsData((old) => ({current: (old.current ?? 0) + 1, total: old.total + 1}));
@@ -175,8 +181,9 @@ export const QueuedIndicatorStreamable = (props: { data: Pick<ComponentClientApi
 
     const client = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(client, (payload) => {
-        if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === data.id) {
-            switch (payload.type) {
+        const event = asSseEvent(payload.data);
+        if (event?.componentId === data.id) {
+            switch (event.event) {
                 case 'playQueued':
                     setStatsData((old) => ({current: old.current + 1}));
                     break;
@@ -208,13 +215,13 @@ export const DeadLetterIndicatorStreamable = (props: { data: Pick<ComponentClien
 
     const client = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(client, (payload) => {
-        if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === data.id) {
-            switch (payload.type) {
+        const event = asSseEvent(payload.data);
+        if (event?.componentId === data.id) {
+            switch (event.event) {
                 case 'deadLetter':
                     setStatsData((old) => ({current: old.current, total: old.total + 1}));
                     break;
                 case 'deadLetterRemoved':
-                case 'removeDeadLetter':
                     setStatsData((old) => ({current: old.current, total: old.total - 1}));
                     break;
                 case 'deadLetterDequeued':
@@ -250,7 +257,7 @@ export const DateIndicatorStreamable = (props: Omit<ComponentProps<typeof DateIn
 
         const client = useSSEContext<MsSseEvent>();
         useSSEAnyEvent(client, (payload) => {
-            if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === id) {
+            if (asSseEvent(payload.data)?.componentId === id) {
                 // TODO update state from event
                 setCurrent(dayjs().toISOString());
             }
@@ -297,4 +304,66 @@ export const DateIndicator = (props: {
         return (
             <TextMuted textStyle="sm">{shortTodayAwareFormat(dayjs(usedDate))} {useActive? 'Last Active At' : 'Last Ready At'}</TextMuted>
         );
+}
+const JOBS_HELP = 'Import jobs that import from or export to this';
+
+export const JobsStatStatic = (props: { current: number } & Omit<ComponentProps<typeof StaticStat>, 'label'>) => {
+    const {current, ...rest} = props;
+    return <StaticStat label="Jobs" helpText={JOBS_HELP} {...rest}>{current}</StaticStat>;
+}
+
+/** Mount useJobEvents once on the page to keep it current */
+export const JobsStatStreamable = (props: { data: Pick<ComponentCommonApiJson, 'id'> } & Omit<ComponentProps<typeof JobsStatStatic>, 'current'>) => {
+    const {
+        data,
+        ...rest
+    } = props;
+    const current = useComponentJobCount(data.id);
+    if (current === undefined) {
+        return null;
+    }
+    return <JobsStatStatic current={current} {...rest}/>;
+}
+
+/**
+ * Plays import jobs created in a Client. Opens a popover with their details.
+ * Kept current by useClientJobPlaysEvents, which the page mounts once
+ * */
+export const JobPlaysStatStreamable = (props: { data: Pick<ComponentCommonApiJson, 'id' | 'mode'> } & ComponentProps<typeof Stat.Root>) => {
+    const {
+        data,
+        ...rest
+    } = props;
+    const isClient = data.mode === 'client';
+    const {data: summary} = useQuery({...tanQueries.mirrors.clientJobPlays(data.id), enabled: isClient});
+    if (!isClient || summary === undefined) {
+        return null;
+    }
+    return (
+        <Popover.Root lazyMount unmountOnExit positioning={{placement: 'bottom-start'}}>
+            <Popover.Trigger asChild>
+                <Box as="button" cursor="pointer" textAlign="start" alignSelf="flex-start" flexGrow={rest.flexGrow}>
+                    <Stat.Root size={{ smDown: "sm", base: "md" }} {...rest}>
+                        <Stat.Label><Span textDecoration="underline dashed 1px">Job Plays</Span></Stat.Label>
+                        <NumberValueText value={summary.total} abbreviate textWrapMode="nowrap"/>
+                    </Stat.Root>
+                </Box>
+            </Popover.Trigger>
+            <Portal>
+                <Popover.Positioner>
+                    <Popover.Content>
+                        <Popover.Arrow>
+                            <Popover.ArrowTip/>
+                        </Popover.Arrow>
+                        <Popover.Body>
+                            <Stack gap="2">
+                                <ClientJobPlaysCountsFetchable componentId={data.id}/>
+                                <Text textStyle="xs"><Badge size="xs" variant="solid" colorPalette="green">Tip</Badge> Cleanup Plays from Jobs in the Client <IconWrapper><EllipsisChakraIcon size="xs"/></IconWrapper> Menu</Text>
+                            </Stack>
+                        </Popover.Body>
+                    </Popover.Content>
+                </Popover.Positioner>
+            </Portal>
+        </Popover.Root>
+    );
 }

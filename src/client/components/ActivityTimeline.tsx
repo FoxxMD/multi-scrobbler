@@ -8,10 +8,11 @@ import { HiMiniMagnifyingGlass } from "react-icons/hi2";
 import { IoMdCodeDownload } from "react-icons/io";
 import { TbDatabaseEdit } from "react-icons/tb";
 import type {PlayApiCommonDetailed} from "../../core/Api";
-import { DEAD_QUEUE, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, QUEUE_STATUS_QUEUED, type ComponentType, type JsonPlayObject, type LifecycleStep, type PlayMatchResult, type ScrobbleResult } from "../../core/Atomic";
+import { DEAD_QUEUE, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, QUEUE_STATUS_QUEUED, type ComponentType, type LifecycleStep } from "../../core/Atomic";
+import type { JsonPlayObject, PlayMatchResult, ScrobbleResult } from "../../core/PlaySchema";
 import { sortByNewestDate } from "../../core/PlayUtils";
 import { capitalizeWords } from "../../core/StringUtils";
-import { shortTodayAwareFormat } from "../../core/TimeUtils";
+import { shortTodayAwareFormat } from "../utils/index";
 import { activityTransformHasIssue, timelineIconProps, TimelineItemSummaryText } from "../utils/ComponentUtils";
 import { ChakraCodeBlockShort } from "./CodeBlock";
 import { ErrorAlert } from "./ErrorAlert";
@@ -104,12 +105,12 @@ const NewItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen' | 'compone
                                 <Tabs.Root size="sm" variant="outline" defaultValue="play">
                                     <Tabs.List>
                                         <Tabs.Trigger value="play">Play</Tabs.Trigger>
-                                        {ogInput !== undefined ? <Tabs.Trigger value="source">Source Data</Tabs.Trigger> : null}
+                                        {ogInput ? <Tabs.Trigger value="source">Source Data</Tabs.Trigger> : null}
                                     </Tabs.List>
                                     <Tabs.Content value="play">
                                         <PlayData play={original} />
                                     </Tabs.Content>
-                                    {ogInput !== undefined ? (<Tabs.Content value="source">
+                                    {ogInput ? (<Tabs.Content value="source">
                                         <ChakraCodeBlockShort code={ogInput} />
                                     </Tabs.Content>) : null}
                                 </Tabs.Root>

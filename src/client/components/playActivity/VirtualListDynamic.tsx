@@ -4,7 +4,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import React, { type ComponentProps, useCallback, useMemo } from "react";
 import { LuCaptionsOff } from "react-icons/lu";
 import { ActivityCollapsible } from '../ActivityDetail.js';
-import { type ActivityLogProps, generateFlatItems, GroupHeader, type GroupInfo, isGroupHeader, isGroupInfo } from './ListParts.js';
+import { type ActivityLogProps, generateFlatItems, GroupHeader, type GroupInfo, isGroupInfo } from './ListParts.js';
 import type { PlayApiCommonDetailed } from '../../../core/Api.js';
 import { scrollShadowCss } from '../ScrollArea.js';
 

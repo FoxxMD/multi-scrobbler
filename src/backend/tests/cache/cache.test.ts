@@ -2,7 +2,7 @@ import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { before, describe, it } from 'mocha';
 import dayjs from "dayjs";
-import withLocalTmpDir from 'with-local-tmp-dir';
+import { createTmpDir } from '../utils/tmpDir.ts';
 import { initFileCache, initMemoryCache, initValkeyCache } from "../../common/Cache.ts";
 import { ListenProgressPositional, ListenProgressTS } from "../../sources/PlayerState/ListenProgress.ts";
 import { isPortReachableConnect } from "../../utils/NetworkUtils.ts";
@@ -50,34 +50,34 @@ describe('#Caching', function () {
 
         it('File cache serializes and deserializes dayjs', async function () {
 
-            await withLocalTmpDir(async () => {
-                // for some reason this *recreates* an empty cache after the test has finished (when running the full suite)
-                // i think its because of long persist interval compared to test time?
-                // 
-                // so:
-                // make intervals very small
-                // call destroy on both cache instances (shouldn't be necessary)
-                // sleep for longer than persist interal so tmp dir callback can (hopefully) properly delete any files
+            await using tmp = await createTmpDir('fileCacheDajys');
+            const dir = tmp.path;
+            // for some reason this *recreates* an empty cache after the test has finished (when running the full suite)
+            // i think its because of long persist interval compared to test time?
+            // 
+            // so:
+            // make intervals very small
+            // call destroy on both cache instances (shouldn't be necessary)
+            // sleep for longer than persist interal so tmp dir removal can (hopefully) properly delete any files
 
-                const [keyv, flat] = await initFileCache({ cacheDir: process.cwd(), persistInterval: 5, expirationInterval: 4 });
+            const [keyv, flat] = await initFileCache({ cacheDir: dir, persistInterval: 5, expirationInterval: 4 });
 
-                const now = dayjs();
+            const now = dayjs();
 
-                await keyv!.set('foo', now);
-                flat!.save(true);
-                keyv!.disconnect!();
+            await keyv!.set('foo', now);
+            flat!.save(true);
+            keyv!.disconnect!();
 
-                const [cleanKeyv, cleanFlat] = await initFileCache({ cacheDir: process.cwd(), persistInterval: 5, expirationInterval: 4 });
+            const [cleanKeyv, cleanFlat] = await initFileCache({ cacheDir: dir, persistInterval: 5, expirationInterval: 4 });
 
-                const time = await cleanKeyv!.get('foo');
+            const time = await cleanKeyv!.get('foo');
 
-                expect(time).to.not.be.undefined;
-                expect(time instanceof dayjs).is.true;
-                expect(now.toJSON()).eq((time as any).toJSON());
-                flat!.destroy();
-                cleanFlat!.destroy();
-                await sleep(10);
-            }, { unsafeCleanup: true, postfix: 'fileCacheDajys' });
+            expect(time).to.not.be.undefined;
+            expect(time instanceof dayjs).is.true;
+            expect(now.toJSON()).eq((time as any).toJSON());
+            flat!.destroy();
+            cleanFlat!.destroy();
+            await sleep(10);
         });
     });
 

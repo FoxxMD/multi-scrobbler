@@ -4,12 +4,13 @@ import type { CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket';
 import { WS } from 'iso-websocket'
 import { randomUUID } from "node:crypto";
 import pEvent from 'p-event';
-import type {ComponentAuthType, PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
+import type { ComponentAuthType, URLData } from "../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal } from "../../core/PlaySchema.ts";
 import { UpstreamError } from "../common/errors/UpstreamError.ts";
-import {
-    type FormatPlayObjectOptions,
-    type InternalConfig,
-    type PlayerStateDataMaybePlay,
+import type {
+    FormatPlayObjectOptions,
+    InternalConfig,
+    PlayerStateDataMaybePlay,
 } from "../common/infrastructure/Atomic.ts";
 import { COMPONENT_AUTH_TYPE, SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
 import type {MCAuthenticateRequest, MCAuthenticateResponse, MCPlaybackOverviewRequest, MCPlaybackOverviewResponse, MusikcubeSourceConfig} from "../common/infrastructure/config/source/musikcube.ts";

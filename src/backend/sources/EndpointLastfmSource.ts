@@ -1,11 +1,12 @@
 import dayjs from "dayjs";
 import type EventEmitter from "events";
-import { PARSED_FROM, type PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
-import {
-    type ExpressRequest,
-    type FormatPlayObjectOptions,
-    type InternalConfig,
-    type PlayerStateData} from "../common/infrastructure/Atomic.ts";
+import { PARSED_FROM, SOURCE_SOT } from "../../core/Atomic.ts";
+import type { PlayObject } from "../../core/PlaySchema.ts";
+import type {
+    ExpressRequest,
+    FormatPlayObjectOptions,
+    InternalConfig,
+    PlayerStateData} from "../common/infrastructure/Atomic.ts";
 import { NO_DEVICE, NO_USER } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import type {PlayPlatformId} from '../../core/Atomic.ts';

@@ -1,78 +1,75 @@
-import type { CompareOpKey, ComponentMinimalSelect } from "../backend/common/database/drizzle/drizzleTypes.ts"
-import { creditSchema, playTrackDataSchema, type ClientType, type ComponentAuthType, type MonitoringStatus, type QueueContext, type MusicServices, type Replace, creditBaseSchema, PLAY_STATES, trackSearchHash, albumSearchHash, artistSearchHash } from "./Atomic.ts"
-import type { LogEvent, SourceType, TrackData } from "./Atomic.ts"
-import type { ComponentType, DateLike, ErrorLike, JsonPlayObject, PlayState, QueueName, SOURCE_SOT_TYPES, SourcePlayerJson } from "./Atomic.ts"
+import { creditSchema, playTrackDataSchema, COMPONENT_AUTH_TYPE, componentTypeSchema, MONITORING_ORIGIN_SYSTEM, MONITORING_ORIGIN_USER, sourceSotTypes, PLAY_STATES, QUEUE_NAMES, QUEUE_STATUSES, queueContextSchema, type QueueStatus, type ClientType, creditBaseSchema, trackSearchHash, albumSearchHash, artistSearchHash } from "./Atomic.ts"
+import type { LogEvent, SourceType } from "./Atomic.ts"
+import type { DateLike, ErrorLike, PlayState, QueueName } from "./Atomic.ts"
+import type { DateSide } from "./PlaySchema.ts"
+import { playObjectInternalSchema, publicPlayDataSchema, publicPlayMetaSchema, sourcePlayerSchema, zDayjs, zDayjsStrict } from "./PlaySchema.ts"
 import type { Dayjs } from "dayjs"
 import type { ErrorIsh } from "./ErrorUtils.ts"
-import type { PlayEvent } from "./PlayEvent.ts"
+import { playEventSchema } from "./PlayEvent.ts"
 import * as z from "zod"
-import type { ElementOf, MarkOptional } from "ts-essentials";
 import type { ErrorObject } from "serialize-error";
 import { serializeError } from "serialize-error";
 
-export interface PlayApiCommon {
-    uid: string
-    componentId: number
-    state: PlayState
-    play: JsonPlayObject
-    compacted: boolean
-    playedAt: string
-    seenAt: string
-    updatedAt: string
-    parentUid?: string
-    // TODO add parent source type/name?
-}
+const errorLikeSchema = z.custom<ErrorLike>();
 
-export interface PlayInputApi {
-    id: number
-    data?: object
-    play?: JsonPlayObject
-    createdAt: string
-}
+export const playApiCommonSchema = z.object({
+    uid: z.string().meta({description: 'unique id for a Play'}),
+    componentId: z.int().nullable().meta({description: 'id of the Source/Client Play was created in'}),
+    state: z.enum(PLAY_STATES as [PlayState, ...PlayState[]]),
+    // loose so a Play's unknown (source specific) keys are still sent
+    play: playObjectInternalSchema,
+    /** dash-joined list of Play properties removed by retention compaction, IE 'input-transform' */
+    compacted: z.string().nullable().meta({description: "dash-joined list of Play properties removed by retention compaction, IE 'input-transform'"}),
+    playedAt: zDayjs.nullable(),
+    seenAt: zDayjs.nullable().meta({description: 'when the Source/Client created this Play, can be different than playedAt'}),
+    updatedAt: zDayjs,
+});
 
-export interface QueueStateApi {
-    id: number
-    queueName: string
-    queueStatus: string
-    retries: number
-    error?: ErrorLike
-    updatedAt: string
-    createdAt: string
-    context?: QueueContext
-}
+export const playInputApiSchema = z.object({
+    id: z.int(),
+    /** raw data the Play was built from */
+    data: z.custom<object>().nullable().meta({description: 'raw data the Play was built from'}),
+    play: playObjectInternalSchema.meta({description: 'the original play before any transforms were applied'}),
+    createdAt: zDayjs.nullable(),
+}).meta({id: 'PlayInput'});
 
-export interface PlayApiCommonDetailed extends PlayApiCommon {
-    error?: ErrorIsh
-    input?: PlayInputApi
-    queueStates: QueueStateApi[]
-    events: PlayEvent<string>[]
-}
+export const queueStateApiSchema = z.object({
+    id: z.int(),
+    queueName: z.string(),
+    queueStatus: z.enum(QUEUE_STATUSES as [QueueStatus, ...QueueStatus[]]),
+    retries: z.int(),
+    error: errorLikeSchema.nullable(),
+    updatedAt: zDayjs,
+    createdAt: zDayjs,
+    context: queueContextSchema.loose().meta({title: 'Queue Context'}).nullable(),
+}).meta({id: 'QueueState'});
 
-export type SerializablePlaySelect = Replace<MarkOptional<PlayApiCommonDetailed, 'queueStates'>, 'error', ErrorObject> & {queueStates?: Replace<ElementOf<PlayApiCommonDetailed['queueStates']>, 'error', ErrorObject | undefined>[]};
-export const asSerializablePlaySelect = (data: MarkOptional<PlayApiCommonDetailed, 'queueStates'>): SerializablePlaySelect => {
+export const playApiCommonDetailedSchema = playApiCommonSchema.extend({
+    error: errorLikeSchema.nullable(),
+    input: playInputApiSchema.optional(),
+    queueStates: queueStateApiSchema.array(),
+    events: playEventSchema.array().optional(),
+}).meta({id: 'PlayDetailed'});
+
+export type PlayApiCommon<D extends DateLike = string> = DateSide<D, typeof playApiCommonSchema>;
+export type PlayInputApi<D extends DateLike = string> = DateSide<D, typeof playInputApiSchema>;
+export type QueueStateApi<D extends DateLike = string> = DateSide<D, typeof queueStateApiSchema>;
+export type PlayApiCommonDetailed<D extends DateLike = string> = DateSide<D, typeof playApiCommonDetailedSchema>;
+
+const serializeIfError = <E>(e: E) => e instanceof Error ? serializeError(e) : e;
+
+/** Serialize Errors so they survive JSON.stringify */
+export const asSerializablePlaySelect = <T extends Partial<Pick<PlayApiCommonDetailed<DateLike>, 'error' | 'queueStates'>>>(data: T): T => {
   const {
     error,
-    queueStates = [],
+    queueStates,
     ...rest
   } = data;
-
-  const qMapped = queueStates.map((x) => {
-    const {
-      error: e,
-      ...restQ
-    } = x;
-    return {
-      ...restQ,
-      error: e instanceof Error ? serializeError(e) : e
-    }
-  });
-
   return {
     ...rest,
-    // @ts-expect-error
-    error: error instanceof Error ? serializeError(error) : error,
-    queueStates: qMapped
-  }
+    error: serializeIfError(error),
+    queueStates: queueStates?.map(x => ({...x, error: serializeIfError(x.error)}))
+  } as T;
 }
 
 export type ComponentState = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -105,67 +102,81 @@ export const componentStateToFriendly = (state: ComponentState) => {
     }
 }
 
-export type ComponentCommonApi = {
-    type: SourceType | ClientType
-    name: string
+const errorIshSchema = z.custom<ErrorIsh>();
+
+export const componentCommonApiSchema = z.object({
+    id: z.int(),
+    uid: z.string(),
+    mode: componentTypeSchema,
+    type: z.custom<SourceType | ClientType>(),
+    name: z.string(),
     /** General state of the component like Idle, Stopped, Running, Error */
-    state: ComponentState
+    state: z.literal([1, 2, 3, 4, 5, 6, 7]).meta({description: 'General state of the component like Idle, Stopped, Running, Error'}),
     /** More specific, live activity state like "sleeping", "hydrating historical scrobbles", "processing dead scrobbles", etc... */
-    status?: string
-    players: Record<string, SourcePlayerJson>
-    errors?: ErrorIsh[]
-    warnings?: ErrorIsh[]
-    monitoringStatus?: MonitoringStatus
-    deadLetterPlays: number
-    deadLetterPlaysTotal: number
-    queued: number
-} & Omit<ComponentMinimalSelect, 'type' | 'userId'>
+    status: z.string().optional().meta({description: 'More specific, live activity state like "sleeping", "hydrating historical scrobbles", "processing dead scrobbles", etc...'}),
+    players: z.record(z.string(), sourcePlayerSchema),
+    errors: errorIshSchema.array().optional(),
+    warnings: errorIshSchema.array().optional(),
+    monitoringStatus: z.object({
+        monitoring: z.boolean(),
+        origin: z.enum([MONITORING_ORIGIN_USER, MONITORING_ORIGIN_SYSTEM]),
+    }).optional(),
+    deadLetterPlays: z.int(),
+    deadLetterPlaysTotal: z.int(),
+    queued: z.int(),
+    /** number of discovered/scrobbled plays found in real time */
+    countLive: z.int().meta({description: 'number of discovered/scrobbled plays found in real time'}),
+    /** number of discovered/scrobbled plays from backlog/jobs */
+    countNonLive: z.int().meta({description: 'number of discovered/scrobbled plays from backlog/jobs'}),
+    /** seconds of discovered plays (sources only) */
+    listenedLive: z.int().meta({description: 'seconds of discovered plays (sources only)'}),
+    createdAt: zDayjsStrict.optional(),
+    lastReadyAt: zDayjsStrict.optional(),
+    lastActiveAt: zDayjsStrict.optional(),
+});
+export type ComponentCommonApiJson = z.input<typeof componentCommonApiSchema>;
 
-/** Maps Dayjs (including nullable/optional Dayjs) properties to string, preserving optionality */
-// nullable Dayjs fields are emitted as undefined (key omitted) when missing, so allow undefined as well as null
-type DayjsJsonVal<V> = Dayjs extends V ? Exclude<V, Dayjs> | string | (null extends V ? undefined : never) : V;
-type DayjsToJson<T> = { [K in keyof T]: DayjsJsonVal<T[K]> };
+export const componentHistoricalApiSchema = z.object({
+    synced: z.boolean(),
+    syncedReason: z.string().nullable().optional(),
+    syncError: errorIshSchema.nullable().optional(),
+    lastImport: zDayjsStrict.optional(),
+    lastImportSuccess: zDayjsStrict.optional(),
+});
+export type ComponentHistoricalApiJson = z.input<typeof componentHistoricalApiSchema>;
 
-export type ComponentCommonApiJson = DayjsToJson<ComponentCommonApi>;
+const componentDetailedApiSchema = componentCommonApiSchema.extend({
+    hasAuth: z.boolean(),
+    hasAuthInteraction: z.boolean(),
+    authed: z.boolean(),
+    authType: z.enum(Object.values(COMPONENT_AUTH_TYPE)),
+    initialized: z.boolean(),
+}).extend(componentHistoricalApiSchema.partial().shape);
 
-export type ComponentHistoricalApi = {
-    synced: boolean
-    syncedReason: string | null | undefined
-    syncError: ErrorIsh | null | undefined
-    lastImport: Dayjs | undefined
-    lastImportSuccess: Dayjs | undefined
-}
+export const componentClientApiSchema = componentDetailedApiSchema.extend({
+    mode: z.literal('client'),
+    tracksScrobbled: z.int(),
+    supportsNowPlaying: z.boolean(),
+    players: z.record(z.string(), sourcePlayerSchema.extend({
+        /** when a now playing that is not realtime is cleared */
+        expiration: zDayjsStrict.optional().meta({description: 'when a now playing that is not realtime is cleared'}),
+    })),
+}).meta({id: 'Client', title: 'Client'});
+export type ComponentClientApiJson = z.input<typeof componentClientApiSchema>;
 
-export type ComponentDetailedApi = ComponentCommonApi & {
-    hasAuth: boolean;
-    hasAuthInteraction: boolean;
-    authed: boolean
-    authType: ComponentAuthType
-    initialized: boolean
-}
-
-export type ComponentCientApiBase = {
-    tracksScrobbled: number
-    supportsNowPlaying: boolean
-    players: Record<string, SourcePlayerJson & {expiration?: string}>
-}
-
-export type ComponentClientApi = ComponentDetailedApi & ComponentCientApiBase & Partial<ComponentHistoricalApi>;
-export type ComponentClientApiJson = DayjsToJson<ComponentClientApi>;
-
-export type ComponentSourceApiBase = {
-    sot: SOURCE_SOT_TYPES
-    supportsUpstreamRecentlyPlayed: boolean;
-    tracksDiscovered: number;
-    wakeAt?: string
-    sleeping: boolean
-}
-
-export type ComponentSourceApi = ComponentDetailedApi & ComponentSourceApiBase & Partial<ComponentHistoricalApi>;
-export type ComponentSourceApiJson = DayjsToJson<ComponentSourceApi>;
+export const componentSourceApiSchema = componentDetailedApiSchema.extend({
+    mode: z.literal('source'),
+    sot: z.enum(sourceSotTypes),
+    supportsUpstreamRecentlyPlayed: z.boolean(),
+    tracksDiscovered: z.int(),
+    wakeAt: zDayjsStrict.optional(),
+    sleeping: z.boolean(),
+}).meta({id: 'Source', title: 'Source'});
+export type ComponentSourceApiJson = z.input<typeof componentSourceApiSchema>;
 
 export type SubsonicSourceApiJson = ComponentSourceApiJson & { playbackReporting?: boolean }
 
+export const componentsApiSchema = z.discriminatedUnion('mode', [componentSourceApiSchema, componentClientApiSchema]);
 export type ComponentsApiJson = ComponentSourceApiJson | ComponentClientApiJson;
 
 export const isComponentSourceApiJson = (data: ComponentCommonApiJson): data is ComponentSourceApiJson => {
@@ -175,25 +186,83 @@ export const isComponentClientApiJson = (data: ComponentCommonApiJson): data is 
     return data.mode === 'client';
 }
 
-export type MsSseEventPayload<T extends object = Record<string, any>> = {
-    type: SourceType | ClientType
-    name: string
-    componentId: number
-    from: ComponentType
-    data: T
-    event: string
-}
+/** Partial Component data sent when some of its API data changed */
+export const componentUpdateDataSchema = componentSourceApiSchema.omit({mode: true})
+    .extend(componentClientApiSchema.omit({mode: true}).shape)
+    .partial()
+    .meta({title: 'Component Update'});
 
-export type MsSseEvent = {
-    playerUpdate: MsSseEventPayload<SourcePlayerJson>
-    discovered: MsSseEventPayload
-    scrobbleQueued: MsSseEventPayload
-    scrobbleDequeued: MsSseEventPayload
-    componentUpdate: MsSseEventPayload<ComponentCommonApiJson>
-    playInsert: MsSseEventPayload<PlayApiCommonDetailed>
-    playUpdate: MsSseEventPayload<Partial<PlayApiCommonDetailed>>
-    log: LogEvent
-}
+/** Sent with every SSE event, identifies the Source/Client it came from */
+const sseEventBaseSchema = z.object({
+    type: z.custom<SourceType | ClientType>(),
+    name: z.string(),
+    componentId: z.int(),
+    from: componentTypeSchema,
+});
+const countEvent = <K extends string>(event: K, title: string, description: string) =>
+    sseEventBaseSchema.extend({event: z.literal(event), data: z.object({})}).meta({title, description});
+
+/**
+ * Events sent to /api/events, as the SSE event's data. The SSE event name is the same as `event`.
+ *
+ * Log events (opted in with PUT /api/events/:tab/logs) are sent separately, see LogEvent.
+ * */
+export const sseEventSchema = z.discriminatedUnion('event', [
+    sseEventBaseSchema.extend({event: z.literal('playInsert'), data: playApiCommonDetailedSchema}).meta({title: 'Play Insert', description: 'A Play was created'}),
+    sseEventBaseSchema.extend({event: z.literal('playUpdate'), data: playApiCommonDetailedSchema.partial().required({uid: true})}).meta({title: 'Play Update', description: 'Some of a Play\'s data changed'}),
+    sseEventBaseSchema.extend({event: z.literal('playDelete'), data: z.object({uid: z.string()})}).meta({title: 'Play Delete', description: 'A Play was deleted'}),
+    sseEventBaseSchema.extend({event: z.literal('playerUpdate'), data: componentClientApiSchema.shape.players.valueType}).meta({title: 'Player Update', description: 'A Player was created or changed'}),
+    sseEventBaseSchema.extend({event: z.literal('playerDelete'), data: z.object({platformId: z.string()})}).meta({title: 'Player Delete', description: 'A Player was removed'}),
+    sseEventBaseSchema.extend({event: z.literal('componentUpdate'), data: componentUpdateDataSchema}).meta({title: 'Component Update', description: 'Some of a Source/Client\'s data changed'}),
+    countEvent('scrobble', 'Scrobbled', 'A Client scrobbled a Play'),
+    countEvent('discovered', 'Discovered', 'A Source discovered a Play'),
+    countEvent('playQueued', 'Play Queued', 'A Play was added to the queue'),
+    countEvent('playDequeued', 'Play Dequeued', 'A Play was removed from the queue'),
+    countEvent('deadLetter', 'Play Failed', 'A Play failed processing'),
+    countEvent('deadLetterRemoved', 'Failed Play Removed', 'A failed Play was removed (discarded or no longer failed)'),
+    countEvent('deadQueued', 'Failed Play Queued', 'A failed Play was queued to be retried'),
+    countEvent('deadLetterDequeued', 'Failed Play Dequeued', 'A failed Play was removed from the retry queue'),
+]).meta({id: 'SseEvent'});
+
+export type SseEvent = z.input<typeof sseEventSchema>;
+export type SseEventName = SseEvent['event'];
+export type SseEventData<K extends SseEventName> = Extract<SseEvent, {event: K}>['data'];
+
+/**
+ * Import job events sent to /api/events. Only sent to sessions of the job's owner.
+ * `data` is a partial Job (see GET /api/jobs/:id), with only the fields that changed.
+ * */
+export const jobSseEventSchema = z.discriminatedUnion('event', [
+    z.object({event: z.literal('jobUpdate'), jobId: z.int(), data: z.record(z.string(), z.unknown())}).meta({title: 'Job Update', description: "Some of a Job's data changed"}),
+    z.object({event: z.literal('jobDeleted'), jobId: z.int(), data: z.object({})}).meta({title: 'Job Deleted', description: 'A Job was deleted'}),
+]).meta({id: 'JobSseEvent'});
+export type JobSseEvent = z.input<typeof jobSseEventSchema>;
+
+/**
+ * Mirror and job play cleanup events sent to /api/events.
+ * Mirror events only go to sessions of the mirror's owner. Client events go to everyone, like other Client events.
+ * */
+export const cleanupSseEventSchema = z.discriminatedUnion('event', [
+    z.object({event: z.literal('mirrorUpdate'), mirrorId: z.int(), data: z.record(z.string(), z.unknown())}).meta({title: 'Mirror Update', description: "Some of a Mirror's data changed. `task: null` with `taskResult` => a cleanup finished"}),
+    z.object({event: z.literal('mirrorDeleted'), mirrorId: z.int(), data: z.object({})}).meta({title: 'Mirror Deleted', description: 'A Mirror was deleted'}),
+    z.object({event: z.literal('playsPurged'), componentId: z.int(), data: z.object({})}).meta({title: 'Plays Purged', description: "Many of a Client's plays were compacted or deleted at once. Reload its play lists"}),
+    z.object({event: z.literal('clientJobPlaysUpdate'), componentId: z.int(), data: z.record(z.string(), z.unknown())}).meta({title: 'Client Job Plays Update', description: "Progress of a cleanup of a Client's job plays. `task: null` with `taskResult` => finished"}),
+]).meta({id: 'CleanupSseEvent'});
+export type CleanupSseEvent = z.input<typeof cleanupSseEventSchema>;
+export const CLEANUP_SSE_EVENTS = ['mirrorUpdate', 'mirrorDeleted', 'playsPurged', 'clientJobPlaysUpdate'] as const;
+
+export const asCleanupSseEvent = (data: unknown): CleanupSseEvent | undefined =>
+    data !== null && typeof data === 'object' && 'event' in data && (CLEANUP_SSE_EVENTS as readonly unknown[]).includes(data.event) ? data as CleanupSseEvent : undefined;
+
+/** SSE event name to event data, for the SSE client */
+export type MsSseEvent = {[K in SseEventName]: Extract<SseEvent, {event: K}>} & {[K in JobSseEvent['event']]: Extract<JobSseEvent, {event: K}>} & {[K in CleanupSseEvent['event']]: Extract<CleanupSseEvent, {event: K}>} & {log: LogEvent};
+
+export const asJobSseEvent = (data: unknown): JobSseEvent | undefined =>
+    data !== null && typeof data === 'object' && 'event' in data && 'jobId' in data ? data as JobSseEvent : undefined;
+
+/** Narrow the data of any received SSE event. Log events have no componentId/event */
+export const asSseEvent = (data: unknown): SseEvent | undefined =>
+    data !== null && typeof data === 'object' && 'event' in data && 'componentId' in data ? data as SseEvent : undefined;
 
 export type SortPlaysBy = 'played' | 'seen';
 export interface SortPlaysByProps {
@@ -204,58 +273,81 @@ export type PlayStateUI = PlayState | 'failed TBR';
 export type QueryPlaysOptsJsonRefreshable = Omit<QueryPlaysOptsJson, 'state'> & {nonce?: string, state?: PlayStateUI[]};
 
 
-export type QueryPlaysOptsJson = {
-    sort?: "playedAt" | "seenAt";
-    order?: "asc" | "desc";
-    with?: ("input" | "parent" | "parent-input" | "queues")[];
-    limit?: number;
-    offset?: number;
-    state?: ("queued" | "discovered" | "discarded" | "scrobbled" | "failed" | "duped" | "review")[];
-    stateNot?: ("queued" | "discovered" | "discarded" | "scrobbled" | "failed" | "duped" | "review")[];
-    componentId?: number;
-    seenAt?: {
-        type: "eq" | "ne" | "gt" | "gte" | "lt" | "lte";
-        date: string;
-    } | {
-        type: "between";
-        range: [string, string];
-        inclusive?: boolean;
-    };
-    playedAt?: {
-        type: "eq" | "ne" | "gt" | "gte" | "lt" | "lte";
-        date: string;
-    } | {
-        type: "between";
-        range: [string, string];
-        inclusive?: boolean;
-    };
-queues?: {
-        queueName: QueueName;
-        queueStatus: ('queued' | 'failed' | 'completed')[] | ('queued' | 'failed' | 'completed');
-    }[];
-    uid?: string[];
-    text?: string[];
-}
-export interface PaginatedQueryResponse {
-    limit: number;
-    offset: number;
-    total?: number;
-}
+/** Query string values are always strings so numbers are coerced */
+const zQueryInt = z.coerce.number<number>().int();
+/** boolean in a JSON body, 'true'/'false' in a query string */
+const zQueryBool = z.union([z.boolean(), z.stringbool()]);
+
+export const compareDateSchema = z.discriminatedUnion('type', [
+    z.object({
+        type: z.enum(['eq', 'ne', 'gt', 'gte', 'lt', 'lte']),
+        date: zDayjsStrict,
+    }).meta({title: 'Date Comparison'}),
+    z.object({
+        type: z.literal('between'),
+        range: z.tuple([zDayjsStrict, zDayjsStrict]),
+        /** include the range boundaries, defaults to true */
+        inclusive: zQueryBool.optional().meta({description: 'include the range boundaries, defaults to true'}),
+    }).meta({title: 'Date Range'}),
+]);
+export type CompareDateOp<D extends DateLike = Dayjs> = DateSide<D, typeof compareDateSchema>;
+export type CompareDateSingle<D extends DateLike = Dayjs> = Exclude<CompareDateOp<D>, {type: 'between'}>;
+export type CompareDateBetween<D extends DateLike = Dayjs> = Extract<CompareDateOp<D>, {type: 'between'}>;
+
+const playStateEnum = z.enum(PLAY_STATES as [PlayState, ...PlayState[]]);
+const queueStatusEnum = z.enum(QUEUE_STATUSES as [QueueStatus, ...QueueStatus[]]);
+
+export const queueCriteriaSchema = z.object({
+    queueName: z.enum(QUEUE_NAMES as [QueueName, ...QueueName[]]),
+    queueStatus: z.union([queueStatusEnum, queueStatusEnum.array()]),
+    /** only match queue states with retries less than or equal to this */
+    retries: zQueryInt.optional().meta({description: 'only match queue states with retries less than or equal to this'}),
+});
+
+export const playWhereOptsSchema = z.object({
+    state: playStateEnum.array().optional(),
+    stateNot: playStateEnum.array().optional(),
+    componentId: zQueryInt.optional(),
+    /** null => only plays not created by an import job */
+    // 'null' because a query string can't carry null
+    jobId: z.union([z.null(), z.literal('null').transform(() => null), zQueryInt]).optional().meta({description: "Import job that created the plays. null (or 'null' in a query string) => only plays not created by a job"}),
+    seenAt: compareDateSchema.optional(),
+    playedAt: compareDateSchema.optional(),
+    queues: queueCriteriaSchema.array().optional(),
+    uid: z.string().array().optional(),
+    /** match text in track title, artists or album name */
+    text: z.string().array().optional().meta({description: 'match text in track title, artists or album name'}),
+});
+
+export const WITH_PLAY_RELATIONS = ['input', 'parent', 'parent-input', 'queues', 'events', 'children'] as const;
+
+export const queryPlaysOptsSchema = playWhereOptsSchema.extend({
+    sort: z.enum(['seenAt', 'playedAt']).optional(),
+    order: z.enum(['asc', 'desc']).optional(),
+    with: z.enum(WITH_PLAY_RELATIONS).array().optional(),
+    limit: zQueryInt.optional(),
+    offset: zQueryInt.optional(),
+});
+
+/** Plays query from an API request. The Component comes from the route, never the request. */
+export const queryPlaysRequestSchema = queryPlaysOptsSchema.omit({componentId: true});
+
+export type QueryPlaysOptsJson = z.input<typeof queryPlaysRequestSchema>;
+
+export const paginatedQueryResponseSchema = z.object({
+    limit: z.int(),
+    offset: z.int(),
+    total: z.int().optional(),
+});
+export type PaginatedQueryResponse = z.infer<typeof paginatedQueryResponseSchema>;
+export const paginatedResponseSchema = <T extends z.ZodType>(item: T) => z.object({
+    data: item.array(),
+    meta: paginatedQueryResponseSchema,
+});
 export interface PaginatedResponse<T> {
     data: T[];
     meta: PaginatedQueryResponse;
 }
-
-export type CompareDateBetween<D extends DateLike = Dayjs> = {
-    type: 'between';
-    range: [D, D];
-    inclusive?: boolean;
-};
-
-export type CompareDateSingle<D extends DateLike = Dayjs> = {
-    type: CompareOpKey<D>;
-    date: D;
-};
 
 export type CacheClearType = 'external-api' | 'transforms';
 
@@ -422,57 +514,61 @@ export type ArtistSearchSimpleRequestQuery = z.infer<typeof artistSearchSimpleRe
 
 export const EXTERNAL_ART_URL_REGEX = new RegExp(/api\/components\/\d+\/art/);
 
-export interface ComponentStat {
-    count: number;
-    types?: (SourceType | ClientType)[];
-}
+export const componentStatSchema = z.object({
+    count: z.int(),
+    types: z.custom<SourceType | ClientType>().array().optional(),
+});
+export type ComponentStat = z.infer<typeof componentStatSchema>;
 
-export interface PublicDashboardData {
+/** The parts of a public Play shown on the public dashboard */
+export const dashboardPlaySchema = z.object({
+    data: publicPlayDataSchema.pick({track: true, artists: true, albumArtists: true, album: true, duration: true, listenedFor: true, repeat: true}),
+    /** `source` is the type of the component the Play came from (spotify, jellyfin...), never its name */
+    meta: publicPlayMetaSchema.pick({source: true, musicService: true, url: true})
+        .meta({description: '`source` is the type of the component the Play came from (spotify, jellyfin...), never its name'}),
+}).meta({id: 'DashboardPlay', title: 'Dashboard Play'});
+export type DashboardPlay = z.infer<typeof dashboardPlaySchema>;
+
+export const publicDashboardDataSchema = z.object({
     /** Total count of successfuly scrobbed Plays from all components for a user.
      * 
      * This is equivalent to the sum of the `countLive` property on all `client` type drizzle entities */
-    scrobbles?: number;
+    scrobbles: z.int().optional().meta({description: 'Total count of successfuly scrobbed Plays from all components for a user'}),
     /** Total count of discovered Plays from all components for a user.
      * 
      * This is equivalent to the sum of the `countLive` property on all `source` type drizzle entities */
-    plays?: number;
+    plays: z.int().optional().meta({description: 'Total count of discovered Plays from all components for a user'}),
     /** Total number of seconds for all discovered Plays for all components for a user.
      * 
      * This uses `listenedFor` on a Play if present, otherwise falls back to full `duration`, or the Play is skipped during summation. */
-    listened?: number;
+    listened: z.number().optional().meta({description: 'Total number of seconds for all discovered Plays for all components for a user. Uses listenedFor on a Play if present, otherwise duration'}),
     /** Data about all `source` type components for a User
      * 
      * * `count` is the total number of components
      * * `types` is an array of unique component types
      **/
-    sources?: ComponentStat;
+    sources: componentStatSchema.optional().meta({description: 'Data about all source type components for a User: count is the total number of components, types is an array of unique component types'}),
     /** Data about all `client` type components for a User
      * 
      * * `count` is the total number of components
      * * `types` is an array of unique component types
      **/
-    clients?: ComponentStat;
+    clients: componentStatSchema.optional().meta({description: 'Data about all client type components for a User: count is the total number of components, types is an array of unique component types'}),
     /** A list of unique, recently scrobbled Plays.
      * 
      * Unique in that they all have distinct PlayData, rather than the same Discovered Play sent to 3x clients (but its all the same data)
      **/
-    recent?: PublicPlay[]
-    /** The currently playing Play, null when nothing is playing. undefined = Now Playing is not enabled
-     *
-     * `meta.source` is the type of the component it came from (spotify, jellyfin...), never its name
-     * */
-    nowPlaying?: PublicPlay | null
-}
+    recent: dashboardPlaySchema.array().optional().meta({description: 'A list of unique, recently scrobbled Plays (distinct PlayData, rather than the same Discovered Play sent to many clients)'}),
+    /** The currently playing Play, null when nothing is playing. undefined = Now Playing is not enabled */
+    nowPlaying: dashboardPlaySchema.nullable().optional().meta({description: 'The currently playing Play, null when nothing is playing. Not present when Now Playing is not enabled'}),
+});
+export type PublicDashboardData = z.infer<typeof publicDashboardDataSchema>;
 
 /** A Source or client that can be picked as the public dashboard's Now Playing (publicDashboardSettings.nowPlaying) */
-export interface NowPlayingOption {
-    from: 'source' | 'client'
-    uid: string
-    name: string
-    type: string
-}
-
-export type PublicPlay = {
-    data: TrackData & Pick<JsonPlayObject['data'], 'listenedFor' | 'repeat'>,
-    meta: Pick<JsonPlayObject['meta'], 'source' | 'musicService' | 'url'>,
-}
+export const nowPlayingOptionSchema = z.object({
+    from: componentTypeSchema,
+    uid: z.string(),
+    name: z.string(),
+    type: z.string(),
+}).meta({description: "A Source or client that can be picked as the public dashboard's Now Playing"});
+export type NowPlayingOption = z.infer<typeof nowPlayingOptionSchema>;

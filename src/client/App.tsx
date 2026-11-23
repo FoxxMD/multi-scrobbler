@@ -14,6 +14,10 @@ import { ComponentDetailedRoutable } from './components/msComponent/MSComponentD
 import { MSComponentListFetchable } from './components/msComponent/MSComponentList';
 import { Provider } from './components/Provider';
 import { SettingsContainer } from './components/settings/settings';
+import { JobListFetchable } from './components/jobs/JobList';
+import { JobDetailRoutable } from './components/jobs/JobDetail';
+import { JobCreateFetchable } from './components/jobs/JobCreate';
+import { MirrorDetailRoutable, MirrorListFetchable } from './components/mirrors/Mirrors';
 import { Toaster } from './components/Toaster';
 import { AuthGate, LoginForm, LogOut, SetPasswordForm } from './components/auth/Auth';
 import { useHasAccess } from './auth/authClient';
@@ -81,6 +85,26 @@ const routesNested: RouteObject[] = [
         {
             path: "components/:componentId",
             element: <Container boxSize="full" p="0" maxWidth="8xl"><MSErrorBoundary><ComponentDetailedRoutable/></MSErrorBoundary></Container>
+        },
+        {
+            path: "jobs",
+            element: <MSErrorBoundary><JobListFetchable/></MSErrorBoundary>
+        },
+        {
+            path: "jobs/new",
+            element: <MSErrorBoundary><JobCreateFetchable/></MSErrorBoundary>
+        },
+        {
+            path: "jobs/:jobId",
+            element: <MSErrorBoundary><JobDetailRoutable/></MSErrorBoundary>
+        },
+        {
+            path: "mirrors",
+            element: <MSErrorBoundary><MirrorListFetchable/></MSErrorBoundary>
+        },
+        {
+            path: "mirrors/:mirrorId",
+            element: <MSErrorBoundary><MirrorDetailRoutable/></MSErrorBoundary>
         },
         {
             path: "login",

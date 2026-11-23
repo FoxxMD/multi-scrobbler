@@ -10,6 +10,7 @@ import {markdownTable} from 'markdown-table'
 import { sourceAIOConfigSchema } from "../common/infrastructure/config/source/sources.ts";
 import { sourceConfigSchemaMapAsync } from "../common/infrastructure/config/source/sourcesMap.ts";
 import { clientAIOConfigSchema } from "../common/infrastructure/config/client/clients.ts";
+import { blackboxNowPlayingPayloadSchema, blackboxScrobblePayloadSchema } from "../common/infrastructure/config/client/blackbox.ts";
 
 mkdirSync(resolve(projectRootDir, 'docsite/public/schemas'), {recursive: true});
 
@@ -61,9 +62,16 @@ for(const [k,v] of clientEntries) {
     writeFileSync(resolve(projectRootDir, `docsite/public/schemas/${k}-client.json`), JSON.stringify(generateSchema(z.array(fileSchema))));
 
     const envSchema = envSchemas;
-    const common = generateCommonComponentEnvConfigSchema(envSchema.prefix.toUpperCase());
-    const commonCol = zodObjectToTableColumns(z.object(common.shape), 'out');
-    const col = [...commonCol,...zodObjectToTableColumns(z.object(envSchema.env.shape), envSchemas.pipe ?? 'out')]
+    const common = generateCommonComponentEnvConfigSchema(envSchema.prefix.toUpperCase(), 'client');
+    // scrobble interval is listed after the client-specific vars
+    const intervalKey = `${envSchema.prefix.toUpperCase()}_SCROBBLE_INTERVAL` as const;
+    const {[intervalKey]: scrobbleInterval, ...commonShape} = common.shape;
+    const commonCol = zodObjectToTableColumns(z.object(commonShape), 'out');
+    const col = [
+        ...commonCol,
+        ...zodObjectToTableColumns(z.object(envSchema.env.shape), envSchemas.pipe ?? 'out'),
+        ...zodObjectToTableColumns(z.object({[intervalKey]: scrobbleInterval}), 'out'),
+    ]
     const tableContent = markdownTable([
         ['Environmental Variable', 'Type', 'Default', 'Description'],
         ...mdCols(col)
@@ -93,3 +101,6 @@ const aioStrongConfigSchema = aioConfigSchema.extend({
 })
 
 writeFileSync(resolve(projectRootDir, 'docsite/public/schemas/aio.json'), JSON.stringify(generateSchema(aioStrongConfigSchema, 'ref')));
+
+writeFileSync(resolve(projectRootDir, 'docsite/public/schemas/blackbox-payload-scrobble.json'), JSON.stringify(generateSchema(blackboxScrobblePayloadSchema)));
+writeFileSync(resolve(projectRootDir, 'docsite/public/schemas/blackbox-payload-nowPlaying.json'), JSON.stringify(generateSchema(blackboxNowPlayingPayloadSchema)));

@@ -13,6 +13,7 @@ import starlightOpenAPI, { openAPISidebarGroups } from 'starlight-openapi';
 import AutoImport from 'astro-auto-import';
 import starlightChangelogs, { makeChangelogsSidebarLinks } from 'starlight-changelogs';
 import starlightHeadingBadges from 'starlight-heading-badges'
+import starlightAnnouncement from 'starlight-announcement'
 import { changelogsBase, changelogsEnabled } from './plugins/changelogs.mjs';
 import { satteriBaseLinks } from './plugins/satteriBaseLinks.mjs';
 import { satteriGithubAlerts } from './plugins/satteriGithubAlerts.mjs';
@@ -135,11 +136,36 @@ export default defineConfig({
           },
         ]),
         starlightChangelogs(),
-        starlightHeadingBadges()
+        starlightHeadingBadges(),
+        starlightAnnouncement({
+          announcements: [
+          {
+            id: 'lfm-key-pre',
+            content: 'Last.fm is disabling API Keys for non-paid accounts December 1st.',
+            variant: 'caution',
+            link: {
+              text: 'Learn More',
+              href: `/configuration/clients/lastfm`,
+            },
+            endDate: '2026-11-30',
+          },
+          {
+            id: 'lfm-key-post',
+            content: 'Last.fm has disabled API Keys for non-paid accounts, beginning December 1st.',
+            variant: 'caution',
+            link: {
+              text: 'Learn More',
+              href: `/configuration/clients/lastfm`,
+            },
+            startDate: '2026-11-30',
+            endDate: '2026-12-15',
+          },
+          ],
+        })
       ],
       sidebar: [
         ...rootSidebar(fileURLToPath(new URL('./src/content/docs', import.meta.url)), [
-          { label: 'Config Playground', link: '/playground/', order: 5.5 },
+          { label: 'Config Playground', link: '/playground/', order: 5.6 },
           ...openAPISidebarGroups.map((group) => ({ ...group, order: 7.5 })),
         ], {
           updating: changelogsEnabled

@@ -7,8 +7,7 @@ import { capitalize } from "../../../../../core/StringUtils.ts";
 import { getConfigByTableName, type TableName } from "../schema/schema.ts";
 import assert from 'node:assert';
 import type { Cacheable } from "cacheable";
-import type { DateLike } from "../../../../../core/Atomic.ts";
-import type { CompareDateBetween, CompareDateSingle } from "../../../../../core/Api.ts";
+import type { CompareDateOp } from "../../../../../core/Api.ts";
 
 export interface DrizzleRepositoryOpts {
     logger?: Logger
@@ -16,7 +15,6 @@ export interface DrizzleRepositoryOpts {
     componentId?: number
 }
 
-export type CompareDateOp<D extends DateLike = Dayjs> = CompareDateSingle<D> | CompareDateBetween<D>;
 export interface ComponentConstrainedRepoOpts {
     componentId?: number
 }

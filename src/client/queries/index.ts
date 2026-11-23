@@ -5,9 +5,10 @@ import ky, { type Options } from 'ky';
 import qs from 'qs';
 import { baseUrl } from "../utils";
 import {type AlbumSearchResult, type ArtistSearchResult, type TrackSearchResult, type MetadataSearchStreamLine, type MetadataSearchError, type MetadataResultServiceScore, NDJSON_MEDIA_TYPE, type ComponentsApiJson, type PaginatedResponse, type PlayApiCommonDetailed, type QueryPlaysOptsJson, type QueryPlaysOptsJsonRefreshable, type TrackDataCreditBase, type ArtistSearchSimpleRequestQuery, artistSearchSimpleRequestQuerySchema, trackDataCreditBaseSchema, type TrackSearchSimpleRequestQuery, trackSearchSimpleRequestQuerySchema, type AlbumSearchSimpleRequestQuery, albumSearchSimpleRequestQuerySchema, type PublicDashboardData, type NowPlayingOption } from "../../core/Api";
-import { type SourcePlayerJson } from "../../core/Atomic";
+import type { SourcePlayerJson } from "../../core/PlaySchema";
 import type { UserSettingKey, UserSettingResponse, UserSettingValue } from "../../core/UserSettings";
 import { queryPlayOptsRefreshableToJson } from "../utils/ComponentUtils";
+import type { ClientJobPlaysSummaryJson, JobApiJson, JobOptionsApiJson, MirrorApiJson } from "../../core/Job";
 const components = createQueryKeys('components', {
     list: () => ({
         queryKey: ['components'],
@@ -181,7 +182,37 @@ const userSettings = createQueryKeys('userSettings', {
 export const putUserSetting = <K extends UserSettingKey>(key: K, value: UserSettingValue<K>) =>
   ky.put(`user/me/setting/${key}`, { baseUrl, json: { value } }).json<UserSettingResponse<K>>();
 
-export const tanQueries = mergeQueryKeys(components, activities, players, logs, metadata, dashboard, userSettings);
+const jobs = createQueryKeys('jobs', {
+  list: () => ({
+    queryKey: ['all'],
+    queryFn: () => ky.get('jobs', { baseUrl }).json<JobApiJson[]>()
+  }),
+  detail: (jobId: number) => ({
+    queryKey: [jobId],
+    queryFn: () => ky.get(`jobs/${jobId}`, { baseUrl }).json<JobApiJson>()
+  }),
+  options: () => ({
+    queryKey: ['options'],
+    queryFn: () => ky.get('jobs/options', { baseUrl }).json<JobOptionsApiJson>()
+  })
+});
+
+const mirrors = createQueryKeys('mirrors', {
+  list: () => ({
+    queryKey: ['list'],
+    queryFn: () => ky.get('mirrors', { baseUrl }).json<MirrorApiJson[]>()
+  }),
+  detail: (mirrorId: number) => ({
+    queryKey: [mirrorId],
+    queryFn: () => ky.get(`mirrors/${mirrorId}`, { baseUrl }).json<MirrorApiJson>()
+  }),
+  clientJobPlays: (componentId: number) => ({
+    queryKey: ['clientJobPlays', componentId],
+    queryFn: () => ky.get(`components/${componentId}/job-plays/summary`, { baseUrl }).json<ClientJobPlaysSummaryJson>()
+  }),
+});
+
+export const tanQueries = mergeQueryKeys(components, activities, players, logs, metadata, dashboard, userSettings, jobs, mirrors);
 
 export const useQueryState = (queryKey: Readonly<unknown[]>) => {
   const queryClient = useQueryClient()

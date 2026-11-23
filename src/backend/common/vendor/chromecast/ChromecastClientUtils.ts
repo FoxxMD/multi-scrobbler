@@ -1,6 +1,6 @@
 import { stripCredits } from "../../../../core/MusicMetadata.ts";
 import type { Media, MediaController, Result } from "@foxxmd/chromecast-client";
-import type {PlayObject} from "../../../../core/Atomic.ts";
+import type { PlayObject } from "../../../../core/PlaySchema.ts";
 import { REPORTED_PLAYER_STATUSES } from '../../../../core/Atomic.ts';
 import type {ReportedPlayerStatus} from '../../../../core/Atomic.ts';
 import type {PlatformApplication, PlatformType} from "./interfaces.ts";

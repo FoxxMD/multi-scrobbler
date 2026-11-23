@@ -1,3 +1,4 @@
+import { getRoot } from "../../ioc.ts";
 import { loggerTest, childLogger } from "@foxxmd/logging";
 import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
@@ -11,7 +12,8 @@ import type {WebhookPayload} from "../../common/infrastructure/config/health/web
 import NativeTransformer from "../../common/transforms/NativeTransformer.ts";
 import { initMemoryCache } from "../../common/Cache.ts";
 import { Cacheable } from "cacheable";
-import type {LifecycleStep, PlayMatchResult, PlayObject, QueueContext} from "../../../core/Atomic.ts";
+import type { LifecycleStep, QueueContext } from "../../../core/Atomic.ts";
+import type { PlayMatchResult, PlayObject } from "../../../core/PlaySchema.ts";
 import TransformerManager from "../../common/transforms/TransformerManager.ts";
 import type AbstractTransformer from "../../common/transforms/AbstractTransformer.ts";
 import { transientCache } from "../utils/TransientTestUtils.ts";
@@ -337,6 +339,35 @@ describe('Play Transforms', function () {
                     const play = generatePlay({ track: nameToCredit('My coolsomething track') });
                     const {play: transformed} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
                     expect(transformed.data.track?.name).equal('My cool track');
+                });
+
+                it('Uses given stages instead of the hook rules', async function () {
+                    component.config = {
+                        id: componentId(),
+                        options: {
+                            playTransform: {
+                                postCompare: {
+                                    type: 'user',
+                                    title: ['something']
+                                }
+                            }
+                        }
+                    }
+                    await component.buildTransformRules();
+                    const tm = getRoot().items.transformerManager;
+                    const coolStages = [await tm.parseTransformerConfig({type: 'user', title: ['cool']})];
+                    const trackStages = [await tm.parseTransformerConfig({type: 'user', title: ['track']})];
+
+                    const play = generatePlay({ track: nameToCredit('My coolsomething track') });
+                    const {play: cool} = await component.transformPlay(play, TRANSFORM_HOOK.postCompare, {stages: coolStages});
+                    expect(cool.data.track?.name).equal('My something track');
+                    // same play, different stages => not served from the first result's cache
+                    const {play: track} = await component.transformPlay(play, TRANSFORM_HOOK.postCompare, {stages: trackStages});
+                    expect(track.data.track?.name).equal('My coolsomething');
+                    // a hook without rules on the component still runs given stages
+                    const somethingStages = [await tm.parseTransformerConfig({type: 'user', title: ['something']})];
+                    const {play: pre} = await component.transformPlay(play, TRANSFORM_HOOK.preCompare, {stages: somethingStages});
+                    expect(pre.data.track?.name).equal('My cool track');
                 });
 
                 it('Transforms consecutively when hook is present with multiple values', async function () {

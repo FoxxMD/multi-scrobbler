@@ -1,5 +1,5 @@
 import { Icon, Tabs, DataList, List } from '@chakra-ui/react';
-import type {PlayMatchResult} from "../../core/Atomic";
+import type { PlayMatchResult } from "../../core/PlaySchema";
 import { PlayData } from "./play/PlayData";
 import { LuCheck, LuX } from "react-icons/lu";
 import { formatNumber } from "../../core/DataUtils";

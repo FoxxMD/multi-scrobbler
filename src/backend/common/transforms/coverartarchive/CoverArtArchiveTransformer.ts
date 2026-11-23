@@ -1,4 +1,5 @@
-import { type Credit, type LifecycleInput, type OptionalCacheUsage, type PlayObject } from "../../../../core/Atomic.ts";
+import type { Credit, LifecycleInput, OptionalCacheUsage } from "../../../../core/Atomic.ts";
+import type { PlayObject } from "../../../../core/PlaySchema.ts";
 import type {WebhookPayload} from "../../infrastructure/config/health/webhooks.ts";
 import type {ApplyTerm} from "../../../../core/Transform.ts";
 import AtomicPartsTransformer from "../AtomicPartsTransformer.ts";

@@ -1,4 +1,5 @@
-import {NO_DEVICE, type PlayObject} from "../../../../core/Atomic.ts";
+import { NO_DEVICE } from "../../../../core/Atomic.ts";
+import type { PlayObject } from "../../../../core/PlaySchema.ts";
 import { isEmptyArrayOrUndefined } from "../../../utils.ts";
 import { removeUndefinedKeys } from '../../../../core/DataUtils.ts';
 import { getScrobbleTsSOCDate } from "../../../utils/TimeUtils.ts";
@@ -99,7 +100,9 @@ export const playToListenPayload = (play: PlayObject, options: PlayToListenPaylo
         origin_url: msAdditionalInfo.origin_url,
         isrc: creditIsrc(play.data.track) ?? msAdditionalInfo.isrc,
         tracknumber: brainz.trackNumber ?? msAdditionalInfo.tracknumber,
-        duration_played: play.data.listenedFor !== undefined ? Math.floor(play.data.listenedFor) : undefined
+        // listenbrainz expects this to be a non-zero, positive integer
+        // so if we have listenedFor but its 0 or less than , then omit this field so LZ doesn't return a 400
+        duration_played: play.data.listenedFor !== undefined && Math.floor(play.data.listenedFor) !== 0 ? Math.floor(play.data.listenedFor) : undefined
     };
     if(includePlayPosition && play.meta.trackProgressPosition !== undefined) {
         addInfo.position_ms = play.meta.trackProgressPosition * 1000;

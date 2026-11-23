@@ -44,6 +44,7 @@ A dockerized app that monitors your music listening activity from *everywhere* a
     * [Yamaha MusicCast](https://docs.multi-scrobbler.app/configuration/sources/yamaha-musiccast)
     * [Youtube Music](https://docs.multi-scrobbler.app/configuration/sources/youtube-music)
 * Supports scrobbling to many [**Clients**](https://docs.multi-scrobbler.app/configuration/clients)
+    * [Blackbox](https://docs.multi-scrobbler.app/configuration/clients/blackbox)
     * [Discord](https://docs.multi-scrobbler.app/configuration/clients/discord) (Now Playing)
     * [Koito](https://docs.multi-scrobbler.app/configuration/clients/koito)
     * [Last.fm](https://docs.multi-scrobbler.app/configuration/clients/lastfm)

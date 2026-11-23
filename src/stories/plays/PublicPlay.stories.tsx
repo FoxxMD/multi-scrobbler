@@ -1,18 +1,15 @@
 import preview from "../../../.storybook/preview.js";
 import React from 'react';
 
-import { PlayData } from "../../client/components/play/PlayData.js";
 import {Provider} from "../../client/components/Provider.js";
 import { Container } from '@chakra-ui/react';
-import { generateArtistCredits, generateJsonPlay, withBrainz } from "../../core/tests/utils/PlayTestUtils.js"
-import clone from "clone";
+import { generateArtistCredits, generateJsonPlay, generatePlay, withBrainz } from "../../core/tests/utils/PlayTestUtils.js"
 import { asJsonPlayObject } from '../../core/PlayMarshalUtils.js';
-import type {JsonPlayObject} from "../../core/Atomic.js";
+import type { JsonPlayObject } from "../../core/PlaySchema.js";
 import { PublicPlayData } from "../../client/components/PublicDashboard.js";
 
 type PropsAndCustomArgs = React.ComponentProps<typeof PublicPlayData> & {
   includeAlbumArtists?: boolean;
-  defaultFinal?: boolean
   brainz?: boolean
   play: JsonPlayObject
 };
@@ -32,8 +29,6 @@ decorators: [
 args: {
     play: generateJsonPlay(),
     includeAlbumArtists: false,
-    showCodeToggle: true,
-    defaultFinal: true,
     brainz: true,
   },
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
@@ -43,23 +38,13 @@ args: {
 export const PublicPlayStory = meta.story({
   render: function Render(args) {
 
-    if(args.defaultFinal && args.final === undefined) {
-      const final = clone(args.play);
-      final.data.track = {...final.data.track, name: `${final.data.track?.name} (Album Version)`};
-      args.final = final;
-    }
-    
     if(args.includeAlbumArtists && (args.play.data.albumArtists === undefined || args.play.data.albumArtists.length === 0)) {
       const aa = generateArtistCredits(undefined, 2, {mbidVal: true});
       args.play.data.albumArtists = aa;
-      if(args.final !== undefined) {
-        args.final.data.albumArtists = aa;
-      }
     }
 
     if(args.brainz) {
-      // @ts-ignore
-      args.play = asJsonPlayObject(withBrainz(args.play, {include: ['album','recording','track','artist']}));
+      args.play = withBrainz(args.play, {include: ['album','recording','track','artist']});
     }
 
     delete args.play.data.playDate;
@@ -72,7 +57,7 @@ export const PublicPlayStory = meta.story({
 
 export const PlayPlayDenseStory = meta.story({
   render: (args) => {
-    const bigPlay = asJsonPlayObject(withBrainz(generateJsonPlay({
+    const bigPlay = asJsonPlayObject(withBrainz(generatePlay({
       artists: generateArtistCredits(4,4, {mbidVal: true}),
       albumArtists: generateArtistCredits(undefined, 2, {mbidVal: true})
     }), {include: ['album','recording','track','artist']}));

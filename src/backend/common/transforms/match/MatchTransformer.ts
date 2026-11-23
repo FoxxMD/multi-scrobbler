@@ -1,4 +1,5 @@
-import type { PlayObject, OptionalCacheUsage } from "../../../../core/Atomic.ts";
+import type { OptionalCacheUsage } from "../../../../core/Atomic.ts";
+import type { PlayObject } from "../../../../core/PlaySchema.ts";
 import type { SearchTerm } from "../../../../core/Transform.ts"
 import { getPlayPartTester, type SuppliedPlayPartTesters, testWhenConditions } from "../../../utils/PlayTransformUtils.ts";
 import { StagePrerequisiteError } from "../../errors/MSErrors.ts";

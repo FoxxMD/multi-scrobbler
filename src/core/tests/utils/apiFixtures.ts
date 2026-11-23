@@ -1,7 +1,8 @@
 import { faker } from "@faker-js/faker";
-import type {AlbumSearchResult, ArtistSearchResult, ComponentClientApi, ComponentClientApiJson, ComponentCommonApi, ComponentCommonApiJson, ComponentHistoricalApi, ComponentSourceApi, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi, TrackSearchResult} from "../../Api.ts";
-import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ComponentType, type JsonPlayObject, type PlayObject, QUEUE_STATUSES, type SourcePlayerJson, sourceSotTypes, type MBID, type Credit, type MusicServices, musicServiceName, type LifecycleStep } from "../../Atomic.ts";
-import { generateArtist, generateISRC, generateMbid, generatePlay, normalizePlays } from "./PlayTestUtils.ts";
+import type {MsSseEvent, SseEventData, SseEventName, AlbumSearchResult, ArtistSearchResult, ComponentClientApiJson, ComponentCommonApiJson, ComponentHistoricalApiJson, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi, TrackSearchResult} from "../../Api.ts";
+import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ErrorLike, type ComponentType, QUEUE_STATUSES, sourceSotTypes, type MBID, type Credit, type MusicServices, musicServiceName, type LifecycleStep } from "../../Atomic.ts";
+import type { JsonPlayObject, PlayObject, SourcePlayerJson } from "../../PlaySchema.ts";
+import { generateISRC, generateMbid, generatePlay, normalizePlays } from "./PlayTestUtils.ts";
 import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.ts";
 import { asJsonPlayObject } from "../../PlayMarshalUtils.ts";
 import { generatePlayUid } from "../../StringUtils.ts";
@@ -14,7 +15,6 @@ import { isClientType } from '../../Atomic.ts';
 import { CALCULATED_PLAYER_STATUSES } from '../../Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../Atomic.ts';
 import { generateArray } from "../../DataUtils.ts";
-import type {ErrorIsh} from "../../ErrorUtils.ts";
 import { serializeError } from "serialize-error";
 import { stripIndents } from "common-tags";
 import { SimpleError } from "../../../backend/common/errors/MSErrors.ts";
@@ -35,14 +35,14 @@ export const generatePlayApiCommon = (commonData: Partial<PlayApiCommon> & {play
         playedAt = typeof play.data.playDate === 'string' ? play.data.playDate : play.data.playDate!.toISOString(),
         seenAt = playedAt,
         updatedAt = dayjs().toISOString(),
-        compacted = false,
+        compacted = null,
         state = randomPlayState(),
         componentId = faker.number.int({min: 1, max: 10}),
         uid = generatePlayUid()
     } = commonData;
 
     return {
-        play: asJsonPlayObject(play),
+        play: typeof play.data.playDate === 'string' ? play as JsonPlayObject : asJsonPlayObject(play as PlayObject),
         ...rest,
         playedAt,
         seenAt,
@@ -56,19 +56,12 @@ export const generatePlayApiCommon = (commonData: Partial<PlayApiCommon> & {play
 
 export const generatePlayInputApi = (inputData: Partial<PlayInputApi> = {}, ...args: Parameters<typeof generatePlayInput>): PlayInputApi => {
     const res = generatePlayInput(...args);
-    let createdAt: string = dayjs().toISOString();
-    if(res.play?.data?.playDate !== undefined) {
-        if(typeof res.play?.data?.playDate === 'string') {
-            createdAt = res.play?.data?.playDate;
-        } else {
-            createdAt = res.play?.data?.playDate.toISOString();
-        }
-    }
+    const createdAt: string = (res.play?.data?.playDate ?? dayjs()).toISOString();
     return {
         id: faker.number.int({min: 1, max: 100}),
         createdAt,
-        data: res.data,
-        play: res.play !== undefined ? asJsonPlayObject(res.play) : undefined,
+        data: res.data ?? null,
+        play: asJsonPlayObject(res.play ?? generatePlay()),
         ...inputData }
 }
 
@@ -81,6 +74,8 @@ export const generateQueueStateApi = (data: Partial<QueueStateApi>): QueueStateA
         updatedAt: cAt,
         retries: 0,
         createdAt: cAt,
+        error: null,
+        context: null,
         ...data
     }
 }
@@ -91,7 +86,7 @@ export const generatePlayApiCommonDetailed = (opts: {
     queueOpts?: Parameters<typeof generateQueueStateApi>
     /** Transform steps, added as a transform event */
     steps?: LifecycleStep[]
-} = {}, error?: ErrorIsh): PlayApiCommonDetailed => {
+} = {}, error: ErrorLike | null = null): PlayApiCommonDetailed => {
     const {
         playOpts = [],
         inputOpts = [],
@@ -120,12 +115,12 @@ export const generatePlayApiCommonDetailed = (opts: {
 
 const statusSamples = ['Sleeping 💤', 'Processing Queue', '⚠️ Authentication Failed', 'Updating Now Playing', 'Monitoring Players', '⚠️  Upstream error'];
 
-export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi> = {}): ComponentCommonApiJson => {
+export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApiJson> = {}): ComponentCommonApiJson => {
     const {
         type = faker.helpers.arrayElement([...sourceTypes, ...clientTypes]),
-        createdAt = dayjs(),
-        lastActiveAt = dayjs(),
-        lastReadyAt = dayjs(),
+        createdAt = dayjs().toISOString(),
+        lastActiveAt = dayjs().toISOString(),
+        lastReadyAt = dayjs().toISOString(),
         state = faker.number.int({min: 1, max: 7}) as ComponentState,
         monitoringStatus = { monitoring: faker.datatype.boolean({probability: 0.1}), origin: 'system' },
         players = {},
@@ -149,9 +144,9 @@ export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi>
         id: faker.number.int({min: 1, max: 100}),
         uid: generatePlayUid(),
         name: `${faker.word.adjective()} ${faker.word.noun()}`,
-        createdAt: createdAt!.toISOString(),
-        lastActiveAt: lastActiveAt!.toISOString(),
-        lastReadyAt: lastReadyAt!.toISOString(),
+        createdAt,
+        lastActiveAt,
+        lastReadyAt,
         type,
         mode,
         countLive: faker.number.int({min: 0, max: 2000}),
@@ -169,14 +164,14 @@ export const generateComponentCommonApiJson = (data: Partial<ComponentCommonApi>
     }
 }
 
-export const generateHistoricalPlayApi = (data: Partial<ComponentHistoricalApi> = {}): ComponentHistoricalApi => {
+export const generateHistoricalPlayApi = (data: Partial<ComponentHistoricalApiJson> = {}): ComponentHistoricalApiJson => {
     let isSynced;
     if(data.synced !== undefined) {
         isSynced = data.synced;
     } else if(data.syncedReason !== undefined || data.syncError !== undefined) {
         isSynced = false;
     }
-    const importDate = dayjs(faker.date.recent().toISOString());
+    const importDate = faker.date.recent().toISOString();
     if(isSynced) {
         return {
             synced: true,
@@ -197,7 +192,7 @@ export const generateHistoricalPlayApi = (data: Partial<ComponentHistoricalApi> 
     }
 }
 
-export const generateSourceApiJson = (data: Partial<ComponentSourceApi> = {}): ComponentSourceApiJson => {
+export const generateSourceApiJson = (data: Partial<ComponentSourceApiJson> = {}): ComponentSourceApiJson => {
     const {
         mode,
         type = faker.helpers.arrayElement(sourceTypes),
@@ -218,6 +213,7 @@ export const generateSourceApiJson = (data: Partial<ComponentSourceApi> = {}): C
         lastImport: undefined,
         lastImportSuccess: undefined,
         ...common,
+        mode: 'source',
         sot,
         supportsUpstreamRecentlyPlayed,
         tracksDiscovered,
@@ -231,7 +227,7 @@ export const generateSourceApiJson = (data: Partial<ComponentSourceApi> = {}): C
     }
 }
 
-export const generateClientApiJson = (data: Partial<ComponentClientApi> = {}): ComponentClientApiJson => {
+export const generateClientApiJson = (data: Partial<ComponentClientApiJson> = {}): ComponentClientApiJson => {
     const {
         mode,
         type = faker.helpers.arrayElement(clientTypes),
@@ -248,6 +244,7 @@ export const generateClientApiJson = (data: Partial<ComponentClientApi> = {}): C
         lastImport: undefined,
         lastImportSuccess: undefined,
         ...common,
+        mode: 'client',
         tracksScrobbled: common.countLive,
         players,
         supportsNowPlaying: Object.keys(players).length > 0,
@@ -259,14 +256,14 @@ export const generateClientApiJson = (data: Partial<ComponentClientApi> = {}): C
     }
 }
 
-export const generateComponentApiJson = (data: Partial<ComponentCommonApi> = {}): ComponentClientApiJson | ComponentSourceApiJson => {
+export const generateComponentApiJson = (data: Partial<ComponentCommonApiJson> = {}): ComponentClientApiJson | ComponentSourceApiJson => {
     const {
         mode: modeData,
         type: typeData
     } = data;
 
-    let mode!: ComponentCommonApi['mode'],
-    type!: ComponentCommonApi['type'];
+    let mode!: ComponentCommonApiJson['mode'],
+    type!: ComponentCommonApiJson['type'];
 
     if(modeData === undefined && typeData === undefined) {
         mode = faker.helpers.arrayElement(['source', 'client']);
@@ -280,9 +277,9 @@ export const generateComponentApiJson = (data: Partial<ComponentCommonApi> = {})
     }
 
     if(mode === 'source') {
-        return generateSourceApiJson({mode, type, ...data});
+        return generateSourceApiJson({...data, mode, type});
     }
-    return generateClientApiJson({mode, type, ...data});
+    return generateClientApiJson({...data, mode, type});
 }
 
 export const generateSourcePlayerJson = (data: Partial<SourcePlayerJson> = {}, opts: {art?: boolean, position?: boolean, status?: boolean} = {}): SourcePlayerJson => {
@@ -664,3 +661,9 @@ const placeholderImage = (size: [number, number?], foregroundColor?: string, bac
     return stripIndents`
 https://placehold.co/${size[0]}${size[1] !== undefined ? `x${size[1]}` : ''}/${fore}/${back}`
 }
+/** An SSE message as sent by /api/events, for msw's sse client.send() */
+export const generateSseMessage = <K extends SseEventName>(event: K, data: SseEventData<K>, componentId: number = 1) => ({
+    event,
+    data: {event, data, componentId, type: 'spotify', name: 'test', from: 'source'},
+// distributes over K so a union of event names gives a union of messages
+}) as {[E in K]: {event: E, data: MsSseEvent[E]}}[K];

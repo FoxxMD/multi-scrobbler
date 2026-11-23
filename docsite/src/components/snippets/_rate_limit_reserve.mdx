@@ -1,0 +1,43 @@
+Your PDS limits how much your account can write by using a points system.
+
+<details>
+
+<summary>Tell me more...</summary>
+
+A new record (scrobble) costs 3 points, an update costs 2 points, and a delete costs 1 point. All apps that write to your account use the same points. Examples are Bluesky posts and likes, and other scrobblers.
+
+A Bluesky PDS allows 5000 points each hour and 35000 points each day for each account. Other PDS servers can use different limits. Multi-Scrobbler reads the limit from the responses of your PDS, so it works with each limit.
+
+</details>
+
+The **rate limit reserve** is the number of points that Multi-Scrobbler keeps free for your other apps. When your PDS reports that this number of points or fewer is left:
+
+* The Client stops scrobbling and Now Playing updates. Its state changes to Idle, and its status shows the time when it resumes. Queued Plays stay in the queue.
+* An [Export](/transfer/overview) to the Client waits. The Job page shows the points that are used and the point where the Export waits.
+* At the reset time of the limit, the Client and the Export start again automatically.
+
+Set the reserve in the `options` of the Client configuration, or with ENV:
+
+| Option | ENV | Default | Points to keep free when... |
+|---|---|---|---|
+| `rateLimitReserve` | <code>{props.env}_RATE_LIMIT_RESERVE</code> | `1000` | the Client scrobbles |
+| `exportRateLimitReserve` | <code>{props.env}_EXPORT_RATE_LIMIT_RESERVE</code> | `1000` | a Job exports to the Client |
+
+On a Bluesky PDS, use a reserve of 1500 or lower.
+
+If your PDS does not send rate limit headers, Multi-Scrobbler does not pause.
+
+```json5 label="file" title="Example File or AIO Config"
+[
+  {
+    // ...your Client configuration
+    "configureAs": "client",
+    "data": { /* ... */ },
+    // [!code focus:4]
+    "options": {
+      "rateLimitReserve": 1000,  // [!ref] Live scrobbling pauses with a generous buffer so other activities (Bluesky likes, posts, etc..) aren't interrupted.
+      "exportRateLimitReserve": 1500 // [!ref] Exports pause before live scrobbling.
+    }
+  }
+]
+```

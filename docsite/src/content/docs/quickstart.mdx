@@ -8,6 +8,7 @@ sidebar:
 
 import {LocalStorageText} from '@site/src/components/Storage/Text';
 import { Badge } from '@astrojs/starlight/components';
+import Handle from "@site/src/components/snippets/_atmosphere_id.mdx";
 
 This guide will get you up and running with multi-scrobbler using [Docker](https://www.docker.com/) and [`docker compose`](https://docs.docker.com/compose/). At the end of the guide you will have:
 
@@ -138,6 +139,9 @@ services:
         [Restart multi-scrobbler](#start-multi-scrobbler) to create the new Source. You may wish to refer to the [User and Library defaults/filtering](/configuration/sources/plex) in the Plex Source docs for a more granular setup.
     </TabItem>
     <TabItem value="lastfm" label="Last.fm">
+
+        <Badge text="Warning!" size="small" variant="caution" /> [**Last.fm is ending free API Keys!**](/configuration/clients/lastfm)
+
         If you are already scrobbling to Last.fm and wish to mirror your scrobbling activity to one or more other [Clients](#setup-clients), use this Source.
         
         If, instead, you want to scrobble **from** multi-scrobbler **to** Last.fm then see the Last.fm tab in the [Setup Clients](#setup-clients) section below.
@@ -282,21 +286,28 @@ Modify the `lastfm.json` file you created in the [Setup Sources](#setup-sources)
         :::
 
     </TabItem>
-    <TabItem value="lastfm" label="Last.fm">
-        [Register for an API account at Last.fm.](https://www.last.fm/api/account/create)
+    <TabItem value="teal" label="Teal.fm">
+        [**teal.fm**](https://teal.fm/) is a social discovery and browsing app for scrobbles stored in your [**Atmosphere Account**](https://atmosphereaccount.com/).
 
-        Use the following for **Callback URL**:
+        Navigate to the Account settings for your Atmosphere account on your respective PDS and create a new **App Password**.
 
-        ```text placeholder="http://YOUR_MS_DOMAIN:9078"
-        http://YOUR_MS_DOMAIN:9078/lastfm/callback
-        ```
+        <DetailsAdmo type="tip" summary="Determining Your Atmosphere Handle/Identifier">
+        <Handle/>
+        </DetailsAdmo>
 
-        After account creation use the displayed information and add these values to the `environment` section in the [`docker-compose.yml` you created for multi-scrobbler earlier.](#create-docker-compose-file)
+        If you don't know what a PDS is or how to find this, just use Bluesky:
 
-        ```yaml title="~/msData/docker-compose.yml"
-        - LASTFM_API_KEY=myApiKey
-        - LASTFM_SECRET=myApiSecret
-        - LASTFM_ID=myLfmClient
+        * Sign in to [Bluesky](https://bsky.app) with your Atmosphere Account
+        * Navigate to https://bsky.app/settings/app-passwords
+          * Settings -> Privacy and Security -> App passwords
+        * Create a new **App Password** and save it somewhere, it will not be shown again
+
+        Add/Substitute values above into these examples values and add them to the `environment` section in the [`docker-compose.yml` you created for multi-scrobbler earlier.](#create-docker-compose-file)
+
+        ```yaml placeholder="myToken,alice.bsky.social,xxxx-xxxx-xxxx-xxxx" title="~/msData/docker-compose.yml"
+        - TEALFM_ID=myTeal
+        - TEALFM_IDENTIFIER=alice.bsky.social
+        - TEALFM_APP_PW=xxxx-xxxx-xxxx-xxxx
         ```
     </TabItem>
     <TabItem value="maloja" label="Maloja">
@@ -328,6 +339,25 @@ Modify the `lastfm.json` file you created in the [Setup Sources](#setup-sources)
         - MALOJA_URL=http://192.168.0.100:42010
         - MALOJA_API_KEY=myApiKey
         - MALOJA_ID=myMaloja
+        ```
+    </TabItem>
+    <TabItem value="lastfm" label="Last.fm">
+        <Badge text="Warning!" size="small" variant="caution" /> [**Last.fm is ending free API Keys!**](/configuration/clients/lastfm)
+        
+        [Register for an API account at Last.fm.](https://www.last.fm/api/account/create)
+
+        Use the following for **Callback URL**:
+
+        ```text placeholder="http://YOUR_MS_DOMAIN:9078"
+        http://YOUR_MS_DOMAIN:9078/lastfm/callback
+        ```
+
+        After account creation use the displayed information and add these values to the `environment` section in the [`docker-compose.yml` you created for multi-scrobbler earlier.](#create-docker-compose-file)
+
+        ```yaml title="~/msData/docker-compose.yml"
+        - LASTFM_API_KEY=myApiKey
+        - LASTFM_SECRET=myApiSecret
+        - LASTFM_ID=myLfmClient
         ```
     </TabItem>
 </Tabs>

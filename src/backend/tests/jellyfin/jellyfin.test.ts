@@ -3,7 +3,7 @@ import { loggerTest } from "@foxxmd/logging";
 import { expect } from 'chai';
 import EventEmitter from "events";
 import { describe, it } from 'mocha';
-import type {JsonPlayObject, PlayMeta} from "../../../core/Atomic.ts";
+import type { JsonPlayObject, PlayMeta } from "../../../core/PlaySchema.ts";
 
 import JellyfinApiSource from "../../sources/JellyfinApiSource.ts";
 import validSessionJson from './validSession.json' with { type: "json" };

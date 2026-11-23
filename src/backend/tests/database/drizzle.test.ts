@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { getDb, migrateDb, getDbMigrationStatus, type DbConcrete } from '../../common/database/drizzle/drizzleUtils.ts';
-import withLocalTmpDir from 'with-local-tmp-dir';
+import { createTmpDir } from '../utils/tmpDir.ts';
 import { components, playEvents, playInputs, plays, queueStates } from '../../common/database/drizzle/schema/schema.ts';
 import dayjs from 'dayjs';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
@@ -27,63 +27,65 @@ import { projectRootDir } from "../../common/infrastructure/Atomic.ts";
 describe('Migrations', function () {
 
     it('Detects non-existent db', async function () {
+        // file backed sqlite db can be slow on a busy disk
+        this.timeout(10000);
 
-        await withLocalTmpDir(async () => {
-            const [db, isNew] = await getMigratedDb(getDbPath('notreal', process.cwd()));
-            expect(isNew).is.true;
-            db.$client.close();
-        }, {postfix: 'noDb'});
+        await using tmp = await createTmpDir('noDb');
+        const dir = tmp.path;
+        const [db, isNew] = await getMigratedDb(getDbPath('notreal', dir));
+        expect(isNew).is.true;
+        db.$client.close();
 
     });
 
     it('Detects abnormal db', async function () {
 
-        await withLocalTmpDir(async () => {
         // database exists but there is no __drizzle_migrations table
         const db = await getDb(':memory:');
         const {backupRequired} = await getDbMigrationStatus(db);
         expect(backupRequired).is.true;
         db.$client.close();
-        }, { unsafeCleanup: true, postfix: 'badDb' });
 
     });
 
     it('Detects pending migrations', async function () {
+        // spawns drizzle-kit which can be slow to start on a busy machine
+        this.timeout(10000);
 
         const allFiles = await fs.readdir(path.resolve(projectRootDir, 'src/backend/common/database/drizzle/migrations'));
         const migrationFiles = allFiles
             .sort();
 
-        await withLocalTmpDir(async () => {
+        await using tmp = await createTmpDir('pendingMigrations');
+        const dir = tmp.path;
 
-            // copy first migration
-            await fs.mkdir('migrations');
-            try {
-                await fs.cp(path.resolve(projectRootDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
-                const mf = path.resolve('./migrations');
-                const db = await getDb(':memory:');
-                await migrateDb(db, { migrationsFolder: mf });
-                const res = await x('drizzle-kit', [
-                    'generate',
-                    '--name',
-                    'newMigration',
-                    '--out',
-                    `${mf}`,
-                    '--custom',
-                    '--schema',
-                    path.resolve(projectRootDir, 'src/backend/common/database/drizzle/schema'),
-                    '--dialect',
-                    'sqlite'
-                ], {throwOnError: true});
-                const {backupRequired, pending} = await getDbMigrationStatus(db, { migrationsFolder: mf });
-                expect(backupRequired).is.true;
-                expect(pending).length(1);
-                expect(pending[0]).includes('newMigration');
-                db.$client.close();
-            } catch (e) {
-                throw e;
-            }
-        }, { unsafeCleanup: true, postfix: 'pendingMigrations' });
+        // copy first migration
+        await fs.mkdir(path.join(dir, 'migrations'));
+        try {
+            await fs.cp(path.resolve(projectRootDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve(dir, 'migrations', migrationFiles[0]), { recursive: true });
+            const mf = path.resolve(dir, 'migrations');
+            const db = await getDb(':memory:');
+            await migrateDb(db, { migrationsFolder: mf });
+            const res = await x('drizzle-kit', [
+                'generate',
+                '--name',
+                'newMigration',
+                '--out',
+                `${mf}`,
+                '--custom',
+                '--schema',
+                path.resolve(projectRootDir, 'src/backend/common/database/drizzle/schema'),
+                '--dialect',
+                'sqlite'
+            ], {throwOnError: true, nodeOptions: {cwd: dir}});
+            const {backupRequired, pending} = await getDbMigrationStatus(db, { migrationsFolder: mf });
+            expect(backupRequired).is.true;
+            expect(pending).length(1);
+            expect(pending[0]).includes('newMigration');
+            db.$client.close();
+        } catch (e) {
+            throw e;
+        }
     });
 
     it('Detects no pending migrations correctly', async function () {
@@ -92,66 +94,68 @@ describe('Migrations', function () {
         const migrationFiles = allFiles
             .sort();
 
-        await withLocalTmpDir(async () => {
+        await using tmp = await createTmpDir('noMigrations');
+        const dir = tmp.path;
 
-            // copy first migration
-            await fs.mkdir('migrations');
-            try {
-                await fs.cp(path.resolve(projectRootDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
-                const mf = path.resolve('./migrations');
-                const db = await getDb(':memory:');
-                await migrateDb(db, { migrationsFolder: mf });
-                const {backupRequired, pending} = await getDbMigrationStatus(db, { migrationsFolder: mf });
-                expect(backupRequired).is.false;
-                expect(pending).length(0);
-                db.$client.close();
-            } catch (e) {
-                throw e;
-            }
-        }, { unsafeCleanup: true, postfix: 'noMigrations' });
+        // copy first migration
+        await fs.mkdir(path.join(dir, 'migrations'));
+        try {
+            await fs.cp(path.resolve(projectRootDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve(dir, 'migrations', migrationFiles[0]), { recursive: true });
+            const mf = path.resolve(dir, 'migrations');
+            const db = await getDb(':memory:');
+            await migrateDb(db, { migrationsFolder: mf });
+            const {backupRequired, pending} = await getDbMigrationStatus(db, { migrationsFolder: mf });
+            expect(backupRequired).is.false;
+            expect(pending).length(0);
+            db.$client.close();
+        } catch (e) {
+            throw e;
+        }
     });
 
     it('Backs up database when migrations are pending', async function () {
+        // spawns drizzle-kit which can be slow to start on a busy machine
+        this.timeout(10000);
 
         const allFiles = await fs.readdir(path.resolve(projectRootDir, 'src/backend/common/database/drizzle/migrations'));
         const migrationFiles = allFiles
             .sort();
 
-        await withLocalTmpDir(async () => {
+        await using tmp = await createTmpDir('dbBackup');
+        const dir = tmp.path;
 
-            const dbPath = getDbPath('ms', process.cwd());
-            // copy first migration
-            await fs.mkdir('migrations');
-            try {
-                await fs.cp(path.resolve(projectRootDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve('./migrations/', migrationFiles[0]), { recursive: true });
-                const mf = path.resolve('./migrations');
-                const [db, _] = await getMigratedDb(dbPath, {migrationsFolder: mf, migrationsAppFolder: process.cwd()});
-                await migrateDb(db, { migrationsFolder: mf });
-                const res = await x('drizzle-kit', [
-                    'generate',
-                    '--name',
-                    'newMigration',
-                    '--out',
-                    `${mf}`,
-                    '--custom',
-                    '--schema',
-                    path.resolve(projectRootDir, 'src/backend/common/database/drizzle/schema'),
-                    '--dialect',
-                    'sqlite'
-                ], {throwOnError: true});
+        const dbPath = getDbPath('ms', dir);
+        // copy first migration
+        await fs.mkdir(path.join(dir, 'migrations'));
+        try {
+            await fs.cp(path.resolve(projectRootDir, `src/backend/common/database/drizzle/migrations/${migrationFiles[0]}`), path.resolve(dir, 'migrations', migrationFiles[0]), { recursive: true });
+            const mf = path.resolve(dir, 'migrations');
+            const [db, _] = await getMigratedDb(dbPath, {migrationsFolder: mf, migrationsAppFolder: dir});
+            await migrateDb(db, { migrationsFolder: mf });
+            const res = await x('drizzle-kit', [
+                'generate',
+                '--name',
+                'newMigration',
+                '--out',
+                `${mf}`,
+                '--custom',
+                '--schema',
+                path.resolve(projectRootDir, 'src/backend/common/database/drizzle/schema'),
+                '--dialect',
+                'sqlite'
+            ], {throwOnError: true, nodeOptions: {cwd: dir}});
 
-                // add dummy data to migration so migrate() doesn't fail
-                const newMigrationFolder = (await fs.readdir(path.resolve('./migrations/'))).find(x => x.includes('newMigration'));
-                await fs.appendFile(path.resolve('./migrations/',newMigrationFolder!, 'migration.sql'),`\nselect count(*) from plays;`);
+            // add dummy data to migration so migrate() doesn't fail
+            const newMigrationFolder = (await fs.readdir(path.resolve(dir, 'migrations'))).find(x => x.includes('newMigration'));
+            await fs.appendFile(path.resolve(dir, 'migrations',newMigrationFolder!, 'migration.sql'),`\nselect count(*) from plays;`);
 
-                await getMigratedDb(dbPath, {migrationsFolder: mf, migrationsAppFolder: process.cwd()});
-                const contents = await fs.readdir(path.resolve('./'));
-                const bakPattern = new RegExp(/ms\.db\.\d+\.bak/);
-                expect(contents.some(x => bakPattern.test(x))).is.true;
-            } catch (e) {
-                throw e;
-            }
-        }, { unsafeCleanup: true, postfix: 'dbBackup' });
+            await getMigratedDb(dbPath, {migrationsFolder: mf, migrationsAppFolder: dir});
+            const contents = await fs.readdir(dir);
+            const bakPattern = new RegExp(/ms\.db\.\d+\.bak/);
+            expect(contents.some(x => bakPattern.test(x))).is.true;
+        } catch (e) {
+            throw e;
+        }
     });
 
 });
@@ -328,117 +332,119 @@ describe('DB Size Stats', function () {
     });
 
     it('get empty db size stats', async function () {
+        // file backed sqlite db can be slow on a busy disk
+        this.timeout(10000);
 
-        await withLocalTmpDir(async () => {
-            try {
-                const [db, _] = await getMigratedDb(getDbPath('ms', process.cwd()));
-                const stats = await fs.stat(path.resolve('./ms.db'));
-                loggerDebug.debug(`Empty => ${stats.size / 1024}kb`);
-            } catch (e) {
-                throw e;
-            }
-        }, { unsafeCleanup: true, postfix: 'dbStatEmpty' });
+        await using tmp = await createTmpDir('dbStatEmpty');
+        const dir = tmp.path;
+        try {
+            const [db, _] = await getMigratedDb(getDbPath('ms', dir));
+            const stats = await fs.stat(path.resolve(dir, 'ms.db'));
+            loggerDebug.debug(`Empty => ${stats.size / 1024}kb`);
+        } catch (e) {
+            throw e;
+        }
     });
 
     it('get db plays size stats', async function () {
 
         this.timeout(10000);
 
-        await withLocalTmpDir(async () => {
-            try {
-                const [db, _] = await getMigratedDb(getDbPath('ms', process.cwd()));
-                const component = await db.insert(components).values(fixtureCreateComponent()).returning();
+        await using tmp = await createTmpDir('dbStatPlain');
+        const dir = tmp.path;
+        try {
+            const [db, _] = await getMigratedDb(getDbPath('ms', dir));
+            const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
-                const playRepo = new DrizzlePlayRepository(db);
-                const playData = generateArray<RepositoryCreatePlayOpts>(100, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlay() }), state: 'queued', input: { data: undefined } }));
-                await playRepo.createPlays(playData);
+            const playRepo = new DrizzlePlayRepository(db);
+            const playData = generateArray<RepositoryCreatePlayOpts>(100, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlay() }), state: 'queued', input: { data: undefined } }));
+            await playRepo.createPlays(playData);
 
-                const Play100Component = await fs.stat(path.resolve('./ms.db'));
-                loggerDebug.debug(`100 Plays => ${Play100Component.size / 1024}kb`);
+            const Play100Component = await fs.stat(path.resolve(dir, 'ms.db'));
+            loggerDebug.debug(`100 Plays => ${Play100Component.size / 1024}kb`);
 
-                const morePlayData = generateArray<RepositoryCreatePlayOpts>(900, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlay() }), state: 'queued', input: { data: undefined }}));
-                await playRepo.createPlays(morePlayData);
-                const Play1000Component = await fs.stat(path.resolve('./ms.db'));
-                loggerDebug.debug(`1000 Plays => ${formatNumber(Play1000Component.size / 1024 / 1024, {toFixed: 2})}mb`);
+            const morePlayData = generateArray<RepositoryCreatePlayOpts>(900, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlay() }), state: 'queued', input: { data: undefined }}));
+            await playRepo.createPlays(morePlayData);
+            const Play1000Component = await fs.stat(path.resolve(dir, 'ms.db'));
+            loggerDebug.debug(`1000 Plays => ${formatNumber(Play1000Component.size / 1024 / 1024, {toFixed: 2})}mb`);
 
-                for(let i = 0; i < 9; i++) {
-                    const evenMorePlayData = generateArray<RepositoryCreatePlayOpts>(1000, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlay() }), state: 'queued', input: { data: undefined }}));
-                    await playRepo.createPlays(evenMorePlayData);
-                }
-                const Play10000Component = await fs.stat(path.resolve('./ms.db'));
-                loggerDebug.debug(`10000 Plays => ${formatNumber(Play10000Component.size / 1024 / 1024, {toFixed: 2})}mb`);
-            } catch (e) {
-                throw e;
+            for(let i = 0; i < 9; i++) {
+                const evenMorePlayData = generateArray<RepositoryCreatePlayOpts>(1000, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlay() }), state: 'queued', input: { data: undefined }}));
+                await playRepo.createPlays(evenMorePlayData);
             }
-        }, { unsafeCleanup: true, postfix: 'dbStatPlain' });
+            const Play10000Component = await fs.stat(path.resolve(dir, 'ms.db'));
+            loggerDebug.debug(`10000 Plays => ${formatNumber(Play10000Component.size / 1024 / 1024, {toFixed: 2})}mb`);
+        } catch (e) {
+            throw e;
+        }
     });
     
     it('get db plays size stats with input', async function () {
 
         this.timeout(10000);
 
-        await withLocalTmpDir(async () => {
-            try {
-                const [db, _] = await getMigratedDb(getDbPath('ms', process.cwd()));
-                const component = await db.insert(components).values(fixtureCreateComponent()).returning();
+        await using tmp = await createTmpDir('dbStatInput');
+        const dir = tmp.path;
+        try {
+            const [db, _] = await getMigratedDb(getDbPath('ms', dir));
+            const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
-                const playRepo = new DrizzlePlayRepository(db);
-                const playData = generateArray<RepositoryCreatePlayOpts>(100, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlay() }), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } }));
-                await playRepo.createPlays(playData);
+            const playRepo = new DrizzlePlayRepository(db);
+            const playData = generateArray<RepositoryCreatePlayOpts>(100, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlay() }), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } }));
+            await playRepo.createPlays(playData);
 
-                const Play100Component = await fs.stat(path.resolve('./ms.db'));
-                loggerDebug.debug(`100 Plays => ${Play100Component.size / 1024}kb`);
+            const Play100Component = await fs.stat(path.resolve(dir, 'ms.db'));
+            loggerDebug.debug(`100 Plays => ${Play100Component.size / 1024}kb`);
 
-                const morePlayData = generateArray<RepositoryCreatePlayOpts>(900, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlay() }), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } }));
-                await playRepo.createPlays(morePlayData);
-                const Play1000Component = await fs.stat(path.resolve('./ms.db'));
-                loggerDebug.debug(`1000 Plays => ${formatNumber(Play1000Component.size / 1024 / 1024, {toFixed: 2})}mb`);
+            const morePlayData = generateArray<RepositoryCreatePlayOpts>(900, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlay() }), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } }));
+            await playRepo.createPlays(morePlayData);
+            const Play1000Component = await fs.stat(path.resolve(dir, 'ms.db'));
+            loggerDebug.debug(`1000 Plays => ${formatNumber(Play1000Component.size / 1024 / 1024, {toFixed: 2})}mb`);
 
-                for(let i = 0; i < 9; i++) {
-                    const evenMorePlayData = generateArray<RepositoryCreatePlayOpts>(1000, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlay() }), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } }));
-                    await playRepo.createPlays(evenMorePlayData);
-                }
-                const Play10000Component = await fs.stat(path.resolve('./ms.db'));
-                loggerDebug.debug(`10000 Plays => ${formatNumber(Play10000Component.size / 1024 / 1024, {toFixed: 2})}mb`);
-            } catch (e) {
-                throw e;
+            for(let i = 0; i < 9; i++) {
+                const evenMorePlayData = generateArray<RepositoryCreatePlayOpts>(1000, () => ({ ...fixtureCreatePlay({ componentId: component[0].id, play: generatePlay() }), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } }));
+                await playRepo.createPlays(evenMorePlayData);
             }
-        }, { unsafeCleanup: true, postfix: 'dbStatInput' });
+            const Play10000Component = await fs.stat(path.resolve(dir, 'ms.db'));
+            loggerDebug.debug(`10000 Plays => ${formatNumber(Play10000Component.size / 1024 / 1024, {toFixed: 2})}mb`);
+        } catch (e) {
+            throw e;
+        }
     });
 
     it('get db plays size stats with input and lifecycle', async function () {
 
         this.timeout(10000);
 
-        await withLocalTmpDir(async () => {
-            try {
-                const [db, _] = await getMigratedDb(getDbPath('ms', process.cwd()));
-                const component = await db.insert(components).values(fixtureCreateComponent()).returning();
+        await using tmp = await createTmpDir('dbStatAll');
+        const dir = tmp.path;
+        try {
+            const [db, _] = await getMigratedDb(getDbPath('ms', dir));
+            const component = await db.insert(components).values(fixtureCreateComponent()).returning();
 
-                const playRepo = new DrizzlePlayRepository(db);
-                const createPlaysWithSteps = async (count: number) => {
-                    const generated = generateArray(count, () => generatePlayWithLifecycle({lifecycleSteps: {preCompare: 1}}));
-                    const rows = await playRepo.createPlays(generated.map(({play}) => ({ ...fixtureCreatePlay({ componentId: component[0].id, play }), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } })));
-                    await db.insert(playEvents).values(rows.map((row, index) => ({...transformToPlayEvent(generated[index].steps), playId: row.id})));
-                }
-                await createPlaysWithSteps(100);
-
-                const Play100Component = await fs.stat(path.resolve('./ms.db'));
-                loggerDebug.debug(`100 Plays => ${Play100Component.size / 1024}kb`);
-
-                await createPlaysWithSteps(900);
-                const Play1000Component = await fs.stat(path.resolve('./ms.db'));
-                loggerDebug.debug(`1000 Plays => ${formatNumber(Play1000Component.size / 1024 / 1024, {toFixed: 2})}mb`);
-
-                for(let i = 0; i < 9; i++) {
-                    await createPlaysWithSteps(1000);
-                }
-                const Play10000Component = await fs.stat(path.resolve('./ms.db'));
-                loggerDebug.debug(`10000 Plays => ${formatNumber(Play10000Component.size / 1024 / 1024, {toFixed: 2})}mb`);
-            } catch (e) {
-                throw e;
+            const playRepo = new DrizzlePlayRepository(db);
+            const createPlaysWithSteps = async (count: number) => {
+                const generated = generateArray(count, () => generatePlayWithLifecycle({lifecycleSteps: {preCompare: 1}}));
+                const rows = await playRepo.createPlays(generated.map(({play}) => ({ ...fixtureCreatePlay({ componentId: component[0].id, play }), state: 'queued', input: { data: generateRandomObj(undefined, { allowUndefined: false }) } })));
+                await db.insert(playEvents).values(rows.map((row, index) => ({...transformToPlayEvent(generated[index].steps), playId: row.id})));
             }
-        }, { unsafeCleanup: true, postfix: 'dbStatAll' });
+            await createPlaysWithSteps(100);
+
+            const Play100Component = await fs.stat(path.resolve(dir, 'ms.db'));
+            loggerDebug.debug(`100 Plays => ${Play100Component.size / 1024}kb`);
+
+            await createPlaysWithSteps(900);
+            const Play1000Component = await fs.stat(path.resolve(dir, 'ms.db'));
+            loggerDebug.debug(`1000 Plays => ${formatNumber(Play1000Component.size / 1024 / 1024, {toFixed: 2})}mb`);
+
+            for(let i = 0; i < 9; i++) {
+                await createPlaysWithSteps(1000);
+            }
+            const Play10000Component = await fs.stat(path.resolve(dir, 'ms.db'));
+            loggerDebug.debug(`10000 Plays => ${formatNumber(Play10000Component.size / 1024 / 1024, {toFixed: 2})}mb`);
+        } catch (e) {
+            throw e;
+        }
     });
 });
 

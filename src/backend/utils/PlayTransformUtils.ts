@@ -1,8 +1,9 @@
 import type { searchAndReplace as searchAndReplaceFunc} from "@foxxmd/regex-buddy-core";
 import { testMaybeRegex as testMaybeRegexFunc } from "@foxxmd/regex-buddy-core";
-import type {LifecycleStep, PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import type { LifecycleStep } from "../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal } from "../../core/PlaySchema.ts";
 
-import { type WhenParts, type WhenConditions, type ActionTerm } from "../../core/Transform.ts";
+import type { WhenParts, WhenConditions, ActionTerm } from "../../core/Transform.ts";
 import dayjs from "dayjs";
 import { playImages } from "../../core/MusicMetadata.ts";
 import { compareDuration, type DurationComparison } from "../../core/TimeUtils.ts";

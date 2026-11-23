@@ -1,5 +1,6 @@
 import type { EventEmitter } from "events";
-import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject} from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, type ComponentAuthType } from "../../core/Atomic.ts";
+import type { PlayObject } from "../../core/PlaySchema.ts";
 import type {FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic.ts";
 import type {KodiSourceConfig} from "../common/infrastructure/config/source/kodi.ts";
 import { KodiApiClient } from "../common/vendor/KodiApiClient.ts";

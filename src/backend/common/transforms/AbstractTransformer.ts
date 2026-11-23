@@ -1,5 +1,6 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
-import type { OptionalCacheUsage, PlayObject } from "../../../core/Atomic.ts";
+import type { OptionalCacheUsage } from "../../../core/Atomic.ts";
+import type { PlayObject } from "../../../core/PlaySchema.ts";
 import { testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import AbstractInitializable from "../AbstractInitializable.ts";
 import { normalizeStageType, type StageCommon, type TransformerCommon, type TransformerCommonConfig } from "../../../core/Transform.ts";

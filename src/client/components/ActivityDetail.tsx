@@ -15,7 +15,6 @@ import { ShortDateDisplay } from "./DateDisplay";
 import { ErrorAlert } from "./ErrorAlert";
 import { ExpandCollapse } from "./ExpandCollapse";
 import { DebugIcon, EllipsisButton, ExclamationCircleIcon, ExclamationTriangleIcon, FinishIconRaw, InsertedIcon, type PowerOffButton, RetryButton, RetryForceIcon, RetryIcon, ReviewIconRaw, StopButton, StopIconRaw, TrashIconRaw, UpdatedIcon } from "./icons/ChakraIcons";
-import { PlayData } from "./play/PlayData";
 import { TextMuted } from "./TextMuted";
 import { capitalize } from '../../core/StringUtils';
 import ky from 'ky';
@@ -108,7 +107,7 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
         activity,
         sortBy
     } = props;
-    const [updated, setUpdated] = useState<{lastUpdated?: string, updated: boolean}>({lastUpdated: updatedAt, updated: false});
+    const [updated, setUpdated] = useState<{lastUpdated?: string | null, updated: boolean}>({lastUpdated: updatedAt, updated: false});
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setUpdated((old) => {
@@ -132,7 +131,7 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
             </Flex>
             <TextMuted textAlign="left" truncate>{creditsToNames(play.data.artists).join(' / ')}</TextMuted>
             <HStack gap="1">
-                <ShortDateDisplay date={sortBy === 'played' ? play.data.playDate : play.meta?.seenAt} prefix={sortBy === 'played' ? 'Played' : 'Seen'} /><Separator orientation="vertical" height="4" />
+                <ShortDateDisplay date={(sortBy === 'played' ? play.data.playDate : play.meta?.seenAt) ?? undefined} prefix={sortBy === 'played' ? 'Played' : 'Seen'} /><Separator orientation="vertical" height="4" />
                 <TextMuted>{play.meta?.source}</TextMuted>
                 {play.meta?.parsedFrom !== undefined && <><Separator orientation="vertical" height="4" /><TextMuted>{capitalize(play.meta?.parsedFrom)}</TextMuted></>}
             </HStack>
@@ -194,7 +193,7 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
                 </Accordion.ItemTrigger>
                 <Accordion.ItemContent>
                     <Accordion.ItemBody>
-                        <PlayEditableMutable editable uid={activity.uid} componentId={activity.componentId} compareDefault='Final' play={original ?? activity.play} final={activity.play} />
+                        <PlayEditableMutable editable uid={activity.uid} componentId={activity.componentId!} compareDefault='Final' play={original ?? activity.play} final={activity.play} />
                     </Accordion.ItemBody>
                 </Accordion.ItemContent>
             </Accordion.Item>

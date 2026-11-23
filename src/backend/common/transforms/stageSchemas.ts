@@ -33,6 +33,11 @@ export const playTransformSchema = buildPlayTransformSchema(stageSchema);
 
 export type PlayTransformConfig = z.input<typeof playTransformSchema>;
 
+/** One Hook's Stages: one Stage or a list of them. IE a transformersPresets value */
+export const playTransformHookSchema = playTransformSchema.shape.preCompare.unwrap();
+
+export type PlayTransformHookConfig = z.input<typeof playTransformHookSchema>;
+
 /** Build `playTransform` with a preCompare hook of Stages (by type) from ENV `[prefix]_TRANSFORMS` */
 export const transformPresetEnv = <T extends CommonClientOptions | CommonSourceOptions>(prefix: string, existing: T | undefined = undefined, logger: Logger = loggerNoop): undefined | T => {
 

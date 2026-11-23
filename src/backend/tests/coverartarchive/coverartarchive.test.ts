@@ -11,7 +11,7 @@ import { withRequestInterception } from '../utils/networking.ts';
 import { http, HttpResponse } from "msw";
 import { generatePlay, withBrainz } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { CoverArtApiClient } from '../../common/vendor/musicbrainz/CoverArtApiClient.ts';
-import { type CoverArtApiConfig } from '../../common/vendor/musicbrainz/CoverArtApiTypes.ts';
+import type { CoverArtApiConfig } from '../../common/vendor/musicbrainz/CoverArtApiTypes.ts';
 import CoverArtArchiveTransformer from '../../common/transforms/coverartarchive/CoverArtArchiveTransformer.ts';
 import { generateCoverReleaseImageResponse, generateCoverResponse } from './caaFixtures.ts';
 import { faker } from '@faker-js/faker';

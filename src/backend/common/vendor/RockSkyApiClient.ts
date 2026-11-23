@@ -1,6 +1,7 @@
 import { creditId, creditIsrc, creditMbid, creditsToNames, isrcMeta, mbMeta, playImage, withAlbumArt } from "../../../core/MusicMetadata.ts";
 import dayjs from "dayjs";
-import {rockskyRequiredFields, type Credit, type LifecycleInput, type PlayObject, type PlayObjectMinimal, type RockskyConfidenceField, type RockskyMissingField, type ScrobbleActionResult, type URLData} from "../../../core/Atomic.ts";
+import { rockskyRequiredFields, type Credit, type LifecycleInput, type RockskyConfidenceField, type RockskyMissingField, type URLData } from "../../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal, ScrobbleActionResult } from "../../../core/PlaySchema.ts";
 import { nonEmptyStringOrDefault } from "../../../core/StringUtils.ts";
 import { creditToName } from "../../../core/MusicMetadata.ts";
 import { nameToCredit } from "../../../core/MusicMetadata.ts";
@@ -29,11 +30,16 @@ import { stringSameness } from "@foxxmd/string-sameness";
 import clone from "clone";
 import { difference } from '../../../core/DataUtils.ts';
 import path from "node:path";
-import { ATProtoUnauthenticatedApiClient } from "./atproto/ATProtoUnauthenticatedApiClient.ts";
-import fsPromise from 'node:fs/promises';
 import { getDataDir } from "../index.ts";
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.ts";
 import { RockskyClientPool } from "./rocksky/RockskyClientPool.ts";
+import { Client } from "@atcute/client";
+import type {} from "@atcute/atproto";
+import type { AtprotoDid } from "@atcute/lexicons/syntax";
+import { getWriteRateLimit, recordWriteRateLimit, type WriteRateLimit } from "./atproto/WriteBudget.ts";
+
+/** shortest time between rate limit probes */
+export const WRITE_PROBE_INTERVAL = 30_000;
 
 interface SubmitOptions {
     log?: boolean
@@ -68,6 +74,9 @@ export class RockSkyApiClient extends AbstractApiClient {
     rsIndex: RockskyIndex;
 
     protected configDir: string;
+
+    protected lastProbeAt = 0;
+    protected probing?: Promise<void>;
 
     constructor(name: any, config: RockSkyData & RockSkyOptions, options: AbstractApiOptions & {configDir: string}) {
         super('RockSky', name, config, options);
@@ -246,6 +255,41 @@ export class RockSkyApiClient extends AbstractApiClient {
         }
     }
 
+    getWriteRateLimit = async (): Promise<WriteRateLimit | undefined> => {
+        if(this.rsAgent === undefined) {
+            return undefined;
+        }
+        return await getWriteRateLimit(this.cache.cacheAuth, this.rsAgent.did);
+    }
+
+    /**
+     * The Rocksky SDK does not give us response headers, so read the PDS rate limit from our own write.
+     * Deleting a record that does not exist costs 1 write point and makes no commit.
+     * At most once per WRITE_PROBE_INTERVAL, failed probes included.
+     * */
+    probeWriteRateLimit = async (): Promise<void> => {
+        if(this.probing !== undefined) {
+            return await this.probing;
+        }
+        const agent = this.rsAgent;
+        if(agent === undefined || Date.now() - this.lastProbeAt < WRITE_PROBE_INTERVAL) {
+            return;
+        }
+        this.lastProbeAt = Date.now();
+        this.probing = (async () => {
+            try {
+                const rpc = new Client({handler: agent.session});
+                const res = await rpc.post('com.atproto.repo.deleteRecord', {input: {repo: agent.did as AtprotoDid, collection: 'app.rocksky.scrobble', rkey: 'msratelimitprobe'}});
+                await recordWriteRateLimit(this.cache.cacheAuth, agent.did, res.headers);
+            } catch (e) {
+                this.logger.warn(new Error('Could not read the PDS rate limit', {cause: e}));
+            } finally {
+                this.probing = undefined;
+            }
+        })();
+        return await this.probing;
+    }
+
     updateNowPlaying = async (play?: PlayObject): Promise<void> => {
         if(this.rsAgent === undefined) {
             throw new SimpleError('Cannot set now playing when no using user/appPassword authentication');
@@ -278,31 +322,43 @@ export class RockSkyApiClient extends AbstractApiClient {
         return rockskyScrobbleToPlay(obj);
     }
 
-    async fetchCarToFile() {
-        // TODO use `since` to get CAR diff instead of entire repo
-        // can use last import date from migrations table
-        if(this.userData === undefined) {
-            throw new Error('Cannot fetch CAR because atproto identifier has not been resolved');
-        }
-        const {did} = this.userData;
-        const filename = path.resolve(this.configDir, `${this.getSafeExternalId()}-${dayjs().unix()}.car`);
-        const atClient = new ATProtoUnauthenticatedApiClient('rocksky', { handleData: this.userData, identifier: this.config.handle }, { logger: this.logger });
-        await atClient.initClient();
-        await fsPromise.writeFile(filename, Buffer.from(await atClient.getCAR(did)));
-        return filename;
-    }
-
-    async syncSdkRepo(filename: string) {
-        if(this.userData === undefined) {
-            throw new Error('Cannot sync repo because atproto identifier has not been resolved');
-        }
-        await this.rsIndex.indexCar(this.userData.did, await fsPromise.readFile(filename));
-    }
-
     public getSafeExternalId() {
         return `${this.type}-${normalizeStr(this.name, {keepSingleWhitespace: false})}`;
     }
     
+}
+
+/**
+ * Write the keys RockskyIndex.indexCar writes for one repo record, so the index can be built from a streamed CAR
+ * instead of indexCar, which reads the whole CAR into memory.
+ * */
+export const indexRockskyRecord = async (index: RockskyIndex, did: string, collection: string, rkey: string, rec: Record<string, unknown>) => {
+    const s = (k: string): string => typeof rec[k] === 'string' ? rec[k] : '';
+    const uri = `at://${did}/${collection}/${rkey}`;
+    switch (collection) {
+        case 'app.rocksky.artist':
+            if (s('name')) {
+                await index.recordArtist(did, s('name'), uri);
+            }
+            break;
+        case 'app.rocksky.album':
+            if (s('title') && s('artist')) {
+                await index.recordAlbum(did, s('title'), s('artist'), uri);
+            }
+            break;
+        case 'app.rocksky.song':
+            if (s('title') && s('artist') && s('album')) {
+                await index.recordSong(did, s('title'), s('artist'), s('album'), uri);
+            }
+            break;
+        case 'app.rocksky.scrobble': {
+            const secs = Math.floor(Date.parse(s('createdAt')) / 1000);
+            if (s('title') && s('artist') && s('album') && !Number.isNaN(secs)) {
+                await index.recordScrobble(did, s('title'), s('artist'), s('album'), secs, uri);
+            }
+            break;
+        }
+    }
 }
 
 interface RsMatchSongInput {

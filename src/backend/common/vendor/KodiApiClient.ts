@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import { KodiClient } from 'kodi-api'
 import normalizeUrl from "normalize-url";
 import { URL } from "url";
-import type {PlayObject, PlayObjectMinimal} from "../../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal } from "../../../core/PlaySchema.ts";
 import type {RecentlyPlayedOptions} from "../../sources/AbstractSource.ts";
 import type {AbstractApiOptions, FormatPlayObjectOptions} from "../infrastructure/Atomic.ts";
 import type {KodiData} from "../infrastructure/config/source/kodi.ts";

@@ -36,3 +36,54 @@ export interface HandleData {
     pds: string
     handle: string
 }
+export const DEFAULT_RATE_LIMIT_RESERVE = 1000;
+
+export const atProtoRateLimitOptionsSchema = z.object({
+    /**
+     * Points of the PDS rate limit to keep free. Scrobbling waits until the limit resets when fewer points are left.
+     *
+     * The PDS rate limit is shared by every app that writes to your account (Bluesky posts, likes, other scrobblers).
+     *
+     * @default 1000
+     * */
+    rateLimitReserve: z.number().int().nonnegative().optional().meta({
+        description: "Points of the PDS rate limit to keep free. Scrobbling waits until the limit resets when fewer points are left.",
+        default: DEFAULT_RATE_LIMIT_RESERVE,
+        examples: [1000]
+    }),
+    /**
+     * Points of the PDS rate limit to keep free when exporting from an Import/Export Job. Exports wait until the limit resets when fewer points are left.
+     *
+     * @default 1000
+     * */
+    exportRateLimitReserve: z.number().int().nonnegative().optional().meta({
+        description: "Points of the PDS rate limit to keep free when exporting from a Job. Exports wait until the limit resets when fewer points are left.",
+        default: DEFAULT_RATE_LIMIT_RESERVE,
+        examples: [2000]
+    }),
+});
+
+export type ATProtoRateLimitOptions = z.infer<typeof atProtoRateLimitOptionsSchema>;
+
+const reserveEnv = (opt: z.ZodOptional<z.ZodNumber>) => z.coerce.number().int().nonnegative().optional().meta(opt.meta() ?? {});
+export const atProtoRateLimitEnvSchemas = {
+    reserve: () => reserveEnv(atProtoRateLimitOptionsSchema.shape.rateLimitReserve),
+    exportReserve: () => reserveEnv(atProtoRateLimitOptionsSchema.shape.exportRateLimitReserve),
+};
+
+export const atProtoHistoryOptionsSchema = z.object({
+    /**
+     * Keep every scrobble of your account in the multi-scrobbler database, instead of only the last 30 days.
+     *
+     * Older scrobbles are otherwise mirrored only when a dupe check needs them, then removed again. Keeping all of them makes the database bigger.
+     *
+     * @default false
+     * */
+    keepAllHistory: z.boolean().optional().meta({
+        description: "Keep every scrobble of your account in the multi-scrobbler database, instead of only the last 30 days. Older scrobbles are otherwise mirrored only when a dupe check needs them, then removed again.",
+        default: false,
+        examples: [true]
+    }),
+});
+
+export type ATProtoHistoryOptions = z.infer<typeof atProtoHistoryOptionsSchema>;

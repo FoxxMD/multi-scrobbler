@@ -65,7 +65,7 @@ describe('SSE Events Endpoint', function () {
             })();
             // logs: false is the default so this only checks the server has registered the connection
             await waitFor(async () => (await setLogs(false)).status === 200, 'events connection to be registered');
-            sources.emitter.emit('statusChange', { type: 'endpointlz', name: 'test', componentId: 1, from: 'source', data: { status: 'ok' } });
+            sources.emitter.emit('componentUpdate', { type: 'endpointlz', name: 'test', componentId: 1, from: 'source', data: { status: 'ok' } });
 
             writeLog('before enable');
             expect((await setLogs(true)).status).to.eq(200);
@@ -75,11 +75,17 @@ describe('SSE Events Endpoint', function () {
             // log lines reach the server on a later tick (stream 'data'), let them be forwarded (or not) first.
             // Then a component event (forwarded synchronously) marks the end, everything sent before it has been received once it is
             await new Promise((resolve) => setImmediate(resolve));
-            sources.emitter.emit('statusChange', { type: 'endpointlz', name: 'test', componentId: 1, from: 'source', data: { status: 'end-marker' } });
+            // only events SSE clients use are forwarded
+            sources.emitter.emit('statusChange', { type: 'endpointlz', name: 'test', componentId: 1, from: 'source', data: { status: 'not-forwarded' } });
+            // Errors would be sent as {} if not serialized
+            sources.emitter.emit('playUpdate', { type: 'endpointlz', name: 'test', componentId: 1, from: 'source', data: { uid: 'abc', error: new Error('play-error-message') } });
+            sources.emitter.emit('componentUpdate', { type: 'endpointlz', name: 'test', componentId: 1, from: 'source', data: { status: 'end-marker' } });
             await waitFor(() => received.includes('end-marker'), 'end marker event');
 
-            expect(received, 'component events named by event name').to.include('event:statusChange');
+            expect(received, 'component events named by event name').to.include('event:componentUpdate');
             expect(received).to.include('event:log');
+            expect(received).to.not.include('not-forwarded');
+            expect(received).to.include('play-error-message');
             expect(received).to.include('while enabled');
             expect(received).to.not.include('before enable');
             expect(received).to.not.include('after disable');

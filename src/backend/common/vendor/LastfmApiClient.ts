@@ -1,5 +1,6 @@
 import dayjs, { type Dayjs, type ManipulateType } from "dayjs";
-import type {PlayObject, PlayObjectMinimal, ScrobbleActionResult, UnixTimestamp, URLData, Writeable} from "../../../core/Atomic.ts";
+import type { UnixTimestamp, URLData, Writeable } from "../../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal, ScrobbleActionResult } from "../../../core/PlaySchema.ts";
 import { nonEmptyStringOrDefault, splitByFirstFound, truncateStringToLength } from "../../../core/StringUtils.ts";
 import { creditsToNames, nameToCredit, withImage } from "../../../core/MusicMetadata.ts";
 import { namesToCredits } from "../../../core/MusicMetadata.ts";
@@ -767,8 +768,14 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
     const {
         source = 'Lastfm'
     } = options;
-    // arbitrary decision yikes
-    const artistStrings = splitByFirstFound(artists, [','], artistName === undefined || artistName.trim() === '' ? [] : [artistName]);
+    const artistMbids = splitByFirstFound<undefined>(artistMbid, [',',';'], undefined);
+    // last.fm has no concept of multiple artists. A single artist mbid means last.fm matched the whole artist string
+    // to one musicbrainz artist (ie "Earth, Wind & Fire") so it should not be split
+    // otherwise splitting on comma is an arbitrary decision yikes
+    // extended=1 responses (user.getRecentTracks) have artist.name instead of #text
+    const artistStrings = artistMbids?.length === 1
+        ? [artists ?? artistName]
+        : splitByFirstFound(artists, [','], artistName === undefined || artistName.trim() === '' ? [] : [artistName]).map((x: string) => x.trim());
     let al: string | undefined = album;
     if(al !== undefined) {
         if(al === null) {
@@ -794,7 +801,7 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
 
     const play: PlayObjectMinimal = {
         data: {
-            artists: creditsWithIds(namesToCredits([...new Set(artistStrings)] as string[]), splitByFirstFound<undefined>(artistMbid, [',',';'], undefined), 'musicbrainz', 'artist'),
+            artists: creditsWithIds(namesToCredits([...new Set(artistStrings)] as string[]), artistMbids, 'musicbrainz', 'artist'),
             track: nameToCredit(title, mbMeta(mbid, 'recording')),
             album: withImage(nameToCredit(al, mbMeta(albumMbid, 'release')), imageUrl),
             duration,

@@ -1,6 +1,9 @@
 import React, { useCallback, useMemo, type ComponentProps, useEffect, type ReactNode } from "react"
+import { clientJobPlaysDialog, useClientJobPlaysEvents } from './ClientJobPlays';
+import { LuEraser } from 'react-icons/lu';
+import { countComponentJobs, useJobEvents } from '../jobs/jobUtils.js';
 import { Portal, Group, Span, Menu, Box, Heading, Skeleton, Wrap, HStack, Badge, Stack, List, Flex, Text, Card, Button, CloseButton, SkeletonText, type BadgeProps, type MenuItemProps, createOverlay, Dialog, type MenuSelectionDetails } from '@chakra-ui/react';
-import { COMPONENT_STATE, type ComponentCommonApiJson, type ComponentsApiJson, type ComponentState, type ComponentStateBody, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
+import { COMPONENT_STATE, type ComponentCommonApiJson, type ComponentsApiJson, type ComponentState, type ComponentStateBody, isComponentSourceApiJson, type MsSseEvent, asSseEvent } from "../../../core/Api.js";
 import { capitalize, capitalizeWords } from "../../../core/StringUtils.js";
 import { ChevronLeftButton, EllipsisButton, ExternalLinkIcon, EyeButton, EyeClosedIcon, EyeIcon, IdleIcon, PowerButton, PowerIcon, type PowerOffButton, PowerOffIcon, RetryButton, RetryIcon, SyncPlayIconRaw, UnlockButton, UnlockIconRaw } from "../icons/ChakraIcons.js";
 import { PlayersContainer, PlayersContainerFetchable } from "../chakraPlayer/Player.js";
@@ -13,13 +16,14 @@ import {
     useSSEAnyEvent
 } from "@flamefrontend/sse-runtime-react";
 import { Link } from "react-router";
-import { CountIndicatorStreamable, DateIndicatorStreamable, DeadLetterIndicatorStreamable, QueuedIndicatorStreamable, StaticStat } from "./Stats.js";
+import { CountIndicatorStreamable, DateIndicatorStreamable, DeadLetterIndicatorStreamable, QueuedIndicatorStreamable, JobsStatStreamable, JobPlaysStatStreamable, StaticStat } from "./Stats.js";
 import { ListContainerFilterable } from "../playActivity/ActivityList.js";
 import { useParams } from "react-router-dom";
 import { ComponentStateBadge } from "../Badges.js";
 import { ActivitySummarySkeleton } from "../ActivityDetail.js";
 import dayjs from "dayjs";
-import { durationToHuman, shortTodayAwareFormat } from "../../../core/TimeUtils.js";
+import { durationToHuman } from "../../../core/TimeUtils.js";
+import { shortTodayAwareFormat } from "../../utils/index.js";
 import { tanQueries } from "../../queries/index.js";
 import { MSErrorBoundary } from "../ErrorBoundary.js";
 import type {IconType} from "react-icons/lib";
@@ -102,7 +106,9 @@ export const MSComponentStats = (props: { data?: ComponentsApiJson, live?: boole
             <QueuedIndicatorStreamable data={props.data} flexGrow="0"/>
             <DeadLetterIndicatorStreamable data={props.data} flexGrow="0"/>
             <DateIndicatorStreamable data={props.data} flexGrow="0"/>
+            {props.data.mode === 'client' ? <JobPlaysStatStreamable data={props.data} flexGrow="0"/> : <JobsStatStreamable data={props.data} flexGrow="0"/>}
             {synced !== undefined ? <SyncedStat data={props.data}/> : null}
+            
         </Wrap>
     )
 }
@@ -270,6 +276,7 @@ const MenuItemIgnore = componentStateMenuItem(EyeClosedIcon, 'ignore', 'Ignore')
 const MenuItemMonitor = componentStateMenuItem(EyeIcon, 'monitor', 'Monitor');
 const MenuItemAuth = componentStateMenuItem(UnlockIconRaw, 'auth', 'Auth');
 const MenuItemSync = componentStateMenuItem(SyncPlayIconRaw, 'syncHistorical', 'Sync Plays...');
+const MenuItemJobCleanup = componentStateMenuItem(LuEraser, 'jobCleanup', 'Job Cleanup');
 
 const primaryActionProps: ComponentProps<typeof PowerOffButton> = {
     margin: "1px",
@@ -279,7 +286,7 @@ const primaryActionProps: ComponentProps<typeof PowerOffButton> = {
 
 export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof ComponentStateBadge>, 'suffix' | 'data' | 'componentId'> & {
     componentId: number,
-    data: ComponentProps<typeof ComponentStateBadge>['data'] & Pick<ComponentsApiJson, 'synced' | 'type'>}) => {
+    data: ComponentProps<typeof ComponentStateBadge>['data'] & Pick<ComponentsApiJson, 'synced' | 'type' | 'mode'>}) => {
     const {
         componentId,
         live,
@@ -351,6 +358,17 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
         menuItems.push(<MenuItemSync/>)
     }
 
+    // job scrobble records only exist in Clients
+    const isClient = props.data.mode === 'client';
+    const {data: jobs} = useQuery({...tanQueries.jobs.list(), enabled: isClient});
+    // records of deleted jobs can be left over after the Client has no jobs
+    const {data: jobPlays} = useQuery({...tanQueries.mirrors.clientJobPlays(componentId), enabled: isClient});
+    const hasJobs = jobs !== undefined && countComponentJobs(jobs, componentId) > 0;
+    const hasJobPlays = jobPlays !== undefined && (jobPlays.total > 0 || jobPlays.task !== null);
+    if(isClient && (hasJobs || hasJobPlays)) {
+        menuItems.push(<MenuItemJobCleanup/>)
+    }
+
     const menuCb = useCallback((select: MenuSelectionDetails) => {
         switch(select.value) {
             case 'auth':
@@ -358,6 +376,9 @@ export const ComponentStateBadgeActionable = (props: Omit<ComponentProps<typeof 
                 break;
             case 'syncHistorical':
                 syncDialog.open('syncPlays', {data: {id: componentId, type: props.data.type}});
+                break;
+            case 'jobCleanup':
+                clientJobPlaysDialog.open('jobCleanup', {componentId});
                 break;
             default:
                 mutate(select.value as ComponentStateBody['state']);
@@ -443,10 +464,15 @@ export const ComponentDetailedDesktop = (props: {data: ComponentsApiJson, live?:
     },[errors, authed]);
     const target = React.useRef<HTMLDivElement>(null);
     const isWrapped = useIsWrapped(target);
+    // reports a finished cleanup of job records even when its dialog is closed
+    useClientJobPlaysEvents(data.id, data.mode === 'client');
+    // keeps job counts current
+    useJobEvents();
     return (
         <MSErrorBoundary>
         <dialog.Viewport />
         <syncDialog.Viewport />
+        <clientJobPlaysDialog.Viewport />
         <Flex direction="row" wrap="wrap" style={{whiteSpace: 'break-spaces'}} truncate rowGap="4">
             <Wrap width="100%" ref={target}>
                 <Box marginEnd="auto" truncate>
@@ -510,16 +536,16 @@ export const ComponentDetailedFetchable = (props: { componentId: number }) => {
     const queryClient = useQueryClient();
     const client = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(client, (payload) => {
-        if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === props.componentId) {
-            switch (payload.type) {
+        const event = asSseEvent(payload.data);
+        if (event?.componentId === props.componentId) {
+            switch (event.event) {
                 case 'componentUpdate':
                     queryClient.setQueryData(tanQueries.components.single(props.componentId).queryKey, (old: ComponentCommonApiJson | undefined) => {
                         if(old === undefined) {
                             // don't create partial data if the full component hasn't been fetched yet
                             return old;
                         }
-                        const componentData = payload.data as MsSseEventPayload<Partial<ComponentCommonApiJson>>;
-                        return { ...old, ...componentData.data };
+                        return { ...old, ...event.data };
                     });
             }
         }

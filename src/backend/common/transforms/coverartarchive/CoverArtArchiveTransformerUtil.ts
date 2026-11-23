@@ -1,6 +1,6 @@
 import * as z from "zod";
 import { MaybeLogger } from "../../MaybeLogger.ts";
-import type { PlayObject } from "../../../../core/Atomic.ts";
+import type { PlayObject } from "../../../../core/PlaySchema.ts";
 import { caaArtType, thumbSizes, type CovertArtApiClientConfig } from "../../vendor/musicbrainz/CoverArtApiTypes.ts";
 import { applyTermSchema, buildRulesSchema, buildStageSchema, DEFAULT_TRANSFORMER_ENV_NAME, type TransformerCommon } from "../../../../core/Transform.ts";
 

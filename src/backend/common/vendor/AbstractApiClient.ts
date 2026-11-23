@@ -1,5 +1,5 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
-import type { PlayObject } from "../../../core/Atomic.ts";
+import type { PlayObject } from "../../../core/PlaySchema.ts";
 import { capitalize } from "../../../core/StringUtils.ts";
 import type { AbstractApiOptions, FormatPlayObjectOptions } from "../infrastructure/Atomic.ts";
 

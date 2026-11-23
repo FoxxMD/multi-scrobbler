@@ -6,6 +6,7 @@ import {commonSourceOptionsSchema, fileLogOptionsSchema, logLevelSchema, sourceR
 import {cacheConfigUserSchema, durationValueSchema} from "../Atomic.ts";
 import {retentionConfigDurationValueSchema} from "./database.ts";
 import { metadataPreferredProviderSchema, transformerConfigSchema } from "../../../../core/Transform.ts";
+import { playTransformHookSchema } from "../../transforms/stageSchemas.ts";
 
 export const sourceDefaultsSchema = z.object({
     ...commonSourceOptionsSchema.shape,
@@ -129,6 +130,10 @@ export const aioConfigSchema = z.object({
     cache: cacheConfigUserSchema.optional().meta({description: 'Configuration for Caching'}),
 
     transformers: z.array(transformerConfigSchema).optional(),
+    transformersPresets: z.record(z.string(), playTransformHookSchema).optional().meta({
+        description: 'Named transform stages that import jobs can apply to plays they export. Each value is one stage or a list of stages, the same as a playTransform hook.',
+        examples: [{cleanTitles: [{type: 'user', title: ['(Remastered)']}, {type: 'native'}]}]
+    }),
     metadata: metadaConfigSchema.optional(),
 
     database: z.object({

@@ -1,6 +1,6 @@
 import React, { type ComponentProps, Fragment } from "react"
 import { Stack, Heading, Separator, HStack, Flex, Badge, Card,  LinkOverlay, LinkBox } from '@chakra-ui/react';
-import { type ComponentClientApiJson, type ComponentCommonApiJson, type ComponentsApiJson, isComponentClientApiJson, isComponentSourceApiJson, type MsSseEvent, type MsSseEventPayload } from "../../../core/Api.js";
+import { type ComponentCommonApiJson, type ComponentsApiJson, isComponentClientApiJson, isComponentSourceApiJson, type MsSseEvent, asSseEvent } from "../../../core/Api.js";
 import { Link } from "react-router";
 import { TextMuted } from "../TextMuted.js";
 import { capitalize } from "../../../core/StringUtils.js";
@@ -98,15 +98,15 @@ export const MSComponentSummaryFetchable = (props: {componentId: number, data: C
 
     const client = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(client, (payload) => {
-        if('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === componentId) {
-            switch(payload.type) {
+        const event = asSseEvent(payload.data);
+        if(event?.componentId === componentId) {
+            switch(event.event) {
                 case 'componentUpdate':
                     queryClient.setQueryData<ComponentsApiJson>(['components', componentId, 'summary'], (old) => {
                         if(old === undefined) {
                             return old;
                         }
-                        const componentData = payload.data as MsSseEventPayload<Partial<ComponentCommonApiJson>>;
-                            return {...old, ...componentData.data};
+                            return {...old, ...event.data};
                     });
             }
         }

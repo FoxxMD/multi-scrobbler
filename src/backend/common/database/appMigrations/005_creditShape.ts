@@ -1,9 +1,11 @@
 import type { SqliteDatabase, Migration } from 'sqlite-up';
 import type { MigrateBaseContext } from '../appMigrator.ts';
 import { playEvents, playInputs, plays as drizzlePlays, playsHistorical } from '../drizzle/schema/schema.ts';
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, getColumns, sql } from 'drizzle-orm';
+import { asLegacyPlay } from '../../../../core/PlayMarshalUtils.ts';
 import { PLAY_EVENT_TYPE } from '../../../../core/PlayEvent.ts';
-import type { Credit, LifecycleStep, PlayObject } from '../../../../core/Atomic.ts';
+import type { Credit, LifecycleStep } from '../../../../core/Atomic.ts';
+import type { PlayObject } from '../../../../core/PlaySchema.ts';
 import { creditsWithIds, isrcMeta, mbMeta, spotifyMeta, withAlbumArt, withImage, withMetadata } from '../../../../core/MusicMetadata.ts';
 import { nameToCredit } from "../../../../core/MusicMetadata.ts";
 import { diffObjects, patchObject } from '../../../../core/DataUtils.ts';
@@ -252,11 +254,12 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
 
     // Plays must be converted before Inputs because we need legacy Input data to regenerate lifecycle patches
     while (more) {
-        const playsRows = await ctx.db.select().from(drizzlePlays).limit(100).offset(offset);
+        // read raw, plays are in a legacy shape
+        const playsRows = await ctx.db.select({...getColumns(drizzlePlays), play: sql<string>`${drizzlePlays.play}`}).from(drizzlePlays).limit(100).offset(offset);
         for (const row of playsRows) {
             processed++;
             try {
-                const legacyPlay = row.play as unknown as LegacyPlay;
+                const legacyPlay = asLegacyPlay(row.play) as unknown as LegacyPlay;
                 // steps stored on the play itself are from before they were moved to play events
                 const play = legacyPlayToCredits(legacyPlay) as unknown as PlayObject & {lifecycle?: LifecycleStep[]};
                 if(!isLegacyPlay(legacyPlay)) {
@@ -264,8 +267,8 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
                     continue;
                 }
 
-                const [input] = await ctx.db.select().from(playInputs).where(eq(playInputs.playId, row.id)).limit(1);
-                const legacyInput = input?.play as unknown as LegacyPlay | undefined;
+                const [input] = await ctx.db.select({...getColumns(playInputs), play: sql<string>`${playInputs.play}`}).from(playInputs).where(eq(playInputs.playId, row.id)).limit(1);
+                const legacyInput = input === undefined ? undefined : asLegacyPlay(input.play) as unknown as LegacyPlay;
                 if(play.lifecycle !== undefined && play.lifecycle.length > 0) {
                     play.lifecycle = rebuildLifecycle(play.lifecycle, legacyInput, legacyPlay.meta?.art);
                 }
@@ -313,11 +316,11 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
     updated = 0;
     more = true;
     while (more) {
-        const inputRows = await ctx.db.select().from(playInputs).limit(100).offset(offset);
+        const inputRows = await ctx.db.select({...getColumns(playInputs), play: sql<string>`${playInputs.play}`}).from(playInputs).limit(100).offset(offset);
         for (const row of inputRows) {
             processed++;
             try {
-                const play = legacyPlayToCredits(row.play as unknown as LegacyPlay) as unknown as PlayObject;
+                const play = legacyPlayToCredits(asLegacyPlay(row.play) as unknown as LegacyPlay) as unknown as PlayObject;
                 await ctx.db.update(playInputs).set({
                     play,
                     playHash: hashObject(playContentBasicInvariantTransform(play).data)
@@ -340,11 +343,11 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
     updated = 0;
     more = true;
     while (more) {
-        const historicalRows = await ctx.db.select().from(playsHistorical).limit(100).offset(offset);
+        const historicalRows = await ctx.db.select({...getColumns(playsHistorical), play: sql<string>`${playsHistorical.play}`}).from(playsHistorical).limit(100).offset(offset);
         for (const row of historicalRows) {
             processed++;
             try {
-                const play = legacyPlayToCredits(row.play as unknown as LegacyPlay) as unknown as PlayObject;
+                const play = legacyPlayToCredits(asLegacyPlay(row.play) as unknown as LegacyPlay) as unknown as PlayObject;
                 await ctx.db.update(playsHistorical).set({
                     play,
                     playHash: hashObject(playContentBasicInvariantTransform(play).data),

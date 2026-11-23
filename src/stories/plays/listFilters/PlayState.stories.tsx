@@ -20,13 +20,13 @@ decorators: [
     (Story) => (<Provider><Container maxWidth="8xl"><Story/></Container></Provider>),
   ],
 args: {
+    mode: 'client' as const,
   },
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
 
 // More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
 export const PlayState = meta.story({
-  component: PlayStateFilter,
   render: function Render(args) {
     return (<PlayStateFilter {...args}/>) 
   }

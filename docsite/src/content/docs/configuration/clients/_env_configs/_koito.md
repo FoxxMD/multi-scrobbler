@@ -7,3 +7,4 @@
 | _**`KOITO_TOKEN`**_       | string  |                     | User token for the user to scrobble for                                                                             |
 | _**`KOITO_USER`**_        | string  |                     | Username of the user to scrobble for                                                                                |
 | `KOITO_ALLOW_DEVICE_LIST` | string  |                     | A comma-delimited list of match:label entries to use as `media_play` in scrobble submit data, when none is present. |
+| `KOITO_SCROBBLE_INTERVAL` | number  |                     | Minimum time (milliseconds) to wait between scrobbles sent to this Client                                           |

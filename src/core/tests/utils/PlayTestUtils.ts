@@ -5,7 +5,8 @@ import isBetween from "dayjs/plugin/isBetween.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
 import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
-import { type Credit, FEAT, JOINERS, JOINERS_FINAL, type JsonPlayObject, type MBID, type ObjectPlayData, type PlayMeta, type PlayObject, type SourcePlayerObj } from "../../Atomic.ts";
+import { type Credit, FEAT, JOINERS, JOINERS_FINAL, type MBID } from "../../Atomic.ts";
+import type { JsonPlayObject, ObjectPlayData, PlayMeta, PlayObject, SourcePlayerObj } from "../../PlaySchema.ts";
 import { genGroupIdStr } from '../../PlayUtils.ts';
 import { sortByNewestPlayDate } from '../../PlayUtils.ts';
 import type { PlayerStateDataMaybePlay } from '../../../backend/common/infrastructure/Atomic.ts';
@@ -17,10 +18,9 @@ import { REPORTED_PLAYER_STATUSES } from '../../Atomic.ts';
 import type {PlayPlatformId} from '../../Atomic.ts';
 import { arrayListAnd } from '../../StringUtils.ts';
 import { isrcMeta, nameToCredit, spotifyMeta } from "../../MusicMetadata.ts";
-import { namesToCredits } from "../../MusicMetadata.ts";
 import { creditMbid, mbMeta, withMetadata } from '../../MusicMetadata.ts';
-import { type MBIdType } from "../../Atomic.ts";
-import { findDelimiters } from "../../StringUtils.ts";
+import type { MBIdType } from "../../Atomic.ts";
+import { findDelimiters, normalizeStr } from "../../StringUtils.ts";
 import type {ListRecord} from '../../../backend/common/infrastructure/config/client/tealfm.ts';
 import { nanoid } from 'nanoid';
 import type {LastFMTrackObject} from '../../../backend/common/vendor/LastfmApiClient.ts';
@@ -334,18 +334,36 @@ export interface ArtistGenerationOptions
 {
     ambiguousJoinedNames?: boolean, 
     trailingAmpersand?: boolean
+    /** names that generated artists must not duplicate (compared normalized) */
+    exclude?: string[]
 }
 
 export const generateArtists = (num?: number, max: number = 3, opts: ArtistGenerationOptions = {}) => {
     if(num === 0 || max === 0) {
         return [];
     }
-    let artists = faker.helpers.multiple(faker.music.artist, {count: {min: num ?? 1, max: num ?? max}});
-
     const {
         trailingAmpersand = false,
-        ambiguousJoinedNames = false
+        ambiguousJoinedNames = false,
+        exclude = []
     } = opts;
+
+    // faker can return the same artist more than once but parsing dedupes artist names
+    // so only generate names that are unique (normalized) among themselves and exclude
+    const isDupe = (a: string, others: string[]) => others.concat(exclude).some(x => normalizeStr(x) === normalizeStr(a));
+    const uniqueArtist = (others: string[]) => {
+        let a = faker.music.artist();
+        while(isDupe(a, others)) {
+            a = faker.music.artist();
+        }
+        return a;
+    }
+
+    let artists: string[] = [];
+    const count = faker.number.int({min: num ?? 1, max: num ?? max});
+    while(artists.length < count) {
+        artists.push(uniqueArtist(artists));
+    }
 
     const isAmbiguous = (a: string) => {
         const foundDelims = findDelimiters(a);
@@ -353,13 +371,11 @@ export const generateArtists = (num?: number, max: number = 3, opts: ArtistGener
     }
 
     if(!ambiguousJoinedNames) {
-        artists = artists.map(x => {
-            let a = x;
-            while(isAmbiguous(a)) {
-                a = faker.music.artist();
+        for(let i = 0; i < artists.length; i++) {
+            while(isAmbiguous(artists[i])) {
+                artists[i] = uniqueArtist(artists.filter((_, j) => j !== i));
             }
-            return a;
-        });
+        }
     }
     // must run AFTER ambiguous name replacement, otherwise a replacement could re-introduce a trailing '&' name
     if(!trailingAmpersand) {
@@ -367,7 +383,7 @@ export const generateArtists = (num?: number, max: number = 3, opts: ArtistGener
         // because its ambigious if the list is joining the list with & or if & is part of the artist name
         // so by default don't generate these (we test for specific scenarios in playParsing.test.ts)
         while(artists[artists.length - 1].includes('&') || (!ambiguousJoinedNames && isAmbiguous(artists[artists.length - 1]))) {
-            artists = artists.slice(0, artists.length - 1).concat(faker.music.artist());
+            artists = artists.slice(0, artists.length - 1).concat(uniqueArtist(artists.slice(0, artists.length - 1)));
         }
     }
     return artists;
@@ -414,7 +430,7 @@ export const generateArtistsStr = (options: CompoundArtistGenerateOptions = {}):
     const secondaryOpts: SecondaryArtistGenerateOptions = typeof secondary === 'number' ? {num: secondary} : secondary;
 
     const primaryArt = generateArtists(primaryOpts.num, primaryOpts.max)
-    const secondaryArt = generateArtists(secondaryOpts.num, secondaryOpts.max);
+    const secondaryArt = generateArtists(secondaryOpts.num, secondaryOpts.max, {exclude: primaryArt});
 
 
     const joinerPrimary: string = primaryOpts.joiner ?? faker.helpers.arrayElement(JOINERS);
@@ -467,7 +483,11 @@ export const generateArtistsStr = (options: CompoundArtistGenerateOptions = {}):
 
 export const generateLastfmTrackObject = (): LastFMTrackObject => {
     const now = dayjs();
-    const artist = faker.music.artist();
+    let artist = faker.music.artist();
+    // last.fm artist strings are split on comma when there is no single artist mbid (ie "Earth, Wind & Fire")
+    while(artist.includes(',')) {
+        artist = faker.music.artist();
+    }
     return {
         album: {
             '#text': faker.music.album(),

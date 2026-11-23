@@ -1,5 +1,6 @@
 import { getListDiff, type ListDiff } from "@donedeal0/superdiff";
-import { type AcceptableTemporalDuringReference, type Credit, type PlayMatchResult, type PlayObject, type PlayObjectMinimal, SOURCE_SOT, type SOURCE_SOT_TYPES, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy, type TrackStringOptions, type TransformPlayResult } from "../../core/Atomic.ts";
+import { type AcceptableTemporalDuringReference, type Credit, SOURCE_SOT, type SOURCE_SOT_TYPES, TA_DURING, TA_EXACT, TA_FUZZY, type TemporalAccuracy, type TransformPlayResult } from "../../core/Atomic.ts";
+import type { PlayMatchResult, PlayObject, PlayObjectMinimal, TrackStringOptions } from "../../core/PlaySchema.ts";
 import { capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
 import { comparingMultipleArtists, playObjDataMatch, setIntersection } from "../utils.ts";

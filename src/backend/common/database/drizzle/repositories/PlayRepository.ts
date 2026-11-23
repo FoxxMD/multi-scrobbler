@@ -1,9 +1,11 @@
 import { childLogger } from "@foxxmd/logging";
 import dayjs, { type Dayjs } from "dayjs";
-import { and, eq, inArray, isNull, relationsFilterToSQL, sql } from "drizzle-orm";
+import { and, asc, count, eq, exists, gt, inArray, isNotNull, isNull, lte, ne, not, or, relationsFilterToSQL, type SQL, type SQLWrapper, sql } from "drizzle-orm";
+import { EmptyFilter } from "drizzle-orm/relations";
 import assert from "node:assert";
 import type { MarkOptional, ElementOf } from "ts-essentials";
-import { type DateLike, type DeepReplaceValue, type PlayObject, type PlayState, QUEUE_STATUS_QUEUED, type QueueName, SCROBBLE_TS_SOC_END, TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
+import { type PlayState, QUEUE_STATUS_QUEUED, SCROBBLE_TS_SOC_END, TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
+import type { PlayObject } from "../../../../../core/PlaySchema.ts";
 import { removeUndefinedKeys } from '../../../../../core/DataUtils.ts';
 import { shortTodayAwareFormat } from "../../../../../core/TimeUtils.ts";
 import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../../utils/PlayComparisonUtils.ts";
@@ -11,44 +13,39 @@ import { hashObject } from "../../../../utils/StringUtils.ts";
 import { comparePlayTemporally, getScrobbleTsSOCDateWithContext, getTemporalAccuracyCloseVal, hasAcceptableTemporalAccuracy } from "../../../../utils/TimeUtils.ts";
 import { type CompactableProperty, type RetentionOptions, retentionPlayTypes } from "../../../infrastructure/config/database.ts";
 import type {ErrorLike, SourceType} from "../../../../../core/Atomic.ts";
-import type {FindMany, FindWhere, FindWith, PlayInputNew, PlayNew, PlaySelect, PlaySelectWithQueueStates, PlayWith, QueueStateSelect, WhereClause} from "../drizzleTypes.ts";
+import type {FilterValue, FindMany, FindWhere, FindWith, PlayInputNew, PlayNew, PlaySelect, PlaySelectWithQueueStates, PlayWith, QueueStateSelect, WhereClause} from "../drizzleTypes.ts";
 import { type DbConcrete, runTransaction } from "../drizzleUtils.ts";
 import { generateInputEntity, generatePlayEntity, hydratePlaySelect, stateChangeToPlayEvent, type PlayEntityOpts, type PlayHydateOptions } from "../entityUtils.ts";
 import { playEvents, playInputs, plays, queueStates, relations, type TSchema } from "../schema/schema.ts";
-import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
-import type {PaginatedResponse} from "../../../../../core/Api.ts";
+import { buildDateCompare, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
+import type {CompareDateOp, PaginatedResponse, playWhereOptsSchema, queryPlaysOptsSchema, queueCriteriaSchema, WITH_PLAY_RELATIONS} from "../../../../../core/Api.ts";
+import type * as z from "zod";
 import type {PaginatedQueryResponse} from "../../../../../core/Api.ts";
-import { type PlayEventTransform } from "../../../../../core/PlayEvent.ts";
+import type { PlayEventTransform } from "../../../../../core/PlayEvent.ts";
+
+/**
+ * Where filter for plays that have a matching queue state, as `id IN (SELECT playId ...)`.
+ * The relational `queueStates` filter compiles to EXISTS, so SQLite walks every play of the component (slow once a component has many plays).
+ * This form reads play_queue_state_component_idx instead. It also filters plays by `componentId`, so callers must not.
+ * */
+const inQueue = (q: {componentId?: number | SQLWrapper, queueName: string | SQLWrapper, status: QueueStateSelect['queueStatus'] | SQLWrapper, retries?: number | SQLWrapper}) => (t: typeof plays): SQL => {
+    const conds = [
+        q.componentId === undefined ? undefined : eq(queueStates.componentId, q.componentId),
+        eq(queueStates.queueName, q.queueName),
+        eq(queueStates.queueStatus, q.status),
+        q.retries === undefined ? undefined : lte(queueStates.retries, q.retries),
+    ];
+    const inQueueSql = sql`${t.id} in (select ${queueStates.playId} from ${queueStates} where ${and(...conds)})`;
+    // unary + stops SQLite from scanning a plays componentId index, so it looks up the subquery ids by rowid instead
+    return q.componentId === undefined ? inQueueSql : sql`+${t.componentId} = ${q.componentId} and ${inQueueSql}`;
+}
 
 // https://github.com/drizzle-team/drizzle-orm/issues/695 may be useful for typing models with relations?
 
-export interface QueueCriteria {
-    queueName: QueueName
-    queueStatus: QueueStateSelect['queueStatus'][] | QueueStateSelect['queueStatus']
-    retries?: number
-}
-
-export interface PlayWhereOpts<D extends DateLike = Dayjs> {
-    state?: PlaySelect['state'][]
-    stateNot?: PlaySelect['state'][]
-    componentId?: number
-    seenAt?: CompareDateOp<D>
-    playedAt?: CompareDateOp<D>
-    queues?: QueueCriteria[]
-    uid?: string[]
-    text?: string[]
-}
-
-export type WithPlayRelation = 'input' | 'parent' | 'parent-input' | 'queues' | 'events' | 'children';
-export interface QueryPlaysOpts<D extends DateLike = Dayjs> extends PlayWhereOpts<D> {
-    sort?: 'seenAt' | 'playedAt'
-    order?: 'asc' | 'desc'
-    with?: WithPlayRelation[]
-    limit?: number
-    offset?: number
-}
-
-export type QueryPlaysOptsJson = DeepReplaceValue<QueryPlaysOpts<Dayjs>, [[Dayjs, string]]>;
+export type QueueCriteria = z.output<typeof queueCriteriaSchema>;
+export type PlayWhereOpts = z.output<typeof playWhereOptsSchema>;
+export type WithPlayRelation = ElementOf<typeof WITH_PLAY_RELATIONS>;
+export type QueryPlaysOpts = z.output<typeof queryPlaysOptsSchema>;
 
 export interface HydrateOpts {
    hydrate?: PlayHydateOptions[] 
@@ -68,6 +65,20 @@ const identifierExtractor: { [K in keyof PlayIdentifierPrimitiveMap]: (play: {id
   id: (play) => play.id,
   uid: (play) => play.uid,
 };
+const COMPACT_BATCH = 1000;
+
+export interface JobPlayFilter {
+    componentId: number
+    /** undefined => plays of any job, including deleted ones */
+    jobId?: number
+    /** true => only plays in a queue (queued or failed with retries left), false => only plays not in one */
+    inQueue?: boolean
+    /** only plays not fully compacted (input and transform) */
+    uncompacted?: boolean
+    /** only plays of deleted jobs. Ignored with jobId */
+    orphaned?: boolean
+}
+
 export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
     protected hasQueueNextPrepared?: ReturnType<typeof this.prepareHasQueueNext>
@@ -82,7 +93,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         const res = await this.db.query.plays.findFirst({
             where: {
                 uid,
-                componentId: opts.componentId ?? this.componentId
+                componentId: opts.componentId ?? this.componentId ?? EmptyFilter
             },
             with: buildPlayWith([...(opts.with ?? []), 'queues'])
         });
@@ -267,14 +278,15 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         return results.map(identifierExtractor[identifier]);
     }
 
-    findPlaysPaginated = async <T = PlayWith<'queueStates' | 'input' | 'parent'>>(args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PaginatedResponse<T> & {meta: {total: number}}> => {
+    /** K is the relations loaded by args.with, which the caller must keep in sync */
+    findPlaysPaginated = async <K extends keyof TSchema['plays']['relations'] = never>(args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PaginatedResponse<PlayWith<K>> & {meta: {total: number}}> => {
         const {
             limit = 100,
             offset = 0,
             ...rest
         } = args;
         const clampedLimit = Math.min(limit, 100);
-        const res = await this.findPlays({limit: clampedLimit, offset, ...rest}, opts) as T[];
+        const res = await this.findPlays({limit: clampedLimit, offset, ...rest}, opts) as PlayWith<K>[];
 
         
         const where = buildPlayWhere({componentId: args.componentId ?? this.componentId,  ...rest});
@@ -284,7 +296,8 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             // @ts-expect-error don't have a good way to type this yet
             where,
             relations.plays.relations,
-            relations);
+            relations,
+            new Map());
         // https://github.com/drizzle-team/drizzle-orm/discussions/3119#discussioncomment-16379557
         const count = await this.db.$count(plays, filter);
 
@@ -320,14 +333,13 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
         const where: FindWhere<'plays'> = {
             component: {
-                id: componentId
+                id: componentId ?? EmptyFilter
             },
             [dateComparer]: {
                 lte: olderThanDate
             },
-            NOT: {
-                children: {}
-            }
+            // false = relation absent (not exists)
+            children: false
         };
 
         if (states !== undefined) {
@@ -362,6 +374,101 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         });
 
         return rows.map(x => x.id);
+    }
+
+    /**
+     * Replace raw data of plays with a removal note: upstream input data ('input') and inputs used by transform stages ('transform').
+     * Marks each play with the compacted types.
+     * */
+    public compactPlays = async (ids: number[], types: CompactableProperty[]) => {
+        if(ids.length === 0 || types.length === 0) {
+            return;
+        }
+        const compacted = (['input', 'transform'] as CompactableProperty[]).filter(x => types.includes(x)).join('-');
+        // bounded so the IN list stays under sqlite's variable limit
+        for(let i = 0; i < ids.length; i += COMPACT_BATCH) {
+            await this.compactBatch(ids.slice(i, i + COMPACT_BATCH), types, compacted);
+        }
+    }
+
+    protected compactBatch = async (ids: number[], types: CompactableProperty[], compacted: string) => {
+        await runTransaction(this.db, async () => {
+            if(types.includes('input')) {
+                await this.db.update(playInputs).set({
+                    data: {removedReason: 'Removed by compaction'}
+                }).where(inArray(playInputs.playId, ids));
+            }
+            if(types.includes('transform')) {
+                const events = await this.db.select().from(playEvents).where(and(inArray(playEvents.playId, ids), eq(playEvents.eventName, 'transform')));
+                for(const ev of events) {
+                    const transformEvent = ev as PlayEventTransform;
+                    let compactedInput = false;
+                    const data = transformEvent.data.map(x => {
+                        if(x.inputs !== undefined && x.inputs.length > 0) {
+                            compactedInput = true;
+                            return {...x, inputs: x.inputs.map((y) => ({type: y.type, input: 'Removed by compaction'}))};
+                        }
+                        return x;
+                    });
+                    if(compactedInput) {
+                        await this.db.update(playEvents).set({data}).where(eq(playEvents.id, ev.id));
+                    }
+                }
+            }
+            await this.db.update(plays).set({compacted}).where(inArray(plays.id, ids));
+        });
+    }
+
+    protected jobPlayConditions = (args: JobPlayFilter) => {
+        const {componentId, jobId, inQueue, uncompacted = false, orphaned = false} = args;
+        const conditions: SQL[] = [eq(plays.componentId, componentId)];
+        if (jobId !== undefined) {
+            conditions.push(eq(plays.jobId, jobId));
+        } else if (orphaned) {
+            conditions.push(isNull(plays.jobId), sql`json_extract(${plays.play}, '$.meta.jobId') IS NOT NULL`);
+        } else {
+            // job plays keep meta.jobId after their job is deleted (and plays.jobId is nulled)
+            conditions.push(or(isNotNull(plays.jobId), sql`json_extract(${plays.play}, '$.meta.jobId') IS NOT NULL`)!);
+        }
+        if (inQueue !== undefined) {
+            const queued = exists(this.db.select({id: queueStates.id}).from(queueStates).where(eq(queueStates.playId, plays.id)));
+            conditions.push(inQueue ? queued : not(queued)!);
+        }
+        if (uncompacted) {
+            conditions.push(or(isNull(plays.compacted), ne(plays.compacted, 'input-transform'))!);
+        }
+        return conditions;
+    }
+
+    /**
+     * Ids of a component's job plays, ascending, after `afterId`.
+     * Without jobId, every job play of the component is included, also those of deleted jobs.
+     * */
+    findJobPlayIds = async (args: JobPlayFilter & {afterId?: number, limit: number}): Promise<number[]> => {
+        const conditions = this.jobPlayConditions(args);
+        if (args.afterId !== undefined) {
+            conditions.push(gt(plays.id, args.afterId));
+        }
+        const rows = await this.db.select({id: plays.id}).from(plays).where(and(...conditions)).orderBy(asc(plays.id)).limit(args.limit);
+        return rows.map(x => x.id);
+    }
+
+    /** Plays per job and state among these ids. Plays without a job are left out */
+    countStatesByJob = async (ids: number[]): Promise<Map<number, Partial<Record<string, number>>>> => {
+        const rows = ids.length === 0 ? [] : await this.db.select({jobId: plays.jobId, state: plays.state, count: count()}).from(plays).where(inArray(plays.id, ids)).groupBy(plays.jobId, plays.state);
+        const byJob = new Map<number, Partial<Record<string, number>>>();
+        for (const r of rows) {
+            if (r.jobId === null) {
+                continue;
+            }
+            byJob.set(r.jobId, {...byJob.get(r.jobId), [r.state]: r.count});
+        }
+        return byJob;
+    }
+
+    countJobPlays = async (args: JobPlayFilter): Promise<number> => {
+        const [row] = await this.db.select({count: count()}).from(plays).where(and(...this.jobPlayConditions(args)));
+        return row?.count ?? 0;
     }
 
     public retentionCleanup = async (componentType: string, retentionOpts: RetentionOptions & ComponentConstrainedRepoOpts) => {
@@ -430,40 +537,9 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                 const ids = await this.findPurgablePlayIds(date, {compacted: compactedFlags.join('-'), states: [state], dateComparer: 'seenAt', componentId: retentionOpts.componentId});
                 loggerCom.trace(`Found ${ids.length} '${retentionType}' plays`);
                 if(ids.length === 0) {
-                    summaryDelStates.push(`No '${retentionType}' Plays older than ${shortTodayAwareFormat(date)}`);
+                    summaryCompactStates.push(`No '${retentionType}' Plays older than ${shortTodayAwareFormat(date)}`);
                 } else {
-                    for(const id of ids) {
-                        if(compactTypes.includes('input')) {
-                            await this.db.update(playInputs).set({
-                                data: {removedReason: 'Removed by compaction'}
-                            }).where(eq(playInputs.playId, id));
-                        }
-                        if(compactTypes.includes('transform')) {
-                            const events = await this.db.query.playEvents.findMany({where: {playId: id}});
-                            for(const ev of events) {
-                                if(ev.eventName === 'transform') {
-                                    const transformEvent = ev as PlayEventTransform;
-                                    let compactedInput = false;
-                                    transformEvent.data = transformEvent.data.map(x => {
-                                        if(x.inputs !== undefined && x.inputs.length > 0) {
-                                            compactedInput = true;
-                                            return {...x, inputs: x.inputs.map((y) => ({type: y.type, input: 'Removed by compaction'}))};
-                                        }
-                                        return x;
-                                    });
-                                    if(compactedInput) {
-                                        await this.db.update(playEvents).set({data: transformEvent.data}).where(eq(playEvents.id, ev.id));
-                                    }
-                                }
-                            }
-                        }
-
-                        const updater = this.db.update(plays);
-                        const vals: Parameters<typeof updater.set>[0] = {
-                            compacted: compactedFlags.join('-')
-                        };
-                        await this.db.update(plays).set(vals).where(eq(plays.id, id));
-                    }
+                    await this.compactPlays(ids, compactedFlags);
                     loggerCom.trace(`Compacted ${ids.length} '${retentionType}' plays`);
                     summaryCompactStates.push(`${ids.length} '${retentionType}' Plays older than ${shortTodayAwareFormat(date)}`)
                 }
@@ -472,21 +548,14 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             }
         }
 
-        loggerCom.verbose(`Cleanup done! Summary:\n${summaryDelStates.join(' | ')}`);
+        loggerCom.verbose(`Cleanup done! Summary:\n${summaryCompactStates.join(' | ')}`);
     }
 
     protected prepareGetQueueNext = () => this.db.query.plays.findFirst({
         // https://stackoverflow.com/a/78551796
         // cannot bind arrays in sqlite
         where: {
-            componentId: sql.placeholder('componentId'),
-            queueStates: {
-                queueName: sql.placeholder('queueName'),
-                queueStatus: sql.placeholder('status'),
-                retries: {
-                    lte: sql.placeholder('retries')
-                }
-            },
+            RAW: inQueue({componentId: sql.placeholder('componentId'), queueName: sql.placeholder('queueName'), status: sql.placeholder('status'), retries: sql.placeholder('retries')}),
         },
         with: {
             queueStates: {
@@ -525,14 +594,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                     id: {
                         notIn: notIds
                     },
-                    componentId: componentId,
-                    queueStates: {
-                        queueName: queueName,
-                        queueStatus: status,
-                        retries: {
-                            lte: retries
-                        }
-                    },
+                    RAW: inQueue({componentId, queueName, status, retries}),
                 },
                 with: {
                     queueStates: {
@@ -560,14 +622,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                     id: true
         },
         where: {
-            componentId: this.componentId,
-            queueStates: {
-                queueName: sql.placeholder('queueName'),
-                queueStatus: 'queued',
-                retries: {
-                    lte: sql.placeholder('retries')
-                }
-            }
+            RAW: inQueue({componentId: this.componentId, queueName: sql.placeholder('queueName'), status: 'queued', retries: sql.placeholder('retries')}),
         }
     }).prepare()
 
@@ -581,14 +636,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
     protected prepareGetQueuedScrobbleRange = () => this.db.query.plays.findMany({
         where: {
-            componentId: this.componentId,
-            queueStates: {
-                queueName: sql.placeholder('queueName'),
-                queueStatus: 'queued',
-                retries: {
-                    lte: sql.placeholder('retries')
-                }
-            },
+            RAW: inQueue({componentId: this.componentId, queueName: sql.placeholder('queueName'), status: 'queued', retries: sql.placeholder('retries')}),
         },
         orderBy: {
             seenAt: 'asc',
@@ -620,21 +668,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
             hydrate
         } = opts;
         const where: FindWhere<'plays'> = {
-            componentId
-        }
-        if(retries !== undefined) {
-            where.queueStates = {
-                queueName,
-                queueStatus: 'queued',
-                retries: {
-                    lte: retries
-                }
-            }
-        } else {
-            where.queueStates = {
-                queueName,
-                queueStatus: 'queued'
-            }
+            RAW: inQueue({componentId, queueName, status: 'queued', retries}),
         }
         const res = await this.db.query.plays.findMany({
             where,
@@ -682,7 +716,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         //     endRange = play.data.playDate.add(dateGranularity, 's');
         // }
         const where: FindWhere<'plays'> = {
-            componentId,
+            componentId: componentId ?? EmptyFilter,
             playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play, {useDuration: true})),
         };
 
@@ -729,12 +763,12 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         * it's also how we ignore exact plays from history-polling sources
         * since those plays are always the same
         */
-        const playHashOrConds: NonNullable<ElementOf<NonNullable<typeof where.AND>>['OR']> = [
+        const playHashOrConds: FilterValue<ElementOf<FilterValue<typeof where.AND>>['OR']> = [
             {
                 playHash: hash
             }
         ];
-        const playHashOr: ElementOf<NonNullable<typeof where.AND>> = {
+        const playHashOr: ElementOf<FilterValue<typeof where.AND>> = {
             OR: playHashOrConds
         };
 
@@ -814,7 +848,7 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         const query: FindMany<'plays'> = {};
 
         const where: FindWhere<'plays'> = {
-            componentId,
+            componentId: componentId ?? EmptyFilter,
             playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play, {bufferTime})),
         };
         if(states !== undefined) {
@@ -1016,7 +1050,7 @@ export const buildPlayWhere = (args: PlayWhereOpts): WhereClause<'plays'> => {
     // let where: Parameters<(ReturnType<typeof getDb>)['query']['plays']['findMany']>[0]['where'] = {
     // };
     const where: FindWhere<'plays'> = {
-        componentId: args.componentId
+        componentId: args.componentId ?? EmptyFilter
     };
     if (args.state !== undefined) {
         where.state = {
@@ -1036,6 +1070,9 @@ export const buildPlayWhere = (args: PlayWhereOpts): WhereClause<'plays'> => {
     if (args.playedAt !== undefined) {
         where.playedAt = buildDateCompare(args.playedAt);
     }
+    if (args.jobId !== undefined) {
+        where.jobId = args.jobId === null ? {isNull: true} : args.jobId;
+    }
     if(args.uid !== undefined) {
         where.uid = {
             in: args.uid
@@ -1051,9 +1088,9 @@ export const buildPlayWhere = (args: PlayWhereOpts): WhereClause<'plays'> => {
         }
         // so that we can use this type
         // or else assigning an array to OR using only `typeof where.queueStates` causes a type error
-        const queueWhere: NonNullable<typeof where.queueStates.OR>[0][] = [];
+        const queueWhere: FilterValue<typeof where.queueStates.OR>[0][] = [];
         for(const q of queues) {
-            const qWhereCriteria: NonNullable<typeof where.queueStates.OR>[0] =  {
+            const qWhereCriteria: FilterValue<typeof where.queueStates.OR>[0] =  {
                 queueName: q.queueName,
                 queueStatus: typeof q.queueStatus === 'string' ? q.queueStatus : {
                     in: q.queueStatus
@@ -1129,5 +1166,3 @@ export const playToRepositoryCreatePlayOpts = (data: MarkOptional<RepositoryCrea
         }
     }
 }
-
-export type RequestPlayQuery = Partial< Record<keyof Exclude<QueryPlaysOpts, 'componentId'>, string>>;

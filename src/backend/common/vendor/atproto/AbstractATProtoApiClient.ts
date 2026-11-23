@@ -3,7 +3,7 @@ import type {AbstractApiOptions} from "../../infrastructure/Atomic.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";
 import type { MSCache } from "../../Cache.ts";
 import { UpstreamError } from "../../errors/UpstreamError.ts";
-import { streamBodyProgress } from "../../../utils/NetworkUtils.ts";
+import { streamBodyToFile } from "../../../utils/NetworkUtils.ts";
 import type {ATProtoUserIdentifierData, HandleData} from "../../infrastructure/config/client/atproto.ts";
 import { checkPds, isDID, identifierToAtProtoHandle, getATProtoIdentifier } from "./atUtils.ts";
 import type { Client} from '@atcute/client';
@@ -13,6 +13,7 @@ import type {AtprotoDid} from "@atcute/lexicons/syntax";
 import { todayAwareFormat } from "../../../../core/TimeUtils.ts";
 import dayjs from "dayjs";
 import type {Millisecond} from "../../../../core/Atomic.ts";
+import { getWriteRateLimit, recordWriteRateLimit, type WriteRateLimit } from "./WriteBudget.ts";
 
 export interface RateLimitInfo {
     limit: number
@@ -67,7 +68,8 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
         }
     }
 
-    async getCAR(did: AtprotoDid) {
+    /** Stream the repo CAR of did into filename */
+    async getCARToFile(did: AtprotoDid, filename: string): Promise<void> {
         const resp = await this.client.call(ComAtprotoSyncGetRepo, {
             params: {
                 did
@@ -82,7 +84,7 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
             throw new UpstreamError(`Failed to fetch repo CAR file. Response was ${resp.status} with response ${text}`, {responseBody: text});
         }
 
-        return await streamBodyProgress(resp.data, {
+        await streamBodyToFile(resp.data, filename, {
             logger: this.logger,
             chunkDefaultSize: 1024 * 1024 * 5, // report progress every 5 MB
             fileHint: 'repo CAR'
@@ -94,10 +96,26 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
         try {
             const res = await func(this.client);
             this.setRateLimitsFromResponse(res.headers);
+            await this.recordWriteRateLimit(res.headers);
             return res;
         } catch (e: any) {
+            if (e instanceof ClientResponseError || ('headers' in e)) {
+                await this.recordWriteRateLimit(e.headers as Headers);
+            }
             throw await this.handleError(e);
         }
+    }
+
+    protected async recordWriteRateLimit(headers?: Headers) {
+        try {
+            await recordWriteRateLimit(this.cache.cacheAuth, this.userData?.did ?? this.config.did, headers);
+        } catch (e) {
+            this.logger.warn(new Error('Failed to store write rate limit', { cause: e }));
+        }
+    }
+
+    public async getWriteRateLimit(): Promise<WriteRateLimit | undefined> {
+        return await getWriteRateLimit(this.cache.cacheAuth, this.userData?.did ?? this.config.did);
     }
     public async get<T extends ReturnType<Client['get']>>(func: (client: Client) => T): Promise<T> {
         await this.checkRateLimit();
@@ -137,9 +155,10 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
                 this.logger.warn({headers}, 'PDS does not implement rate limiting or is using some non-standard rate limit headers. Rate limiting will be ignored. Expected headers: ratelimit-limit, ratelimit-remaining, ratelimit-reset');
                 this.resetMissing = true;
             }
-            if (info !== null) {
+            if (info !== null && info.reset.getTime() > Date.now()) {
                 const secUntilReset = dayjs(info.reset).diff(dayjs(), 's');
-                await this.cache.cacheAuth.set<RateLimitInfo>(`${this.getAuthCacheKey()}-rateLimitInfo`, { limit: info.limit, remaining: info.remaining, reset: info.reset.valueOf() }, Math.min(secUntilReset, 3600));
+                // number TTL is ms
+                await this.cache.cacheAuth.set<RateLimitInfo>(`${this.getAuthCacheKey()}-rateLimitInfo`, { limit: info.limit, remaining: info.remaining, reset: info.reset.valueOf() }, Math.max(Math.min(secUntilReset, 3600), 1) * 1000);
             }
         } catch (e) {
             this.logger.warn(new Error('Failed to parse or set rate limit data', { cause: e }));

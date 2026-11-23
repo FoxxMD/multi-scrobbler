@@ -1,3 +1,4 @@
+import type { MSCoreEvents } from "../../core/MSCoreEventMap.ts";
 import {loggerTest, type LogDataPretty, type Logger, type LogLevel} from "@foxxmd/logging";
 import type {Express, Request, RequestHandler, Response} from 'express';
 import { createChannel, createSession, type DefaultChannelState } from 'better-sse';
@@ -5,18 +6,8 @@ import bodyParser from "body-parser";
 import { FixedSizeList } from 'fixed-size-list';
 import { PassThrough } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import {
-    type LogEvent,
-    type LogOutputConfig,
-    queueContextSchema,
-    logLevelStandaloneSchema,
-    trackSearchToMusicService,
-    albumSearchToMusicService,
-    artistSearchToMusicService,
-    playEditStrictCreateSchema,
-    type PlayObject,
-    type MusicServicesBase,
-} from "../../core/Atomic.ts";
+import { type LogEvent, type LogOutputConfig, queueContextSchema, logLevelStandaloneSchema, trackSearchToMusicService, albumSearchToMusicService, artistSearchToMusicService, playEditStrictCreateSchema, type MusicServicesBase } from "../../core/Atomic.ts";
+import type { PlayObject } from "../../core/PlaySchema.ts";
 import type {LeveledLogData} from "../common/infrastructure/Atomic.ts";
 import { getRoot } from "../ioc.ts";
 import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";;
@@ -31,12 +22,14 @@ import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import prom from 'prom-client';
 import { findAuthIssue, SimpleError } from "../common/errors/MSErrors.ts";
-import { DrizzlePlayRepository, type QueryPlaysOpts, type QueryPlaysOptsJson } from "../common/database/drizzle/repositories/PlayRepository.ts";
+import { DrizzlePlayRepository, type QueryPlaysOpts } from "../common/database/drizzle/repositories/PlayRepository.ts";
 import AbstractHistoricalScrobbleClient from "../scrobblers/AbstractHistoricalScrobbleClient.ts";
 import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
-import {componentStateBodySchema, playStateBodySchema, type ComponentClientApiJson, type ComponentSourceApiJson, asSerializablePlaySelect, trackDataCreditBaseSchema, type TrackDataCreditBase, NDJSON_MEDIA_TYPE, trackSearchSimpleRequestQuerySchema, albumSearchSimpleRequestQuerySchema, artistSearchSimpleRequestQuerySchema } from "../../core/Api.ts";
-import { asDayjsHydratedObject } from "../../core/DataUtils.ts";
-import type {Dayjs} from "dayjs";
+import type { JobManager } from "../jobs/JobManager.ts";
+import { setupJobRoutes } from "./jobRoutes.ts";
+import { setupCleanupRoutes } from "./cleanupRoutes.ts";
+import { toJsonable } from "../jobs/jobApi.ts";
+import {componentStateBodySchema, playStateBodySchema, type SseEvent, type JobSseEvent, type CleanupSseEvent, type SseEventData, type SseEventName, sseEventSchema, queryPlaysRequestSchema, componentsApiSchema, componentClientApiSchema, paginatedResponseSchema, playApiCommonDetailedSchema, publicDashboardDataSchema, nowPlayingOptionSchema, type ComponentClientApiJson, type ComponentSourceApiJson, asSerializablePlaySelect, trackDataCreditBaseSchema, type TrackDataCreditBase, NDJSON_MEDIA_TYPE, trackSearchSimpleRequestQuerySchema, albumSearchSimpleRequestQuerySchema, artistSearchSimpleRequestQuerySchema } from "../../core/Api.ts";
 import { serializeError } from "serialize-error";
 import { z } from 'zod';
 import type { createTypedRouter, TypedMiddleware } from "@minisylar/express-typed-router";
@@ -45,7 +38,7 @@ import pMap from "p-map";
 import type { PlayWith } from "../common/database/drizzle/drizzleTypes.ts";
 import { stripIndents } from "common-tags";
 import { nameToCredit } from "../../core/MusicMetadata.ts";
-import { asPlayCheap } from "../../core/PlayMarshalUtils.ts";
+import { asJsonPlayer, asPlay } from "../../core/PlayMarshalUtils.ts";
 import { getOwnerId } from "../common/auth/owner.ts";
 import { getNowPlayingOptions, getPublicDashboardEntry } from "../common/dashboard.ts";
 import { deleteUserSetting, getUserSetting, getUserSettings, isUserSettingKey, setUserSetting, type UserSettingKey } from "../common/auth/userSettings.ts";
@@ -57,6 +50,26 @@ const noopMiddleware: RequestHandler = (req, res, next) => next();
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
 
 const jsonParser = bodyParser.json({ type: ['text/*', 'application/json'] });
+
+
+/** Converts the data of each Component event SSE clients use to the JSON they receive. Events not listed are not forwarded */
+const sseEventData: {[K in SseEventName]: (data: MSCoreEvents[K][0]['data']) => SseEventData<K>} = {
+    playInsert: (data) => playApiCommonDetailedSchema.encode(asSerializablePlaySelect(data)),
+    playUpdate: (data) => playApiCommonDetailedSchema.partial().required({uid: true}).encode(asSerializablePlaySelect(data)),
+    playDelete: ({uid}) => ({uid}),
+    playerUpdate: ({expiration, ...player}) => ({...asJsonPlayer(player), expiration: expiration?.toISOString()}),
+    playerDelete: ({platformId}) => ({platformId}),
+    componentUpdate: (data) => data,
+    // only the event itself is used, as a count
+    scrobble: () => ({}),
+    discovered: () => ({}),
+    playQueued: () => ({}),
+    playDequeued: () => ({}),
+    deadLetter: () => ({}),
+    deadLetterRemoved: () => ({}),
+    deadQueued: () => ({}),
+    deadLetterDequeued: () => ({}),
+};
 
 export const HIDDEN_FROM_WEB = '[setup token hidden: see the server console/log file]';
 
@@ -104,6 +117,7 @@ export interface ApiArgs {
     hiddenFromWeb?: string[]
     scrobbleSources: ScrobbleSources
     scrobbleClients: ScrobbleClients
+    jobs?: JobManager
 }
 
 export interface ApiOptions {
@@ -122,7 +136,8 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         optionalAuth = noopMiddleware,
         hiddenFromWeb = [],
         scrobbleSources,
-        scrobbleClients
+        scrobbleClients,
+        jobs
     } = args;
     const {
         logger = loggerTest,
@@ -151,20 +166,45 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     }
 
     // tab is a client-generated connection id, logs is opt-in so log events are only pushed to clients actually rendering them
-    const eventsChannel = createChannel<DefaultChannelState, {tab?: string, logs: boolean}>();
+    const eventsChannel = createChannel<DefaultChannelState, {tab?: string, logs: boolean, userId?: string}>();
 
     // runs synchronously inside source/client emit() calls so it must never throw back into them
     const forwardEvent = (eventName: string, payload: any) => {
-        if(payload !== undefined && payload.from !== undefined) {
-            try {
-                eventsChannel.broadcast({event: eventName, ...payload}, eventName);
-            } catch (e) {
-                logger.warn(new Error(`Failed to forward '${eventName}' event to SSE clients`, {cause: e}));
-            }
+        const toData = sseEventData[eventName as SseEventName];
+        if(toData === undefined || payload?.from === undefined) {
+            // not an event SSE clients use
+            return;
+        }
+        try {
+            const {type, name, componentId, from, data} = payload as MSCoreEvents[SseEventName][0];
+            eventsChannel.broadcast({event: eventName, type, name, componentId, from, data: toData(data as never)} as SseEvent, eventName);
+        } catch (e) {
+            logger.warn(new Error(`Failed to forward '${eventName}' event to SSE clients`, {cause: e}));
         }
     };
     scrobbleSources.emitter.onAny(forwardEvent);
     scrobbleClients.emitter.onAny(forwardEvent);
+
+    // job data belongs to one user so it only goes to that user's sessions
+    jobs?.emitter.onAny((eventName: string | symbol, raw: unknown) => {
+        const payload = raw as {jobId?: number, mirrorId?: number, componentId?: number, userId?: string | null, data?: unknown};
+        const ownerOnly = {filter: (s: {state: {userId?: string}}) => payload.userId !== undefined && payload.userId !== null && s.state.userId === payload.userId};
+        try {
+            if(eventName === 'jobUpdate' || eventName === 'jobDeleted') {
+                const event = {event: eventName, jobId: payload.jobId, data: toJsonable(payload.data ?? {})} as JobSseEvent;
+                eventsChannel.broadcast(event, eventName, ownerOnly);
+            } else if(eventName === 'mirrorUpdate' || eventName === 'mirrorDeleted') {
+                const event = {event: eventName, mirrorId: payload.mirrorId, data: toJsonable(payload.data ?? {})} as CleanupSseEvent;
+                eventsChannel.broadcast(event, eventName, ownerOnly);
+            } else if(eventName === 'playsPurged' || eventName === 'clientJobPlaysUpdate') {
+                // Clients are not owned by a user, same as their other events
+                const event = {event: eventName, componentId: payload.componentId, data: toJsonable(payload.data ?? {})} as CleanupSseEvent;
+                eventsChannel.broadcast(event, eventName);
+            }
+        } catch (e) {
+            logger.warn(new Error(`Failed to forward '${String(eventName)}' event to SSE clients`, {cause: e}));
+        }
+    });
 
     // only warn on the first failure until forwarding succeeds again
     // otherwise the warning is itself a log line that fails to forward, logging another warning, forever
@@ -228,8 +268,10 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
 
     router.get('/events', {docs: {operationId: 'sse-events'}, querySchema: z.object({
         tab: z.string().optional().meta({description: 'Client-generated connection id. Required to opt in to log events via PUT /api/events/:tab/logs'})
-    }), middleware: [setLogWebSettings], tags: ['Events'], summary: 'SSE Events'}, async (req, res) => {
-        const session = await createSession(req, res, {state: {tab: req.query.tab, logs: false}});
+    }), middleware: [setLogWebSettings], tags: ['Events'], summary: 'SSE Events',
+    description: 'Server-sent events for Plays, Players, Sources/Clients and your import Jobs. The SSE event name is the same as `event` in its data.',
+    responses: {200: {description: 'An event stream. Each event\'s data is one of these, as JSON', contentType: 'text/event-stream', schema: sseEventSchema}}}, async (req, res) => {
+        const session = await createSession(req, res, {state: {tab: req.query.tab, logs: false, userId: req.auth?.userId}});
         eventsChannel.register(session);
     });
 
@@ -345,8 +387,12 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
     setupLZEndpointRoutes(app, publicRouter, logger, scrobbleSources, scrobbleClients);
     setupLastfmEndpointRoutes(app, publicRouter, logger, scrobbleSources);
     setupAuthRoutes(app, router, logger, scrobbleSources, scrobbleClients);
+    if(jobs !== undefined) {
+        setupJobRoutes(router, jobs, scrobbleSources, scrobbleClients, logger);
+        setupCleanupRoutes(router, jobs, scrobbleClients, logger);
+    }
 
-    router.get('/components', {docs: {operationId: 'get-all-sources-clients'}, tags: ['Source/Client'], summary: 'Get All Sources/Clients'}, async (req, res, next) => {
+    router.get('/components', {docs: {operationId: 'get-all-sources-clients'}, tags: ['Source/Client'], summary: 'Get All Sources/Clients', responseSchema: componentsApiSchema.array()}, async (req, res, next) => {
 
         const sourceData = scrobbleSources.sources.filter(x => x.databaseOK).map((x) => {
             const {
@@ -406,16 +452,16 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.json([...sourceData, ...clientData]);
     });
 
-    router.get('/components/:id/players', {docs: {operationId: 'get-source-client-players'}, middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Source/Client Players'}, async (req, res, next) => {
+    router.get('/components/:id/players', {docs: {operationId: 'get-source-client-players'}, middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Source/Client Players', responseSchema: componentClientApiSchema.shape.players}, async (req, res, next) => {
         if(req.component instanceof MemorySource) {
-            return res.json(req.component.playersToObject());
+            return res.json(req.component.playersToJson());
         } else if(req.component instanceof AbstractScrobbleClient && req.component.nowPlayingEnabled) {
             return res.json(req.component.getNowPlayingPlayers());
         }
         return res.json({});
     });
 
-    router.get('/components/:id/players/:platformId', {docs: {operationId: 'get-specific-source-client-player'}, middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Specific Source/Client Player'}, async (req, res, next) => {
+    router.get('/components/:id/players/:platformId', {docs: {operationId: 'get-specific-source-client-player'}, middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Specific Source/Client Player', responseSchema: componentClientApiSchema.shape.players.valueType}, async (req, res, next) => {
         const {
             params: {
                 platformId
@@ -427,7 +473,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
             if(player === undefined) {
                 return res.status(400).json({error: `No player with platform id ${platformId} exists`});
             }
-            return res.json(player);
+            return res.json(asJsonPlayer(player.getApiState()));
         } else if(req.component instanceof AbstractScrobbleClient && req.component.nowPlayingEnabled) {
             const players = req.component.getNowPlayingPlayers();
             if(players[platformId as string] === undefined) {
@@ -438,7 +484,7 @@ export const setupApi = (args: ApiArgs, opts: ApiOptions = {}) => {
         return res.status(400).json({error: `Component does not support players`});
     });
 
-    router.get('/components/:id', {docs: {operationId: 'get-source-client'}, middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Source/Client'}, async (req, res) => {
+    router.get('/components/:id', {docs: {operationId: 'get-source-client'}, middleware: [componentAwareMiddle], tags: ['Source/Client'], summary: 'Get Source/Client', responseSchema: componentsApiSchema}, async (req, res) => {
         const {
             component,
         } = req;
@@ -564,6 +610,8 @@ Note: this is only supported by some components.`
     router.get('/components/:id/plays', {
         docs: {operationId: 'get-paginated-plays'},
         middleware: [componentAwareMiddle],
+        querySchema: queryPlaysRequestSchema,
+        responseSchema: paginatedResponseSchema(playApiCommonDetailedSchema),
         tags: ['Plays'],
         summary: 'Get Paginated Plays'
     }, async (req, res, next) => {
@@ -572,19 +620,15 @@ Note: this is only supported by some components.`
             query
         } = req;
 
-        const hydratedQuery = asDayjsHydratedObject<QueryPlaysOptsJson, QueryPlaysOpts<Dayjs>>(query as QueryPlaysOptsJson);
-        const playRes = await component.getPlaysPaginated(hydratedQuery);
+        const playRes = await component.getPlaysPaginated(query);
 
-        // @ts-expect-error its fine
-        playRes.data = playRes.data.map(x => asSerializablePlaySelect(x))
-        //PlayApiCommonDetailed
-        // plus paginatioon
-        return res.json(playRes);
+        return res.json(paginatedResponseSchema(playApiCommonDetailedSchema).encode({...playRes, data: playRes.data.map(x => asSerializablePlaySelect(x))}));
     });
 
     router.get('/components/:id/plays/:uid', {
         docs: {operationId: 'get-play'},
         middleware: [componentAwareMiddle],
+        responseSchema: playApiCommonDetailedSchema,
         tags: ['Plays'],
         summary: 'Get Play'
     }, async (req, res, next) => {
@@ -596,9 +640,10 @@ Note: this is only supported by some components.`
         } = req;
 
         const playRes = await component.getPlayApiResponse(playUid as string);
-        //PlayApiCommonDetailed
-        // plus paginatioon
-        return res.json(asSerializablePlaySelect(playRes));
+        if(playRes === undefined) {
+            return res.sendStatus(404);
+        }
+        return res.json(playApiCommonDetailedSchema.encode(asSerializablePlaySelect(playRes)));
     });
 
     router.delete('/components/:id/plays/:uid', {
@@ -633,7 +678,8 @@ Note: this is only supported by some components.`
         middleware: [componentAwareMiddle,jsonParser],
         tags: ['Plays'],
         summary: 'Update Play',
-        bodySchema: playEditStrictCreateSchema
+        bodySchema: playEditStrictCreateSchema,
+        responseSchema: playApiCommonDetailedSchema
     }, async (req, res, next) => {
         const {
             component,
@@ -643,10 +689,10 @@ Note: this is only supported by some components.`
             body
         } = req;
 
-        const play: PlayObject = asPlayCheap(body);
+        const play: PlayObject = asPlay(body);
 
         const playRes = await component.updatePlay(playUid as string, play.data);
-        return res.json(asSerializablePlaySelect(playRes));
+        return res.json(playApiCommonDetailedSchema.encode(asSerializablePlaySelect(playRes)));
     });
 
     router.post('/components/:id/plays/queue', {
@@ -654,7 +700,7 @@ Note: this is only supported by some components.`
         middleware: [componentAwareMiddle,jsonParser],
         bodySchema: z.object({
             context: queueContextSchema.optional(),
-            filters: z.looseObject({})
+            filters: queryPlaysRequestSchema
         }),
         tags: ['Plays'],
         summary: 'Requeue Bulk Plays'
@@ -664,12 +710,11 @@ Note: this is only supported by some components.`
             body
         } = req;
 
-        const hydratedQuery = asDayjsHydratedObject<QueryPlaysOptsJson, QueryPlaysOpts<Dayjs>>({...body.filters, with: ['queues']});
         res.sendStatus(200);
 
         const queueFunc = async (p: PlayWith<'queueStates'>) => await component.queuePlay([p], {...body.context, isRetry: true, reason: 'User requested reprocessing'});
 
-        const currentFilters = hydratedQuery;
+        const currentFilters: QueryPlaysOpts = {...body.filters, with: ['queues']};
         let more = true;
         while(more) {
             const res = await component.getPlaysPaginatedInternal(currentFilters);
@@ -1018,7 +1063,8 @@ Note: this is only supported by some components.`
     publicRouter.get('/api/dashboard', {
         docs: {operationId: 'get-dashboard'},
         tags: ['App Meta'],
-        description: 'Data for the default public dashboard, if it is enabled'
+        description: 'Data for the default public dashboard, if it is enabled',
+        responseSchema: publicDashboardDataSchema
     }, async (req, res) => {
         const db = await root.items.db();
         const {data, expires} = await getPublicDashboardEntry(db, await getOwnerId(db), {sources: scrobbleSources.sources, clients: scrobbleClients.clients}, logger);
@@ -1030,7 +1076,8 @@ Note: this is only supported by some components.`
     router.get('/dashboard/now-playing-options', {
         docs: {operationId: 'get-dashboard-now-playing-options'},
         tags: ['App Meta'],
-        description: 'Sources and clients that can be used as Now Playing for the public dashboard'
+        description: 'Sources and clients that can be used as Now Playing for the public dashboard',
+        responseSchema: nowPlayingOptionSchema.array()
     }, async (req, res) => res.json(getNowPlayingOptions({sources: scrobbleSources.sources, clients: scrobbleClients.clients})));
 
     publicRouter.get('/api/version', {docs: {operationId: 'get-version'}, tags: ['App Meta']}, async (req, res) => {

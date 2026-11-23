@@ -4,7 +4,7 @@ import asPromised from 'chai-as-promised';
 import { describe, it } from 'mocha';
 import pEvent from "p-event";
 import clone from 'clone';
-import type {PlayObject} from "../../../core/Atomic.ts";
+import type { PlayObject } from "../../../core/PlaySchema.ts";
 import { generatePlay, generatePlayerStateData, generatePlays, normalizePlays } from "../../../core/tests/utils/PlayTestUtils.ts";
 import { TestMemoryPositionalSource, TestMemorySource, TestSource } from "./TestSource.ts";
 import spotifyPayload from '../plays/spotifyCurrentPlaybackState.json' with { type: "json" };

@@ -1,5 +1,6 @@
 import { type SearchAndReplaceRegExp, searchAndReplace } from "@foxxmd/regex-buddy-core";
-import type {Credit, PlayObject} from "../../../core/Atomic.ts";
+import type { Credit } from "../../../core/Atomic.ts";
+import type { PlayObject } from "../../../core/PlaySchema.ts";
 import { testWhenConditions } from "../../utils/PlayTransformUtils.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
 import {buildRulesSchema, buildStageSchema, type SearchReplaceTerm, searchReplaceTermSchema} from "../../../core/Transform.ts";

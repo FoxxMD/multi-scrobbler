@@ -4,13 +4,66 @@ import AbstractScrobbleClient from "./AbstractScrobbleClient.ts";
 import type {ComponentMigrationSelect} from "../common/database/drizzle/drizzleTypes.ts";
 import type {ErrorIsh} from "../../core/ErrorUtils.ts";
 import { DrizzlePlayHistoricalRepository, playToRepositoryCreatePlayHistoricalOpts, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
-import { spawn, isAbortError } from 'abort-controller-x';
-import { generateLoggableAbortReason } from "../common/errors/MSErrors.ts";
-import type {Logger} from "@foxxmd/logging";
+import { spawn, isAbortError, abortable } from 'abort-controller-x';
+import { generateLoggableAbortReason, PlayParkedError } from "../common/errors/MSErrors.ts";
+import { childLogger, type Logger } from "@foxxmd/logging";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
-import type {PlayObject} from "../../core/Atomic.ts";
+import type { PlayObject } from "../../core/PlaySchema.ts";
 import { todayAwareFormat } from "../../core/TimeUtils.ts";
 import type { ComponentClientApiJson } from "../../core/Api.ts";
+import fsPromise from 'node:fs/promises';
+import path from 'node:path';
+import { AsyncTask, SimpleIntervalJob } from "toad-scheduler";
+import { addRange, mergeRanges, subtractRanges, type TimeRange } from "../utils/RangeUtils.ts";
+import { HISTORICAL_BUCKET_AFTER, HISTORICAL_BUCKET_DURATION, HISTORICAL_BUCKET_PADDING } from "../utils/ListenFetchUtils.ts";
+import { DEAD_QUEUE, INGRESS_QUEUE } from "../../core/Atomic.ts";
+import { setTimeout as sleep } from 'node:timers/promises';
+import { MirrorRepository, type CoverageTag } from "../common/database/drizzle/repositories/MirrorRepository.ts";
+
+/** How long a downloaded repo CAR is kept for reuse before it is deleted */
+export const CAR_KEEP_MS = 60 * 60 * 1000;
+const CAR_DELETE_JOB = 'carDelete';
+const PRUNE_JOB = 'historicalPrune';
+/** How far back the full sync mirrors, older plays are mirrored on demand and pruned again */
+export const HISTORICAL_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** Failed passes in a row after which plays are checked against what is mirrored instead of waiting (IE a PDS whose CAR can't be read) */
+export const COVERAGE_GIVE_UP_FAILURES = 3;
+
+/** Coverage origin of ranges an ensure pass mirrored. Not a sync, so it never extends coverage to now */
+export const COVERAGE_ORIGIN_DUPE_CHECK = 'dupe-check';
+
+export interface ParseCarOpts {
+    allowFailures?: boolean
+    logger?: Logger
+    signal?: AbortSignal
+    /** only store plays played in these inclusive ms ranges */
+    ranges?: TimeRange[]
+}
+
+export const inRanges = (ts: number | undefined, ranges: TimeRange[]): boolean => ts !== undefined && ranges.some(([from, to]) => ts >= from && ts <= to);
+
+/** Coverage a play's dupe check needs: its 6 hour bucket (the same one getSOTScrobblesForPlay caches by), extended by its duration */
+export const coverageForPlay = (play: PlayObject): TimeRange | undefined => {
+    const {playDate} = play.data;
+    if(playDate === undefined) {
+        return undefined;
+    }
+    const width = HISTORICAL_BUCKET_DURATION.asMilliseconds();
+    const padding = HISTORICAL_BUCKET_PADDING.asMilliseconds();
+    const start = Math.floor(playDate.valueOf() / width) * width;
+    return [start - padding, start + width + padding + (play.data.duration ?? 0) * 1000];
+}
+
+/**
+ * Remove what a historical play doesn't need to store: raw upstream data, the record URL and the user (both derivable from the DID and rkey).
+ * Keeps `meta.url.origin`, which is real record data. Migration 009 does the same to existing rows.
+ * */
+export const slimHistoricalPlay = (play: PlayObject): PlayObject => {
+    const {original, ...rest} = play;
+    const {user, url: {web, ...url} = {}, ...meta} = rest.meta;
+    return {...rest, meta: Object.keys(url).length > 0 ? {...meta, url} : meta};
+}
 
 export default abstract class AbstractHistoricalScrobbleClient extends AbstractScrobbleClient {
 
@@ -25,7 +78,266 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
     override preloadScrobbles: boolean = false;
     protected addScrobbleToHistorical: boolean = true;
 
-    protected abstract doHydrateHistoricalScrobbles(opts: {allowFailures?: boolean, signal?: AbortSignal }): Promise<void>;
+    protected abstract dataDir: string;
+
+    /** The locked mirror (service + account DID) that holds this client's historical plays. Set in postInitialize */
+    protected mirrorId?: number;
+
+    /** The account DID that identifies this client's locked mirror. undefined while it is not resolved */
+    protected abstract getMirrorAccount(): string | undefined;
+
+    protected get mirrorRepo(): MirrorRepository {
+        return new MirrorRepository(this.db, {logger: this.logger});
+    }
+
+    protected get coverageTag(): CoverageTag {
+        return {origin: this.type, jobId: null};
+    }
+
+    /**
+     * Find or create the locked mirror for this client's account and move its historical plays into it.
+     * Plays this client stored for another account (the configured account changed) are deleted, they would give wrong dupe checks.
+     * */
+    /**
+     * Parts of ranges the mirror does not cover. Everything after the last range a sync covered counts as covered:
+     * the recent sync and this client's own scrobbles keep it. Without a successful sync, plays of the last day count as covered
+     * (like before mirrors: checked against what is stored) so live plays are never parked.
+     * Nothing is uncovered without a mirror.
+     * */
+    async uncoveredRanges(ranges: TimeRange[]): Promise<TimeRange[]> {
+        if(this.mirrorId === undefined) {
+            return [];
+        }
+        const {coverage, segments} = await this.mirrorRepo.getById(this.mirrorId) ?? {coverage: [], segments: []};
+        const tail = this.syncedTail(segments) ?? Date.now() - HISTORICAL_BUCKET_AFTER.asMilliseconds();
+        return ranges.flatMap(([from, to]) => from > tail ? [] : subtractRanges([from, Math.min(to, tail)], coverage));
+    }
+
+    /**
+     * Resolve once the mirror covers ranges. Uncovered ranges wait for an ensure pass: one CAR pass that stores the plays of every range requested before it started.
+     * Rejects if the pass fails, unless passes failed COVERAGE_GIVE_UP_FAILURES times in a row: then it resolves uncovered. signal stops waiting, not the pass.
+     * */
+    /** End of the last range a sync covered */
+    protected syncedTail(segments: {range: TimeRange, origin: string}[]): number | undefined {
+        const synced = segments.filter(x => x.origin === this.coverageTag.origin);
+        return synced.length === 0 ? undefined : Math.max(...synced.map(x => x.range[1]));
+    }
+
+    async ensureCoverage(ranges: TimeRange[], signal?: AbortSignal, hold?: string): Promise<void> {
+        if(hold !== undefined) {
+            this.coverageHolds.set(hold, ranges);
+        }
+        while(true) {
+            const missing = await this.uncoveredRanges(ranges);
+            if(missing.length === 0) {
+                return;
+            }
+            for(const r of missing) {
+                this.pendingCoverage = addRange(this.pendingCoverage, r);
+            }
+            if(this.coveragePass === undefined) {
+                const pass = this.runCoveragePass().finally(() => {
+                    this.coveragePass = undefined;
+                });
+                // waiters get the error, this keeps it handled when every waiter stopped waiting
+                pass.catch(() => undefined);
+                this.coveragePass = pass;
+            }
+            try {
+                await (signal !== undefined ? abortable(signal, this.coveragePass) : this.coveragePass);
+            } catch (e) {
+                if(this.coverageGaveUp !== undefined && !isAbortError(e)) {
+                    // continue without it, like getSOTScrobblesForPlay does
+                    return;
+                }
+                throw e;
+            }
+        }
+    }
+
+    /** Stop keeping the ranges held by ensureCoverage when pruning */
+    releaseCoverage(hold: string) {
+        this.coverageHolds.delete(hold);
+    }
+
+    /** Coverage the plays in the ingress and dead queues need */
+    protected async queuedCoverage(): Promise<TimeRange[]> {
+        const queued = [...await this.playRepo.getQueuedScrobbleRange(INGRESS_QUEUE, {limit: 1000}), ...await this.playRepo.getQueuedScrobbleRange(DEAD_QUEUE, {retries: 3, limit: 1000})];
+        return queued.flatMap(x => {
+            const r = coverageForPlay(x);
+            return r === undefined ? [] : [r];
+        });
+    }
+
+    /**
+     * Delete mirrored plays older than the window, and their coverage, except what queued plays and running exports need.
+     * Call inside withCarLock. A full sync passes its own windowStart, so pruning never cuts into what it just covered. Returns how many plays were deleted
+     * */
+    protected async pruneOutsideWindow(windowStart: number = this.windowStart()): Promise<number> {
+        if(this.mirrorId === undefined || windowStart <= 0) {
+            return 0;
+        }
+        const keep = mergeRanges([...await this.queuedCoverage(), ...[...this.coverageHolds.values()].flat()]);
+        let deleted = 0;
+        for(const range of subtractRanges([0, windowStart - 1], keep)) {
+            // first, so an interrupted prune never claims plays that are gone
+            await this.mirrorRepo.removeCoverage(this.mirrorId, range);
+            while(true) {
+                const ids = await this.playsHistoricalRepo.findMirrorIds({mirrorId: this.mirrorId, range, limit: 1000});
+                if(ids.length === 0) {
+                    break;
+                }
+                await this.playsHistoricalRepo.deleteWithInputs(ids);
+                deleted += ids.length;
+            }
+        }
+        if(deleted > 0) {
+            this.logger.info(`Pruned ${deleted} mirrored plays older than ${todayAwareFormat(dayjs(windowStart))}`);
+        }
+        return deleted;
+    }
+
+    /** Daily prune, first run now */
+    protected schedulePrune() {
+        if(this.scheduler.existsById(PRUNE_JOB)) {
+            return;
+        }
+        this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({hours: 24, runImmediately: true}, new AsyncTask('Prune historical plays', async () => {
+            await this.withCarLock(() => this.pruneOutsideWindow());
+        }, (err) => this.logger.warn(new Error('Failed to prune mirrored plays', {cause: err}))), {id: PRUNE_JOB}));
+    }
+
+    /** Run fn after any other work on the repo CAR finished */
+    protected async withCarLock<T>(fn: () => Promise<T>): Promise<T> {
+        const previous = this.carWork;
+        let release!: () => void;
+        this.carWork = new Promise(r => {
+            release = r;
+        });
+        await previous;
+        try {
+            return await fn();
+        } finally {
+            release();
+        }
+    }
+
+    protected async runCoveragePass(): Promise<void> {
+        const wait = this.coverageFailure === undefined ? 0 : this.coverageFailure.at + this.coverageFailureBackoffMs - Date.now();
+        if(wait > 0) {
+            this.logger.verbose(`Waiting ${Math.round(wait / 1000)}s after the last failed pass before the next pass over the repo CAR`);
+            await sleep(wait, undefined, {ref: false});
+        }
+        // after a running full sync, which may cover them
+        await this.withCarLock(() => this.doCoveragePass());
+    }
+
+    protected async doCoveragePass(): Promise<void> {
+        const ranges = await this.uncoveredRanges(this.pendingCoverage);
+        this.pendingCoverage = [];
+        if(ranges.length === 0 || this.mirrorId === undefined) {
+            return;
+        }
+        const summary = ranges.map(([from, to]) => `${todayAwareFormat(dayjs(from))} - ${todayAwareFormat(dayjs(to))}`).join(', ');
+        this.logger.info(`Mirroring scrobbles from the repo CAR for dupe checks of older plays: ${summary}`);
+        this.setStatus(`Mirroring scrobbles for ${ranges.length} older time ranges...`);
+        try {
+            await this.parseScrobblesFromCar(await this.getCarFile(), 100, {ranges, allowFailures: true});
+            for(const r of ranges) {
+                await this.mirrorRepo.addCoverage(this.mirrorId, r, {origin: COVERAGE_ORIGIN_DUPE_CHECK, jobId: null});
+            }
+            this.coverageFailure = undefined;
+            if(this.coverageGaveUp !== undefined) {
+                this.warnings = this.warnings.filter(x => x !== this.coverageGaveUp);
+                this.coverageGaveUp = undefined;
+                this.logger.info('Mirroring older scrobbles works again, older plays wait for their dupe check again');
+            }
+            this.setStatus(`Mirrored scrobbles for ${ranges.length} older time ranges`);
+        } catch (e) {
+            this.setStatus('Mirroring older scrobbles failed');
+            const error = new Error('Could not mirror scrobbles for older plays', {cause: e});
+            const failures = (this.coverageFailure?.failures ?? 0) + 1;
+            this.coverageFailure = {error, at: Date.now(), failures};
+            if(failures >= COVERAGE_GIVE_UP_FAILURES && this.coverageGaveUp === undefined) {
+                this.coverageGaveUp = new Error(`Could not mirror older scrobbles ${failures} times in a row. Until it works again, older plays are only checked for duplicates against scrobbles already mirrored and may be scrobbled twice.`, {cause: error});
+                this.logger.warn(this.coverageGaveUp);
+                this.warnings.push(this.coverageGaveUp);
+            }
+            throw error;
+        }
+    }
+
+    protected async useLockedMirror() {
+        const account = this.getMirrorAccount();
+        const userId = this.dbComponent.userId;
+        if(account === undefined || userId === null) {
+            this.logger.warn(`Historical plays are not kept in a mirror because ${account === undefined ? 'the account DID is not resolved' : 'the component has no owner'}`);
+            return;
+        }
+        const mirror = await this.mirrorRepo.findOrCreate({userId, service: this.type, account, name: `${this.type} ${this.name}`});
+        this.mirrorId = mirror.id;
+        const stale = await this.playsHistoricalRepo.deleteComponentOutsideMirror(this.dbComponent.id, mirror.id);
+        if(stale > 0) {
+            this.logger.info(`Deleted ${stale} historical plays of an account this client used before`);
+        }
+        const moved = await this.playsHistoricalRepo.assignComponentToMirror(this.dbComponent.id, mirror.id, this.type);
+        if(moved > 0) {
+            this.logger.info(`Moved ${moved} historical plays into mirror '${mirror.name}'`);
+        }
+        if(mirror.coverage.length === 0 && this.synced && this.lastImportSuccess !== undefined) {
+            // the last full sync mirrored everything before it started
+            await this.mirrorRepo.addCoverage(mirror.id, [0, this.lastImportSuccess.valueOf()], this.coverageTag);
+        } else if(this.historicalWindowMs === undefined && this.synced && mirror.coverage[0]?.[0] !== 0) {
+            // keepAllHistory was turned on after a sync that kept only the window
+            this.synced = false;
+            this.syncedReason = 'all history is kept but the mirror only has the last days';
+        }
+    }
+
+    /** Stream the user's repo CAR into filename */
+    protected abstract downloadCar(filename: string): Promise<void>;
+
+    abstract parseScrobblesFromCar(filename: string, batchSize: number, opts?: ParseCarOpts): Promise<void>;
+
+    /** ms after a failed ensure pass before another can start. Downloads are already limited by reusing the CAR for CAR_KEEP_MS */
+    protected coverageFailureBackoffMs = 15 * 60 * 1000;
+    protected pendingCoverage: TimeRange[] = [];
+    protected coveragePass?: Promise<void>;
+    protected coverageFailure?: {error: Error, at: number, failures: number};
+    /** set after COVERAGE_GIVE_UP_FAILURES failed passes in a row: plays are not parked anymore, until a pass works */
+    protected coverageGaveUp?: Error;
+    /** serializes work on the repo CAR: full syncs and ensure passes */
+    protected carWork: Promise<void> = Promise.resolve();
+    protected carFileTask?: Promise<string>;
+
+    /** ms before now that the full sync mirrors and pruning keeps. undefined keeps all history */
+    protected historicalWindowMs?: number = HISTORICAL_WINDOW_MS;
+
+    /** Start of the window kept in the mirror, 0 when keeping all history */
+    protected windowStart(now: number = Date.now()): number {
+        return this.historicalWindowMs === undefined ? 0 : now - this.historicalWindowMs;
+    }
+    /** ranges an export job needs until it ends, pruning keeps them. By hold key */
+    protected coverageHolds = new Map<string, TimeRange[]>();
+
+    /** One pass over the repo CAR that stores the plays in ranges. Throws on failure */
+    protected async doHydrateHistoricalScrobbles(opts: {allowFailures?: boolean, signal?: AbortSignal, ranges?: TimeRange[]} = {}): Promise<void> {
+        const logger = childLogger(this.logger, ['Historical Plays']);
+        const {allowFailures = false, signal, ranges} = opts;
+        let file: string;
+        try {
+            logger.verbose('Fetching scrobbles from PDS...');
+            file = await this.getCarFile();
+            signal?.throwIfAborted();
+        } catch (e) {
+            throw new Error('Failed to fetch repo CAR', {cause: e});
+        }
+        try {
+            await this.parseScrobblesFromCar(file, 100, {allowFailures, logger, signal, ranges});
+        } catch (e) {
+            throw new Error('Failed to convert CAR without any error', {cause: e});
+        }
+    }
 
     public getApiData(): ComponentClientApiJson {
         return {
@@ -55,15 +367,26 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
             });
         
             const newImport: ComponentMigrationSelect = await this.migrationRepo.create({name: 'historicalImport', componentId: this.dbComponent.id}) as ComponentMigrationSelect;
+            const startedAt = Date.now();
+            const windowStart = this.windowStart(startedAt);
             try {
                 this.setStatus('Starting full mirror rebuild...');
-                await this.doHydrateHistoricalScrobbles({signal, allowFailures});
+                // coverage inside the lock, so a waiting pass sees what this sync covered
+                await this.withCarLock(async () => {
+                    await this.doHydrateHistoricalScrobbles({signal, allowFailures, ranges: [[windowStart, startedAt]]});
+                    if(this.mirrorId !== undefined) {
+                        await this.mirrorRepo.addCoverage(this.mirrorId, [windowStart, startedAt], this.coverageTag);
+                    }
+                    await this.pruneOutsideWindow(windowStart);
+                });
                 await this.migrationRepo.updateById(newImport.id, {success: true});
                 this.logger.info('Sync complete');
                 this.setStatus('Full mirror rebuild complete');
                 this.synced = true;
                 this.lastImportSuccess = dayjs();
             } catch (e: any) {
+                // live scrobbles still work: they are checked against the recent sync and what is stored, older plays wait for a pass
+                this.warnings.push(new Error('Unable to mirror historical plays. Live scrobbles are still checked for duplicates against recent plays.', {cause: e}));
                 await this.migrationRepo.updateById(newImport.id, {success: false, error: e});
                 this.logger.warn(new Error('Failed to hydrate historical scrobbles', {cause: e}));
                 this.syncError = e;
@@ -117,6 +440,8 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
             logger = this.logger,
             signal
         } = opts;
+        // no historical_play_inputs rows, the raw record stays in the PDS
+        batch = batch.map(({input, ...x}) => ({...x, mirrorId: this.mirrorId, origin: this.type, play: slimHistoricalPlay(x.play)}));
         try {
             await this.playsHistoricalRepo.createPlays(batch);
             return [true, batch.length];
@@ -145,7 +470,88 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
         return [false, valid];
     }
 
-    async getSOTScrobblesForPlay(play: PlayObject): Promise<PlayObject[]> {
+    protected get carPath(): string {
+        return path.resolve(this.dataDir, `historical-${this.dbComponent.id}.car`);
+    }
+
+    /**
+     * The repo CAR file. Reuses one downloaded less than CAR_KEEP_MS ago, else downloads it and schedules its deletion.
+     * Downloads to a .part file first so an interrupted download is never reused.
+     * */
+    protected async getCarFile(): Promise<string> {
+        // a full sync and an ensure pass can ask at once, download once
+        if(this.carFileTask === undefined) {
+            this.carFileTask = this.loadCarFile().finally(() => {
+                this.carFileTask = undefined;
+            });
+        }
+        return this.carFileTask;
+    }
+
+    protected async loadCarFile(): Promise<string> {
+        const file = this.carPath;
+        const stat = await fsPromise.stat(file).catch(() => undefined);
+        const age = stat === undefined ? undefined : Date.now() - stat.mtimeMs;
+        if(age !== undefined && age < CAR_KEEP_MS) {
+            this.logger.verbose(`Reusing repo CAR downloaded ${Math.round(age / 60000)} minutes ago`);
+            if(!this.scheduler.existsById(CAR_DELETE_JOB)) {
+                this.scheduleCarDelete(CAR_KEEP_MS - age);
+            }
+            return file;
+        }
+        const part = `${file}.part`;
+        try {
+            await this.downloadCar(part);
+        } catch (e) {
+            await fsPromise.rm(part, {force: true});
+            throw e;
+        }
+        await fsPromise.rename(part, file);
+        this.scheduleCarDelete(CAR_KEEP_MS);
+        return file;
+    }
+
+    /** One-off job: delete the repo CAR after ms */
+    protected scheduleCarDelete(ms: number) {
+        if(this.scheduler.existsById(CAR_DELETE_JOB)) {
+            this.scheduler.removeById(CAR_DELETE_JOB);
+        }
+        this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({milliseconds: ms}, new AsyncTask('Delete repo CAR', async () => {
+            this.scheduler.removeById(CAR_DELETE_JOB);
+            await this.deleteCarFiles();
+            this.logger.verbose('Deleted repo CAR');
+        }, (err) => this.logger.warn(new Error('Failed to delete repo CAR', {cause: err}))), {id: CAR_DELETE_JOB}));
+    }
+
+    protected async deleteCarFiles() {
+        for(const f of [this.carPath, `${this.carPath}.part`]) {
+            await fsPromise.rm(f, {force: true});
+        }
+    }
+
+    /**
+     * Mirrored scrobbles close to play. When the mirror does not cover its time yet this starts a pass in the background
+     * and throws PlayParkedError, so the queue processes other plays meanwhile. After a failed pass the next one waits for the backoff,
+     * the play stays parked instead of failing (which would use up its retries).
+     * */
+    async getSOTScrobblesForPlay(play: PlayObject, opts?: {useCache?: boolean}): Promise<PlayObject[]> {
+        const needed = coverageForPlay(play);
+        if(needed !== undefined && (await this.uncoveredRanges([needed])).length > 0) {
+            // one pass for this play and every other queued play that needs one
+            const pass = this.ensureCoverage([needed, ...await this.queuedCoverage()]);
+            // the parked play's queue handles the result
+            pass.catch(() => undefined);
+            if(this.coverageGaveUp !== undefined) {
+                // the pass still runs, so this recovers once mirroring works again
+                this.logger.verbose(`Checking ${buildTrackString(play)} for duplicates only against mirrored scrobbles, mirroring older scrobbles keeps failing`);
+                return this.getMirroredScrobblesForPlay(play);
+            }
+            throw new PlayParkedError(`Waiting for scrobbles around ${todayAwareFormat(play.data.playDate!)} to be mirrored from the repo CAR for the dupe check`, pass);
+        }
+        return this.getMirroredScrobblesForPlay(play);
+    }
+
+    protected async getMirroredScrobblesForPlay(play: PlayObject): Promise<PlayObject[]> {
         const closeTemporalPlays = await this.playsHistoricalRepo.getTemporallyClosePlays(play);
         return closeTemporalPlays.map(x => x.play);
     }
@@ -165,6 +571,13 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
                 this.logger.verbose('Most recent upstream plays were alerady mirrored.');
                 this.setStatus('Most recent upstream plays were alerady mirrored.');
             }
+            if(gapSynced && this.mirrorId !== undefined) {
+                // the recent plays overlap what was mirrored, so everything up to now is mirrored
+                const tail = this.syncedTail((await this.mirrorRepo.getById(this.mirrorId))?.segments ?? []);
+                if(tail !== undefined) {
+                    await this.mirrorRepo.addCoverage(this.mirrorId, [tail, Date.now()], this.coverageTag);
+                }
+            }
             return [recent, gapSynced];
         } catch (e) {
             this.logger.warn(new Error('Recent plays sync failed', {cause: e}));
@@ -174,6 +587,12 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
 
     protected async postInitialize(): Promise<void> {
         await super.postInitialize();
+
+        try {
+            await this.useLockedMirror();
+        } catch (e) {
+            this.logger.warn(new Error('Could not move historical plays into a mirror, continuing without one', {cause: e}));
+        }
 
         spawn(new AbortController().signal, async (signal, {defer, fork}) => {
 
@@ -205,6 +624,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
                 }
             }
 
+            this.schedulePrune();
         })
         .then(() => null)
         .catch((e) => this.logger.warn(new Error('Failed to complete post-init historical database sync but continuing anyway', {cause: e})));
@@ -213,6 +633,8 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
     protected async postDatabase(): Promise<void> {
         await super.postDatabase();
         this.playsHistoricalRepo = new DrizzlePlayHistoricalRepository(this.db, {componentId: this.dbComponent.id, logger: this.logger});
+        // left by a previous run, its deletion job did not survive the restart
+        await this.deleteCarFiles();
         const imports = this.dbComponent.migrations.filter(x => x.name === 'historicalImport');
         const [synced, reason] = await this.getHistoricalScrobblesAreSynced();
         this.synced = synced;

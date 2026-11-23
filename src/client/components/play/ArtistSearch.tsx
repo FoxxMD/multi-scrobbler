@@ -1,7 +1,7 @@
 import { useListCollection, Stack, Text, HStack, Badge, Box } from "@chakra-ui/react"
 import { useQuery } from '@tanstack/react-query';
 import { tanQueries } from "../../queries/index.js";
-import { type ArtistSearchResult, type ArtistSearchSimpleRequestQuery, type TrackDataCreditBase } from "../../../core/Api.js";
+import type { ArtistSearchResult, ArtistSearchSimpleRequestQuery, TrackDataCreditBase } from "../../../core/Api.js";
 import { useCallback, useEffect, useState } from "react";
 import { LeftSideMetadataResultContent, MetadataPickMenu, MetadataSearchCombobox, MetadataServiceScore, type MetadataPartials } from "./MetadataResults.js";
 import { artistSearchToMusicService, creditSchema, type Credit } from "../../../core/Atomic.js";

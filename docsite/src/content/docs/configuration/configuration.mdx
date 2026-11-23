@@ -848,6 +848,92 @@ Deleting all Play types after 3 days:
 
 </Tabs>
 
+### Reclaiming Disk Space
+
+When data is deleted from a sqlite database the space on disk that data occupied is not automatically freed. Sqlite will reuse this space for subequent, new rows.
+
+If you have
+
+* large swings in activity
+* change [retention policy](#retention)
+* do a version upgrade that runs a migration that reclaims disk space
+* delete source/clients, or [Mirrors](/transfers/overview), that took up a lot of space
+
+you may want to reclaim this disk space since your MS activity may not need all that space for new rows.
+
+You can reclaim space by using sqlite's [`VACUUM` command](https://sqlite.org/lang_vacuum.html).
+
+<details>
+
+<summary>Running `VACUUM`</summary>
+
+To run `VACUUM` your database must not be in use.
+
+<Tabs groupId="vacuum">
+<TabItem value="compose" label="Docker Compose">
+
+**1.** Stop the service:
+
+```shell
+docker compose stop multi-scrobbler
+```
+**2.** Run `VACUUM` in a one-off container:
+
+```shell
+docker compose run --rm --no-deps multi-scrobbler -e "const db = new (require('node:sqlite').DatabaseSync)('/config/ms.db'); db.exec('VACUUM'); db.close();" # [!ref] If you have set `CONFIG_DIR` then replace `/config/ms.db` with your configured directory.
+```
+
+**3.** Start the service again:
+
+```shell
+docker compose start multi-scrobbler
+```
+
+</TabItem>
+<TabItem value="docker-run" label="Docker">
+
+If you are not using docker compose...
+
+**1.** Stop the container:
+
+```shell
+docker stop multi-scrobbler
+```
+**2.** Run `VACUUM` in a temporary container from the same image, with the same volumes:
+
+```shell
+# [!callout /foxxmd/multi-scrobbler/] Use the same image:tag as stopped container
+docker run --rm --volumes-from multi-scrobbler foxxmd/multi-scrobbler -e "const db = new (require('node:sqlite').DatabaseSync)('/config/ms.db'); db.exec('VACUUM'); db.close();" # [!ref] If you have set `CONFIG_DIR` then replace `/config/ms.db` with your configured directory. [!ref] If `user` is set make sure to add the same `--user <uid>:<gid>`
+```
+
+**3.** Start the service again:
+
+```shell
+docker start multi-scrobbler
+```
+
+</TabItem>
+<TabItem value="native" label="Nodejs">
+
+**1.** Stop the MS process or `systemctl` service
+
+**2.** Determine your [`DATA_DIR`](/installation/#persistent-directories)
+
+This is shown in startup logs in the log line with `Data Dir Resolved` in it
+
+**3.** Run `VACUUM`
+
+```shell
+node -e "const db = new (require('node:sqlite').DatabaseSync)(process.argv[1]); db.exec('VACUUM'); db.close();" /your/DATA/DIR/ms.db # [!ref] Replace `/your/DATA/DIR` with your path to `ms.db`
+```
+
+**4.** Restart the MS process or `systemctl` service
+
+</TabItem>
+</Tabs>
+
+</details>
+
 ## Debug Mode
 
 Turning on Debug Mode will

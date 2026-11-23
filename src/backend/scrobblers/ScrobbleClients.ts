@@ -1,7 +1,7 @@
  
 import { childLogger, type Logger } from '@foxxmd/logging';
 import dayjs, { type Dayjs } from "dayjs";
-import type {PlayObject, SourcePlayerObj} from "../../core/Atomic.ts";
+import type { PlayObject, SourcePlayerObj } from "../../core/PlaySchema.ts";
 import type {InternalConfig, InternalConfigOptional, SourceIdentifier} from "../common/infrastructure/Atomic.ts";
 import { isClientType } from '../../core/Atomic.ts';
 import { clientTypes } from "../../core/Atomic.ts";
@@ -14,9 +14,9 @@ import type AbstractScrobbleClient from "./AbstractScrobbleClient.ts";
 import clone from 'clone';
 import { stripIndents } from 'common-tags';
 import { normalizeStr } from "../../core/StringUtils.ts";
-import { type StringNormalizationOptions } from "../../core/StringUtils.ts";
+import type { StringNormalizationOptions } from "../../core/StringUtils.ts";
 import { prettifyError, ZodError } from 'zod';
-import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvConfigSchema, generateConfigLocation, type CommonConfigPrimitives, type UnparsedConfig } from '../common/infrastructure/config/common.ts';
+import { commonComponentEnvConfigToConfigPrimitives, generateCommonComponentEnvConfigSchema, generateConfigLocation, type UnparsedConfig } from '../common/infrastructure/config/common.ts';
 import type { CommonClientConfig } from '../common/infrastructure/config/client/index.ts';
 import { getClientEnvSchema, validateClientAIOJson, validateClientJson, type ClientTypeConfigMap } from '../common/infrastructure/config/client/clientsMap.ts';
 import type { MSBackendEventMap } from '../common/infrastructure/MSBackendEventMap.ts';
@@ -229,9 +229,9 @@ export default class ScrobbleClients {
                     switch (entry.source) {
                         case 'env': {
                             const envSchema = await getClientEnvSchema(clientType);
-                            const primitiveSchema = generateCommonComponentEnvConfigSchema(configTypeUpper);
+                            const primitiveSchema = generateCommonComponentEnvConfigSchema(configTypeUpper, 'client');
                             const parsed = primitiveSchema.parse(entry.config);
-                            const primitives: CommonConfigPrimitives = commonComponentEnvConfigToConfigPrimitives(configTypeUpper, parsed);
+                            const {options: primitiveOptions = {}, ...primitives} = commonComponentEnvConfigToConfigPrimitives(configTypeUpper, parsed);
                             const parsedEnvConfigValues = envSchema.env.parse(entry.config);
                             const { data = {}, options = {}, ...rest } = envSchema.toConfig(parsedEnvConfigValues);
                             const transformOptions = transformPresetEnv(configTypeUpper);
@@ -242,6 +242,7 @@ export default class ScrobbleClients {
                                 ...rest,
                                 source: generateConfigLocation('client', entry),
                                 options: {
+                                    ...primitiveOptions,
                                     ...options,
                                     ...(transformOptions ?? {})
                                 }
@@ -382,6 +383,11 @@ export default class ScrobbleClients {
                 case 'tuneshine': {
                     const TuneshineScrobbler = (await import('./TuneshineScrobbler.ts')).default;
                     await this.instantiateClients('tuneshine', strongConfigs, clientDefaults, TuneshineScrobbler,
+                        (config, options) => [config.name ?? config.id, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
+                } break;
+                case 'blackbox': {
+                    const BlackboxScrobbler = (await import('./BlackboxScrobbler.ts')).default;
+                    await this.instantiateClients('blackbox', strongConfigs, clientDefaults, BlackboxScrobbler,
                         (config, options) => [config.name ?? config.id, { ...config, options }, this.internalConfig, this.emitter, this.logger]);
                 } break;
             }

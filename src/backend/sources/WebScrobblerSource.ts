@@ -1,11 +1,12 @@
 import { mbMeta } from "../../core/MusicMetadata.ts";
 import dayjs, { type Dayjs } from "dayjs";
 import type EventEmitter from "events";
-import { PARSED_FROM, type PlayObjectMinimal, SOURCE_SOT } from "../../core/Atomic.ts";
-import {
-    type FormatPlayObjectOptions,
-    type InternalConfig,
-    type PlayerStateData,
+import { PARSED_FROM, SOURCE_SOT } from "../../core/Atomic.ts";
+import type { PlayObjectMinimal } from "../../core/PlaySchema.ts";
+import type {
+    FormatPlayObjectOptions,
+    InternalConfig,
+    PlayerStateData,
 } from "../common/infrastructure/Atomic.ts";
 import { NO_DEVICE, NO_USER } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';

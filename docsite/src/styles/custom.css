@@ -97,3 +97,22 @@ img.image-center {
 .sl-markdown-content img[src^='https://img.shields.io'] {
 	display: inline-block;
 }
+
+/* Card sizing (ServiceGrid). Compact by default, roomier from Starlight's lg breakpoint.
+   Keep 72rem in sync with Starlight's lg (see @astrojs/starlight style/props.css) */
+:root {
+	--ms-card-gap: 0.5rem;
+	--ms-card-pad: 0.5rem;
+	--ms-card-icon-size: 1.5rem;
+	--ms-card-initials-text: var(--sl-text-2xs);
+	--ms-card-name-text: var(--sl-text-sm);
+}
+@media (min-width: 72rem) {
+	:root {
+		--ms-card-gap: 0.75rem;
+		--ms-card-pad: 0.75rem;
+		--ms-card-icon-size: 2.25rem;
+		--ms-card-initials-text: var(--sl-text-sm);
+		--ms-card-name-text: var(--sl-text-base);
+	}
+}

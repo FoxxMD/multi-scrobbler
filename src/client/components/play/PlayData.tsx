@@ -1,8 +1,9 @@
 import React, { useCallback, useState, type ComponentProps, type PropsWithChildren } from 'react';
 import { EmptyState, DataList, HStack, Tabs, Box, Badge, Stack, Text, Separator, IconButton, Container, Float, Link, Span, Menu, Group, Portal, type MenuItemProps, type MenuSelectionDetails } from "@chakra-ui/react"
 import { LuCode, LuText } from "react-icons/lu"
-import type { JsonPlayObject, PlayObjectMinimal } from '../../../core/Atomic.js';
-import { shortTodayAwareFormat, timeToHumanTimestamp } from '../../../core/TimeUtils.js';
+import type { JsonPlayObject, PlayObjectMinimal } from '../../../core/PlaySchema.js';
+import { timeToHumanTimestamp } from '../../../core/TimeUtils.js';
+import { shortTodayAwareFormat } from '../../utils/index.js';
 import dayjs from 'dayjs';
 import { ChakraCodeBlock } from '../CodeBlock.js';
 import { TextMuted } from '../TextMuted.js';
@@ -10,11 +11,11 @@ import { formatNumber } from '../../../core/DataUtils.js';
 import { Muted } from '../Typography.js';
 import { ArtistCreditTags } from '../ArtistCreditDisplay.js';
 import { MSErrorBoundary } from '../ErrorBoundary.js';
-import { EditIconRaw, EllipsisButton, EyeClosedIcon, EyeIcon, hasMusicServiceIcon } from '../icons/ChakraIcons.js';
+import { EditIconRaw, EllipsisButton, hasMusicServiceIcon } from '../icons/ChakraIcons.js';
 import type { IconType } from 'react-icons/lib';
 import { capitalize, capitalizeWords } from '../../../core/StringUtils.js';
-import { getMusicServiceIconTooltip, MusicServiceIndicators, MusicServiceIndicatorStack } from '../musicServices/MusicServiceIndicators.js';
-import type { PublicPlay } from '../../../core/Api.js';
+import { getMusicServiceIconTooltip, MusicServiceIndicatorStack } from '../musicServices/MusicServiceIndicators.js';
+import type { DashboardPlay } from '../../../core/Api.js';
 
 const EmptyPlayData = () => {
     return (
@@ -159,7 +160,7 @@ const SourceMaybeLink = (props: PropsWithChildren<{link?: string}>) => {
     return <Link key="weblink" variant="underline" target="_blank" href={props.link}>{props.children}</Link>
 }
 
-export const PlayDataDataList = (props: { play: PublicPlay, dates?: DisplayDates, showMbid?: boolean }) => {
+export const PlayDataDataList = (props: { play: DashboardPlay, dates?: DisplayDates, showMbid?: boolean }) => {
 
     const {
         play,

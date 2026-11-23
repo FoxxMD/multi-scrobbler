@@ -3,15 +3,16 @@ import { expect } from 'chai';
 import dayjs from 'dayjs';
 import { loggerTest } from '@foxxmd/logging';
 import { eq } from 'drizzle-orm';
-import type { LifecycleStep, PlayObject } from '../../../core/Atomic.ts';
+import type { LifecycleStep } from '../../../core/Atomic.ts';
+import type { PlayObject } from '../../../core/PlaySchema.ts';
 import { diffObjects, patchObject } from '../../../core/DataUtils.ts';
 import { creditId, creditIds, creditMbid } from '../../../core/MusicMetadata.ts';
 import { nameToCredit } from "../../../core/MusicMetadata.ts";
 import { namesToCredits } from "../../../core/MusicMetadata.ts";
 import { generateMbid } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { isLegacyData, legacyPlayToCredits, rebuildLifecycle, up } from '../../common/database/appMigrations/005_creditShape.ts';
-import { components, playEvents, playsHistorical } from '../../common/database/drizzle/schema/schema.ts';
-import { generatePlayHistoricalEntity } from '../../common/database/drizzle/entityUtils.ts';
+import { components, playEvents, playInputs, plays, playsHistorical } from '../../common/database/drizzle/schema/schema.ts';
+import { generateInputEntity, generatePlayHistoricalEntity, transformToPlayEvent } from '../../common/database/drizzle/entityUtils.ts';
 import { DrizzlePlayRepository } from '../../common/database/drizzle/repositories/PlayRepository.ts';
 import { playContentBasicInvariantTransform } from '../../utils/PlayComparisonUtils.ts';
 import { hashObject } from '../../utils/StringUtils.ts';
@@ -154,14 +155,15 @@ describe('#Credit shape migration', function () {
 
         const [component] = await db.insert(components).values(fixtureCreateComponent()).returning();
         const repo = new DrizzlePlayRepository(db);
-        await repo.createPlays([{
-            ...fixtureCreatePlay({ play: finalPlay as unknown as PlayObject }),
+        // seeded with inserts like repo.createPlays does, which can't be used because it returns (decodes) legacy plays
+        const { lifecycle, ...storedPlay } = finalPlay;
+        const [created] = await db.insert(plays).values({
+            ...fixtureCreatePlay({ play: storedPlay as unknown as PlayObject }),
             componentId: component.id,
             state: 'queued' as const,
-            input: { data: { foo: 'bar' }, play: inputPlay as unknown as PlayObject }
-        }]);
-        const [created] = await repo.findPlays({});
-        await db.insert(playEvents).values({ playId: created.id, eventName: 'transform', data: finalPlay.lifecycle });
+        }).returning({ id: plays.id });
+        await db.insert(playInputs).values(generateInputEntity({ data: { foo: 'bar' }, play: inputPlay as unknown as PlayObject, playId: created.id }));
+        await db.insert(playEvents).values({ ...transformToPlayEvent(lifecycle as LifecycleStep[]), playId: created.id });
         await db.insert(playEvents).values({ playId: created.id, eventName: 'scrobbleResult', data: finalPlay.scrobble });
         await db.insert(playsHistorical).values(generatePlayHistoricalEntity(finalPlay as unknown as PlayObject, { componentId: component.id }));
 

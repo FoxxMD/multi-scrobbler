@@ -1,7 +1,7 @@
 import { setupServer, type SetupServer } from 'msw/node';
 
 /**
- * Must be loaded (via .mocharc.json "file") before any spec file, and must have no
+ * Must be loaded (via .mocharc.json "require") before any spec file, and must have no
  * other imports, so this listen() call wins the race against any library (like
  * lastfm-ts-api) that freezes a reference to `https.request` at its own module load.
  * @see https://github.com/nock/nock/issues/2397#issuecomment-1591090893

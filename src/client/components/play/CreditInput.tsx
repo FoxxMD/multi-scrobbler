@@ -2,7 +2,7 @@ import { Field, HStack, Input, InputGroup, Stack } from "@chakra-ui/react";
 import type { FieldWithValue } from "@tanstack/react-form";
 import { useState, type ReactNode } from "react";
 import type { Credit, MusicServices } from "../../../core/Atomic"
-import { LettersButton, PlusButton, SearchButton, SearchIcon } from "../icons/ChakraIcons";
+import { LettersButton, PlusButton } from "../icons/ChakraIcons";
 import { MusicServiceInput } from "../musicServices/MusicServiceEditable";
 import { MusicServiceIndicator } from "../musicServices/MusicServiceIndicators";
 import { Tooltip } from "../ToggleTip";

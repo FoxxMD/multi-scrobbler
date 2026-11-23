@@ -9,7 +9,7 @@ import { generatePlay } from '../../core/tests/utils/PlayTestUtils.ts';
 import { ensureOwner } from '../common/auth/owner.ts';
 import { getUserSettings, setUserSetting } from '../common/auth/userSettings.ts';
 import { buildPublicDashboard, getNowPlayingOptions, getPublicDashboard, invalidateDashboardCache, type DashboardComponents, type NowPlayingClient, type NowPlayingSource } from '../common/dashboard.ts';
-import type { SourcePlayerObj } from '../../core/Atomic.ts';
+import type { SourcePlayerObj } from '../../core/PlaySchema.ts';
 import { components, plays } from '../common/database/drizzle/schema/schema.ts';
 import { up as listenedMigration } from '../common/database/appMigrations/008_listenedCounter.ts';
 import { buildAuthApp, secureApp, signIn } from './utils/authTestUtils.ts';

@@ -1,12 +1,12 @@
 import type React from "react";
 import TsCountryFlag from "ts-react-emoji-flag";
 
-const userLocale =
-    navigator.languages && navigator.languages.length
+export const browserLocale: string =
+    (navigator.languages && navigator.languages.length
         ? navigator.languages[0]
-        : navigator.language;
+        : navigator.language) ?? 'en-US';
 
-const getCountryNamesIntl = new Intl.DisplayNames([userLocale ?? 'en'], { type: 'region' });
+const getCountryNamesIntl = new Intl.DisplayNames([browserLocale], { type: 'region' });
 
 export const getCountryName = (iso2: string) => {
     const name = getCountryNamesIntl.of(iso2);

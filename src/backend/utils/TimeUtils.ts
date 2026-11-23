@@ -1,22 +1,8 @@
 
 import dayjs, { type Dayjs } from "dayjs";
 //import isToday from 'dayjs/plugin/isToday.js';
-import {
-    type AcceptableTemporalDuringReference,
-    type PlayObject,
-    SCROBBLE_TS_SOC_END,
-    SCROBBLE_TS_SOC_START,
-    type ScrobbleTsSOC,
-    TA_CLOSE,
-    TA_DEFAULT_ACCURACY,
-    TA_DURING,
-    TA_EXACT,
-    TA_FUZZY,
-    TA_NONE,
-    type TemporalAccuracy,
-    type TemporalPlayComparison,
-    type UnixTimestamp,
-} from "../../core/Atomic.ts";
+import { type AcceptableTemporalDuringReference, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, type ScrobbleTsSOC, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_DURING, TA_EXACT, TA_FUZZY, TA_NONE, type TemporalAccuracy, type TemporalPlayComparison, type UnixTimestamp } from "../../core/Atomic.ts";
+import type { PlayObject } from "../../core/PlaySchema.ts";
 import { capitalize } from "../../core/StringUtils.ts";
 import {
     DEFAULT_CLOSE_POSITION_ABSOLUTE,

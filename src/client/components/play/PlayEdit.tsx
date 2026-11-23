@@ -1,11 +1,12 @@
-import { HStack, Box, Field, Stack, Fieldset, Button, IconButton, DateInput, DatePicker, Portal, Text, Kbd, Span } from "@chakra-ui/react"
-import { playEditStrictCreateSchema, type PlayObjectMinimal, type TrackData } from '../../../core/Atomic.js';
+import { HStack, Box, Field, Stack, Fieldset, Button, IconButton, DateInput, DatePicker, Portal, Text, Span } from "@chakra-ui/react"
+import { playEditStrictCreateSchema, type TrackData } from '../../../core/Atomic.js';
+import type { PlayObjectMinimal } from '../../../core/PlaySchema.js';
 import { MSErrorBoundary } from '../ErrorBoundary.js';
 import { useForm, formOptions } from '@tanstack/react-form';
 import { TrackSearch } from "./TrackSearch.js";
 import { ArtistSearch } from "./ArtistSearch.js";
-import { BracesIcon, CopyToRight, EllipsisChakraIcon, LettersIcon, ResetIconRaw, SearchIcon, TextIcon, TrashIconButton } from "../icons/ChakraIcons.js";
-import { useState, type ReactNode } from "react";
+import { BracesIcon, CopyToRight, EllipsisChakraIcon, IconWrapper, LettersIcon, ResetIconRaw, SearchIcon, TextIcon, TrashIconButton } from "../icons/ChakraIcons.js";
+import { useState } from "react";
 import { AlbumSearch } from "./AlbumSearch.js";
 import { DurationSepEditable } from "./DurationEditable.js";
 import { InfoPopover, Tooltip } from "../ToggleTip.js";
@@ -23,8 +24,6 @@ export interface PlayEditProps {
     onSubmit?: (vals: PlayObjectMinimal<string>) => void
     onCancel?: () => void
 }
-
-const IconWrapper = (props: {children: ReactNode}) => <Box paddingX="1" marginX="1" display="inline-block" rounded="md" backgroundColor="bg.emphasized">{props.children}</Box>
 
 const editPopoverContent = (
     <Stack mt="4" gap="2">
@@ -95,6 +94,7 @@ export const PlayEdit = (props: PlayEditProps) => {
                 track: { name: '' },
                 artists: [],
                 ...data,
+                playDate: data.playDate ?? undefined,
                 // ArrayField needs an array, an empty list is removed on submit
                 albumArtists: data.albumArtists ?? []
             },

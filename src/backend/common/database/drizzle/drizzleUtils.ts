@@ -1,6 +1,5 @@
 import { drizzle } from 'drizzle-orm/node-sqlite';
 import { migrate } from 'drizzle-orm/node-sqlite/migrator';
-import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import { sql as dsl, type Logger as DrizzleLogger } from 'drizzle-orm';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -127,12 +126,8 @@ export const createDrizzleLogger = (parentLogger: Logger, opts: {level?: LogLeve
 // so use this workaround for now
 // https://github.com/drizzle-team/drizzle-orm/issues/2275#issuecomment-2496503801
 let currentTransaction: null | Promise<void> = null;
-export const runTransaction = async <
-    T,
-    TQueryResult,
-    TSchema extends Record<string, unknown> = Record<string, never>
->(
-    db: BaseSQLiteDatabase<"sync", TQueryResult, TSchema>,
+export const runTransaction = async <T>(
+    db: DbConcrete,
     executor: () => Promise<T>
 ) => {
     while (currentTransaction !== null) {

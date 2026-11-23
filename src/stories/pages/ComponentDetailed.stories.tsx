@@ -5,8 +5,10 @@ import { http, HttpResponse, sse } from 'msw';
 import { Container } from '@chakra-ui/react';
 import { ComponentDetailedDesktop } from "../../client/components/msComponent/MSComponentDetailed.js";
 import {Provider} from "../../client/components/Provider.js";
-import { generateClientApiJson, generateFakeError, generateHistoricalPlayApi, generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList, generateSourceApiJson, generateSourcePlayerJson } from "../../core/tests/utils/apiFixtures.js";
+import { generateClientApiJson, generateFakeError, generateHistoricalPlayApi, generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList, generateSourceApiJson, generateSourcePlayerJson, generateSseMessage } from "../../core/tests/utils/apiFixtures.js";
 import type {PaginatedResponse, MsSseEvent, PlayApiCommonDetailed} from "../../core/Api.js";
+import type { ClientJobPlaysSummaryJson, JobApiJson } from "../../core/Job.js";
+import { generateJobApiJson, generateJobTargetApiJson } from "../../core/tests/utils/jobFixtures.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
 import { sseProviderOptions } from "../../client/App.js";
 import { faker } from "@faker-js/faker";
@@ -20,6 +22,41 @@ let livePlayData: PlayApiCommonDetailed[] = [];
 const meta = preview.meta({
   title: 'Pages/Component Detailed',
   component: ComponentDetailedDesktop,
+  beforeEach({ msw }) {
+    msw.use(
+      http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params }) => {
+        if(livePlayData.length === 0) {
+          livePlayData = await generatePlayApiCommonDetailedList();
+          livePlayData[0].error = serializeError(generateFakeError(3));
+        }
+        const res: PaginatedResponse<PlayApiCommonDetailed> = {
+          data: livePlayData,
+          meta: {
+            offset: 0,
+            limit: 100
+          }
+        }
+        return HttpResponse.json(res);
+      }),
+      http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
+        if(livePlayData.length === 0) {
+          livePlayData = await generatePlayApiCommonDetailedList();
+        }
+        const existing = livePlayData.find(x => x.uid === params.uid);
+        if (existing !== undefined) {
+          return HttpResponse.json(existing);
+        }
+        return HttpResponse.json(generatePlayApiCommonDetailed({}, serializeError(new Error('This is an error', {cause: new Error('this is a nested error', {cause: new Error('another error')})}))));
+      }),
+      sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {}),
+      // two jobs export to Client 7, one is unrelated
+      http.get('/api/jobs', () => HttpResponse.json<JobApiJson[]>([
+        generateJobApiJson({id: 1, targets: [generateJobTargetApiJson({componentId: 7})]}),
+        generateJobApiJson({id: 2, targets: [generateJobTargetApiJson({componentId: 7}), generateJobTargetApiJson({componentId: 8})]}),
+        generateJobApiJson({id: 3, targets: [generateJobTargetApiJson({componentId: 8})]}),
+      ]))
+    );
+  },
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
@@ -32,35 +69,6 @@ const meta = preview.meta({
         useStoryElement: true
       }
     }),
-    msw: {
-      handlers: [
-        http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params }) => {
-          if(livePlayData.length === 0) {
-            livePlayData = await generatePlayApiCommonDetailedList();
-            livePlayData[0].error = serializeError(generateFakeError(3));
-          }
-          const res: PaginatedResponse<PlayApiCommonDetailed> = {
-            data: livePlayData,
-            meta: {
-              offset: 0,
-              limit: 100
-            }
-          }
-          return HttpResponse.json(res);
-        }),
-        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
-          if(livePlayData.length === 0) {
-            livePlayData = await generatePlayApiCommonDetailedList();
-          }
-          const existing = livePlayData.find(x => x.uid === params.uid);
-          if (existing !== undefined) {
-            return HttpResponse.json(existing);
-          }
-          return HttpResponse.json(generatePlayApiCommonDetailed({}, serializeError(new Error('This is an error', {cause: new Error('this is a nested error', {cause: new Error('another error')})}))));
-        }),
-        sse('/api/events?next=true', async ({ params, client }) => {})
-      ],
-    },
   },
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
@@ -79,7 +87,7 @@ const meta = preview.meta({
     },
 decorators: [
   withRouter,
-    (Story) => (<Provider><Container maxWidth="4xl"><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Container></Provider>),
+    (Story: React.ComponentType) => (<Provider><Container maxWidth="4xl"><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Container></Provider>),
   ]
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
@@ -102,7 +110,7 @@ export const ClientHistoricalFailDetailed = meta.story({
     }
 });
 
-const randomQueue = () => faker.helpers.arrayElement(['scrobbleQueued', 'scrobbleDequeued']);
+const randomQueue = () => faker.helpers.arrayElement(['playQueued', 'playDequeued'] as const);
 
 export const ClientDetailedFetchable = meta.story({
     args: {
@@ -110,26 +118,15 @@ export const ClientDetailedFetchable = meta.story({
       live: true,
       componentId: 1,
     },
-    parameters: {
-        msw: {
-          handlers: [
-            sse('/api/events?next=true', async ({ params, client }) => {
-            setInterval(() => client.send({
-              //@ts-expect-error
-              event: randomQueue(), 
-              data: {componentId: 1}}), 2000);
-            setInterval(() => client.send({
-              //@ts-expect-error
-              event: 'deadLetter', 
-              data: {componentId: 1}}), 3000);
-            setInterval(() => client.send({
-              //@ts-expect-error
-              event: 'scrobble', 
-              data: {componentId: 1}}), 2500);
-            })
-          ],
-        },
-    }
+    beforeEach({ msw }) {
+      msw.use(
+        sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
+        setInterval(() => client.send(generateSseMessage(randomQueue(), {})), 2000);
+        setInterval(() => client.send(generateSseMessage('deadLetter', {})), 3000);
+        setInterval(() => client.send(generateSseMessage('scrobble', {})), 2500);
+        })
+      );
+    },
 });
 
 export const SourceDetailed = meta.story({
@@ -162,4 +159,21 @@ export const SubsonicNotEnhanced = meta.story({
     args: {
       data: {...generateClientApiJson(), playbackReporting: false}
     }
+});
+export const ClientWithJobPlays = meta.story({
+    args: {
+      data: generateClientApiJson({id: 7})
+    },
+    beforeEach({ msw }) {
+      msw.use(
+        http.get('/api/components/:componentId/job-plays/summary', () => HttpResponse.json<ClientJobPlaysSummaryJson>({
+          total: 48210,
+          queued: 35,
+          orphaned: 1200,
+          compacted: 12000,
+          exportingJobs: [],
+          task: null,
+        }))
+      );
+    },
 });

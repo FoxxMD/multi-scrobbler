@@ -1,29 +1,9 @@
 {
-  "compilerOptions": {
-    "moduleResolution": "bundler",
-    "module": "preserve",
-    "target": "esnext",
-    "jsx": "react-jsx",
-    "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "lib": [
-      "esnext",
-      "dom",
-      "dom.iterable"
-    ],
-    "rootDirs": [
-      ".",
-      "..src/client"
-    ],
-  },
+  "extends": "../client/tsconfig.json",
   "include": [
-    "*.stories.tsx",
-    "**/*.stories.tsx",
-    "*.tsx",
-    "../src/client/**/*.tsx",
-    "../src/backend/tests/**/*.ts"
+    "**/*.ts",
+    "**/*.tsx",
+    "../client/vite-env.d.ts"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": []
 }

@@ -3,10 +3,11 @@ import type { EventEmitter } from "events";
 import request from 'superagent';
 import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
-import type {PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
-import {
-    type InternalConfig,
-    type PlayerStateDataMaybePlay,
+import type { URLData } from "../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal } from "../../core/PlaySchema.ts";
+import type {
+    InternalConfig,
+    PlayerStateDataMaybePlay,
 } from "../common/infrastructure/Atomic.ts";
 import { NO_USER } from '../../core/Atomic.ts';
 import { NO_DEVICE } from '../../core/Atomic.ts';

@@ -1,11 +1,10 @@
-import { childLogger, type Logger } from "@foxxmd/logging";
+import { type Logger } from "@foxxmd/logging";
 import type EventEmitter from "events";
-import fsPromise from 'node:fs/promises';
 import fs from 'node:fs';
-import path from 'path';
 
 import { Readable } from 'stream';
-import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type SourcePlayerObj} from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, type ComponentAuthType } from "../../core/Atomic.ts";
+import type { PlayObject, SourcePlayerObj } from "../../core/PlaySchema.ts";
 import { capitalize } from "../../core/StringUtils.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
@@ -14,6 +13,7 @@ import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
 
 import { nowPlayingUpdateByPlayDuration, shouldClearNPStatus } from "./AbstractScrobbleClient.ts";
 import type {TealClientConfig} from "../common/infrastructure/config/client/tealfm.ts";
+import { toWriteBudget, type WriteBudget } from "../common/vendor/atproto/WriteBudget.ts";
 import { ATProtoAppApiClient } from "../common/vendor/atproto/ATProtoAppApiClient.ts";
 import { playToRecord, TealApiAuthenticatedClient } from "../common/vendor/teal/TealApiClient.ts";
 import { playToStatusRecord } from "../common/vendor/teal/TealApiClient.ts";
@@ -21,7 +21,7 @@ import { recordToPlay } from "../common/vendor/teal/TealApiClient.ts";
 import dayjs from "dayjs";
 import { isDebugMode } from "../utils.ts";
 import { durationToHuman } from '../../core/TimeUtils.ts';
-import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.ts";
+import AbstractHistoricalScrobbleClient, { inRanges, type ParseCarOpts } from "./AbstractHistoricalScrobbleClient.ts";
 import { fromStream } from '@atcute/repo';
 import { playToRepositoryCreatePlayHistoricalOpts, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
 import { isAbortError } from "abort-controller-x";
@@ -53,6 +53,9 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
         this.nowPlayingMinThreshold = (_) => 20;
         this.dataDir = options.dataDir;
+        if(config.options?.keepAllHistory) {
+            this.historicalWindowMs = undefined;
+        }
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => recordToPlay(obj);
@@ -72,6 +75,9 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
             throw new Error('Must provide an identifier');
         }
         await this.client.client.initClient();
+        if((this.config.options?.scrobbleInterval ?? this.scrobbleDelay) < this.scrobbleDelay) {
+            this.logger.warn(`Scrobble interval is LOWER than recommended ${this.scrobbleDelay}ms . You should only be using this if you are sure your PDS allows higher request rates.`)
+        }
         return true;
     }
 
@@ -117,6 +123,10 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         }
     }
 
+    override async writeBudget(): Promise<WriteBudget | undefined> {
+        return toWriteBudget(await this.client.client.getWriteRateLimit(), this.config.options);
+    }
+
     getScrobblesForTimeRange = async (_: any) => {
         try {
             const {data} = await this.client.getPagelessTimeRangeListens({limit: 100})
@@ -143,7 +153,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
             }
             return res;
         } catch (e: any) {
-            await this.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
+            await this.notifyScrobbleFailure(playObj, {title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             throw e;
         }
     }
@@ -167,50 +177,22 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         }
     }
 
-    protected async doHydrateHistoricalScrobbles(opts: {allowFailures?: boolean, signal?: AbortSignal } = {}) {
-        try {
-            const logger =  childLogger(this.logger, ['Historical Plays']);
-            const {
-                allowFailures = false,
-                signal
-            } = opts;
-            let file: string;
-            try {
-                logger.verbose('Fetching scrobbles from PDS...');
-                file = await this.fetchCarToFile();
-                signal?.throwIfAborted();
-            } catch (e) {
-                throw new Error('Failed to fetch repo CAR', {cause: e});
-            }
-
-            try {
-                await this.parseScrobblesFromCar(file, 100, {allowFailures, logger: logger, signal});
-            } catch (e) {
-                throw new Error('Failed to convert CAR without any error', {cause: e});
-            } finally {
-                await fsPromise.rm(file);
-            }
-        } catch (e) {
-            const historicalWarnings = new Error('Unable to hydrate historical plays. The client will still work but may not be able to catch all duplicates.', {cause: e});
-            this.warnings.push(historicalWarnings);
-            this.logger.warn(historicalWarnings);
-        }
+    protected getMirrorAccount(): string | undefined {
+        return this.client.client.userData?.did;
     }
 
-    async fetchCarToFile() {
+    protected async downloadCar(filename: string) {
         // TODO use `since` to get CAR diff instead of entire repo
-        // can use last import date from migrations table
-        const filename = path.resolve(this.dataDir, `${this.getSafeExternalId()}-${dayjs().unix()}.car`);
-        await fsPromise.writeFile(filename, Buffer.from(((await this.client.client.getCAR(this.client.client.userData.did)))));
-        return filename;
+        await this.client.client.getCARToFile(this.client.client.userData.did, filename);
     }
 
-    async parseScrobblesFromCar(filename: string, batchSize: number, opts: {allowFailures?: boolean, logger?: Logger, signal?: AbortSignal} = {}) {
+    async parseScrobblesFromCar(filename: string, batchSize: number, opts: ParseCarOpts = {}) {
 
         const {
             allowFailures = false,
             logger = this.logger,
-            signal
+            signal,
+            ranges
         } = opts;
 
         const stream = Readable.toWeb(fs.createReadStream(filename));
@@ -233,7 +215,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
                 let play: PlayObject;
                 try {
                     play = recordToPlay(entry.record as FmTealAlphaFeedPlay.Main | FmTealFeedPlay.Main, {
-                        web: did !== undefined ? `at://did:plc:${did}/${entry.collection}/${entry.rkey}` : undefined,
+                        web: did !== undefined ? `https://atproto.at/viewer?uri=${did}/${entry.collection}/${entry.rkey}` : undefined,
                         playId: entry.rkey,
                         user: did
                     });
@@ -257,6 +239,9 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
                     }
                 }
 
+                if(ranges !== undefined && !inRanges(play.data.playDate?.valueOf(), ranges)) {
+                    continue;
+                }
                 const existing = await this.playsHistoricalRepo.hasByUid(entry.rkey);
                 if(!existing) {
                     const batchDupe = batch.find(x => x.uid === entry.rkey);

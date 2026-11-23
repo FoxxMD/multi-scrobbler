@@ -12,13 +12,10 @@ type PropsAndCustomArgs = React.ComponentProps<typeof MusicServiceInput> & {
 const meta = preview.type<{args: PropsAndCustomArgs}>().meta({
   title: 'Music Service/Input',
   component: MusicServiceInput,
+  beforeEach({ msw }) { msw.use(); },
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
-        msw: {
-      handlers: [
-      ],
-    },
   },
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],

@@ -5,14 +5,14 @@ import Mopidy, { type models } from "mopidy";
 import normalizeUrl from 'normalize-url';
 import pEvent from 'p-event';
 import { URL } from "url";
-import type {PlayObject, PlayObjectMinimal} from "../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal } from "../../core/PlaySchema.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
 import { nameToCredit } from "../../core/MusicMetadata.ts";
 import { namesToCredits } from "../../core/MusicMetadata.ts";
-import {
-    type FormatPlayObjectOptions,
-    type InternalConfig,
-    type PlayerStateDataMaybePlay,
+import type {
+    FormatPlayObjectOptions,
+    InternalConfig,
+    PlayerStateDataMaybePlay,
 } from "../common/infrastructure/Atomic.ts";
 import { SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
 import type {MopidySourceConfig} from "../common/infrastructure/config/source/mopidy.ts";

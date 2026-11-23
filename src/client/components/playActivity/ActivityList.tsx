@@ -3,13 +3,13 @@ import { useSSEAnyEvent, useSSEContext } from '@flamefrontend/sse-runtime-react'
 import { type InfiniteData, useInfiniteQuery, type UseInfiniteQueryResult, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { type ComponentProps, useCallback, useMemo, useState } from "react";
-import type {MsSseEvent, MsSseEventPayload, PaginatedResponse, PlayApiCommonDetailed, QueryPlaysOptsJson, QueryPlaysOptsJsonRefreshable } from '../../../core/Api.js';
+import {asSseEvent, asCleanupSseEvent, type MsSseEvent, type PaginatedResponse, type PlayApiCommonDetailed, type QueryPlaysOptsJson, type QueryPlaysOptsJsonRefreshable } from '../../../core/Api.js';
 import {actionContextSchema, type ComponentType, type QueueContext} from '../../../core/Atomic.js';
 import { fetchPlaysPage, tanQueries, useQueryWatcher } from '../../queries/index.js';
 import { ActivitySummarySkeleton } from '../ActivityDetail.js';
 import { ErrorAlert } from '../ErrorAlert.js';
 import { ListFilters, ListRefereshButton, getTodayRange } from './ListFilters.js';
-import { type ActivityLogProps } from './ListParts.js';
+import type { ActivityLogProps } from './ListParts.js';
 import { NoPlayResults, VirtualizedListDynamic } from './VirtualListDynamic.js';
 import { menuItem, type MenuItemRender } from '../buttonMenus/menuItemUtils.js';
 import { RetryIcon } from '../icons/ChakraIcons.js';
@@ -83,11 +83,18 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
     const queryClient = useQueryClient();
     const client = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(client, (payload) => {
-        if ('componentId' in (payload.data as object) && (payload.data as Record<string, any>).componentId === componentId) {
-            switch (payload.type) {
+        const purged = asCleanupSseEvent(payload.data);
+        if (purged?.event === 'playsPurged' && purged.componentId === componentId) {
+            // many plays were compacted or deleted at once, refetch instead of patching
+            queryClient.invalidateQueries({queryKey: tanQueries.activities.list(componentId, query).queryKey});
+            return;
+        }
+        const event = asSseEvent(payload.data);
+        if (event?.componentId === componentId) {
+            switch (event.event) {
               case 'playInsert':
                 { 
-                  const componentData = payload.data as MsSseEventPayload<PlayApiCommonDetailed>;
+                  const componentData = event;
                 console.debug(`[Insert Check ${componentData.data.uid}] Recieved playInsert for Component ${componentId}, checking if Play can be inserted...`);
                 if(playInWindow(componentData.data, queryJson)) {
                   queryClient.setQueryData(tanQueries.activities.list(componentId, query).queryKey, (old: InfiniteData<PaginatedResponse<PlayApiCommonDetailed>, unknown> | undefined) => {
@@ -101,7 +108,7 @@ export const ListContainerFetchable = (props: { componentId: number, componentTy
                       if(old === undefined) {
                         return old;
                       }
-                      const componentData = payload.data as MsSseEventPayload<Pick<PlayApiCommonDetailed, 'uid'>>;
+                      const componentData = event;
                       // playDelete events don't happen outside of ui the except for retention cleanup
                       // and its unlikely the user would have fetched data during a retention cleanup event
                       //
@@ -205,6 +212,13 @@ const insertInfinitePlay = (data: PlayApiCommonDetailed, queryData: InfiniteData
 }
 
 const playInWindow = (data: PlayApiCommonDetailed, query: QueryPlaysOptsJson): boolean => {
+  if (query.jobId === 'null' || query.jobId === null) {
+    const jobId = (data as {jobId?: number | null}).jobId ?? (data.play.meta as {jobId?: number}).jobId;
+    if (jobId !== undefined && jobId !== null) {
+      console.debug(`[Insert Check ${data.uid}] Play is from an import/export job, which are hidden`);
+      return false;
+    }
+  }
   if (query.state !== undefined && !query.state.includes(data.state)) {
     console.debug(`[Insert Check ${data.uid}] Play is in state ${data.state} not included in current filters of ${query.state.join(',')}`);
     return false;
@@ -342,7 +356,9 @@ const defaultFilter = (): QueryPlaysOptsJsonRefreshable => ({
       inclusive: true
     },
     order: 'desc',
-    sort: 'playedAt'
+    sort: 'playedAt',
+    // scrobbles from import/export jobs can flood a client's list, hidden until asked for
+    jobId: 'null'
 });
 
 export const ListContainerFilterable = (props: { componentId: number, componentType: ComponentType }) => {

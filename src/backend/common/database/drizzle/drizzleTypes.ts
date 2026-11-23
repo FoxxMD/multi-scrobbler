@@ -1,5 +1,6 @@
 import type {DBQueryConfig, DBQueryConfigWith, KnownKeysOnly, RelationFieldsFilterInternals, BuildQueryResult, RelationsFilter} from "drizzle-orm";
-import type { components, componentMigrations, playInputs, plays, queueStates, relations, playsHistorical, playEvents } from "./schema/schema.ts";
+import type { EmptyFilter } from "drizzle-orm/relations";
+import type { components, componentMigrations, playInputs, plays, queueStates, relations, playsHistorical, playEvents, historicalPlayInputs } from "./schema/schema.ts";
 import type {TSchema, TableName} from "./schema/schema.ts";
 
 
@@ -23,6 +24,10 @@ export type PlayNew = typeof plays.$inferInsert;
 
 export type PlayHistoricalSelect = typeof playsHistorical.$inferSelect;
 export type PlayHistoricalNew = typeof playsHistorical.$inferInsert;
+export type PlayHistoricalWith<K extends keyof TSchema['playsHistorical']["relations"]> = GenericRelationResult<'playsHistorical', K>;
+
+export type HistoricalPlayInputNew = typeof historicalPlayInputs.$inferInsert;
+export type HistoricalPlayInputSelect = typeof historicalPlayInputs.$inferSelect;
 
 export type PlayEventSelect = typeof playEvents.$inferSelect;
 export type PlayEventNew = typeof playEvents.$inferInsert;
@@ -43,6 +48,8 @@ export type FindOne<T extends TableName> = Pick<KnownKeysOnly<QueryConfig<T>, DB
 export type FindWhere<T extends TableName> = QueryConfig<T>['where'];
 // https://github.com/drizzle-team/drizzle-orm/issues/5218#issuecomment-4154686086
 export type WhereClause<T extends keyof typeof relations> = RelationsFilter<typeof relations[T], typeof relations>
+/** A filter field value with undefined and EmptyFilter removed */
+export type FilterValue<T> = Exclude<NonNullable<T>, typeof EmptyFilter>;
 
 
 export type CompareOp<T> = Pick<RelationFieldsFilterInternals<T>, 'gt' | 'gte' | 'eq' | 'lt' | 'lte' | 'ne'>

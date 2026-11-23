@@ -1,11 +1,11 @@
 import type {RecentlyPlayedOptions} from "./AbstractSource.ts";
 import type { EventEmitter } from "events";
-import type {PlayObject, PlayObjectMinimal, URLData} from "../../core/Atomic.ts";
-import {
-    type FormatPlayObjectOptions,
-    type InternalConfig,
-    type PlayerStateData,
-    type PlayerStateDataMaybePlay,
+import type { URLData } from "../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal } from "../../core/PlaySchema.ts";
+import type {
+    FormatPlayObjectOptions,
+    InternalConfig,
+    PlayerStateDataMaybePlay,
 } from "../common/infrastructure/Atomic.ts";
 import { SINGLE_USER_PLATFORM_ID } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';

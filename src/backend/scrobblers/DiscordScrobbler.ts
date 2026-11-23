@@ -1,7 +1,8 @@
 import type {Logger, LogLevel} from "@foxxmd/logging";
 import type EventEmitter from "events";
-import type {ComponentAuthType, PlayMatchResult, PlayObject, SourcePlayerObj} from "../../core/Atomic.ts";
-import { type FormatPlayObjectOptions } from "../common/infrastructure/Atomic.ts";
+import type { ComponentAuthType } from "../../core/Atomic.ts";
+import type { PlayMatchResult, PlayObject, SourcePlayerObj } from "../../core/PlaySchema.ts";
+import type { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.ts";
 import { COMPONENT_AUTH_TYPE, SINGLE_USER_PLATFORM_ID_STR } from '../../core/Atomic.ts';
 import { CALCULATED_PLAYER_STATUSES } from '../../core/Atomic.ts';
 import { REPORTED_PLAYER_STATUSES } from '../../core/Atomic.ts';

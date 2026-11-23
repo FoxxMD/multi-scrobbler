@@ -10,8 +10,8 @@
 
 #
 #
-#
-FROM node:24-trixie-slim@sha256:0820eaa85e07d0490446dd01d14707e17e6108a36988cf374899cd057eb3812d AS builder
+#div
+FROM node:24-trixie-slim@sha256:af02d57b57719b9657a45199a79264a9437940cd55b3c7b3fc99615654f124a0 AS builder
 #
 #
 #
@@ -61,7 +61,7 @@ FROM app-src AS test
 
 # Runs the test suite as part of the image build, used by CI with `--target test`.
 # Not a dependency of the app target so a normal build skips it.
-RUN npm run test
+RUN npm run test:parallel
 
 #
 #
@@ -111,6 +111,12 @@ RUN npm ci --omit=dev --no-audit \
     && npm cache clean --force \
     ## peerDependency of validbot and can(?) be removed for production
     && rm -r node_modules/typescript \
+    ## drizzle-kit is an optional peer of better-auth, installed because it is also a devDependency
+    ## it is only used to generate migrations during development, prod runs migrations with drizzle-orm
+    ## the other packages are drizzle-kit-only dependencies, recheck with `npm ls <pkg>` when bumping drizzle-kit
+    && rm -rf node_modules/drizzle-kit node_modules/@drizzle-team/brocli \
+              node_modules/@js-temporal/polyfill node_modules/jsbi \
+              node_modules/get-tsconfig node_modules/resolve-pkg-maps node_modules/jiti \
     ## youtubei.js includes a large folder of maps and d.ts files that
     ## are only used for frontend bundling, we we don't need
     && rm -rf node_modules/youtubei.js/bundle \
@@ -120,7 +126,7 @@ RUN npm ci --omit=dev --no-audit \
 #
 #
 #
-FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:b8cec4b2f2126ff7bd034ec9ac207ffb3272667dfdc48376e3b035d3270549ba AS app
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:6abfcb367ebc291572c774c1592a986be2ab26a2486f73093401327495a5962a AS app
 #
 #
 #
@@ -233,7 +239,7 @@ RUN apt-get update \
 #
 #
 #
-FROM gcr.io/distroless/nodejs24-debian13:debug-nonroot@sha256:3113adad6d98116a67d4a60b23d227fbafa704208b3b114c4a91470c244c3af1 AS busybox
+FROM gcr.io/distroless/nodejs24-debian13:debug-nonroot@sha256:4bbe32843b358db173c92768c585c2ecd5f70cff6571d573f2df2bfcd391c9a0 AS busybox
 #
 #
 #

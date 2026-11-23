@@ -1,12 +1,16 @@
 import { type DbConcrete, runTransaction } from "../drizzleUtils.ts";
-import { type PlayObject, TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
-import { generatePlayHistoricalEntity, hydratePlaySelect, type PlayHydateOptions, type PlayHistoricalEntityOpts } from "../entityUtils.ts";
-import { plays, playsHistorical } from "../schema/schema.ts";
-import type {FindWhere, FindMany, WhereClause, PlayHistoricalSelect, PlayHistoricalNew} from "../drizzleTypes.ts";;
+import { TA_DEFAULT_ACCURACY, type TemporalAccuracy } from "../../../../../core/Atomic.ts";
+import type { PlayObject } from "../../../../../core/PlaySchema.ts";
+import { generateInputEntity, generatePlayHistoricalEntity, hydratePlaySelect, type PlayHydateOptions, type PlayHistoricalEntityOpts } from "../entityUtils.ts";
+import { historicalPlayInputs, playsHistorical } from "../schema/schema.ts";
+import type {FindWhere, FindMany, WhereClause, PlayHistoricalSelect, PlayHistoricalNew, HistoricalPlayInputNew, HistoricalPlayInputSelect} from "../drizzleTypes.ts";
 import type { MarkOptional } from "ts-essentials";
 import { removeUndefinedKeys } from '../../../../../core/DataUtils.ts';
-import { inArray, sql } from "drizzle-orm";
-import { buildDateCompare, type CompareDateOp, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
+import { and, asc, count, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
+import dayjs from "dayjs";
+import { EmptyFilter } from "drizzle-orm/relations";
+import { buildDateCompare, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
+import type { CompareDateOp } from "../../../../../core/Api.ts";
 import type {PaginatedResponse} from "../../../../../core/Api.ts";
 import { hashObject } from "../../../../utils/StringUtils.ts";
 import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../../utils/PlayComparisonUtils.ts";
@@ -17,6 +21,7 @@ import { getTemporallyCloseDateCompareOp } from "./PlayRepository.ts";
 
 export interface PlayWhereOpts {
     componentId?: number
+    mirrorId?: number
     seenAt?: CompareDateOp
     playedAt?: CompareDateOp
     uid?: string[]
@@ -33,8 +38,19 @@ export interface HydrateOpts {
    hydrate?: PlayHydateOptions[] 
 }
 
+export interface WithInputOpts {
+    /** include historical_play_inputs row as `input` */
+    withInput?: boolean
+}
+
+export type PlayHistoricalSelectMaybeInput = PlayHistoricalSelect & { input?: HistoricalPlayInputSelect | null };
+
 export type RepositoryCreatePlayHistoricalOpts = PlayHistoricalEntityOpts
-    & Pick<PlayHistoricalNew, 'play' | 'componentId'>;
+    & Pick<PlayHistoricalNew, 'play' | 'componentId'>
+    & {
+        /** raw upstream data. When undefined no input row is created */
+        input?: Partial<Pick<HistoricalPlayInputNew, 'play' | 'data'>>
+    };
 
 type PlayIdentifierPrimitiveMap = {
   uid: string;
@@ -55,7 +71,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         const res = await this.db.query.playsHistorical.findFirst({
             where: {
                 uid,
-                componentId: opts.componentId ?? this.componentId
+                componentId: opts.componentId ?? this.componentId ?? EmptyFilter
             }
         });
         if(res === undefined) {
@@ -70,7 +86,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
             columns: {id: true},
             where: {
                 uid,
-                componentId: opts.componentId ?? this.componentId
+                componentId: opts.componentId ?? this.componentId ?? EmptyFilter
             }
         });
         return res !== undefined;
@@ -88,20 +104,73 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
             const entitiesData = entitiesOpts.map((data) => {
                 const {
                     play,
+                    input,
                     ...rest
                 } = data;
                 return generatePlayHistoricalEntity(play, { componentId: this.componentId, ...rest });
             });
 
             playRows = await this.db.insert(playsHistorical).values(entitiesData).returning();
+
+            const inputDatas = playRows.flatMap((x, index) => {
+                const {play, input} = entitiesOpts[index];
+                if(input === undefined) {
+                    return [];
+                }
+                const {play: inputPlay = play, ...restInput} = input;
+                return [generateInputEntity({ play: inputPlay, playId: x.id, ...restInput }) as HistoricalPlayInputNew];
+            });
+            if(inputDatas.length > 0) {
+                await this.db.insert(historicalPlayInputs).values(inputDatas);
+            }
         });
 
         return playRows.map(x => ({...x, play: hydratePlaySelect(x, hydrate)}));
     }
 
-    findPlays = async (args: QueryPlaysOpts, opts: HydrateOpts & ComponentConstrainedRepoOpts = {}): Promise<PlayHistoricalSelect[]> => {
+    /**
+     * Insert mirror plays, skipping any whose uid already exists. Returns the number of rows actually inserted.
+     *
+     * Every row must have a uid (dedupe key). Inputs are only created for inserted rows, matched by uid.
+     *
+     * Does not open a transaction so it can be paired with coverage/cursor updates in the caller's transaction.
+     * */
+    insertIgnoreDuplicates = async (entitiesOpts: (RepositoryCreatePlayHistoricalOpts & {uid: string})[], opts: {persistInputs?: boolean} = {}): Promise<number> => {
+        const {persistInputs = true} = opts;
+        if(entitiesOpts.length === 0) {
+            return 0;
+        }
+        // raw data only belongs in historical_play_inputs
+        const entitiesData = entitiesOpts.map(({play: {original, ...play}, input, ...rest}) => generatePlayHistoricalEntity(play, { componentId: this.componentId, ...rest }));
+        const inserted = await this.db.insert(playsHistorical).values(entitiesData).onConflictDoNothing().returning({id: playsHistorical.id, uid: playsHistorical.uid});
+
+        if(persistInputs && inserted.length > 0) {
+            // first wins, matching which duplicate SQLite actually inserted
+            const byUid = new Map<string, typeof entitiesOpts[number]>();
+            for(const x of entitiesOpts) {
+                if(!byUid.has(x.uid)) {
+                    byUid.set(x.uid, x);
+                }
+            }
+            const inputDatas = inserted.flatMap((x) => {
+                const entity = byUid.get(x.uid as string);
+                if(entity?.input === undefined) {
+                    return [];
+                }
+                const {play: inputPlay = entity.play, ...restInput} = entity.input;
+                return [generateInputEntity({ play: inputPlay, playId: x.id, ...restInput }) as HistoricalPlayInputNew];
+            });
+            if(inputDatas.length > 0) {
+                await this.db.insert(historicalPlayInputs).values(inputDatas);
+            }
+        }
+        return inserted.length;
+    }
+
+    findPlays = async (args: QueryPlaysOpts, opts: HydrateOpts & WithInputOpts & ComponentConstrainedRepoOpts = {}): Promise<PlayHistoricalSelectMaybeInput[]> => {
         const {
             hydrate,
+            withInput = false,
             componentId = this.componentId
         } = opts;
         // this does not work as type for query variable
@@ -130,8 +199,104 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         }
 
         query = removeUndefinedKeys(query, false);
-        const results = await this.db.query.playsHistorical.findMany(query);
+        if(withInput) {
+            query.with = {input: true};
+        }
+        const results = await this.db.query.playsHistorical.findMany(query) as PlayHistoricalSelectMaybeInput[];
         return results.map((x) => ({...x, play: hydratePlaySelect(x, hydrate)}));
+    }
+
+    /**
+     * A page of a mirror's plays in `range` (inclusive, ms), in export order, after the keyset `after` (the last row of the previous page).
+     * Plays are hydrated without id/uid.
+     * */
+    findPageForExport = async (args: {mirrorId: number, range: [number, number], order: 'asc' | 'desc', after?: {playedAt: number, id: number}, limit: number}): Promise<{id: number, playedAt: number, play: PlayObject}[]> => {
+        const {mirrorId, range, order, after, limit} = args;
+        const t = playsHistorical;
+        const conditions = [eq(t.mirrorId, mirrorId), gte(t.playedAt, dayjs(range[0])), lte(t.playedAt, dayjs(range[1]))];
+        if (after !== undefined) {
+            const beyond = order === 'desc' ? lt : gt;
+            conditions.push(or(beyond(t.playedAt, dayjs(after.playedAt)), and(eq(t.playedAt, dayjs(after.playedAt)), beyond(t.id, after.id)))!);
+        }
+        const dir = order === 'desc' ? desc : asc;
+        const rows = await this.db.select().from(t).where(and(...conditions)).orderBy(dir(t.playedAt), dir(t.id)).limit(limit);
+        return rows.map(x => ({id: x.id, playedAt: x.playedAt!.valueOf(), play: hydratePlaySelect(x, [])}));
+    }
+
+    /**
+     * Up to `limit` ids of a mirror's plays, optionally only in `range` (inclusive, ms) and only those not compacted yet.
+     * Ordered by id so batched cleanups make steady progress.
+     * */
+    findMirrorIds = async (args: {mirrorId: number, range?: [number, number], uncompacted?: boolean, limit: number}): Promise<number[]> => {
+        const {mirrorId, range, uncompacted = false, limit} = args;
+        const t = playsHistorical;
+        const conditions = [eq(t.mirrorId, mirrorId)];
+        if (range !== undefined) {
+            conditions.push(gte(t.playedAt, dayjs(range[0])), lte(t.playedAt, dayjs(range[1])));
+        }
+        if (uncompacted) {
+            conditions.push(isNull(t.compacted));
+        }
+        const rows = await this.db.select({id: t.id}).from(t).where(and(...conditions)).orderBy(asc(t.id)).limit(limit);
+        return rows.map(x => x.id);
+    }
+
+    /** Number of a mirror's plays, optionally only in `range` (inclusive, ms) and only those not compacted yet */
+    countMirror = async (args: {mirrorId: number, range?: [number, number], uncompacted?: boolean}): Promise<number> => {
+        const {mirrorId, range, uncompacted = false} = args;
+        const t = playsHistorical;
+        const conditions = [eq(t.mirrorId, mirrorId)];
+        if (range !== undefined) {
+            conditions.push(gte(t.playedAt, dayjs(range[0])), lte(t.playedAt, dayjs(range[1])));
+        }
+        if (uncompacted) {
+            conditions.push(isNull(t.compacted));
+        }
+        const [row] = await this.db.select({count: count()}).from(t).where(and(...conditions));
+        return row?.count ?? 0;
+    }
+
+    /** Replace raw upstream data of these plays with a removal note */
+    compactInputs = async (ids: number[]): Promise<void> => {
+        if (ids.length === 0) {
+            return;
+        }
+        await runTransaction(this.db, async () => {
+            await this.db.update(historicalPlayInputs).set({data: {removedReason: 'Removed by compaction'}}).where(inArray(historicalPlayInputs.playId, ids));
+            await this.db.update(playsHistorical).set({compacted: 'input'}).where(inArray(playsHistorical.id, ids));
+        });
+    }
+
+    /** Move a component's plays that have no mirror into mirrorId, in batches. Returns how many moved */
+    assignComponentToMirror = async (componentId: number, mirrorId: number, origin: string, batchSize: number = 5000): Promise<number> => {
+        const t = playsHistorical;
+        let moved = 0;
+        while (true) {
+            const ids = (await this.db.select({id: t.id}).from(t).where(and(eq(t.componentId, componentId), isNull(t.mirrorId))).limit(batchSize)).map(x => x.id);
+            if (ids.length === 0) {
+                return moved;
+            }
+            await this.db.update(t).set({mirrorId, origin}).where(inArray(t.id, ids));
+            moved += ids.length;
+        }
+    }
+
+    /** Delete a component's plays that are in a mirror other than mirrorId. Returns how many were deleted */
+    deleteComponentOutsideMirror = async (componentId: number, mirrorId: number): Promise<number> => {
+        const t = playsHistorical;
+        const deleted = await this.db.delete(t).where(and(eq(t.componentId, componentId), isNotNull(t.mirrorId), ne(t.mirrorId, mirrorId))).returning({id: t.id});
+        return deleted.length;
+    }
+
+    /** Delete plays and their inputs */
+    deleteWithInputs = async (ids: number[]): Promise<void> => {
+        if (ids.length === 0) {
+            return;
+        }
+        await runTransaction(this.db, async () => {
+            await this.db.delete(historicalPlayInputs).where(inArray(historicalPlayInputs.playId, ids));
+            await this.db.delete(playsHistorical).where(inArray(playsHistorical.id, ids));
+        });
     }
 
     findPlayIds = async (args: QueryPlaysOpts, opts: ComponentConstrainedRepoOpts = {}): Promise<number[]> => {
@@ -204,7 +369,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
 
     deletePlays = async (playsData: (Pick<PlayHistoricalSelect, 'id'> | number)[]) => {
         const ids = playsData.map(x => typeof x === 'number' ? x : x.id);
-        await this.db.delete(playsHistorical).where(inArray(plays.id, ids));
+        await this.db.delete(playsHistorical).where(inArray(playsHistorical.id, ids));
     }
 
     public checkExisting = async (play: PlayObject, opts: {taAccuracy?: TemporalAccuracy[]} & ComponentConstrainedRepoOpts = {}): Promise<PlayHistoricalSelect | undefined> => {
@@ -228,7 +393,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         //     endRange = getScrobbleTsSOCDate(play).add(dateGranularity, 's');
         // }
         const where: FindWhere<'playsHistorical'> = {
-            componentId,
+            componentId: componentId ?? EmptyFilter,
             playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play)),
         };
 
@@ -271,7 +436,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         const query: FindMany<'playsHistorical'> = {};
 
         const where: FindWhere<'playsHistorical'> = {
-            componentId,
+            componentId: componentId ?? EmptyFilter,
             playedAt: buildDateCompare(getTemporallyCloseDateCompareOp(play, {bufferTime})),
         };
         query.where = where;
@@ -294,7 +459,8 @@ export const buildPlayHistoricalWhere = (args: PlayWhereOpts): WhereClause<'play
     // let where: Parameters<(ReturnType<typeof getDb>)['query']['plays']['findMany']>[0]['where'] = {
     // };
     const where: FindWhere<'playsHistorical'> = {
-        componentId: args.componentId
+        componentId: args.componentId ?? EmptyFilter,
+        mirrorId: args.mirrorId ?? EmptyFilter
     };
     if (args.seenAt !== undefined) {
         where.seenAt = buildDateCompare(args.seenAt);
@@ -310,9 +476,24 @@ export const buildPlayHistoricalWhere = (args: PlayWhereOpts): WhereClause<'play
     return where;
 }
 
+/**
+ * Moves raw upstream data (play.original) into `input` so it is stored in historical_play_inputs instead of the play json
+ * */
 export const playToRepositoryCreatePlayHistoricalOpts = (data: MarkOptional<RepositoryCreatePlayHistoricalOpts, 'componentId'>): RepositoryCreatePlayHistoricalOpts => {
-    return {
+    const {
+        play: {
+            original,
+            ...playRest
+        },
+        ...rest
+    } = data;
+    const opts: RepositoryCreatePlayHistoricalOpts = {
         uid: data.play.meta?.playId,
-        ...data
+        ...rest,
+        play: playRest,
+    };
+    if(original !== undefined && opts.input === undefined) {
+        opts.input = {play: original.play, data: original.data};
     }
+    return opts;
 }

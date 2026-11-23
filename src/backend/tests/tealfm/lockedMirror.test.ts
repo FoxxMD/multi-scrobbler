@@ -1,0 +1,318 @@
+import { expect } from 'chai';
+import { describe, it } from 'mocha';
+import { EventEmitter } from "events";
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import dayjs from 'dayjs';
+import { eq } from 'drizzle-orm';
+import { loggerTest } from '@foxxmd/logging';
+import TealScrobbler from '../../scrobblers/TealfmScrobbler.ts';
+import { PlayParkedError } from '../../common/errors/MSErrors.ts';
+import { COVERAGE_GIVE_UP_FAILURES, COVERAGE_ORIGIN_DUPE_CHECK, coverageForPlay } from '../../scrobblers/AbstractHistoricalScrobbleClient.ts';
+import { ensureOwner } from '../../common/auth/owner.ts';
+import { MirrorRepository } from '../../common/database/drizzle/repositories/MirrorRepository.ts';
+import { playToRepositoryCreatePlayHistoricalOpts } from '../../common/database/drizzle/repositories/PlayHistoricalRepository.ts';
+import { generatePlayHistoricalEntity } from '../../common/database/drizzle/entityUtils.ts';
+import { playsHistorical } from '../../common/database/drizzle/schema/schema.ts';
+import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
+
+const buildTeal = async (account: string | null = 'did:plc:abc', options: Record<string, unknown> = {}) => {
+    const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ms-mirror-'));
+    const tfm = new TealScrobbler('test',
+        {id: `test-${Date.now()}`, name: 'test', data: {identifier: 'test', appPassword: 'test'}, options},
+        {configDir: dataDir, dataDir, localUrl: new URL('https://example.com'), version: 'test'},
+        new EventEmitter(),
+        loggerTest
+    );
+    await tfm.buildDatabase();
+    fs.rmSync(dataDir, {recursive: true, force: true});
+    const t = tfm as any;
+    t.getMirrorAccount = () => account ?? undefined;
+    const owner = await ensureOwner(t.db);
+    t.dbComponent.userId = owner.id;
+    return {t, owner, mirrors: new MirrorRepository(t.db)};
+}
+
+const until = async (fn: () => boolean, ms = 2000) => {
+    const start = Date.now();
+    while (!fn()) {
+        if (Date.now() - start > ms) {
+            throw new Error('timed out');
+        }
+        await new Promise(r => setTimeout(r, 5));
+    }
+}
+
+const seed = (t: any, ts: number, mirrorId: number | null = null) => t.db.insert(playsHistorical).values(
+    generatePlayHistoricalEntity(generatePlay({playDate: dayjs(ts)}), {componentId: t.dbComponent.id, uid: `rkey${ts}`, mirrorId}));
+
+describe('#tealfm Locked mirror', function () {
+
+    it('moves historical plays into a locked mirror for its account, deletes plays of another account and covers the last full sync', async function () {
+        const {t, owner, mirrors} = await buildTeal();
+        const other = await mirrors.findOrCreate({userId: owner.id, service: 'tealfm', account: 'did:plc:old', name: 'old account'});
+        await seed(t, 100);
+        await seed(t, 200);
+        await seed(t, 300, other.id);
+        t.synced = true;
+        t.lastImportSuccess = dayjs(5000);
+
+        await t.useLockedMirror();
+        // idempotent, IE on every start
+        await t.useLockedMirror();
+
+        const mirror = (await mirrors.getById(t.mirrorId))!;
+        expect(mirror).include({service: 'tealfm', account: 'did:plc:abc', userId: owner.id});
+        const rows = await t.db.select().from(playsHistorical);
+        expect(rows.map((x: any) => [x.uid, x.mirrorId, x.origin])).eql([['rkey100', mirror.id, 'tealfm'], ['rkey200', mirror.id, 'tealfm']]);
+        expect(mirror.coverage).eql([[0, 5000]]);
+        expect(mirror.segments).eql([{range: [0, 5000], origin: 'tealfm', jobId: null}]);
+
+        await t.createHistoricalPlays([playToRepositoryCreatePlayHistoricalOpts({play: generatePlay({playDate: dayjs(400)}, {playId: 'rkey400'})})]);
+        const [added] = await t.db.select().from(playsHistorical).where(eq(playsHistorical.uid, 'rkey400'));
+        expect(added).include({mirrorId: mirror.id, origin: 'tealfm', componentId: t.dbComponent.id});
+    });
+
+    it('does not cover anything when the last full sync failed', async function () {
+        const {t, mirrors} = await buildTeal();
+        t.synced = false;
+        await t.useLockedMirror();
+        expect((await mirrors.getById(t.mirrorId))!.coverage).eql([]);
+    });
+
+    it('keeps plays without a mirror when the account DID is not resolved', async function () {
+        const {t} = await buildTeal(null);
+        await seed(t, 100);
+        await t.useLockedMirror();
+        expect(t.mirrorId).undefined;
+        expect((await t.db.select().from(playsHistorical))[0].mirrorId).eq(null);
+    });
+
+    it('counts everything after the last synced range as covered, but nothing after a range only a pass covered', async function () {
+        const {t, mirrors} = await buildTeal();
+        await t.useLockedMirror();
+        await mirrors.addCoverage(t.mirrorId, [500, 600], {origin: COVERAGE_ORIGIN_DUPE_CHECK, jobId: null});
+        // no sync yet: after 600 is not covered
+        expect(await t.uncoveredRanges([[550, 700]])).eql([[601, 700]]);
+        // but plays of the last day are, so live plays are never parked
+        expect(await t.uncoveredRanges([[Date.now() - 60_000, Date.now()]])).eql([]);
+        await mirrors.addCoverage(t.mirrorId, [0, 100], {origin: 'tealfm', jobId: null});
+        expect(await t.uncoveredRanges([[50, 700]])).eql([]);
+        await mirrors.addCoverage(t.mirrorId, [1000, 2000], {origin: 'tealfm', jobId: null});
+        expect(await t.uncoveredRanges([[50, 5000]])).eql([[101, 499], [601, 999]]);
+        expect(await t.uncoveredRanges([[3000, 5000]])).eql([]);
+    });
+
+    it('requests made while a pass runs share the next pass, which covers what it mirrored', async function () {
+        const {t, mirrors} = await buildTeal();
+        await t.useLockedMirror();
+        await mirrors.addCoverage(t.mirrorId, [10_000, 20_000], {origin: 'tealfm', jobId: null});
+        const passes: unknown[] = [];
+        let release!: () => void;
+        const gate = new Promise<void>(r => { release = r; });
+        t.getCarFile = async () => 'car';
+        t.parseScrobblesFromCar = async (_file: string, _batch: number, opts: {ranges: unknown}) => {
+            passes.push(opts.ranges);
+            if (passes.length === 1) {
+                await gate;
+            }
+        };
+        const first = t.ensureCoverage([[100, 200]]);
+        await until(() => passes.length === 1);
+        const later = Promise.all([t.ensureCoverage([[150, 300]]), t.ensureCoverage([[5000, 6000]])]);
+        release();
+        await Promise.all([first, later]);
+        expect(passes).eql([[[100, 200]], [[201, 300], [5000, 6000]]]);
+        const mirror = (await mirrors.getById(t.mirrorId))!;
+        expect(mirror.coverage).eql([[100, 300], [5000, 6000], [10_000, 20_000]]);
+        expect(mirror.segments.filter((x: {origin: string}) => x.origin === COVERAGE_ORIGIN_DUPE_CHECK).length).gte(2);
+        await t.ensureCoverage([[120, 250]]);
+        expect(passes).length(2);
+    });
+
+    it('after a failed pass, parks plays that need one (no retry used) and passes again after the backoff', async function () {
+        const {t} = await buildTeal();
+        await t.useLockedMirror();
+        t.coverageFailureBackoffMs = 150;
+        t.getCarFile = async () => 'car';
+        let fail = true;
+        const startedAt: number[] = [];
+        t.parseScrobblesFromCar = async () => {
+            startedAt.push(Date.now());
+            if (fail) {
+                throw new Error('bad CAR');
+            }
+        };
+        await expect(t.ensureCoverage([[100, 200]])).rejectedWith('Could not mirror scrobbles for older plays');
+        const old = generatePlay({playDate: dayjs().subtract(1, 'year')});
+        fail = false;
+        const parked = await t.getSOTScrobblesForPlay(old).catch((e: unknown) => e);
+        expect(parked).instanceOf(PlayParkedError);
+        await (parked as PlayParkedError).until;
+        expect(startedAt[1] - startedAt[0]).gte(140);
+    });
+
+    it('parks an older play until a pass covers it, never a recent one', async function () {
+        const {t} = await buildTeal();
+        await t.useLockedMirror();
+        await t.mirrorRepo.addCoverage(t.mirrorId, [dayjs().subtract(1, 'week').valueOf(), dayjs().subtract(1, 'day').valueOf()], {origin: 'tealfm', jobId: null});
+        const ensured: unknown[] = [];
+        t.ensureCoverage = async (ranges: unknown) => {
+            ensured.push(ranges);
+        };
+        await t.getSOTScrobblesForPlay(generatePlay({playDate: dayjs()}));
+        expect(ensured).length(0);
+        const old = generatePlay({playDate: dayjs().subtract(1, 'year')});
+        const err = await t.getSOTScrobblesForPlay(old).catch((e: unknown) => e);
+        expect(err).instanceOf(PlayParkedError);
+        await (err as PlayParkedError).until;
+        expect(ensured).eql([[coverageForPlay(old)]]);
+    });
+
+    it('a pass waits for a running full sync, which can cover its ranges', async function () {
+        const {t, mirrors} = await buildTeal();
+        await t.useLockedMirror();
+        let release!: () => void;
+        const gate = new Promise<void>(r => { release = r; });
+        let syncing = false;
+        t.doHydrateHistoricalScrobbles = async () => {
+            syncing = true;
+            await gate;
+            syncing = false;
+        };
+        const parsedDuringSync: boolean[] = [];
+        t.getCarFile = async () => 'car';
+        t.parseScrobblesFromCar = async () => {
+            parsedDuringSync.push(syncing);
+        };
+        t.hydrateHistoricalScrobbles();
+        await until(() => syncing);
+        // inside the window the full sync mirrors
+        const recent = Date.now() - 2 * 24 * 60 * 60 * 1000;
+        const ensured = t.ensureCoverage([[recent, recent + 1000]]);
+        await new Promise(r => setTimeout(r, 50));
+        expect(parsedDuringSync).eql([]);
+        release();
+        await ensured;
+        await t.importPromise;
+        // the full sync covered its window, so the pass had nothing left to do
+        expect(parsedDuringSync).eql([]);
+        expect((await mirrors.getById(t.mirrorId))!.coverage).length(1);
+    });
+
+    it('a full sync mirrors only the window, covers it and prunes older plays except held and queued ones', async function () {
+        const {t, mirrors} = await buildTeal();
+        const day = 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        await seed(t, now - 40 * day);
+        await seed(t, now - 35 * day);
+        await seed(t, now - 33 * day);
+        await seed(t, now - 10 * day);
+        t.synced = true;
+        t.lastImportSuccess = dayjs(now - day);
+        await t.useLockedMirror();
+        t.coverageHolds.set('job', [[now - 36 * day, now - 34 * day]]);
+        t.queuedCoverage = async () => [[now - 34 * day, now - 32 * day]];
+        const parsed: unknown[] = [];
+        t.getCarFile = async () => 'car';
+        t.parseScrobblesFromCar = async (_f: string, _b: number, opts: {ranges: unknown}) => {
+            parsed.push(opts.ranges);
+        };
+        t.hydrateHistoricalScrobbles();
+        await t.importPromise;
+
+        expect(t.synced).true;
+        const [[from, to]] = parsed[0] as [number, number][];
+        expect(to - from).eq(30 * day);
+        const left = (await t.db.select().from(playsHistorical)).map((x: any) => Math.round((now - x.playedAt.valueOf()) / day));
+        expect(left).eql([35, 33, 10]);
+        const mirror = (await mirrors.getById(t.mirrorId))!;
+        expect(mirror.coverage).eql([[now - 36 * day, now - 32 * day], [from, to]]);
+    });
+
+    it('with keepAllHistory, syncs again when only the window was mirrored, then keeps everything', async function () {
+        const {t, mirrors} = await buildTeal('did:plc:abc', {keepAllHistory: true});
+        const day = 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        await seed(t, now - 40 * day);
+        const mirror = await mirrors.findOrCreate({userId: t.dbComponent.userId, service: 'tealfm', account: 'did:plc:abc', name: 'teal'});
+        // synced before with the 30 day window
+        await mirrors.addCoverage(mirror.id, [now - 30 * day, now - day], t.coverageTag);
+        t.synced = true;
+        t.lastImportSuccess = dayjs(now - day);
+        await t.useLockedMirror();
+        expect(t.synced).false;
+
+        const parsed: unknown[] = [];
+        t.getCarFile = async () => 'car';
+        t.parseScrobblesFromCar = async (_f: string, _b: number, opts: {ranges: unknown}) => {
+            parsed.push(opts.ranges);
+        };
+        t.hydrateHistoricalScrobbles();
+        await t.importPromise;
+
+        expect(t.synced).true;
+        const [[from, to]] = parsed[0] as [number, number][];
+        expect(from).eq(0);
+        expect((await mirrors.getById(t.mirrorId))!.coverage).eql([[0, to]]);
+        expect(await t.pruneOutsideWindow()).eq(0);
+        expect(await t.db.select().from(playsHistorical)).length(1);
+
+        // a later start does not sync again
+        await t.useLockedMirror();
+        expect(t.synced).true;
+    });
+
+    it('a failed full sync covers nothing and still lets live plays through', async function () {
+        const {t, mirrors} = await buildTeal();
+        await t.useLockedMirror();
+        t.getCarFile = async () => {
+            throw new Error('not a valid CAR');
+        };
+        t.hydrateHistoricalScrobbles();
+        await t.importPromise;
+        expect(t.synced).false;
+        expect((await mirrors.getById(t.mirrorId))!.coverage).eql([]);
+        expect(t.warnings.map((x: Error) => x.message)).include('Unable to mirror historical plays. Live scrobbles are still checked for duplicates against recent plays.');
+        // a live play is not parked
+        expect(await t.getSOTScrobblesForPlay(generatePlay({playDate: dayjs()}))).eql([]);
+    });
+
+    it('ensureCoverage holds its ranges until released', async function () {
+        const {t} = await buildTeal();
+        await t.useLockedMirror();
+        t.uncoveredRanges = async () => [];
+        await t.ensureCoverage([[1, 2]], undefined, 'job-1');
+        expect([...t.coverageHolds.keys()]).eql(['job-1']);
+        t.releaseCoverage('job-1');
+        expect(t.coverageHolds.size).eq(0);
+    });
+
+    it('after repeated failed passes, checks older plays against what is mirrored with a warning, until a pass works again', async function () {
+        const {t} = await buildTeal();
+        await t.useLockedMirror();
+        t.coverageFailureBackoffMs = 0;
+        t.getCarFile = async () => 'car';
+        let fail = true;
+        t.parseScrobblesFromCar = async () => {
+            if (fail) {
+                throw new Error('bad CAR');
+            }
+        };
+        for (let i = 1; i < COVERAGE_GIVE_UP_FAILURES; i++) {
+            await expect(t.ensureCoverage([[100, 200]])).rejectedWith('Could not mirror scrobbles for older plays');
+        }
+        expect(t.warnings).length(0);
+        // the last failure gives up: resolves uncovered so exports continue
+        await t.ensureCoverage([[100, 200]]);
+        expect(t.warnings.map((x: Error) => x.message)[0]).match(/Could not mirror older scrobbles 3 times in a row/);
+        // not parked, checked against what is mirrored
+        expect(await t.getSOTScrobblesForPlay(generatePlay({playDate: dayjs().subtract(1, 'year')}))).eql([]);
+
+        fail = false;
+        await t.ensureCoverage([[100, 200]]);
+        expect(t.warnings).length(0);
+        expect(t.coverageGaveUp).undefined;
+    });
+});

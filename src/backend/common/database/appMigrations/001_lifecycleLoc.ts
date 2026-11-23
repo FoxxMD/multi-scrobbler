@@ -2,8 +2,10 @@ import type { SqliteDatabase, Migration } from 'sqlite-up';
 import type {MigrateBaseContext} from '../appMigrator.ts';
 import { plays as drizzlePlays } from '../drizzle/schema/schema.ts';
 import clone from 'clone';
-import { eq } from 'drizzle-orm';
-import type {LifecycleStep, PlayLifecycle, PlayObject} from '../../../../core/Atomic.ts';
+import { eq, getColumns, sql } from 'drizzle-orm';
+import { asLegacyPlay } from '../../../../core/PlayMarshalUtils.ts';
+import type { LifecycleStep } from '../../../../core/Atomic.ts';
+import type { PlayLifecycle, PlayObject } from '../../../../core/PlaySchema.ts';
 
 /** Shape of a Play after this migration. Steps were later moved to play events */
 type PlayWithLifecycle = PlayObject & {lifecycle?: LifecycleStep[]};
@@ -20,9 +22,10 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
         processed = 0,
         updated = 0;
     while (more) {
-        const playRows = await ctx.db.select().from(drizzlePlays).limit(100).offset(offset);
+        // read raw, plays may be in a legacy shape
+        const playRows = await ctx.db.select({...getColumns(drizzlePlays), play: sql<string>`${drizzlePlays.play}`}).from(drizzlePlays).limit(100).offset(offset);
         for (const row of playRows) {
-            const play = row.play as PlayObject<{lifecycle?: PlayLifecycle}>;
+            const play = asLegacyPlay(row.play) as PlayObject<{lifecycle?: PlayLifecycle}>;
             try {
                 const {
                     meta: {
@@ -39,14 +42,13 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
                     continue;
                 }
                 if (steps.length > 0) {
-                    (row.play as PlayWithLifecycle).lifecycle = clone(steps);
+                    (play as PlayWithLifecycle).lifecycle = clone(steps);
                 }
                 if (scrobble !== undefined) {
-                    row.play.scrobble = clone(scrobble);
+                    play.scrobble = clone(scrobble);
                 }
-                // @ts-expect-error its fine
-                delete row.play.meta.lifecycle;
-                await ctx.db.update(drizzlePlays).set({ play: row.play }).where(eq(drizzlePlays.id, row.id));
+                delete play.meta.lifecycle;
+                await ctx.db.update(drizzlePlays).set({ play }).where(eq(drizzlePlays.id, row.id));
                 updated++;
                 processed++;
             } catch (e) {

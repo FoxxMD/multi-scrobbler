@@ -1,0 +1,101 @@
+---
+/**
+ * Responsive grid of link cards for Sources/Clients, with an icon (or initials avatar) per service.
+ * Icons are shared with the app from src/client/components/icons/custom.
+ */
+import FocusSiblings from './FocusSiblings.astro';
+import { withBase } from '../withBase';
+import type { Service } from '../data/services';
+
+interface Props {
+	services: Service[];
+	label?: string;
+}
+
+const { services, label } = Astro.props;
+
+const icons = import.meta.glob<{ default: any }>('../../../src/client/components/icons/custom/*.svg', { eager: true });
+const getIcon = (name?: string) => (name === undefined ? undefined : icons[`../../../src/client/components/icons/custom/${name}.svg`]?.default);
+
+// same as Chakra Avatar fallback: first letters of the first and last words
+const initials = (name: string) => {
+	const words = name.split(' ');
+	return (words.length > 1 ? `${words[0][0]}${words[words.length - 1][0]}` : words[0][0]).toUpperCase();
+};
+---
+
+<FocusSiblings class="service-grid not-content" dim={0.6} scale={0.98} label={label}>
+	{services.map((s) => {
+		const Icon = getIcon(s.icon);
+		return (
+			<a class="service-card" href={withBase(s.href)}>
+				<span class="service-icon" aria-hidden="true">
+					{Icon !== undefined ? <Icon width="100%" height="100%" /> : <span class="service-initials">{initials(s.name)}</span>}
+				</span>
+				<span class="service-text">
+					<span class="service-name">{s.name}</span>
+					{s.note && <span class="service-note">{s.note}</span>}
+				</span>
+			</a>
+		);
+	})}
+</FocusSiblings>
+
+<style>
+	.service-grid {
+		display: grid;
+		/* at least 2 columns on phones */
+		grid-template-columns: repeat(auto-fill, minmax(min(12rem, calc(50% - 0.375rem)), 1fr));
+		gap: var(--ms-card-gap);
+		margin-block: 1rem;
+		/* start below the floated logo instead of squeezing beside it */
+		clear: right;
+	}
+	.service-card {
+		display: flex;
+		align-items: center;
+		gap: var(--ms-card-gap);
+		padding: var(--ms-card-pad);
+		border: 1px solid var(--sl-color-gray-5);
+		border-radius: 0.5rem;
+		box-shadow: var(--sl-shadow-sm);
+		text-decoration: none;
+		color: var(--sl-color-white);
+	}
+	.service-card:hover {
+		background: var(--sl-color-gray-7, var(--sl-color-gray-6));
+		border-color: var(--sl-color-gray-2);
+	}
+	.service-icon {
+		flex: none;
+		display: grid;
+		place-items: center;
+		width: var(--ms-card-icon-size);
+		height: var(--ms-card-icon-size);
+	}
+	.service-initials {
+		display: grid;
+		place-items: center;
+		width: 100%;
+		height: 100%;
+		border-radius: 50%;
+		background: var(--sl-color-gray-5);
+		color: var(--sl-color-white);
+		font-weight: 600;
+		font-size: var(--ms-card-initials-text);
+	}
+	.service-text {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+	}
+	.service-name {
+		font-weight: 600;
+		font-size: var(--ms-card-name-text);
+		line-height: var(--sl-line-height-headings);
+	}
+	.service-note {
+		color: var(--sl-color-gray-3);
+		font-size: var(--sl-text-xs);
+	}
+</style>

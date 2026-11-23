@@ -1,7 +1,8 @@
 import * as z from "zod";
+import {envMetaNormalize} from "../../../../utils/ZodUtils.ts";
 import {componentTypeSchema} from "../../../../../core/Atomic.ts";
 import {requestRetryOptionsSchema} from "../common.ts";
-import {atProtoAppDataSchema, atProtoUserIdentifierDataSchema} from "./atproto.ts";
+import {atProtoAppDataSchema, atProtoHistoryOptionsSchema, atProtoRateLimitEnvSchemas, atProtoRateLimitOptionsSchema, atProtoUserIdentifierDataSchema} from "./atproto.ts";
 import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, type EnvClientSchema} from "./index.ts";
 
 export const tealDataSchema = z.object({
@@ -33,6 +34,9 @@ export type TealClientData = z.infer<typeof tealClientDataSchema>;
 const envDataSchema = z.object({
     TEALFM_IDENTIFIER: tealClientDataSchema.shape.identifier,
     TEALFM_APP_PW: tealClientDataSchema.shape.appPassword,
+    TEALFM_RATE_LIMIT_RESERVE: atProtoRateLimitEnvSchemas.reserve(),
+    TEALFM_EXPORT_RATE_LIMIT_RESERVE: atProtoRateLimitEnvSchemas.exportReserve(),
+    TEALFM_KEEP_ALL_HISTORY: z.stringbool().optional().meta(envMetaNormalize(atProtoHistoryOptionsSchema.shape.keepAllHistory.meta())),
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, TealClientConfig> = {
@@ -43,12 +47,19 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, TealClientConfig>
             data: {
                 identifier: partial.TEALFM_IDENTIFIER,
                 appPassword: partial.TEALFM_APP_PW
+            },
+            options: {
+                rateLimitReserve: partial.TEALFM_RATE_LIMIT_RESERVE,
+                exportRateLimitReserve: partial.TEALFM_EXPORT_RATE_LIMIT_RESERVE,
+                keepAllHistory: partial.TEALFM_KEEP_ALL_HISTORY,
             }
     })
 };
 
 export const tealClientOptionsSchema = z.object({
     ...commonClientOptionsSchema.shape,
+    ...atProtoRateLimitOptionsSchema.shape,
+    ...atProtoHistoryOptionsSchema.shape,
 });
 
 export type TealClientOptions = z.infer<typeof tealClientOptionsSchema>;

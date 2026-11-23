@@ -1,3 +1,4 @@
+import { generateSseMessage } from '../../core/tests/utils/apiFixtures.js';
 import preview from "../../../.storybook/preview.js";
 import React from 'react';
 import { sse } from 'msw';
@@ -14,15 +15,15 @@ import { faker } from "@faker-js/faker";
 const meta = preview.meta({
   title: 'Component/Details/Stat Queued',
   component: QueuedIndicatorStreamable,
+  beforeEach({ msw }) {
+    msw.use(
+      sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
+      })
+    );
+  },
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
-      msw: {
-        handlers: [
-          sse('/api/events?next=true', async ({ params, client }) => {
-          }),
-        ],
-      },
   },
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
@@ -39,7 +40,7 @@ decorators: [
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
 
-const randomQueue = () => faker.helpers.arrayElement(['playQueued', 'playDequeued']);
+const randomQueue = () => faker.helpers.arrayElement(['playQueued', 'playDequeued'] as const);
 
 export const StatsQueued = meta.story({
   args: {
@@ -48,13 +49,11 @@ export const StatsQueued = meta.story({
       id: 1,
     },
   },
-  parameters: {
-      msw: {
-        handlers: [
-          sse('/api/events?next=true', async ({ params, client }) => {
-          setInterval(() => client.send({event: randomQueue(), data: {componentId: 1}}), 2000);
-          }),
-        ],
-      },
-  }
+  beforeEach({ msw }) {
+    msw.use(
+      sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
+      setInterval(() => client.send(generateSseMessage(randomQueue(), {})), 2000);
+      })
+    );
+  },
 });

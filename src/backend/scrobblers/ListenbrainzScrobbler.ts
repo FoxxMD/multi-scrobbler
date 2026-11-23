@@ -1,6 +1,7 @@
 import type {Logger} from "@foxxmd/logging";
 import type EventEmitter from "events";
-import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type SourcePlayerObj} from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, type ComponentAuthType } from "../../core/Atomic.ts";
+import type { PlayObject, SourcePlayerObj } from "../../core/PlaySchema.ts";
 import { capitalize } from "../../core/StringUtils.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
@@ -22,6 +23,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
     requiresAuthInteraction = false;
     getScrobblesForTimeRange: TimeRangeListensFetcher
     declare config: ListenBrainzClientConfig;
+    override scrobbleDelayFloor?: number | undefined = 1000;
 
     constructor(name: any, config: ListenBrainzClientConfig, options = {}, emitter: EventEmitter, logger: Logger) {
         super('listenbrainz', name, config, emitter, logger);
@@ -45,6 +47,10 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         } = this.config;
         if (token === undefined) {
             throw new Error('Must provide a User Token');
+        }
+        if(this.api.url.url.hostname !== 'api.listenbrainz.org') {
+            this.logger.debug(`Detected non-official LZ server, scrobble interval floor is disabled`);
+            this.scrobbleDelayFloor = 0;
         }
         return true;
     }
@@ -92,7 +98,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
             }
             return result;
         } catch (e: any) {
-            await this.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
+            await this.notifyScrobbleFailure(playObj, {title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             throw e;
         }
     }

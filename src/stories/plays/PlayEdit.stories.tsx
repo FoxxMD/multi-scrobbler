@@ -6,8 +6,8 @@ import { PlayEditable, PlayEditableMutable } from "../../client/components/play/
 import {Provider} from "../../client/components/Provider.js";
 import { Container } from '@chakra-ui/react';
 import { generateArtistCredits, generateJsonPlay, withBrainz } from "../../core/tests/utils/PlayTestUtils.js"
-import { asJsonPlayObject } from '../../core/PlayMarshalUtils.js';
-import type {Credit, PlayObjectMinimal} from "../../core/Atomic.js";
+import type { Credit } from "../../core/Atomic.js";
+import type { PlayObjectMinimal } from "../../core/PlaySchema.js";
 import { http, HttpResponse, delay } from 'msw';
 import { generateAlbumSearchResults, generateArtistSearchResults, generateMusicService, generateTrackSearchResults } from "../../core/tests/utils/apiFixtures.js";
 import { CreditInput } from "../../client/components/play/CreditInput.js";
@@ -44,23 +44,23 @@ type PropsAndCustomArgs = React.ComponentProps<typeof PlayEdit> & {
 const meta = preview.type<{args: PropsAndCustomArgs}>().meta({
   title: 'Plays/Play Edit',
   component: PlayEdit,
+  beforeEach({ msw }) {
+    msw.use(
+      http.get<{ query: string }>('/api/metadata/search/artists', () => searchStreamResponse(generateArtistSearchResults)),
+      http.post<{ query: string }>('/api/metadata/search/artists', () => searchStreamResponse(generateArtistSearchResults)),
+      http.get<{ query: string }>('/api/metadata/search/albums', () => searchStreamResponse(generateAlbumSearchResults)),
+      http.post<{ query: string }>('/api/metadata/search/albums', () => searchStreamResponse(generateAlbumSearchResults)),
+      http.get<{ query: string }>('/api/metadata/search/tracks', () => searchStreamResponse(generateTrackSearchResults)),
+      http.post<{ query: string }>('/api/metadata/search/tracks', () => searchStreamResponse(generateTrackSearchResults)),
+      http.put('/api/components/1/plays/1234/play', async ({ request}) => {
+        await delay();
+        return HttpResponse.json(request.clone().json());
+      })
+    );
+  },
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
-        msw: {
-      handlers: [
-        http.get<{ query: string }>('/api/metadata/search/artists', () => searchStreamResponse(generateArtistSearchResults)),
-        http.post<{ query: string }>('/api/metadata/search/artists', () => searchStreamResponse(generateArtistSearchResults)),
-        http.get<{ query: string }>('/api/metadata/search/albums', () => searchStreamResponse(generateAlbumSearchResults)),
-        http.post<{ query: string }>('/api/metadata/search/albums', () => searchStreamResponse(generateAlbumSearchResults)),
-        http.get<{ query: string }>('/api/metadata/search/tracks', () => searchStreamResponse(generateTrackSearchResults)),
-        http.post<{ query: string }>('/api/metadata/search/tracks', () => searchStreamResponse(generateTrackSearchResults)),
-        http.put('/api/components/1/plays/1234/play', async ({ request}) => {
-          await delay();
-          return HttpResponse.json(request.clone().json());
-        }),
-      ],
-    },
   },
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
@@ -85,8 +85,7 @@ export const PlayEditStory = meta.story({
     }
 
     if(args.brainz) {
-      // @ts-ignore
-      args.initialPlay = asJsonPlayObject(withBrainz(args.initialPlay, {include: ['album','recording','track','artist']}));
+      args.initialPlay = withBrainz(args.initialPlay, {include: ['album','recording','track','artist']});
     }
     return (<PlayEdit {...args}/>) 
   }
@@ -101,8 +100,7 @@ export const PlayEditableStory = meta.story({
     }
 
     if(args.brainz) {
-      // @ts-ignore
-      args.initialPlay = asJsonPlayObject(withBrainz(args.initialPlay, {include: ['album','recording','track','artist']}));
+      args.initialPlay = withBrainz(args.initialPlay, {include: ['album','recording','track','artist']});
     }
     const {initialPlay, ...rest} = args;
     return (<PlayEditable editable play={initialPlay} {...rest}/>) 
@@ -118,11 +116,10 @@ export const PlayEditableMutateStory = meta.story({
     }
 
     if(args.brainz) {
-      // @ts-ignore
-      args.initialPlay = asJsonPlayObject(withBrainz(args.initialPlay, {include: ['album','recording','track','artist']}));
+      args.initialPlay = withBrainz(args.initialPlay, {include: ['album','recording','track','artist']});
     }
     const {initialPlay, ...rest} = args;
-    return (<PlayEditableMutable componentId="1" uid="1234" editable play={initialPlay} {...rest}/>) 
+    return (<PlayEditableMutable componentId={1} uid="1234" editable play={initialPlay} {...rest}/>) 
   }
 });
 

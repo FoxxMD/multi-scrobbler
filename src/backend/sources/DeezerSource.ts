@@ -3,7 +3,8 @@ import { namesToCredits } from "../../core/MusicMetadata.ts";
 import dayjs from "dayjs";
 import type EventEmitter from "events";
 import request from 'superagent';
-import {COMPONENT_AUTH_TYPE, type ComponentAuthType, type PlayObject, type PlayObjectMinimal} from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, type ComponentAuthType } from "../../core/Atomic.ts";
+import type { PlayObject, PlayObjectMinimal } from "../../core/PlaySchema.ts";
 import { DEFAULT_RETRY_MULTIPLIER, type FormatPlayObjectOptions, type InternalConfig } from "../common/infrastructure/Atomic.ts";
 import type {DeezerSourceConfig} from "../common/infrastructure/config/source/deezer.ts";
 import { parseRetryAfterSecsFromObj, sleep, sortByOldestPlayDate, } from "../utils.ts";
@@ -11,7 +12,6 @@ import { readJson } from '../utils/DataUtils.ts';
 import { joinedUrl } from "../utils/NetworkUtils.ts";
 import AbstractSource, { type RecentlyPlayedOptions } from "./AbstractSource.ts";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.ts";
-import { SimpleError } from "../common/errors/MSErrors.ts";
 
 export default class DeezerSource extends AbstractSource {
     workingCredsPath;

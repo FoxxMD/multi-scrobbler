@@ -4,7 +4,7 @@ import React from 'react';
 import { http, HttpResponse, delay, sse, type StrictRequest, type DefaultBodyType, type JsonBodyType } from 'msw';
 
 import { Container } from '@chakra-ui/react';
-import { ListContainerFetchable, ListContainerFilterable, ActivityList } from "../../client/components/playActivity/ActivityList.js";
+import { ListContainerFetchable, ListContainerFilterable } from "../../client/components/playActivity/ActivityList.js";
 import {Provider} from "../../client/components/Provider.js";
 import { generatePlay } from "../../core/tests/utils/PlayTestUtils.js";
 import { type PlayState, qsOptions } from "../../core/Atomic.js";
@@ -12,7 +12,7 @@ import { randomPlayState} from '../../core/tests/utils/fixtures.js'
 import dayjs from "dayjs";
 import qs from 'qs';
 import { asJsonPlayObject } from "../../core/PlayMarshalUtils.js";
-import { generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList } from "../../core/tests/utils/apiFixtures.js";
+import { generatePlayApiCommonDetailed, generatePlayApiCommonDetailedList, generateSseMessage } from "../../core/tests/utils/apiFixtures.js";
 import type { PaginatedResponse, QueryPlaysOptsJson} from "../../core/Api.js";
 import type {MsSseEvent, PlayApiCommonDetailed} from "../../core/Api.js";
 import { SSEProvider } from "@flamefrontend/sse-runtime-react";
@@ -22,7 +22,7 @@ import { faker } from '@faker-js/faker';
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
   title: 'Plays/List',
-  component: ActivityList,
+  component: ListContainerFilterable,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
@@ -30,11 +30,11 @@ const meta = preview.meta({
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
   // More on argTypes: https://storybook.js.org/docs/api/argtypes
-  // args: {
-  //    data:[
-  //     ] ,
-  // },
-  render: function Render(args, { loaded: { data } }) { return (<ActivityList {...args} data={data ?? []}/>) },
+  args: {
+    componentId: 1,
+    componentType: 'source' as const,
+  },
+  render: function Render(args) { return (<ListContainerFilterable {...args}/>) },
 decorators: [
     (Story) => (<Provider><Container maxWidth="4xl"><SSEProvider<MsSseEvent> options={sseProviderOptions}><Story/></SSEProvider></Container></Provider>),
   ]
@@ -85,30 +85,22 @@ const handlePlayRequest = async ({params, request}: PlayRequestMock, list: PlayA
 
 let listLiveData: PlayApiCommonDetailed[] = [];
 export const ListLive = meta.story({
-  component: ListContainerFetchable,
-  render: function Render(args, { loaded: { data } }) { return (<ListContainerFetchable {...args}/>) },
-  args: {
-    render: "virtDynamic",
-    componentId: 1,
-    componentType: 'source'
-  },
-  parameters: {
-    msw: {
-      handlers: [
-        http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
-          const [res, newList] = await handlePlayListRequest({request, list: listLiveData});
-          await delay(1000);
-          listLiveData = newList;
-          return res;
-        }),
-        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async (info) => {
-          const [res, newList] = await handlePlayRequest(info, listLiveData);
-          listLiveData = newList;
-          await delay(1000);
-          return res;
-        }),
-      ],
-    },
+  render: function Render(args) { return (<ListContainerFetchable {...args}/>) },
+  beforeEach({ msw }) {
+    msw.use(
+      http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
+        const [res, newList] = await handlePlayListRequest({request, list: listLiveData});
+        await delay(1000);
+        listLiveData = newList;
+        return res;
+      }),
+      http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async (info) => {
+        const [res, newList] = await handlePlayRequest(info, listLiveData);
+        listLiveData = newList;
+        await delay(1000);
+        return res;
+      })
+    );
   },
 
   //render: function Render(args) { return (<ChakraProvider><MyList></MyList></ChakraProvider>) }
@@ -123,30 +115,21 @@ export const ListLive = meta.story({
 
 let livePlayData: PlayApiCommonDetailed[] = [];
 export const ListLiveFilterable = meta.story({
-  component: ListContainerFilterable,
-  render: function Render(args, { loaded: { data } }) { return (<ListContainerFilterable {...args}/>) },
-  args: {
-    render: "virtDynamic",
-    componentId: 1,
-    componentType: 'source'
-  },
-  parameters: {
-    msw: {
-      handlers: [
-        http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
-          const [res, newList] = await handlePlayListRequest({request, list: livePlayData});
-          await delay(1000);
-          livePlayData = newList;
-          return res;
-        }),
-        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async (info) => {
-          const [res, newList] = await handlePlayRequest(info, livePlayData);
-          livePlayData = newList;
-          await delay(1000);
-          return res;
-        }),
-      ],
-    },
+  beforeEach({ msw }) {
+    msw.use(
+      http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
+        const [res, newList] = await handlePlayListRequest({request, list: livePlayData});
+        await delay(1000);
+        livePlayData = newList;
+        return res;
+      }),
+      http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async (info) => {
+        const [res, newList] = await handlePlayRequest(info, livePlayData);
+        livePlayData = newList;
+        await delay(1000);
+        return res;
+      })
+    );
   },
 
   //render: function Render(args) { return (<ChakraProvider><MyList></MyList></ChakraProvider>) }
@@ -159,124 +142,94 @@ export const ListLiveFilterable = meta.story({
 });
 
 export const ListLiveEmpty = meta.story({
-  component: ListContainerFilterable,
-  render: function Render(args, { loaded: { data } }) { return (<ListContainerFilterable {...args}/>) },
-  args: {
-    render: "virtDynamic",
-    componentId: 1,
-    componentType: 'source'
+  beforeEach({ msw }) {
+    msw.use(
+      http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
+        await delay(2000);
+        return HttpResponse.json({data: [], meta: {offset: 0, limit: 100}});
+      }),
+      http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
+        return new HttpResponse('', {status: 404});
+      })
+    );
   },
-  parameters: {
-    msw: {
-      handlers: [
-        http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
-          await delay(2000);
-          return HttpResponse.json({data: [], meta: {offset: 0, limit: 100}});
-        }),
-        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async ({ params }) => {
-          return new HttpResponse('', {status: 404});
-        }),
-      ],
-    },
-  }
 });
 
 let liveNoMorePlayData: PlayApiCommonDetailed[] = [];
 export const ListLiveNoMorePlay = meta.story({
-  component: ListContainerFilterable,
-  render: function Render(args) { return (<ListContainerFilterable {...args}/>) },
-  args: {
-    render: "virtDynamic",
-    componentId: 1,
-    componentType: 'source'
-  },
-  parameters: {
-    msw: {
-      handlers: [
-        http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
+  beforeEach({ msw }) {
+    msw.use(
+      http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
 
-          await delay();
-          const url = new URL(request.url)
-          console.log(url.search);
-          const query = qs.parse(url.search, qsOptions) as QueryPlaysOptsJson;
-          console.log(query);
-          const offset = Number.parseInt(query.offset as unknown as string);
-          if(offset > 0) {
-            return HttpResponse.json({
-              data: [],
-              meta: {
-                limit: liveNoMorePlayData.length,
-                offset: query.offset
-              }
-            });
-          }
-          if(liveNoMorePlayData.length === 0) {
-            liveNoMorePlayData = await generatePlayApiCommonDetailedList();
-          }
-          const res: PaginatedResponse<PlayApiCommonDetailed> = {
-            data: liveNoMorePlayData,
+        await delay();
+        const url = new URL(request.url)
+        console.log(url.search);
+        const query = qs.parse(url.search, qsOptions) as QueryPlaysOptsJson;
+        console.log(query);
+        const offset = Number.parseInt(query.offset as unknown as string);
+        if(offset > 0) {
+          return HttpResponse.json({
+            data: [],
             meta: {
-              offset: 0,
-              limit: livePlayData.length
+              limit: liveNoMorePlayData.length,
+              offset: query.offset
             }
+          });
+        }
+        if(liveNoMorePlayData.length === 0) {
+          liveNoMorePlayData = await generatePlayApiCommonDetailedList();
+        }
+        const res: PaginatedResponse<PlayApiCommonDetailed> = {
+          data: liveNoMorePlayData,
+          meta: {
+            offset: 0,
+            limit: livePlayData.length
           }
-          return HttpResponse.json(res);
-        }),
-        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async (info) => {
-          const [res, newList] = await handlePlayRequest(info, liveNoMorePlayData);
-          liveNoMorePlayData = newList;
-          await delay(1000);
-          return res;
-        }),
-      ],
-    },
+        }
+        return HttpResponse.json(res);
+      }),
+      http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async (info) => {
+        const [res, newList] = await handlePlayRequest(info, liveNoMorePlayData);
+        liveNoMorePlayData = newList;
+        await delay(1000);
+        return res;
+      })
+    );
   },
 });
 
 let liveUpdateData: PlayApiCommonDetailed[] = [];
 export const ListLiveUpdates = meta.story({
-  component: ListContainerFilterable,
-  render: function Render(args, { loaded: { data } }) { return (<ListContainerFilterable {...args}/>) },
-  args: {
-    render: "virtDynamic",
-    componentId: 1,
-    componentType: 'source'
-  },
-  parameters: {
-    msw: {
-      handlers: [
-        http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
-          const [res, newList] = await handlePlayListRequest({request, list: liveUpdateData});
-          await delay(1000);
-          liveUpdateData = newList;
-          return res;
-        }),
-        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async (info) => {
-          const [res, newList] = await handlePlayRequest(info, liveUpdateData);
-          liveUpdateData = newList;
-          await delay(1000);
-          return res;
-        }),
-        sse('/api/events?next=true', async ({ params, client }) => {
-            setInterval(() => {
+  beforeEach({ msw }) {
+    msw.use(
+      http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
+        const [res, newList] = await handlePlayListRequest({request, list: liveUpdateData});
+        await delay(1000);
+        liveUpdateData = newList;
+        return res;
+      }),
+      http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async (info) => {
+        const [res, newList] = await handlePlayRequest(info, liveUpdateData);
+        liveUpdateData = newList;
+        await delay(1000);
+        return res;
+      }),
+      sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
+          setInterval(() => {
 
-              const index = faker.number.int({min: 0, max: 7});
-              let newState: PlayState = liveUpdateData[index].state;
-              while(newState === liveUpdateData[index].state) {
-                newState = randomPlayState();
-              }
-              liveUpdateData[index].state = newState;
-              liveUpdateData[index].play.data.track = {name: faker.music.songName()};
-              liveUpdateData[index].updatedAt = dayjs().toISOString();
+            const index = faker.number.int({min: 0, max: 7});
+            let newState: PlayState = liveUpdateData[index].state;
+            while(newState === liveUpdateData[index].state) {
+              newState = randomPlayState();
+            }
+            liveUpdateData[index].state = newState;
+            liveUpdateData[index].play.data.track = {name: faker.music.songName()};
+            liveUpdateData[index].updatedAt = dayjs().toISOString();
 
-              client.send({
-              //@ts-expect-error
-              event: 'playUpdate', 
-              data: {componentId: 1, data: {uid: liveUpdateData[index].uid}}})
-            }, 2000);
-        })
-      ],
-    },
+            client.send(generateSseMessage('playUpdate', {uid: liveUpdateData[index].uid}))
+          }, 2000);
+      })
+    );
   },
 
   //render: function Render(args) { return (<ChakraProvider><MyList></MyList></ChakraProvider>) }
@@ -290,51 +243,39 @@ export const ListLiveUpdates = meta.story({
 
 let livePlayInsertData: PlayApiCommonDetailed[] = [];
 export const ListLiveInsert = meta.story({
-  component: ListContainerFilterable,
-  render: function Render(args, { loaded: { data } }) { return (<ListContainerFilterable {...args}/>) },
-  args: {
-    render: "virtDynamic",
-    componentId: 1,
-    componentType: 'source'
-  },
-  parameters: {
-    msw: {
-      handlers: [
-        http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
-          const [res, newList] = await handlePlayListRequest({request, list: livePlayInsertData});
-          await delay(1000);
-          livePlayInsertData = newList;
-          return res;
-        }),
-        http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async (info) => {
-          const [res, newList] = await handlePlayRequest(info, livePlayInsertData);
-          livePlayInsertData = newList;
-          await delay(1000);
-          return res;
-        }),
-        sse('/api/events?next=true', async ({ params, client }) => {
-            setInterval(() => {
-              //const first = livePlayInsertData[0].play.data.playDate;
-              //const last = livePlayInsertData[livePlayData.length - 1].play.data.playDate;
-              const randomIndex = faker.number.int({min: 1, max: livePlayInsertData.length - 2});
-              const random = livePlayInsertData[randomIndex];
+  beforeEach({ msw }) {
+    msw.use(
+      http.get<{ uid: string }>('/api/components/:componentId/plays', async ({ params, request }) => {
+        const [res, newList] = await handlePlayListRequest({request, list: livePlayInsertData});
+        await delay(1000);
+        livePlayInsertData = newList;
+        return res;
+      }),
+      http.get<{ uid: string }>('/api/components/:componentId/plays/:uid', async (info) => {
+        const [res, newList] = await handlePlayRequest(info, livePlayInsertData);
+        livePlayInsertData = newList;
+        await delay(1000);
+        return res;
+      }),
+      sse<MsSseEvent>('/api/events?next=true', async ({ params, client }) => {
+          setInterval(() => {
+            //const first = livePlayInsertData[0].play.data.playDate;
+            //const last = livePlayInsertData[livePlayData.length - 1].play.data.playDate;
+            const randomIndex = faker.number.int({min: 1, max: livePlayInsertData.length - 2});
+            const random = livePlayInsertData[randomIndex];
 
-              const generatedPlayData = generatePlayApiCommonDetailed({
-                playOpts: [{
-                  
-                  play: asJsonPlayObject(generatePlay({playDate: dayjs(random.play.data.playDate).subtract(30, 's')}))
-                }]
-              });
-              livePlayInsertData.splice(randomIndex, 0, generatedPlayData);
-              client.send({
-              //@ts-expect-error
-              event: 'playInsert', 
-              data: {componentId: 1, data: generatedPlayData}});
+            const generatedPlayData = generatePlayApiCommonDetailed({
+              playOpts: [{
 
-            }, 2000);
-        })
-      ],
-    },
+                play: asJsonPlayObject(generatePlay({playDate: dayjs(random.play.data.playDate).subtract(30, 's')}))
+              }]
+            });
+            livePlayInsertData.splice(randomIndex, 0, generatedPlayData);
+            client.send(generateSseMessage('playInsert', generatedPlayData));
+
+          }, 2000);
+      })
+    );
   },
 
   //render: function Render(args) { return (<ChakraProvider><MyList></MyList></ChakraProvider>) }
