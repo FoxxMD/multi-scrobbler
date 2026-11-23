@@ -12,6 +12,16 @@ import type { PlayObject } from "../../core/PlaySchema.ts";
 import { todayAwareFormat } from "../../core/TimeUtils.ts";
 import type { ComponentClientApiJson } from "../../core/Api.ts";
 
+/**
+ * Remove what a historical play doesn't need to store: raw upstream data, the record URL and the user (both derivable from the DID and rkey).
+ * Keeps `meta.url.origin`, which is real record data. Migration 009 does the same to existing rows.
+ * */
+export const slimHistoricalPlay = (play: PlayObject): PlayObject => {
+    const {original, ...rest} = play;
+    const {user, url: {web, ...url} = {}, ...meta} = rest.meta;
+    return {...rest, meta: Object.keys(url).length > 0 ? {...meta, url} : meta};
+}
+
 export default abstract class AbstractHistoricalScrobbleClient extends AbstractScrobbleClient {
 
     protected importAbortController: AbortController | undefined;
@@ -117,6 +127,8 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
             logger = this.logger,
             signal
         } = opts;
+        // no historical_play_inputs rows, the raw record stays in the PDS
+        batch = batch.map(({input, ...x}) => ({...x, play: slimHistoricalPlay(x.play)}));
         try {
             await this.playsHistoricalRepo.createPlays(batch);
             return [true, batch.length];
