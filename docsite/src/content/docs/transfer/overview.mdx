@@ -55,6 +55,8 @@ The Client always skips Plays that Multi-Scrobbler already sent to it. Because o
 
 You can also set [**Transforms**](/configuration/transforms) for the Job. They modify Play data before they go to each Client, the same as a [`postCompare` hook](/configuration/transforms/#hook) on a Source. You can apply transforms from an existing Source/Client or use a [preset](/configuration/transforms#presets). Be aware that exports are only as fast the [slowest transform](#transforms).
 
+A Stage in the Job's Transforms can also tell the Job to skip a Play, or to add it to the Client in the **Needs Review** state. See [Play State Control in Import/Export Jobs](/configuration/transforms#play-state-control-jobs).
+
 Once the Job is created, exporting to a Client occurs depending on the **Order** you set:
 
 * Newest first - Exporting happens as new Plays are added to the Mirror

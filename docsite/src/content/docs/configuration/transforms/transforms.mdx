@@ -714,6 +714,18 @@ See [Examples](#examples) for more complex usage of Play State Control
 
 :::
 
+### In Import/Export Jobs {#play-state-control-jobs}
+
+The [Transforms of a Job](/transfer/overview#3-export-to-a-client) also use Play State Control. The Job runs its Stages on each Play before it sends the Play to a Client. The last action of the Stages decides what happens to the Play:
+
+* `approve` - The Job sends the Play to the Client, and the Client queues it.
+* `discard` - The Job does not send the Play. The Client has no record of it. Multi-Scrobbler writes the Play to the log at the `verbose` level.
+* `review` - The Job adds the Play to the Client in the **Needs Review** state. The Client does not scrobble the Play.
+
+The Job page shows the number of Plays in **Needs Review** for each Client. To find them on the Client page, turn on **Plays from Export jobs** in the **Plays** filters.
+
+When you retry a Play in **Needs Review**, the Client does not run the Job's Stages again. It runs only its own `playTransform` Stages. The Client applies Play State Control from its own Stages to exported Plays, the same as to other Plays.
+
 ## Presets {#presets}
 
 Import/Export jobs can apply transforms to scrobbles they [export](/transfer/overview#how-to-export). Define reusable lists of [Stages](#stage) for them in the top-level `transformersPresets` block of your [AIO Config](/configuration?configType=aio#configuration-types). Each key is a preset name, and its value is the list of Stages to run, written the same way as a [hook](#hook).
