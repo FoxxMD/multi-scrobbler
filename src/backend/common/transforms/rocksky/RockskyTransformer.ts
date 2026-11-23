@@ -493,10 +493,10 @@ export default class RockskyTransformer extends AtomicPartsTransformer<ApplyTerm
         const matches = await this.handlePostFetchMatches(res, {type: 'rocksky', ...this.defaults, score: 0});
 
         return matches.slice(0, 5).map((x, index): TrackSearchResult => {
-            // the song view only has full metadata (mbids, album artist) for the best match, same as a transform would use
+            // the song view only has full metadata (album artist, art) for the best match, same as a transform would use
             const view: SongViewDetailedMS = x === res.matches?.[0]
                 ? mergeSongMatch(res, x)
-                : {requestQuery, title: x.title, artist: x.artist, album: x.album, albumArt: x.albumArt, isrc: x.isrc, duration: x.durationMs};
+                : {requestQuery, title: x.title, artist: x.artist, album: x.album, albumArt: x.albumArt, isrc: x.isrc, duration: x.durationMs, mbId: x.mbId, mbReleaseId: x.mbReleaseId, mbArtists: x.mbArtists};
             return trackDataToResult(songViewToPlay(view).data, {
                 service: 'rocksky',
                 id: String(x.id ?? index),
@@ -705,7 +705,10 @@ const mergeSongMatch = (view: SongViewDetailedMS, match: SongMatchView): SongVie
     title: match.title ?? view.title,
     artist: match.artist ?? view.artist,
     album: match.album ?? view.album,
-    isrc: match.isrc ?? view.isrc
+    isrc: match.isrc ?? view.isrc,
+    mbId: match.mbId ?? view.mbId,
+    mbReleaseId: match.mbReleaseId ?? view.mbReleaseId,
+    mbArtists: (match.mbArtists ?? []).length > 0 ? match.mbArtists : view.mbArtists
 });
 
 const requireTrack = (play: PlayObject): string => {

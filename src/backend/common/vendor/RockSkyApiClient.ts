@@ -1,4 +1,4 @@
-import { creditId, creditIsrc, creditMbid, creditsToNames, isrcMeta, mbMeta, playImage, withAlbumArt } from "../../../core/MusicMetadata.ts";
+import { creditId, creditIsrc, creditMbid, creditsToNames, isrcMeta, mbMeta, playImage, spotifyMeta, withAlbumArt } from "../../../core/MusicMetadata.ts";
 import dayjs from "dayjs";
 import { rockskyRequiredFields, type Credit, type LifecycleInput, type RockskyConfidenceField, type RockskyMissingField, type URLData } from "../../../core/Atomic.ts";
 import type { PlayObject, PlayObjectMinimal, ScrobbleActionResult } from "../../../core/PlaySchema.ts";
@@ -15,7 +15,7 @@ import type {ListenResponse, ListenType} from '../../../core/vendor/listenbrainz
 import { getATProtoIdentifier, identifierToAtProtoHandle, isDID } from './atproto/atUtils.ts';
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
 import { AuthError, ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.ts";
-import { type CreateScrobbleInput, RockskyClient, Agent, type SongViewDetailed, type ScrobbleInput, type ScrobbleViewBasic, RockskyError, type ActorTrackView } from "@rocksky/sdk";
+import { type CreateScrobbleInput, RockskyClient, Agent, type SongViewDetailed, type ScrobbleInput, type ScrobbleViewBasic, RockskyError, type ActorTrackView, type ScrobbleRecord, type SongResponseMbArtistsItemView } from "@rocksky/sdk";
 import { RockskyIndex } from "@rocksky/sdk/dedup";
 import { getRootCommon } from "../../iocCommon.ts";
 import type { MSCache } from "../Cache.ts";
@@ -430,7 +430,7 @@ export const songViewToPlay = (song: SongViewDetailedMS): PlayObject => {
 
     let artists: Credit[] = [],
     albumArtists: Credit[];
-    const mbArtists = (song.mbArtists ?? []).flatMap(x => x.name !== undefined && x.name !== '' ? [nameToCredit(x.name, mbMeta(x.mbid, 'artist'))] : []);
+    const mbArtists = mbArtistsToCredits(song.mbArtists);
     if(mbArtists.length > 0) {
         artists = mbArtists;
     } else if(song.artists !== undefined && song.artists !== null && song.artists.length > 0) {
@@ -449,14 +449,14 @@ export const songViewToPlay = (song: SongViewDetailedMS): PlayObject => {
         albumArtists = artists;
     }
 
-    const mb = song.mbid ?? song.mbId;
+    const mb = song.mbId ?? song.mbid;
 
     const play: PlayObject = {
         data: {
-            track: nameToCredit(song.title, mbMeta(mb, 'recording'), isrcMeta(song.isrc)),
+            track: nameToCredit(song.title, mbMeta(mb, 'recording'), isrcMeta(song.isrc), spotifyMeta(spotifyTrackId(song.spotifyLink), 'track')),
             artists,
             albumArtists,
-            album: nameToCredit(song.album !== '' ? song.album : undefined),
+            album: nameToCredit(song.album !== '' ? song.album : undefined, mbMeta(song.mbReleaseId, 'release')),
             duration: song.duration !== undefined && song.duration !== 0 ? song.duration / 1000 : undefined,
         },
         meta: {
@@ -486,12 +486,14 @@ export const rockskyScrobbleToPlay = (obj: RockskyScrobble, opts: {playId?: stri
         web,
         user
     } = opts;
+    const mbArtists = mbArtistsToCredits(obj.artists);
     const play: PlayObjectMinimal = {
         data: {
-            track: nameToCredit(obj.title),
-            artists: namesToCredits(obj.artist !== undefined && nonEmptyStringOrDefault(obj.artist) ? [obj.artist] : []),
+            track: nameToCredit(obj.title, mbMeta(obj.mbid ?? obj.mbId, 'recording'), isrcMeta(obj.isrc), spotifyMeta(spotifyTrackId(obj.spotifyLink), 'track')),
+            artists: mbArtists.length > 0 ? mbArtists : namesToCredits(obj.artist !== undefined && nonEmptyStringOrDefault(obj.artist) ? [obj.artist] : []),
             albumArtists: namesToCredits(obj.albumArtist !== undefined && nonEmptyStringOrDefault(obj.albumArtist) ? [obj.albumArtist] : []),
             album: nameToCredit(nonEmptyStringOrDefault(obj.album)),
+            duration: obj.duration !== undefined && obj.duration > 0 ? obj.duration / 1000 : undefined,
             playDate: dayjs.utc(obj.createdAt).local()
         },
         meta: {
@@ -508,8 +510,10 @@ export const rockskyScrobbleToPlay = (obj: RockskyScrobble, opts: {playId?: stri
     // if('id' in obj) {
     //     play.meta.playId = obj.id as string;
     // }
-    if('albumArt' in obj) {
-        play.data = withAlbumArt(play.data, obj.albumArt as string);
+    // in a repo record albumArt is a blob ref, its url is albumArtUrl
+    const albumArt = typeof obj.albumArt === 'string' ? obj.albumArt : obj.albumArtUrl;
+    if(albumArt !== undefined) {
+        play.data = withAlbumArt(play.data, albumArt);
     }
 
     if(obj.uri !== undefined) {
@@ -609,9 +613,18 @@ const rockskyUriToData = (str: string): { web?: string, playId?: string, user?: 
     }
     return undefined;
 }
-export type RockskyScrobble = ScrobbleViewBasic;
+/** A scrobble from the API, or a scrobble record from the repository (CAR) */
+export type RockskyScrobble = Omit<ScrobbleViewBasic, 'albumArt'> & Partial<Pick<ScrobbleRecord, 'artists' | 'albumArtUrl'>> & {albumArt?: ScrobbleViewBasic['albumArt'] | ScrobbleRecord['albumArt']};
 
 export interface SongViewDetailedMS extends SongViewDetailed {
     requestQuery: string;
     requestQueries?: LifecycleInput[];
+    /** MusicBrainz release of the chosen match */
+    mbReleaseId?: string;
 }
+
+const mbArtistsToCredits = (artists: SongResponseMbArtistsItemView[] = []): Credit[] =>
+    artists.flatMap(x => x.name !== undefined && x.name !== '' ? [nameToCredit(x.name, mbMeta(x.mbid, 'artist'))] : []);
+
+const SPOTIFY_TRACK_REGEX = /open\.spotify\.com\/(?:[^/]+\/)?track\/([A-Za-z0-9]+)/;
+export const spotifyTrackId = (link: string | undefined): string | undefined => link === undefined ? undefined : SPOTIFY_TRACK_REGEX.exec(link)?.[1];
