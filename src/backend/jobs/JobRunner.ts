@@ -11,6 +11,7 @@ import type { JobProcessStatus } from "../../core/Job.ts";
 import { policyWindow, type RateLimitStatusJson } from "../../core/RateLimit.ts";
 import { todayAwareFormat } from "../../core/TimeUtils.ts";
 import type { PlayObject } from "../../core/PlaySchema.ts";
+import { buildTrackString } from "../../core/MusicMetadata.ts";
 import type { StageCommon } from "../../core/Transform.ts";
 import type { WebhookPayload } from "../common/infrastructure/config/health/webhooks.ts";
 import { type DbConcrete, runTransaction } from "../common/database/drizzle/drizzleUtils.ts";
@@ -23,6 +24,7 @@ import type { JobImportCursor, JobImportCursorApi, JobImportCursorFile, JobTarge
 import type { WildcardEmitter } from "../common/WildcardEmitter.ts";
 import type { WriteBudget } from "../common/vendor/atproto/WriteBudget.ts";
 import { contiguousCoveredFrom, type TimeRange } from "../utils/RangeUtils.ts";
+import { getLastLifecycleStepWithAction } from "../utils/PlayTransformUtils.ts";
 import { DEFAULT_JOB_TIMINGS, type JobTimings } from "./constants.ts";
 import { fullImportPacer, type ImportBatch, type ImportPacer, type ImportProvider, isApiCursor } from "./ImportProvider.ts";
 import type { LockRegistry } from "./LockRegistry.ts";
@@ -761,11 +763,19 @@ export class JobRunner {
             }
 
             let plays: PlayObject[] = rows.map(r => ({...r.play, original: {play: r.play}}));
+            let discarded = 0;
             if(stages !== undefined) {
-                plays = await stage('job_transform', () => pMap(plays, async (p) => {
-                    const {play: transformed} = await client.transformPlay(p, 'postCompare', {stages});
-                    return transformed;
-                }, {concurrency: 5}));
+                const results = await stage('job_transform', () => pMap(plays, async (p) => client.transformPlay(p, 'postCompare', {stages}), {concurrency: 5}));
+                plays = [];
+                for(const {play, steps} of results) {
+                    const step = getLastLifecycleStepWithAction(steps);
+                    if(step?.actionResult === 'discard') {
+                        discarded++;
+                        logger.verbose(`Not exporting ${buildTrackString(play)}, discarded by Stage ${step.stageName}${step.actionReason !== undefined ? `: ${step.actionReason}` : ''}`);
+                        continue;
+                    }
+                    plays.push(play);
+                }
             }
             signal.throwIfAborted();
             if(this.cleanupLocked(componentId, job.mirrorId)) {
@@ -786,7 +796,7 @@ export class JobRunner {
             await this.setTarget(targetId, update);
             // only passes that exported a page, waits are in exportWaitSeconds
             exportStageSeconds.observe({job: jobLabel, name: clientLabel, stage: 'pass'}, (performance.now() - passStart) / 1000);
-            logger.verbose(`Exported ${rows.length} scrobbles, ${created.length} new to the client`);
+            logger.verbose(`Exported ${rows.length} scrobbles, ${created.length} new to the client${discarded > 0 ? `, ${discarded} discarded by transforms` : ''}`);
         }
     }
 

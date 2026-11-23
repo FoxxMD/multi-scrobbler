@@ -17,6 +17,7 @@ import type { DbConcrete } from '../../common/database/drizzle/drizzleUtils.ts';
 import { COMPONENT_STATE } from '../../../core/Api.ts';
 import type { PlayObject } from '../../../core/PlaySchema.ts';
 import type { StageCommon } from '../../../core/Transform.ts';
+import type { LifecycleStep } from '../../../core/Atomic.ts';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { nameToCredit } from '../../../core/MusicMetadata.ts';
 import { TestScrobbler } from '../scrobbler/TestScrobbler.ts';
@@ -36,6 +37,8 @@ class FakeClient implements ExportClient {
     queued: PlayObject[] = [];
     contexts: unknown[] = [];
     transformedWith: StageCommon[][] = [];
+    /** transform steps returned for a play, IE to set a Stage action */
+    stepsFor: (play: PlayObject) => LifecycleStep[] = () => [];
     /** emit a failed playUpdate for every queued play */
     failAll = false;
     jobId?: number;
@@ -70,7 +73,7 @@ class FakeClient implements ExportClient {
 
     async transformPlay(play: PlayObject, _hook: 'postCompare', opts: {stages?: StageCommon[]}) {
         this.transformedWith.push(opts.stages ?? []);
-        return {play: {...play, data: {...play.data, track: nameToCredit(`${play.data.track?.name} (transformed)`)}}, steps: []};
+        return {play: {...play, data: {...play.data, track: nameToCredit(`${play.data.track?.name} (transformed)`)}}, steps: this.stepsFor(play)};
     }
 
     async writeBudget() {
@@ -371,6 +374,19 @@ describe('Job export runner', function () {
         expect(client.transformedWith[0]).to.deep.eq(stages);
         expect(client.queued[0].data.track?.name).eq('T700 (transformed)');
         expect(client.queued[0].original?.play?.data.track?.name).eq('T700');
+    });
+
+    it('does not send plays that a job transform discarded', async function () {
+        const {runner, target, targetRepo, client} = await setup({transformOptions: [{type: 'user', name: 'x'}]});
+        const step = (actionResult: LifecycleStep['actionResult']): LifecycleStep => ({stageName: 'x', stageType: 'user', hook: 'postCompare', source: 'test', actionResult, createdAt: dayjs().toISOString()});
+        // a later approve negates an earlier discard
+        client.stepsFor = (p) => p.data.track?.name === 'T700' ? [step('discard')] : p.data.track?.name === 'T600' ? [step('discard'), step('approve')] : [];
+        await runner.startExport(target.id);
+        await exportTask(runner, target.id);
+
+        const done = (await targetRepo.getById(target.id))!;
+        expect(done.status).eq('completed');
+        expect(titles(client.queued)).to.deep.eq(['T600', 'T500', 'T400', 'T300', 'T200', 'T100'].map(x => `${x} (transformed)`));
     });
 
     it('tells the client to skip its upstream dupe check only when the job opts out', async function () {
