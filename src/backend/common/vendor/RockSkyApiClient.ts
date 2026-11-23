@@ -430,8 +430,9 @@ export const songViewToPlay = (song: SongViewDetailedMS): PlayObject => {
 
     let artists: Credit[] = [],
     albumArtists: Credit[];
-    if(song.mbArtists !== undefined && song.mbArtists !== null && song.mbArtists.length > 0) {
-        artists = song.mbArtists.map(x => nameToCredit(x.name, mbMeta(x.mbid, 'artist')));
+    const mbArtists = (song.mbArtists ?? []).flatMap(x => x.name !== undefined && x.name !== '' ? [nameToCredit(x.name, mbMeta(x.mbid, 'artist'))] : []);
+    if(mbArtists.length > 0) {
+        artists = mbArtists;
     } else if(song.artists !== undefined && song.artists !== null && song.artists.length > 0) {
         artists = song.artists.flatMap(x => x.name !== undefined ? [{name: x.name}] : [])
     } else if(song.artist !== undefined && song.artist !== null) {
@@ -448,8 +449,7 @@ export const songViewToPlay = (song: SongViewDetailedMS): PlayObject => {
         albumArtists = artists;
     }
 
-    // api returns mbId but type says mbid
-    const mb = song.mbid ?? (song as any).mbId;
+    const mb = song.mbid ?? song.mbId;
 
     const play: PlayObject = {
         data: {
@@ -614,5 +614,4 @@ export type RockskyScrobble = ScrobbleViewBasic;
 export interface SongViewDetailedMS extends SongViewDetailed {
     requestQuery: string;
     requestQueries?: LifecycleInput[];
-    mbArtists?: { name: string; mbid: string; }[];
 }

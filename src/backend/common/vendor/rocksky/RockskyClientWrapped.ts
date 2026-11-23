@@ -1,4 +1,4 @@
-import { RockskyClient } from "@rocksky/sdk";
+import { RockskyClient, RockskyError } from "@rocksky/sdk";
 import { RateLimiterMemory, type IRateLimiterOptions, RateLimiterQueue } from "rate-limiter-flexible";
 import { loggerNoop } from "../../MaybeLogger.ts";
 import type { Logger } from "@foxxmd/logging";
@@ -37,7 +37,23 @@ export class RockskyClientWrapped extends RockskyClient {
         const remainingTokens = await this.rateLimiterQueue.removeTokens(1);
         this.logger.trace(`Rate Tokens => Used 1 | Remaining ${remainingTokens}`);
 
-        return super.matchSong(...args);
+        const [title, artist, mbId, isrc, album] = args;
+        if(album === undefined) {
+            return super.matchSong(...args);
+        }
+        // album is a hard filter since sdk 0.18, so retry without it to still match a differently named edition of the album
+        try {
+            const res = await super.matchSong(...args);
+            if((res.matches ?? []).length > 0) {
+                return res;
+            }
+        } catch (e) {
+            if(!(e instanceof RockskyError && e.kind === 'NotFound')) {
+                throw e;
+            }
+        }
+        this.logger.debug(`No match with album '${album}', retrying without album`);
+        return this.matchSong(title, artist, mbId, isrc);
     }
 
     async song(...args: Parameters<RockskyClient['song']>): ReturnType<RockskyClient['song']> {
