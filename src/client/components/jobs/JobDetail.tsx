@@ -414,6 +414,30 @@ export const DownstreamCheck = (props: { job: JobApiJson }) => {
     );
 }
 
+export const KeepDiscarded = (props: { job: JobApiJson }) => {
+    const {job} = props;
+    const setJob = useSetJob();
+    const {mutate, isPending} = useMutation({
+        mutationFn: (exportDiscarded: boolean) => ky.patch(`jobs/${job.id}`, {baseUrl, json: {exportDiscarded}}).json<JobApiJson>(),
+        onSuccess: setJob,
+        onError: (e) => toaster.create({type: 'error', title: 'Could not change keeping discarded Plays', description: apiErrorMessage(e)}),
+    });
+    return (
+        <Checkbox.Root size="sm" checked={job.exportDiscarded} disabled={isPending} onCheckedChange={(d) => mutate(d.checked === true)}>
+            <Checkbox.HiddenInput/>
+            <Checkbox.Control/>
+            <Checkbox.Label>Keep in the Client
+                <InfoPopover question>
+                    <Stack>
+                        <Text>If a Stage of this Job discards a Play, the Play is added to each Client as Discarded and is not scrobbled.</Text>
+                        <Text>When off, the Play is not sent to the Clients.</Text>
+                        <Text textStyle="xs" color="fg.muted">Note: Changes apply to Plays exported next.</Text>
+                    </Stack>
+                </InfoPopover></Checkbox.Label>
+        </Checkbox.Root>
+    );
+}
+
 const transformSourceText = (job: JobApiJson): string => {
     const src = job.transformSource;
     if (src === null) {
@@ -506,6 +530,7 @@ export const ExportPanel = (props: { job: JobApiJson }) => {
                                 </Collapsible.Root> : undefined}
                             </Stack>
                         </DataItem>
+                        {job.transformOptions !== null ? <DataItem label="Discarded Plays"><KeepDiscarded job={job}/></DataItem> : undefined}
                     </DataList.Root>
                     {job.targets.map((t, i) => <Box key={t.id}>
                         {i > 0 ? <Separator mb="4"/> : undefined}

@@ -23,6 +23,7 @@ type Source = 'component' | 'upload' | 'existing' | 'mirror';
 type TransformsKind = 'none' | 'preset' | 'component';
 
 export const TRANSFER_DOCS = 'docs/transfer/overview/';
+export const JOB_PLAY_STATE_DOCS = 'docs/configuration/transforms/#play-state-control-jobs';
 
 const formSchema = z.object({
     name: z.string().trim().min(1, 'Name is required').max(100),
@@ -49,6 +50,7 @@ const formSchema = z.object({
     exportOrder: z.enum(['asc', 'desc']),
     exportQueueLimit: z.number().int().min(1, 'At least 1').max(EXPORT_QUEUE_LIMIT_MAX, `At most ${EXPORT_QUEUE_LIMIT_MAX}`),
     upstreamCheck: z.boolean(),
+    exportDiscarded: z.boolean(),
     transforms: z.enum(['none', 'preset', 'component']),
     preset: z.string(),
     /** `componentId:hook` */
@@ -130,6 +132,7 @@ const formSchema = z.object({
             exportOrder: v.exportOrder,
             exportQueueLimit: v.exportQueueLimit,
             upstreamCheck: v.upstreamCheck,
+            exportDiscarded: v.exportDiscarded,
             transforms,
             start: v.start,
         },
@@ -221,6 +224,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                 exportOrder: 'desc' as JobExportOrder,
                 exportQueueLimit: EXPORT_QUEUE_LIMIT_DEFAULT,
                 upstreamCheck: true,
+                exportDiscarded: false,
                 transforms: 'none' as TransformsKind,
                 preset: options.presets[0]?.name ?? '',
                 transformComponent: options.componentTransforms[0] !== undefined ? `${options.componentTransforms[0].componentId}:${options.componentTransforms[0].preCompare !== undefined ? 'preCompare' : 'postCompare'}` : '',
@@ -474,6 +478,11 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                                     children={(field) => <FormNativeSelect field={field} label="Copy From" groups={transformComponentGroups} helperText="A copy is saved with the job. Later changes to the config don't affect it."/>}
                                 /> : undefined}
                                 {stages !== undefined ? <Code as="pre" display="block" whiteSpace="pre-wrap" p="2" textStyle="xs">{JSON.stringify(stages, null, 2)}</Code> : undefined}
+                                {values.transforms !== 'none' ? <form.Field
+                                    name="exportDiscarded"
+                                    children={(field) => <FormCheckbox field={field} label="Keep discarded Plays in the Client"
+                                        helperText={<>If a Stage discards a Play, the Play is added to each Client as Discarded and is not scrobbled. When off, the Play is not sent. Can be changed later. See the <ChakraLink textDecoration="underline" href={JOB_PLAY_STATE_DOCS} target="_blank">docs</ChakraLink>.</>}/>}
+                                /> : undefined}
                                 <Collapsible.Root>
                                     <Collapsible.Trigger asChild><Button size="xs" variant="ghost" alignSelf="flex-start">Advanced</Button></Collapsible.Trigger>
                                     <Collapsible.Content>

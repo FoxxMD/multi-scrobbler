@@ -43,6 +43,20 @@ export const ImportAndExport = meta.story({
   }
 });
 
+/** Transforms that discard and review Plays, with those Plays kept in the Client */
+export const WithTransforms = meta.story({
+  args: {
+    job: generateJobApiJson({
+      transformOptions: [{type: 'match', artists: 'Unknown Artist', onSuccessAction: 'discard'}, {type: 'match', duration: '< 30 s', onSuccessAction: 'review'}],
+      transformSource: {kind: 'preset', name: 'cleanup'},
+      exportDiscarded: true,
+      targets: [
+        generateJobTargetApiJson({name: 'Maloja', stats: {scrobbled: 1200, discarded: 34, review: 12}}),
+      ]
+    })
+  }
+});
+
 /** Nothing running, so every cleanup action is available */
 export const CleanupAvailable = meta.story({
   args: {
