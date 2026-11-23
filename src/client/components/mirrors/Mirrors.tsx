@@ -27,6 +27,7 @@ const ORIGIN_NAMES: Record<string, string> = {
     'lastfm-benjamin': 'benjaminbenben file',
     tealfm: 'Teal.fm Client',
     rocksky: 'Rocksky Client',
+    'dupe-check': 'Client, for dupe checks of older plays',
     unknown: 'Unknown source',
 };
 

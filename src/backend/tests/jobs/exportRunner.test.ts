@@ -40,6 +40,7 @@ class FakeClient implements ExportClient {
     failAll = false;
     jobId?: number;
     budget?: WriteBudget;
+    ensureCoverage?: ExportClient['ensureCoverage'];
 
     constructor(componentId: number) {
         this.componentId = componentId;
@@ -163,6 +164,27 @@ describe('Job export runner', function () {
         expect(client.queued[0].original?.play?.data.track?.name).eq('T700');
         expect(client.queued[0].original?.data).is.undefined;
         expect(client.queued[0].id).is.undefined;
+    });
+
+    it('waits once for a Client that mirrors its own scrobbles to cover the job range, retrying a failed pass', async function () {
+        const {runner, target, targetRepo, client} = await setup();
+        const calls: unknown[] = [];
+        let release!: () => void;
+        client.ensureCoverage = async (ranges) => {
+            calls.push(ranges);
+            if (calls.length === 1) {
+                throw new Error('PDS down');
+            }
+            await new Promise<void>(r => { release = r; });
+        };
+        await runner.startExport(target.id);
+        await until(() => calls.length === 2);
+        expect(runner.runtime.exports[target.id]?.waiting).eq('Client is mirroring its scrobbles in the job range for dupe checks');
+        expect(client.queued).length(0);
+        release();
+        await exportTask(runner, target.id);
+        expect(calls).eql([[[0, 1000]], [[0, 1000]]]);
+        expect((await targetRepo.getById(target.id))!.exported).eq(7);
     });
 
     it('never puts more than the queue limit in the client queue', async function () {

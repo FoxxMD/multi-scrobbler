@@ -954,7 +954,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                          this.logger.debug(`Delaying discovery of Play ${item.uid} task for ${delayFor}ms due to non-zero prior failures (${taskFailures})`);
                          await sleep(delayFor, { signal });
                      }
-                     return this.handlePlayProcessing(item, signal)
+                     await this.handlePlayProcessing(item, signal);
                  },
                  {
                      concurrency: this.queueConcurrency,

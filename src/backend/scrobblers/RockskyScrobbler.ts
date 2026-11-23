@@ -14,7 +14,7 @@ import { isDebugMode } from "../utils.ts";
 import { durationToHuman } from '../../core/TimeUtils.ts';
 import { indexRockskyRecord, playToRockskyClientRecord, RockSkyApiClient, rockskyScrobbleToPlay, type RockskyScrobble, WRITE_PROBE_INTERVAL } from "../common/vendor/RockSkyApiClient.ts";
 import type {RockSkyClientConfig} from "../common/infrastructure/config/client/rocksky.ts";
-import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.ts";
+import AbstractHistoricalScrobbleClient, { inRanges, type ParseCarOpts } from "./AbstractHistoricalScrobbleClient.ts";
 import { fromStream } from '@atcute/repo';
 import fs from 'node:fs';
 import dayjs from "dayjs";
@@ -230,7 +230,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         await atClient.getCARToFile(userData.did, filename);
     }
 
-    async parseScrobblesFromCar(filename: string, batchSize: number, opts: { allowFailures?: boolean, logger?: Logger, signal?: AbortSignal } = {}) {
+    async parseScrobblesFromCar(filename: string, batchSize: number, opts: ParseCarOpts = {}) {
 
         if(this.api.userData === undefined) {
             throw new Error('Cannot parse CAR because atproto identifier has not been resolved');
@@ -243,7 +243,8 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         const {
             allowFailures = false,
             logger = this.logger,
-            signal
+            signal,
+            ranges
         } = opts;
 
         const stream = Readable.toWeb(fs.createReadStream(filename));
@@ -286,6 +287,9 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
                     }
                 }
 
+                if(ranges !== undefined && !inRanges(play.data.playDate?.valueOf(), ranges)) {
+                    continue;
+                }
                 const existing = await this.playsHistoricalRepo.hasByUid(entry.rkey);
                 if (!existing) {
                     batch.push(playToRepositoryCreatePlayHistoricalOpts({ play }));

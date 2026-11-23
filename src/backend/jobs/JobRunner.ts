@@ -44,6 +44,8 @@ export interface ExportClient {
     transformPlay(play: PlayObject, hookType: 'postCompare', opts: {stages?: StageConfig[]}): Promise<PlayObject>
     /** the service's write rate limit, for Clients that track one */
     writeBudget?(): Promise<WriteBudget | undefined>
+    /** for Clients that check duplicates against their own mirror (Teal, Rocksky): resolves once it covers ranges. signal stops waiting */
+    ensureCoverage?(ranges: TimeRange[], signal?: AbortSignal): Promise<void>
 }
 
 export interface JobRunnerDeps {
@@ -639,6 +641,7 @@ export class JobRunner {
         const jobLabel = String(this.jobId);
         // component id until the client resolves, a client that is not configured has no name
         let clientLabel = String(componentId);
+        let coverageEnsured = false;
         /** @param key fixed reason for metrics, `reason` can hold numbers and dates */
         const wait = async (reason: string, key: string = reason) => {
             const waitStart = performance.now();
@@ -688,6 +691,27 @@ export class JobRunner {
             }
             if(this.cleanupLocked(componentId, job.mirrorId)) {
                 await wait('Waiting for a cleanup to finish');
+                continue;
+            }
+            if(client.ensureCoverage !== undefined && !coverageEnsured) {
+                // one pass for the job's range, not one per queue's worth of plays
+                const waitStart = performance.now();
+                this.runtime.exports[targetId] = {waiting: 'Client is mirroring its scrobbles in the job range for dupe checks', rateLimit};
+                this.emitUpdate({runtime: this.runtime});
+                let failure: unknown;
+                try {
+                    await client.ensureCoverage([[job.rangeFrom?.valueOf() ?? 0, job.rangeTo.valueOf()]], signal);
+                    coverageEnsured = true;
+                } catch (e) {
+                    failure = e;
+                } finally {
+                    exportWaitSeconds.inc({job: jobLabel, name: clientLabel, reason: 'Client is mirroring its scrobbles'}, (performance.now() - waitStart) / 1000);
+                }
+                if(failure !== undefined) {
+                    signal.throwIfAborted();
+                    logger.warn(new Error('Client could not mirror its scrobbles for dupe checks, will try again', {cause: failure}));
+                    await wait('Client could not mirror its scrobbles for dupe checks, will try again', 'Client mirroring failed');
+                }
                 continue;
             }
             const room = job.exportQueueLimit - client.queuedLength;

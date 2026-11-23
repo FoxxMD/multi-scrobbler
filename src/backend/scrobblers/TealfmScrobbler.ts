@@ -21,7 +21,7 @@ import { recordToPlay } from "../common/vendor/teal/TealApiClient.ts";
 import dayjs from "dayjs";
 import { isDebugMode } from "../utils.ts";
 import { durationToHuman } from '../../core/TimeUtils.ts';
-import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.ts";
+import AbstractHistoricalScrobbleClient, { inRanges, type ParseCarOpts } from "./AbstractHistoricalScrobbleClient.ts";
 import { fromStream } from '@atcute/repo';
 import { playToRepositoryCreatePlayHistoricalOpts, type RepositoryCreatePlayHistoricalOpts } from "../common/database/drizzle/repositories/PlayHistoricalRepository.ts";
 import { isAbortError } from "abort-controller-x";
@@ -211,12 +211,13 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         await this.client.client.getCARToFile(this.client.client.userData.did, filename);
     }
 
-    async parseScrobblesFromCar(filename: string, batchSize: number, opts: {allowFailures?: boolean, logger?: Logger, signal?: AbortSignal} = {}) {
+    async parseScrobblesFromCar(filename: string, batchSize: number, opts: ParseCarOpts = {}) {
 
         const {
             allowFailures = false,
             logger = this.logger,
-            signal
+            signal,
+            ranges
         } = opts;
 
         const stream = Readable.toWeb(fs.createReadStream(filename));
@@ -263,6 +264,9 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
                     }
                 }
 
+                if(ranges !== undefined && !inRanges(play.data.playDate?.valueOf(), ranges)) {
+                    continue;
+                }
                 const existing = await this.playsHistoricalRepo.hasByUid(entry.rkey);
                 if(!existing) {
                     const batchDupe = batch.find(x => x.uid === entry.rkey);
