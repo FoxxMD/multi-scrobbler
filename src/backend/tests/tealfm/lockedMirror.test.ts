@@ -17,10 +17,10 @@ import { generatePlayHistoricalEntity } from '../../common/database/drizzle/enti
 import { playsHistorical } from '../../common/database/drizzle/schema/schema.ts';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
 
-const buildTeal = async (account: string | null = 'did:plc:abc') => {
+const buildTeal = async (account: string | null = 'did:plc:abc', options: Record<string, unknown> = {}) => {
     const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ms-mirror-'));
     const tfm = new TealScrobbler('test',
-        {id: `test-${Date.now()}`, name: 'test', data: {identifier: 'test', appPassword: 'test'}},
+        {id: `test-${Date.now()}`, name: 'test', data: {identifier: 'test', appPassword: 'test'}, options},
         {configDir: dataDir, dataDir, localUrl: new URL('https://example.com'), version: 'test'},
         new EventEmitter(),
         loggerTest
@@ -229,6 +229,39 @@ describe('#tealfm Locked mirror', function () {
         expect(left).eql([35, 33, 10]);
         const mirror = (await mirrors.getById(t.mirrorId))!;
         expect(mirror.coverage).eql([[now - 36 * day, now - 32 * day], [from, to]]);
+    });
+
+    it('with keepAllHistory, syncs again when only the window was mirrored, then keeps everything', async function () {
+        const {t, mirrors} = await buildTeal('did:plc:abc', {keepAllHistory: true});
+        const day = 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        await seed(t, now - 40 * day);
+        const mirror = await mirrors.findOrCreate({userId: t.dbComponent.userId, service: 'tealfm', account: 'did:plc:abc', name: 'teal'});
+        // synced before with the 30 day window
+        await mirrors.addCoverage(mirror.id, [now - 30 * day, now - day], t.coverageTag);
+        t.synced = true;
+        t.lastImportSuccess = dayjs(now - day);
+        await t.useLockedMirror();
+        expect(t.synced).false;
+
+        const parsed: unknown[] = [];
+        t.getCarFile = async () => 'car';
+        t.parseScrobblesFromCar = async (_f: string, _b: number, opts: {ranges: unknown}) => {
+            parsed.push(opts.ranges);
+        };
+        t.hydrateHistoricalScrobbles();
+        await t.importPromise;
+
+        expect(t.synced).true;
+        const [[from, to]] = parsed[0] as [number, number][];
+        expect(from).eq(0);
+        expect((await mirrors.getById(t.mirrorId))!.coverage).eql([[0, to]]);
+        expect(await t.pruneOutsideWindow()).eq(0);
+        expect(await t.db.select().from(playsHistorical)).length(1);
+
+        // a later start does not sync again
+        await t.useLockedMirror();
+        expect(t.synced).true;
     });
 
     it('a failed full sync covers nothing and still lets live plays through', async function () {

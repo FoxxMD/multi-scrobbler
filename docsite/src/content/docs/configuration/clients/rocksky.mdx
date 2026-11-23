@@ -10,6 +10,7 @@ import Handle from "@site/src/components/snippets/_atmosphere_id.mdx";
 import JsonConfig from '@site/../config/rocksky.json.example?raw';
 import ENVConfig from "@site/src/content/docs/configuration/clients/_env_configs/_rocksky.md";
 import RateLimitReserve from "@site/src/components/snippets/_rate_limit_reserve.mdx";
+import History from "@site/src/components/snippets/_atproto_history.mdx";
 
 
 
@@ -226,6 +227,12 @@ The rate limit reserve works only with the [PDS approach](#setup). With the Serv
 </Aside>
 
 <RateLimitReserve env="ROCKSKY"/>
+
+</DetailsAdmo>
+
+<DetailsAdmo type="note" summary="Scrobble History and Duplicates">
+
+<History name="Rocksky" env="ROCKSKY"/>
 
 </DetailsAdmo>
 

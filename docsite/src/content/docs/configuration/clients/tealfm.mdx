@@ -13,6 +13,7 @@ import Bluesky from "@site/src/components/snippets/_bluesky.mdx";
 import Handle from "@site/src/components/snippets/_atmosphere_id.mdx";
 import ENVConfig from "@site/src/content/docs/configuration/clients/_env_configs/_tealfm.md";
 import RateLimitReserve from "@site/src/components/snippets/_rate_limit_reserve.mdx";
+import History from "@site/src/components/snippets/_atproto_history.mdx";
 
 :::tip[Other Uses]
 
@@ -62,6 +63,12 @@ If you don't know what a PDS is or how to find this just use Bluesky:
 <DetailsAdmo type="note" summary="Rate Limit Reserve">
 
 <RateLimitReserve env="TEALFM"/>
+
+</DetailsAdmo>
+
+<DetailsAdmo type="note" summary="Scrobble History and Duplicates">
+
+<History name="Teal.fm" env="TEALFM"/>
 
 </DetailsAdmo>
 

@@ -173,8 +173,8 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
      * Delete mirrored plays older than the window, and their coverage, except what queued plays and running exports need.
      * Call inside withCarLock. A full sync passes its own windowStart, so pruning never cuts into what it just covered. Returns how many plays were deleted
      * */
-    protected async pruneOutsideWindow(windowStart: number = Date.now() - this.historicalWindowMs): Promise<number> {
-        if(this.mirrorId === undefined) {
+    protected async pruneOutsideWindow(windowStart: number = this.windowStart()): Promise<number> {
+        if(this.mirrorId === undefined || windowStart <= 0) {
             return 0;
         }
         const keep = mergeRanges([...await this.queuedCoverage(), ...[...this.coverageHolds.values()].flat()]);
@@ -287,6 +287,10 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
         if(mirror.coverage.length === 0 && this.synced && this.lastImportSuccess !== undefined) {
             // the last full sync mirrored everything before it started
             await this.mirrorRepo.addCoverage(mirror.id, [0, this.lastImportSuccess.valueOf()], this.coverageTag);
+        } else if(this.historicalWindowMs === undefined && this.synced && mirror.coverage[0]?.[0] !== 0) {
+            // keepAllHistory was turned on after a sync that kept only the window
+            this.synced = false;
+            this.syncedReason = 'all history is kept but the mirror only has the last days';
         }
     }
 
@@ -306,8 +310,13 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
     protected carWork: Promise<void> = Promise.resolve();
     protected carFileTask?: Promise<string>;
 
-    /** ms before now that the full sync mirrors and pruning keeps */
-    protected historicalWindowMs = HISTORICAL_WINDOW_MS;
+    /** ms before now that the full sync mirrors and pruning keeps. undefined keeps all history */
+    protected historicalWindowMs?: number = HISTORICAL_WINDOW_MS;
+
+    /** Start of the window kept in the mirror, 0 when keeping all history */
+    protected windowStart(now: number = Date.now()): number {
+        return this.historicalWindowMs === undefined ? 0 : now - this.historicalWindowMs;
+    }
     /** ranges an export job needs until it ends, pruning keeps them. By hold key */
     protected coverageHolds = new Map<string, TimeRange[]>();
 
@@ -359,7 +368,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
         
             const newImport: ComponentMigrationSelect = await this.migrationRepo.create({name: 'historicalImport', componentId: this.dbComponent.id}) as ComponentMigrationSelect;
             const startedAt = Date.now();
-            const windowStart = startedAt - this.historicalWindowMs;
+            const windowStart = this.windowStart(startedAt);
             try {
                 this.setStatus('Starting full mirror rebuild...');
                 // coverage inside the lock, so a waiting pass sees what this sync covered

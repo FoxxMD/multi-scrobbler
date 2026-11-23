@@ -188,6 +188,12 @@ The [Teal.fm](/configuration/clients/tealfm#configuration) and [Rocksky](/config
 
 These Clients keep a reserve of points free. When the reserve is reached, the Export waits until the limit resets. You can see the points that are used in the Export section of the Job page.
 
+### Teal.fm and Rocksky Mirrors
+
+The Teal.fm and Rocksky Clients each keep a locked Mirror of your account. By default, it has the scrobbles of the last 30 days. The Client uses it to find duplicates. You cannot clean up a locked Mirror, or delete it while it has Plays.
+
+Before an Export to one of these Clients starts, the Client copies the scrobbles in the Job's range from your PDS into its Mirror. For more information, see the [Teal.fm](/configuration/clients/tealfm#configuration) and [Rocksky](/configuration/clients/rocksky#configuration) pages.
+
 ### Failed Plays
 
 If many exported Plays fail in a row, the Export stops and shows the last error. The limit is 10, or the Queue Limit if it is higher. This usually means that the Client configuration is wrong or its service is down. Fix the problem, then select **Resume**.

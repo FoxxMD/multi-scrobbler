@@ -1,7 +1,8 @@
 import * as z from "zod";
+import {envMetaNormalize} from "../../../../utils/ZodUtils.ts";
 import {requestRetryOptionsSchema} from "../common.ts";
 import {commonClientConfigSchema, commonClientDataSchema, commonClientOptionsSchema, nowPlayingOptionsSchema, type EnvClientSchema} from "./index.ts";
-import { atProtoAppDataSchema, atProtoRateLimitEnvSchemas, atProtoRateLimitOptionsSchema } from "./atproto.ts";
+import { atProtoAppDataSchema, atProtoHistoryOptionsSchema, atProtoRateLimitEnvSchemas, atProtoRateLimitOptionsSchema } from "./atproto.ts";
 
 export const rockSkyDataSchema = z.object({
 
@@ -38,6 +39,7 @@ const envDataSchema = z.object({
     ROCKSKY_TOKEN: rockSkyDataSchema.shape.token,
     ROCKSKY_RATE_LIMIT_RESERVE: atProtoRateLimitEnvSchemas.reserve(),
     ROCKSKY_EXPORT_RATE_LIMIT_RESERVE: atProtoRateLimitEnvSchemas.exportReserve(),
+    ROCKSKY_KEEP_ALL_HISTORY: z.stringbool().optional().meta(envMetaNormalize(atProtoHistoryOptionsSchema.shape.keepAllHistory.meta())),
 });
 
 export const envSchemas: EnvClientSchema<typeof envDataSchema, RockSkyClientConfig> = {
@@ -53,6 +55,7 @@ export const envSchemas: EnvClientSchema<typeof envDataSchema, RockSkyClientConf
             options: {
                 rateLimitReserve: partial.ROCKSKY_RATE_LIMIT_RESERVE,
                 exportRateLimitReserve: partial.ROCKSKY_EXPORT_RATE_LIMIT_RESERVE,
+                keepAllHistory: partial.ROCKSKY_KEEP_ALL_HISTORY,
             }
     })
 };
@@ -82,6 +85,7 @@ export const rockSkyClientOptionsSchema = z.object({
     ...commonClientOptionsSchema.shape,
     ...nowPlayingOptionsSchema.shape,
     ...atProtoRateLimitOptionsSchema.shape,
+    ...atProtoHistoryOptionsSchema.shape,
 });
 
 export type RockSkyClientOptions = z.infer<typeof rockSkyClientOptionsSchema>;

@@ -53,6 +53,9 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
         this.nowPlayingMinThreshold = (_) => 20;
         this.dataDir = options.dataDir;
+        if(config.options?.keepAllHistory) {
+            this.historicalWindowMs = undefined;
+        }
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => recordToPlay(obj);

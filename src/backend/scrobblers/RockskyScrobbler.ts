@@ -54,6 +54,9 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         // PDS rate limit for operations is ~2/sec
         this.scrobbleDelay = 2000;
         this.dataDir = options.dataDir;
+        if(config.options?.keepAllHistory) {
+            this.historicalWindowMs = undefined;
+        }
         this.existingPlayOpts = {
             logger: this.dupeLogger,
             transformRules: this.transformRules,
