@@ -20,6 +20,13 @@ Before the Client scrobbles, it compares the Play against the Mirror to find dup
 
 By default, the Mirror has only the scrobbles of the last 30 days. The Client copies them from your repository's CAR file when it starts for the first time.
 
+#### Sync Status
+
+The **Synced** status found on the {props.name} Client's details page let's you know if if this 30 day history (or [all history](#keep-all-history)) is succesfully mirrored in the database. You can manually trigger a sync of the Mirror by using the **Sync Plays** action in the Client menu:
+
+* **Full Sync** - reruns importing the 30 day/full scrobble history from your CAR file into the Mirror
+* **Recent Sync** -- Uses the API to re-import the last ~100 scrobbles into the Mirror, to fill in any gaps in recent listening history
+
 #### Older Plays
 
 When the Client gets a Play that is older than the Mirror, it copies the scrobbles of that time from your repository's CAR file. This copy is a pass. During the pass:
