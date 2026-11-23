@@ -42,7 +42,7 @@ export interface ExportClient {
     /** plays waiting in the client's queue (not retries) */
     queuedLength: number
     getRunningState(): ComponentState
-    queuePlay(data: PlayObject[], context?: QueueContext, opts?: {jobId?: number, review?: Map<PlayObject, LifecycleStep[]>}): Promise<unknown[]>
+    queuePlay(data: PlayObject[], context?: QueueContext, opts?: {jobId?: number, steps?: Map<PlayObject, LifecycleStep[]>}): Promise<unknown[]>
     transformPlay(play: PlayObject, hookType: 'postCompare', opts: {stages?: StageCommon[]}): Promise<TransformPlayResult>
     /** the service's write rate limit, for Clients that track one */
     writeBudget?(): Promise<WriteBudget | undefined>
@@ -764,7 +764,8 @@ export class JobRunner {
 
             let plays: PlayObject[] = rows.map(r => ({...r.play, original: {play: r.play}}));
             let discarded = 0;
-            const review = new Map<PlayObject, LifecycleStep[]>();
+            const jobSteps = new Map<PlayObject, LifecycleStep[]>();
+            let review = 0;
             if(stages !== undefined) {
                 const results = await stage('job_transform', () => pMap(plays, async (p) => client.transformPlay(p, 'postCompare', {stages}), {concurrency: 5}));
                 plays = [];
@@ -776,7 +777,10 @@ export class JobRunner {
                         continue;
                     }
                     if(step?.actionResult === 'review') {
-                        review.set(play, steps);
+                        review++;
+                    }
+                    if(steps.length > 0) {
+                        jobSteps.set(play, steps);
                     }
                     plays.push(play);
                 }
@@ -786,7 +790,7 @@ export class JobRunner {
                 // a cleanup started while this page was read, the next pass waits for it and reads the page again
                 continue;
             }
-            const created = await stage('queue_play', () => client.queuePlay(plays, job.exportUpstreamCheck ? undefined : {upstreamCheck: false}, {jobId: this.jobId, review: review.size > 0 ? review : undefined}));
+            const created = await stage('queue_play', () => client.queuePlay(plays, job.exportUpstreamCheck ? undefined : {upstreamCheck: false}, {jobId: this.jobId, steps: jobSteps.size > 0 ? jobSteps : undefined}));
             const last = rows[rows.length - 1];
             cursor = {playedAt: last.playedAt, id: last.id} satisfies JobTargetCursor;
             exported += rows.length;
@@ -800,7 +804,7 @@ export class JobRunner {
             await this.setTarget(targetId, update);
             // only passes that exported a page, waits are in exportWaitSeconds
             exportStageSeconds.observe({job: jobLabel, name: clientLabel, stage: 'pass'}, (performance.now() - passStart) / 1000);
-            logger.verbose(`Exported ${rows.length} scrobbles, ${created.length} new to the client${discarded > 0 ? `, ${discarded} discarded by transforms` : ''}${review.size > 0 ? `, ${review.size} set for review by transforms` : ''}`);
+            logger.verbose(`Exported ${rows.length} scrobbles, ${created.length} new to the client${discarded > 0 ? `, ${discarded} discarded by transforms` : ''}${review > 0 ? `, ${review} set for review by transforms` : ''}`);
         }
     }
 

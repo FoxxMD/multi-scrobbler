@@ -847,12 +847,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
      * @param opts.jobId plays are exported by this import job. They are linked to the job (not a parent Source play) and marked as job plays in meta
      * */
     /**
-     * @param opts.review New plays to create in the review state instead of queueing them, with the transform steps that set the review action
+     * @param opts.steps Transform steps already run on new plays (IE by an import job), saved as a transform event. A play whose last Stage action is review is created in the review state instead of queued
      * */
-    queuePlay = async (data: (PlayObject | PlayObject[]) | (PlaySelectWithQueueStates | PlaySelectWithQueueStates[]), context?: QueueContext, opts: {jobId?: number, review?: Map<PlayObject, LifecycleStep[]>} = {}) => {
-        const {jobId, review} = opts;
-        if ((jobId !== undefined || review !== undefined) && (Array.isArray(data) ? data : [data]).some(x => entityIsPlayEntity(x))) {
-            throw new Error('jobId and review can only be given for new plays, existing plays keep their job and state');
+    queuePlay = async (data: (PlayObject | PlayObject[]) | (PlaySelectWithQueueStates | PlaySelectWithQueueStates[]), context?: QueueContext, opts: {jobId?: number, steps?: Map<PlayObject, LifecycleStep[]>} = {}) => {
+        const {jobId, steps} = opts;
+        if ((jobId !== undefined || steps !== undefined) && (Array.isArray(data) ? data : [data]).some(x => entityIsPlayEntity(x))) {
+            throw new Error('jobId and steps can only be given for new plays, existing plays keep their job and state');
         }
         const createdQueuedPlays: PlaySelect[] = [];
 
@@ -921,7 +921,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 }
 
                 // not in queue, doesn't exist elsewhere, or existing queued check failed for some reason and we don't want to lose Play
-                const reviewSteps = review?.get(dataArray[index] as PlayObject);
+                const priorSteps = steps?.get(dataArray[index] as PlayObject) ?? [];
+                const reviewStep = getLastLifecycleStepWithAction(priorSteps);
+                const inReview = reviewStep?.actionResult === 'review';
                 const {
                     data,
                     meta,
@@ -935,18 +937,18 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                         original
                     },
                     componentId: this.dbComponent.id,
-                    state: reviewSteps === undefined ? 'queued' : 'review',
+                    state: inReview ? 'review' : 'queued',
                     // only exists on plays from Source. A job play's id (if any) is a mirror row, not a play
                     parentId: jobId === undefined ? queueablePlay.id : undefined,
                     jobId,
                 });
 
                 const playRow = await this.playRepo.createPlays([createPlayData]);
-                if (reviewSteps !== undefined) {
-                    const step = getLastLifecycleStepWithAction(reviewSteps);
+                const transformEvents = priorSteps.length > 0 ? [{ playId: playRow[0].id, ...transformToPlayEvent(priorSteps) }] : [];
+                if (inReview) {
                     const reviewEvents = await this.playEventsRepo.createMany([
-                        { playId: playRow[0].id, ...transformToPlayEvent(reviewSteps) },
-                        { playId: playRow[0].id, ...stateChangeToPlayEvent({ state: 'review', reason: step?.actionReason ?? 'Triggered by a Stage' }), createdAt: (playRow[0].seenAt ?? dayjs()).add(1, 'ms') },
+                        ...transformEvents,
+                        { playId: playRow[0].id, ...stateChangeToPlayEvent({ state: 'review', reason: reviewStep.actionReason ?? 'Triggered by a Stage' }), createdAt: (playRow[0].seenAt ?? dayjs()).add(1, 'ms') },
                     ]) as PlayEventSelect[];
                     createdQueuedPlays.push(playRow[0]);
                     this.logger.debug(`Added ${buildTrackString(queueablePlay)} for review`);
@@ -955,6 +957,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 }
                 const queueState = await this.queueRepo.create({ componentId: this.dbComponent.id, playId: playRow[0].id, queueName: INGRESS_QUEUE, context }) as QueueStateSelect;
                 const createdEvents = await this.playEventsRepo.createMany([
+                    ...transformEvents,
                     { playId: playRow[0].id, ...stateChangeToPlayEvent({ state: 'queued' }), createdAt: (playRow[0].seenAt ?? dayjs()).add(1, 'ms') },
                     { playId: playRow[0].id, ...queueStateToPlayEvent(queueState), createdAt: queueState.createdAt }
                 ]) as PlayEventSelect[];

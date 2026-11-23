@@ -38,8 +38,8 @@ class FakeClient implements ExportClient {
     queued: PlayObject[] = [];
     contexts: unknown[] = [];
     transformedWith: StageCommon[][] = [];
-    /** titles of plays given to queuePlay to create in review */
-    reviewed: (string | undefined)[] = [];
+    /** titles of plays given to queuePlay with transform steps */
+    withSteps: (string | undefined)[] = [];
     /** transform steps returned for a play, IE to set a Stage action */
     stepsFor: (play: PlayObject) => LifecycleStep[] = () => [];
     /** emit a failed playUpdate for every queued play */
@@ -61,8 +61,8 @@ class FakeClient implements ExportClient {
         return this.running ? COMPONENT_STATE.RUNNING : COMPONENT_STATE.IDLE;
     }
 
-    async queuePlay(data: PlayObject[], context?: unknown, opts: {jobId?: number, review?: Map<PlayObject, LifecycleStep[]>} = {}) {
-        this.reviewed.push(...[...(opts.review?.keys() ?? [])].map(x => x.data.track?.name));
+    async queuePlay(data: PlayObject[], context?: unknown, opts: {jobId?: number, steps?: Map<PlayObject, LifecycleStep[]>} = {}) {
+        this.withSteps.push(...[...(opts.steps?.keys() ?? [])].map(x => x.data.track?.name));
         this.queued.push(...data);
         this.contexts.push(context);
         this.queuedLength += data.length;
@@ -393,14 +393,15 @@ describe('Job export runner', function () {
         expect(titles(client.queued)).to.deep.eq(['T600', 'T500', 'T400', 'T300', 'T200', 'T100'].map(x => `${x} (transformed)`));
     });
 
-    it('tells the client which plays a job transform set for review', async function () {
+    it('gives the client the job transform steps of each play', async function () {
         const {runner, target, client} = await setup({transformOptions: [{type: 'user', name: 'x'}]});
         const step = (actionResult: LifecycleStep['actionResult']): LifecycleStep => ({stageName: 'x', stageType: 'user', hook: 'postCompare', source: 'test', actionResult, createdAt: dayjs().toISOString()});
         client.stepsFor = (p) => p.data.track?.name === 'T700' ? [step('review')] : p.data.track?.name === 'T600' ? [step('review'), step('approve')] : [];
         await runner.startExport(target.id);
         await exportTask(runner, target.id);
         expect(client.queued).length(7);
-        expect(client.reviewed).to.deep.eq(['T700 (transformed)']);
+        // plays without steps (no Stage ran) have no transform event to save
+        expect(client.withSteps).to.deep.eq(['T700 (transformed)', 'T600 (transformed)']);
     });
 
     it('tells the client to skip its upstream dupe check only when the job opts out', async function () {
@@ -531,9 +532,16 @@ describe('Job export runner', function () {
             expect(reviewed.play.data.track?.name).eq(`T${now}`);
             expect(reviewed.queueStates).length(0);
             expect(reviewed.events.map(x => x.eventName)).to.include.members(['transform', 'playStateChange']);
+            // queued plays keep the job's transform steps too
+            const scrobbled = await scrobbler.playRepoTest.findPlays({jobId: job.id, state: ['scrobbled'], with: ['events']}) as PlayWith<'events'>[];
+            expect(scrobbled).length(2);
+            for (const p of scrobbled) {
+                const jobTransform = p.events.find(x => x.eventName === 'transform' && (x.data as LifecycleStep[]).some(y => y.stageType === 'match'));
+                expect(jobTransform).to.not.be.undefined;
+            }
 
             // exporting the same play again finds the play in review
-            const again = await scrobbler.queuePlay([reviewed.play], undefined, {jobId: job.id, review: new Map([[reviewed.play, []]])});
+            const again = await scrobbler.queuePlay([reviewed.play], undefined, {jobId: job.id});
             expect(again).length(0);
         } finally {
             await scrobbler[Symbol.asyncDispose]();
