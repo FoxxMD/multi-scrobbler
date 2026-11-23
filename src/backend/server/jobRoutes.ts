@@ -403,6 +403,7 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                     exportOrder: payload.exportOrder,
                     exportQueueLimit: payload.exportQueueLimit,
                     exportUpstreamCheck: payload.upstreamCheck,
+                    exportDiscarded: payload.exportDiscarded,
                     ...transforms,
                 });
                 await repos().targetRepo.createForJob(created.id, targetIds);
@@ -436,8 +437,8 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
             return;
         }
         const {jobRepo, mirrorRepo} = repos(req);
-        const {name, exportQueueLimit, upstreamCheck} = req.body;
-        const updated = name !== undefined || exportQueueLimit !== undefined || upstreamCheck !== undefined ? (await jobRepo.update(job.id, {name, exportQueueLimit, exportUpstreamCheck: upstreamCheck}))! : job;
+        const {name, exportQueueLimit, upstreamCheck, exportDiscarded} = req.body;
+        const updated = name !== undefined || exportQueueLimit !== undefined || upstreamCheck !== undefined || exportDiscarded !== undefined ? (await jobRepo.update(job.id, {name, exportQueueLimit, exportUpstreamCheck: upstreamCheck, exportDiscarded}))! : job;
         if (exportQueueLimit !== undefined) {
             jobs.wake(job.id);
         }

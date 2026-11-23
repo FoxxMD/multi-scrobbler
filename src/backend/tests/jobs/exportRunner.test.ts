@@ -91,7 +91,7 @@ class FakeClient implements ExportClient {
     }
 }
 
-const setup = async (opts: {db?: DbConcrete, timestamps?: number[], limit?: number, order?: 'asc' | 'desc', rangeTo?: number, coverage?: [number, number][], importing?: boolean, transformOptions?: unknown[], upstreamCheck?: boolean, realClient?: ExportClient} = {}) => {
+const setup = async (opts: {db?: DbConcrete, timestamps?: number[], limit?: number, order?: 'asc' | 'desc', rangeTo?: number, coverage?: [number, number][], importing?: boolean, transformOptions?: unknown[], upstreamCheck?: boolean, exportDiscarded?: boolean, realClient?: ExportClient} = {}) => {
     const db = opts.db ?? await transientDb();
     const mirrors = new MirrorRepository(db);
     const mirror = await mirrors.findOrCreate({userId: null as unknown as string, service: 'lastfm', account: null, name: 'test'});
@@ -116,6 +116,7 @@ const setup = async (opts: {db?: DbConcrete, timestamps?: number[], limit?: numb
         importStatus: opts.importing === true ? 'running' : 'idle',
         transformOptions: opts.transformOptions,
         exportUpstreamCheck: opts.upstreamCheck,
+        exportDiscarded: opts.exportDiscarded,
     });
     const componentId = opts.realClient?.componentId ?? (await db.insert(components).values({type: 'test', name: 'fake', mode: 'client', uid: `fake-${Math.random()}`}).returning())[0].id;
     const targetRepo = new JobTargetRepository(db);
@@ -393,6 +394,15 @@ describe('Job export runner', function () {
         expect(titles(client.queued)).to.deep.eq(['T600', 'T500', 'T400', 'T300', 'T200', 'T100'].map(x => `${x} (transformed)`));
     });
 
+    it('sends plays that a job transform discarded, with their steps, when the job keeps discarded plays', async function () {
+        const {runner, target, client} = await setup({transformOptions: [{type: 'user', name: 'x'}], exportDiscarded: true});
+        client.stepsFor = (p) => p.data.track?.name === 'T700' ? [{stageName: 'x', stageType: 'user', hook: 'postCompare', source: 'test', actionResult: 'discard', createdAt: dayjs().toISOString()}] : [];
+        await runner.startExport(target.id);
+        await exportTask(runner, target.id);
+        expect(client.queued).length(7);
+        expect(client.withSteps).to.deep.eq(['T700 (transformed)']);
+    });
+
     it('gives the client the job transform steps of each play', async function () {
         const {runner, target, client} = await setup({transformOptions: [{type: 'user', name: 'x'}]});
         const step = (actionResult: LifecycleStep['actionResult']): LifecycleStep => ({stageName: 'x', stageType: 'user', hook: 'postCompare', source: 'test', actionResult, createdAt: dayjs().toISOString()});
@@ -543,6 +553,38 @@ describe('Job export runner', function () {
             // exporting the same play again finds the play in review
             const again = await scrobbler.queuePlay([reviewed.play], undefined, {jobId: job.id});
             expect(again).length(0);
+        } finally {
+            await scrobbler[Symbol.asyncDispose]();
+        }
+    });
+
+    it('creates plays a job transform discarded in the discarded state when the job keeps them', async function () {
+        const scrobbler = new TestScrobbler();
+        await scrobbler.initialize();
+        scrobbler.scrobbleSleep = 50;
+        scrobbler.scrobbleDelay = 0;
+        scrobbler.initScrobbleMonitoring().catch((e) => {
+            if (!isAbortError(e)) {
+                console.error(e);
+            }
+        });
+        try {
+            const now = dayjs().subtract(1, 'day').valueOf();
+            const tm = (scrobbler as unknown as {transformManager: {parseTransformerConfig: (x: unknown) => Promise<StageCommon>}}).transformManager;
+            const stages = [await tm.parseTransformerConfig({type: 'match', title: `T${now}`, onSuccessAction: 'discard'})];
+            const {runner, target, targetRepo, job} = await setup({db: scrobbler.playRepoTest.db, timestamps: [now - 600000, now - 300000, now], rangeTo: now + 1000, coverage: [[0, now + 1000]], realClient: scrobbler as unknown as ExportClient, transformOptions: stages, exportDiscarded: true});
+
+            await runner.startExport(target.id);
+            await exportTask(runner, target.id);
+            const done = (await targetRepo.getById(target.id))!;
+            expect(done.status).eq('completed');
+            expect(done.queued).eq(3);
+            expect(done.stats).to.deep.eq({scrobbled: 2, discarded: 1});
+
+            const [discarded] = await scrobbler.playRepoTest.findPlays({jobId: job.id, state: ['discarded'], with: ['queues', 'events']}) as PlayWith<'queueStates' | 'events'>[];
+            expect(discarded.play.data.track?.name).eq(`T${now}`);
+            expect(discarded.queueStates).length(0);
+            expect(discarded.events.map(x => x.eventName)).to.include.members(['transform', 'playStateChange']);
         } finally {
             await scrobbler[Symbol.asyncDispose]();
         }

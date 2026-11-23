@@ -108,6 +108,8 @@ export interface JobApiJson {
     exportQueueLimit: number
     /** false => clients don't fetch their service's scrobbles to find duplicates, only plays they already have in the database */
     exportUpstreamCheck: boolean
+    /** true => plays a job transform discarded are kept in clients in the discarded state, false => they are not sent */
+    exportDiscarded: boolean
     targets: JobTargetApiJson[]
     /** mirror plays in the job's range, what an export will go through */
     mirrorPlaysInRange: number
@@ -317,6 +319,7 @@ export const jobCreateSchema = z.object({
     exportOrder: z.enum(JOB_EXPORT_ORDERS).default('desc').meta({description: 'desc exports newest first and can start while the import runs. asc exports oldest first, after the oldest scrobbles are imported'}),
     exportQueueLimit: z.int().min(1).max(EXPORT_QUEUE_LIMIT_MAX).default(EXPORT_QUEUE_LIMIT_DEFAULT).meta({description: "The export only sends more scrobbles while a Client's queue (live scrobbles included) holds fewer than this"}),
     upstreamCheck: z.boolean().default(true).meta({description: "Clients fetch scrobbles from their service to skip ones it already has. false only skips scrobbles the Client already has in the database, which is much faster for large exports but can duplicate scrobbles that reached the service some other way"}),
+    exportDiscarded: z.boolean().default(false).meta({description: "true => scrobbles that the job's transforms discard are added to each Client in the discarded state, without scrobbling them. false => they are not sent to the Clients"}),
     start: z.boolean().default(false).meta({description: 'Start the import and all exports once created'}),
 }).meta({title: 'Create Job'});
 export type JobCreate = z.input<typeof jobCreateSchema>;
@@ -346,4 +349,5 @@ export const jobUpdateSchema = z.object({
     name: z.string().trim().min(1).max(100).optional(),
     exportQueueLimit: z.int().min(1).max(EXPORT_QUEUE_LIMIT_MAX).optional(),
     upstreamCheck: z.boolean().optional().meta({description: 'See upstreamCheck on Create Job. Applies to scrobbles exported after the change, ones already queued in a Client keep the old setting'}),
+    exportDiscarded: z.boolean().optional().meta({description: 'See exportDiscarded on Create Job. Applies to scrobbles exported after the change'}),
 }).meta({title: 'Update Job'});

@@ -773,8 +773,10 @@ export class JobRunner {
                     const step = getLastLifecycleStepWithAction(steps);
                     if(step?.actionResult === 'discard') {
                         discarded++;
-                        logger.verbose(`Not exporting ${buildTrackString(play)}, discarded by Stage ${step.stageName}${step.actionReason !== undefined ? `: ${step.actionReason}` : ''}`);
-                        continue;
+                        if(!job.exportDiscarded) {
+                            logger.verbose(`Not exporting ${buildTrackString(play)}, discarded by Stage ${step.stageName}${step.actionReason !== undefined ? `: ${step.actionReason}` : ''}`);
+                            continue;
+                        }
                     }
                     if(step?.actionResult === 'review') {
                         review++;
