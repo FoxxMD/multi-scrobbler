@@ -321,7 +321,7 @@ export const ImportPanel = (props: { job: JobApiJson }) => {
 }
 
 
-const STAT_LABELS: [string, string][] = [['exported', 'exported'], ['duped', 'already exported'], ['failed', 'failed'], ['queued', 'queued'], ['discarded', 'discarded']];
+const STAT_LABELS: [string, string][] = [['exported', 'exported'], ['duped', 'already exported'], ['failed', 'failed'], ['queued', 'queued'], ['discarded', 'discarded'], ['review', 'need review']];
 
 const statsText = (stats: JobTargetApiJson['stats']): string | undefined => {
     if (stats === null) {

@@ -9,6 +9,7 @@ import { COMPONENT_TYPE_CLIENT, DEAD_LETTER_RETRIES_DEFAULT, DEAD_QUEUE, INGRESS
 import { isPlayObject, type PlayData, type PlayObject } from "../../core/PlaySchema.ts";
 import { capitalize } from "../../core/StringUtils.ts";
 import { buildTrackString } from "../../core/MusicMetadata.ts";
+import { getLastLifecycleStepWithAction } from "../utils/PlayTransformUtils.ts";
 import type {CommonClientConfig} from "./infrastructure/config/client/index.ts";
 import type {CommonSourceConfig} from "./infrastructure/config/source/index.ts";
 import { generateLoggableAbortReason, mergeSimpleError, PlayParkedError, SimpleError, SkipTransformStageError, StageChangeError, StagePrerequisiteError, StageTransformError, TransformRulesError } from "./errors/MSErrors.ts";
@@ -50,7 +51,7 @@ import type { ElementOf, MarkRequired } from "ts-essentials";
 import { serializeError } from "serialize-error";
 import { DrizzleQueueRepository } from "./database/drizzle/repositories/QueueRepository.ts";
 import { DrizzlePlayEventsRepository } from "./database/drizzle/repositories/PlayEventsRepository.ts";
-import { asPlayEvents, entityIsPlayEntity, playUpdateToEvent, queueCompletionStateToPlayEvent, queueStateToPlayEvent, stateChangeToPlayEvent } from "./database/drizzle/entityUtils.ts";
+import { asPlayEvents, entityIsPlayEntity, playUpdateToEvent, queueCompletionStateToPlayEvent, queueStateToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from "./database/drizzle/entityUtils.ts";
 import pMap from "p-map";
 import { prettifyError } from "zod";
 import { playTransformSchema } from "./transforms/stageSchemas.ts";
@@ -845,10 +846,13 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     /**
      * @param opts.jobId plays are exported by this import job. They are linked to the job (not a parent Source play) and marked as job plays in meta
      * */
-    queuePlay = async (data: (PlayObject | PlayObject[]) | (PlaySelectWithQueueStates | PlaySelectWithQueueStates[]), context?: QueueContext, opts: {jobId?: number} = {}) => {
-        const {jobId} = opts;
-        if (jobId !== undefined && (Array.isArray(data) ? data : [data]).some(x => entityIsPlayEntity(x))) {
-            throw new Error('jobId can only be given for new plays, existing plays keep their job');
+    /**
+     * @param opts.review New plays to create in the review state instead of queueing them, with the transform steps that set the review action
+     * */
+    queuePlay = async (data: (PlayObject | PlayObject[]) | (PlaySelectWithQueueStates | PlaySelectWithQueueStates[]), context?: QueueContext, opts: {jobId?: number, review?: Map<PlayObject, LifecycleStep[]>} = {}) => {
+        const {jobId, review} = opts;
+        if ((jobId !== undefined || review !== undefined) && (Array.isArray(data) ? data : [data]).some(x => entityIsPlayEntity(x))) {
+            throw new Error('jobId and review can only be given for new plays, existing plays keep their job and state');
         }
         const createdQueuedPlays: PlaySelect[] = [];
 
@@ -905,7 +909,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             const jobMeta = jobId !== undefined ? {jobId, parsedFrom: 'job' as const, newFromSource: false} : {};
             const playDatas = dataArray.map(x => ({ ...x, meta: { ...x.meta, ...jobMeta, wasMonitored: monitoring.monitoring, seenAt: dayjs() } }));
 
-            await pMap(playDatas, async (queueablePlay) => {
+            await pMap(playDatas, async (queueablePlay, index) => {
                 try {
                     const existing = await timed(playStageSeconds, this.playStageLabels(queueablePlay, 'pre_queue_check'), () => this.findPreQueueExistingPlay(queueablePlay, context));
                     if(existing !== undefined) {
@@ -917,6 +921,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 }
 
                 // not in queue, doesn't exist elsewhere, or existing queued check failed for some reason and we don't want to lose Play
+                const reviewSteps = review?.get(dataArray[index] as PlayObject);
                 const {
                     data,
                     meta,
@@ -930,13 +935,24 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                         original
                     },
                     componentId: this.dbComponent.id,
-                    state: 'queued',
+                    state: reviewSteps === undefined ? 'queued' : 'review',
                     // only exists on plays from Source. A job play's id (if any) is a mirror row, not a play
                     parentId: jobId === undefined ? queueablePlay.id : undefined,
                     jobId,
                 });
 
                 const playRow = await this.playRepo.createPlays([createPlayData]);
+                if (reviewSteps !== undefined) {
+                    const step = getLastLifecycleStepWithAction(reviewSteps);
+                    const reviewEvents = await this.playEventsRepo.createMany([
+                        { playId: playRow[0].id, ...transformToPlayEvent(reviewSteps) },
+                        { playId: playRow[0].id, ...stateChangeToPlayEvent({ state: 'review', reason: step?.actionReason ?? 'Triggered by a Stage' }), createdAt: (playRow[0].seenAt ?? dayjs()).add(1, 'ms') },
+                    ]) as PlayEventSelect[];
+                    createdQueuedPlays.push(playRow[0]);
+                    this.logger.debug(`Added ${buildTrackString(queueablePlay)} for review`);
+                    this.emitPlayInsert({ ...playRow[0], queueStates: [], events: asPlayEvents(reviewEvents) });
+                    return;
+                }
                 const queueState = await this.queueRepo.create({ componentId: this.dbComponent.id, playId: playRow[0].id, queueName: INGRESS_QUEUE, context }) as QueueStateSelect;
                 const createdEvents = await this.playEventsRepo.createMany([
                     { playId: playRow[0].id, ...stateChangeToPlayEvent({ state: 'queued' }), createdAt: (playRow[0].seenAt ?? dayjs()).add(1, 'ms') },

@@ -14,6 +14,7 @@ import { WildcardEmitter } from '../../common/WildcardEmitter.ts';
 import { componentLockKey, type ExportClient, mirrorLockKey, JobRunner, type JobRunnerDeps } from '../../jobs/JobRunner.ts';
 import { LockRegistry } from '../../jobs/LockRegistry.ts';
 import type { DbConcrete } from '../../common/database/drizzle/drizzleUtils.ts';
+import type { PlayWith } from '../../common/database/drizzle/drizzleTypes.ts';
 import { COMPONENT_STATE } from '../../../core/Api.ts';
 import type { PlayObject } from '../../../core/PlaySchema.ts';
 import type { StageCommon } from '../../../core/Transform.ts';
@@ -37,6 +38,8 @@ class FakeClient implements ExportClient {
     queued: PlayObject[] = [];
     contexts: unknown[] = [];
     transformedWith: StageCommon[][] = [];
+    /** titles of plays given to queuePlay to create in review */
+    reviewed: (string | undefined)[] = [];
     /** transform steps returned for a play, IE to set a Stage action */
     stepsFor: (play: PlayObject) => LifecycleStep[] = () => [];
     /** emit a failed playUpdate for every queued play */
@@ -58,7 +61,8 @@ class FakeClient implements ExportClient {
         return this.running ? COMPONENT_STATE.RUNNING : COMPONENT_STATE.IDLE;
     }
 
-    async queuePlay(data: PlayObject[], context?: unknown, opts: {jobId?: number} = {}) {
+    async queuePlay(data: PlayObject[], context?: unknown, opts: {jobId?: number, review?: Map<PlayObject, LifecycleStep[]>} = {}) {
+        this.reviewed.push(...[...(opts.review?.keys() ?? [])].map(x => x.data.track?.name));
         this.queued.push(...data);
         this.contexts.push(context);
         this.queuedLength += data.length;
@@ -389,6 +393,16 @@ describe('Job export runner', function () {
         expect(titles(client.queued)).to.deep.eq(['T600', 'T500', 'T400', 'T300', 'T200', 'T100'].map(x => `${x} (transformed)`));
     });
 
+    it('tells the client which plays a job transform set for review', async function () {
+        const {runner, target, client} = await setup({transformOptions: [{type: 'user', name: 'x'}]});
+        const step = (actionResult: LifecycleStep['actionResult']): LifecycleStep => ({stageName: 'x', stageType: 'user', hook: 'postCompare', source: 'test', actionResult, createdAt: dayjs().toISOString()});
+        client.stepsFor = (p) => p.data.track?.name === 'T700' ? [step('review')] : p.data.track?.name === 'T600' ? [step('review'), step('approve')] : [];
+        await runner.startExport(target.id);
+        await exportTask(runner, target.id);
+        expect(client.queued).length(7);
+        expect(client.reviewed).to.deep.eq(['T700 (transformed)']);
+    });
+
     it('tells the client to skip its upstream dupe check only when the job opts out', async function () {
         const checked = await setup();
         await checked.runner.startExport(checked.target.id);
@@ -485,6 +499,42 @@ describe('Job export runner', function () {
             expect(plays.every(x => x.parentId === null && x.play.meta.jobId === job.id)).is.true;
             const stages = await stagesOf(playStageSeconds, {mode: 'client', job: String(job.id)});
             expect([...stages]).to.include.members(['pre_queue_check', 'queue_wait', 'process_total', 'transform', 'dupe_check', 'scrobble_request', 'persist']);
+        } finally {
+            await scrobbler[Symbol.asyncDispose]();
+        }
+    });
+
+    it('creates plays a job transform set for review in review, without processing them', async function () {
+        const scrobbler = new TestScrobbler();
+        await scrobbler.initialize();
+        scrobbler.scrobbleSleep = 50;
+        scrobbler.scrobbleDelay = 0;
+        scrobbler.initScrobbleMonitoring().catch((e) => {
+            if (!isAbortError(e)) {
+                console.error(e);
+            }
+        });
+        try {
+            const now = dayjs().subtract(1, 'day').valueOf();
+            const tm = (scrobbler as unknown as {transformManager: {parseTransformerConfig: (x: unknown) => Promise<StageCommon>}}).transformManager;
+            const stages = [await tm.parseTransformerConfig({type: 'match', title: `T${now}`, onSuccessAction: 'review'})];
+            const {runner, target, targetRepo, job} = await setup({db: scrobbler.playRepoTest.db, timestamps: [now - 600000, now - 300000, now], rangeTo: now + 1000, coverage: [[0, now + 1000]], realClient: scrobbler as unknown as ExportClient, transformOptions: stages});
+
+            await runner.startExport(target.id);
+            await exportTask(runner, target.id);
+            const done = (await targetRepo.getById(target.id))!;
+            expect(done.status).eq('completed');
+            expect(done.queued).eq(3);
+            expect(done.stats).to.deep.eq({scrobbled: 2, review: 1});
+
+            const [reviewed] = await scrobbler.playRepoTest.findPlays({jobId: job.id, state: ['review'], with: ['queues', 'events']}) as PlayWith<'queueStates' | 'events'>[];
+            expect(reviewed.play.data.track?.name).eq(`T${now}`);
+            expect(reviewed.queueStates).length(0);
+            expect(reviewed.events.map(x => x.eventName)).to.include.members(['transform', 'playStateChange']);
+
+            // exporting the same play again finds the play in review
+            const again = await scrobbler.queuePlay([reviewed.play], undefined, {jobId: job.id, review: new Map([[reviewed.play, []]])});
+            expect(again).length(0);
         } finally {
             await scrobbler[Symbol.asyncDispose]();
         }
