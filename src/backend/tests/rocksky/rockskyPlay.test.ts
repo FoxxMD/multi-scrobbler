@@ -1,7 +1,9 @@
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
-import { creditId, creditIds, creditMbid, creditsToNames, playImage } from '../../../core/MusicMetadata.ts';
-import { rockskyScrobbleToPlay, songViewToPlay, type RockskyScrobble } from '../../common/vendor/RockSkyApiClient.ts';
+import dayjs from 'dayjs';
+import type { PlayObject } from '../../../core/PlaySchema.ts';
+import { creditId, creditIds, creditMbid, creditsToNames, mbMeta, nameToCredit, playImage, spotifyMeta, withImage } from '../../../core/MusicMetadata.ts';
+import { playToRockskyAgentRecord, playToRockskyClientRecord, publicAlbumArt, rockskyScrobbleToPlay, songViewToPlay, type RockskyScrobble } from '../../common/vendor/RockSkyApiClient.ts';
 
 describe('Rocksky to Play', function () {
 
@@ -42,5 +44,33 @@ describe('Rocksky to Play', function () {
         expect(creditMbid(data.track, 'recording')).eq('rec-mbid');
         expect(creditMbid(data.album, 'release')).eq('rel-mbid');
         expect(creditId(data.track, 'spotify', 'track')).eq('abc123');
+    });
+});
+
+describe('Play to Rocksky', function () {
+
+    const play = (image: string) => ({
+        data: {
+            track: nameToCredit('Song', spotifyMeta('abc123', 'track')),
+            artists: [nameToCredit('A', mbMeta('a-mbid', 'artist')), nameToCredit('B')],
+            album: withImage(nameToCredit('Album'), image),
+            duration: 180,
+            playDate: dayjs(),
+        },
+        meta: {}
+    }) as PlayObject;
+
+    it('sends artists with mbids, spotify link and public album art', function () {
+        const rec = playToRockskyAgentRecord(play('https://i.scdn.co/image/x'));
+        expect(rec.artists).eql([{name: 'A', mbid: 'a-mbid'}, {name: 'B'}]);
+        expect(rec.spotifyLink).eq('https://open.spotify.com/track/abc123');
+        expect(rec.albumArtUrl).eq('https://i.scdn.co/image/x');
+        expect(playToRockskyClientRecord(play('https://i.scdn.co/image/x')).albumArt).eq('https://i.scdn.co/image/x');
+    });
+
+    it('does not send album art from a local server', function () {
+        expect(publicAlbumArt(play('/api/components/1/art?ratingKey=1'))).eq(undefined);
+        expect(publicAlbumArt(play('http://192.168.1.10:8096/Items/1/Images/Primary'))).eq(undefined);
+        expect(publicAlbumArt(play('http://192.168.1.10/proxy?u=scdn.co'))).eq(undefined);
     });
 });

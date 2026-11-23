@@ -11,6 +11,7 @@ import type {AbstractApiOptions, FormatPlayObjectOptions} from "../infrastructur
 import type {RockSkyClientData, RockSkyData, RockSkyOptions} from "../infrastructure/config/client/rocksky.ts";
 import AbstractApiClient from "./AbstractApiClient.ts";
 import { isPortReachableConnect, normalizeWebAddress } from '../../utils/NetworkUtils.ts';
+import { urlContainsKnownMediaDomain } from "../../utils/RequestUtils.ts";
 import type {ListenResponse, ListenType} from '../../../core/vendor/listenbrainz/interfaces.ts';
 import { getATProtoIdentifier, identifierToAtProtoHandle, isDID } from './atproto/atUtils.ts';
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
@@ -553,7 +554,8 @@ export const playToRockskyClientRecord = (play: PlayObject): RealCreateScrobbleI
         mbId: creditMbid(play.data.track, 'recording'),
         isrc: isrc !== undefined ? isrcNoHyphens(isrc) : undefined,
         duration: play.data.duration !== undefined ? play.data.duration * 1000 : 0,
-        spotifyLink: play.meta.source === 'spotify' && play.meta.url?.web !== undefined ? play.meta.url?.web : undefined,
+        spotifyLink: playSpotifyLink(play),
+        albumArt: publicAlbumArt(play),
         timestamp: getScrobbleTsSOCDate(play).unix()
     }
     return csi;
@@ -574,10 +576,12 @@ export const playToRockskyAgentRecord = (play: PlayObject): ScrobbleInput => {
         // tsiry's advice is that if there really is no album artists then just use the same value as artist
         albumArtist: (play.data.albumArtists ?? []).length === 0 ? artistStr : creditsToNames(play.data.albumArtists).join(', '),
         album: album.name,
+        artists: (play.data.artists ?? []).length === 0 ? undefined : play.data.artists?.map(x => removeUndefinedKeys({name: x.name, mbid: creditMbid(x, 'artist')}, false)),
         mbid: creditMbid(play.data.track, 'recording'),
         isrc: isrc !== undefined ? isrcNoHyphens(isrc) : undefined,
         duration: play.data.duration !== undefined ? play.data.duration * 1000 : 0,
-        spotifyLink: play.meta.source === 'spotify' && play.meta.url?.web !== undefined ? play.meta.url?.web : undefined,
+        spotifyLink: playSpotifyLink(play),
+        albumArtUrl: publicAlbumArt(play),
         createdAt: getScrobbleTsSOCDate(play).toISOString()
     }
     return csi;
@@ -587,11 +591,34 @@ export const playToActorTrackView = (play: PlayObject): ActorTrackView => remove
     name: requirePlayTrack(play),
     artist: creditsToNames(play.data.artists).join(', '),
     album: creditToName(play.data.album),
-    albumCoverUrl: playImage(play.data),
+    albumCoverUrl: publicAlbumArt(play),
     durationMs: play.data.duration !== undefined ? Math.floor(play.data.duration * 1000) : undefined,
     source: play.meta.musicService,
     recordingMbId: creditMbid(play.data.track, 'recording')
  }, false)
+
+const playSpotifyLink = (play: PlayObject): string | undefined => {
+    const id = creditId(play.data.track, 'spotify', 'track');
+    if(id !== undefined) {
+        return `https://open.spotify.com/track/${id}`;
+    }
+    return play.meta.source === 'spotify' ? play.meta.url?.web : undefined;
+}
+
+/** Rocksky records are public, so only send art from known media hosts and never a url to a local server */
+export const publicAlbumArt = (play: PlayObject): string | undefined => {
+    const art = playImage(play.data, ['album', 'track']);
+    if(art === undefined) {
+        return undefined;
+    }
+    try {
+        const url = new URL(art);
+        return ['http:', 'https:'].includes(url.protocol) && urlContainsKnownMediaDomain(url) ? art : undefined;
+    } catch {
+        // relative url
+        return undefined;
+    }
+}
 
 const requirePlayTrack = (play: PlayObject): string => {
     if(play.data.track === undefined) {
