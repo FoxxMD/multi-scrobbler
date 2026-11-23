@@ -1,6 +1,8 @@
+import { MIRROR_SERVICE_MIXED } from '../../../core/Job.ts';
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 import dayjs from 'dayjs';
+import { eq } from 'drizzle-orm';
 import { loggerTest } from '@foxxmd/logging';
 import { transientDb } from '../utils/TransientTestUtils.ts';
 import { ensureOwner } from '../../common/auth/owner.ts';
@@ -22,7 +24,7 @@ const setup = async (opts: {active?: boolean, batchSize?: number} = {}) => {
     const db = await transientDb();
     const owner = await ensureOwner(db);
     const mirrors = new MirrorRepository(db);
-    const mirror = await mirrors.findOrCreate({userId: owner.id, service: 'lastfm', account: 'foxx', name: 'foxx'});
+    const mirror = await mirrors.findOrCreate({userId: owner.id, service: MIRROR_SERVICE_MIXED, account: null, name: 'foxx'});
     await mirrors.addCoverage(mirror.id, [100, 1000]);
     const historical = new DrizzlePlayHistoricalRepository(db);
     await historical.insertIgnoreDuplicates([100, 200, 300, 400, 500].map(ts => ({
@@ -188,5 +190,32 @@ describe('Mirror service', function () {
         expect(err).instanceOf(JobConflictError);
         release();
         await manager.stopImport(job.id, 'stopped');
+    });
+
+    it('refuses to clean up a locked mirror, and to delete it while it has plays', async function () {
+        const {db, owner, mirrors, historical, service} = await setup();
+        const locked = await mirrors.findOrCreate({userId: owner.id, service: 'tealfm', account: 'did:plc:abc', name: 'teal'});
+        await historical.insertIgnoreDuplicates([{uid: 'rkey1', mirrorId: locked.id, play: generatePlay({playDate: dayjs(100)})}]);
+        await expect(service.startCleanup(locked.id, {action: 'delete'})).rejectedWith(JobConflictError);
+        await expect(service.startCleanup(locked.id, {action: 'compact'})).rejectedWith(JobConflictError);
+        await expect(service.startDelete(locked.id)).rejectedWith(JobConflictError);
+        expect(await historical.countMirror({mirrorId: locked.id})).eq(1);
+
+        // empty, IE its account changed or its Client was deleted
+        await db.delete(playsHistorical).where(eq(playsHistorical.mirrorId, locked.id));
+        await (await service.startDelete(locked.id)).done;
+        expect(await mirrors.getById(locked.id)).eq(undefined);
+    });
+
+    it('the job manager refuses deleting a job with cleanup of its locked mirror, before stopping it', async function () {
+        const {db, owner, mirrors, jobs} = await setup();
+        const locked = await mirrors.findOrCreate({userId: owner.id, service: 'rocksky', account: 'did:plc:abc', name: 'rs'});
+        const job = await jobs.create({userId: owner.id, name: 'export', mirrorId: locked.id, rangeTo: dayjs(1000)});
+        const manager = new JobManager({db, logger: loggerTest, timings, createProvider: () => { throw new Error('no import'); }});
+        await expect(manager.deleteJobWithCleanup(job.id, {historical: 'delete', scrobbles: 'keep'})).rejectedWith(JobConflictError);
+        expect(await jobs.getById(job.id)).not.eq(undefined);
+        await (await manager.deleteJobWithCleanup(job.id, {historical: 'keep', scrobbles: 'keep'})).done;
+        expect(await jobs.getById(job.id)).eq(undefined);
+        await manager.shutdown();
     });
 });

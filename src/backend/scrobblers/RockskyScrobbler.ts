@@ -215,6 +215,10 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         }
     }
 
+    protected getMirrorAccount(): string | undefined {
+        return this.api.userData?.did;
+    }
+
     protected async downloadCar(filename: string) {
         // TODO use `since` to get CAR diff instead of entire repo
         const {userData} = this.api;

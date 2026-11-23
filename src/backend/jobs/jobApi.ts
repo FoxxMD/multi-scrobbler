@@ -56,7 +56,7 @@ export const toJobApiJson = (job: JobSelect, mirror: PlayMirrorSelect, opts: {co
     id: job.id,
     name: job.name,
     status: deriveJobStatus([job.importStatus, ...(opts.targets ?? []).map(x => x.status)]),
-    mirror: {id: mirror.id, name: mirror.name, service: mirror.service, account: mirror.account},
+    mirror: {id: mirror.id, name: mirror.name, service: mirror.service, account: mirror.account, locked: isLockedMirror(mirror)},
     importFrom: jobImportOrigin(job, opts.componentName),
     rangeFrom: job.rangeFrom?.toISOString() ?? null,
     rangeTo: job.rangeTo.toISOString(),

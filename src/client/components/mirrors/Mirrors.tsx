@@ -25,6 +25,8 @@ const accountText = (mirror: MirrorApiJson) => mirror.locked ? `Locked to ${mirr
 const ORIGIN_NAMES: Record<string, string> = {
     lastfm: 'Last.fm',
     'lastfm-benjamin': 'benjaminbenben file',
+    tealfm: 'Teal.fm Client',
+    rocksky: 'Rocksky Client',
     unknown: 'Unknown source',
 };
 
@@ -191,6 +193,9 @@ const MirrorDelete = (props: { mirror: MirrorApiJson }) => {
         onSuccess: () => navigate('/mirrors'),
         onError: (e) => toaster.create({type: 'error', title: 'Delete failed', description: apiErrorMessage(e)}),
     });
+    if (mirror.locked && mirror.plays > 0) {
+        return <TextMuted textStyle="sm" maxWidth="xs" textAlign="right">Managed by its {mirror.service} Client.</TextMuted>;
+    }
     if (mirror.jobs.length > 0) {
         return <TextMuted textStyle="sm" maxWidth="xs" textAlign="right">Delete the jobs using this mirror before deleting it.</TextMuted>;
     }
@@ -238,8 +243,12 @@ export const MirrorDetail = (props: { mirror: MirrorApiJson }) => {
                 <Card.Header><Heading size="lg">Clean Up</Heading></Card.Header>
                 <Card.Body>
                     <Stack gap="3">
-                        <TextMuted textStyle="sm">Free up space once your exports are done. Jobs using this mirror can't import or export while a cleanup runs.</TextMuted>
-                        <MirrorCleanup mirror={mirror}/>
+                        {mirror.locked
+                            ? <TextMuted textStyle="sm">Its {mirror.service} Client uses these Plays to find duplicates and manages them, so they can't be cleaned up here.</TextMuted>
+                            : <>
+                                <TextMuted textStyle="sm">Free up space once your exports are done. Jobs using this mirror can't import or export while a cleanup runs.</TextMuted>
+                                <MirrorCleanup mirror={mirror}/>
+                            </>}
                     </Stack>
                 </Card.Body>
             </Card.Root>

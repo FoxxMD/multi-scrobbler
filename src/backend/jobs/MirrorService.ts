@@ -8,9 +8,13 @@ import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repo
 import type { WildcardEmitter } from "../common/WildcardEmitter.ts";
 import { subtractRanges, type TimeRange } from "../utils/RangeUtils.ts";
 import { JobConflictError, mirrorLockKey } from "./JobRunner.ts";
+import { isLockedMirror } from "../../core/Job.ts";
 import type { LockRegistry } from "./LockRegistry.ts";
 
 export type CleanupAction = 'compact' | 'delete';
+
+/** Locked mirrors hold the plays their Client uses to find duplicates. The Client manages them */
+export const lockedMessage = (mirror: Pick<PlayMirrorSelect, 'name' | 'service'>) => `Mirror '${mirror.name}' is managed by its ${mirror.service} Client, which needs its Plays to find duplicates. It can't be cleaned up or deleted`;
 
 export class MirrorNotFoundError extends Error {
     name = 'MirrorNotFoundError';
@@ -124,11 +128,14 @@ export class MirrorService {
      * * compact => raw upstream data is removed, plays stay and can still be exported
      * * delete => coverage is removed first, so a later import fetches the range again, then the plays are deleted
      *
-     * Throws JobConflictError if a job using the mirror is running or another cleanup is.
+     * Throws JobConflictError if a job using the mirror is running or another cleanup is, or the mirror is locked (its Client needs its plays).
      * */
     startCleanup = async (id: number, opts: {action: CleanupAction, range?: TimeRange, holder?: string, signal?: AbortSignal}): Promise<StartedTask> => {
         const {action, range} = opts;
         const mirror = await this.getOrThrow(id);
+        if (isLockedMirror(mirror)) {
+            throw new JobConflictError(lockedMessage(mirror));
+        }
         const release = await this.acquire(mirror, opts.holder, async (jobs) => {
             const active = jobs.filter(x => this.deps.isJobActive(x.id));
             if (active.length > 0) {
@@ -148,9 +155,12 @@ export class MirrorService {
         });
     }
 
-    /** Delete a mirror and all its plays in the background. Throws JobConflictError while any job uses it */
+    /** Delete a mirror and all its plays in the background. Throws JobConflictError while any job uses it, or it is locked and has plays */
     startDelete = async (id: number): Promise<StartedTask> => {
         const mirror = await this.getOrThrow(id);
+        if (isLockedMirror(mirror) && await this.historicalRepo.countMirror({mirrorId: id}) > 0) {
+            throw new JobConflictError(lockedMessage(mirror));
+        }
         const release = await this.acquire(mirror, undefined, async (jobs) => {
             if (jobs.length > 0) {
                 throw new JobConflictError(`Used by ${jobs.length} job${jobs.length === 1 ? '' : 's'} (${jobs.map(x => `'${x.name}'`).join(', ')}). Delete them first`);

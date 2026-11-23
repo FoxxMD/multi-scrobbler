@@ -1,3 +1,4 @@
+import { MIRROR_SERVICE_MIXED } from '../../../core/Job.ts';
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 import dayjs from 'dayjs';
@@ -26,7 +27,7 @@ const setup = async (opts: {provider?: ImportProvider, persistInputs?: boolean, 
     const db = await transientDb();
     const owner = await ensureOwner(db);
     const mirrors = new MirrorRepository(db);
-    const mirror = await mirrors.findOrCreate({userId: owner.id, service: 'lastfm', account: 'foxx', name: 'foxx'});
+    const mirror = await mirrors.findOrCreate({userId: owner.id, service: MIRROR_SERVICE_MIXED, account: null, name: 'foxx'});
     for (const c of opts.coverage ?? []) {
         await mirrors.addCoverage(mirror.id, c);
     }

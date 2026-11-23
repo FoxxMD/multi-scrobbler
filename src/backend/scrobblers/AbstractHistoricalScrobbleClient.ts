@@ -14,6 +14,7 @@ import type { ComponentClientApiJson } from "../../core/Api.ts";
 import fsPromise from 'node:fs/promises';
 import path from 'node:path';
 import { AsyncTask, SimpleIntervalJob } from "toad-scheduler";
+import { MirrorRepository, type CoverageTag } from "../common/database/drizzle/repositories/MirrorRepository.ts";
 
 /** How long a downloaded repo CAR is kept for reuse before it is deleted */
 export const CAR_KEEP_MS = 60 * 60 * 1000;
@@ -43,6 +44,47 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
     protected addScrobbleToHistorical: boolean = true;
 
     protected abstract dataDir: string;
+
+    /** The locked mirror (service + account DID) that holds this client's historical plays. Set in postInitialize */
+    protected mirrorId?: number;
+
+    /** The account DID that identifies this client's locked mirror. undefined while it is not resolved */
+    protected abstract getMirrorAccount(): string | undefined;
+
+    protected get mirrorRepo(): MirrorRepository {
+        return new MirrorRepository(this.db, {logger: this.logger});
+    }
+
+    protected get coverageTag(): CoverageTag {
+        return {origin: this.type, jobId: null};
+    }
+
+    /**
+     * Find or create the locked mirror for this client's account and move its historical plays into it.
+     * Plays this client stored for another account (the configured account changed) are deleted, they would give wrong dupe checks.
+     * */
+    protected async useLockedMirror() {
+        const account = this.getMirrorAccount();
+        const userId = this.dbComponent.userId;
+        if(account === undefined || userId === null) {
+            this.logger.warn(`Historical plays are not kept in a mirror because ${account === undefined ? 'the account DID is not resolved' : 'the component has no owner'}`);
+            return;
+        }
+        const mirror = await this.mirrorRepo.findOrCreate({userId, service: this.type, account, name: `${this.type} ${this.name}`});
+        this.mirrorId = mirror.id;
+        const stale = await this.playsHistoricalRepo.deleteComponentOutsideMirror(this.dbComponent.id, mirror.id);
+        if(stale > 0) {
+            this.logger.info(`Deleted ${stale} historical plays of an account this client used before`);
+        }
+        const moved = await this.playsHistoricalRepo.assignComponentToMirror(this.dbComponent.id, mirror.id, this.type);
+        if(moved > 0) {
+            this.logger.info(`Moved ${moved} historical plays into mirror '${mirror.name}'`);
+        }
+        if(mirror.coverage.length === 0 && this.synced && this.lastImportSuccess !== undefined) {
+            // the last full sync mirrored everything before it started
+            await this.mirrorRepo.addCoverage(mirror.id, [0, this.lastImportSuccess.valueOf()], this.coverageTag);
+        }
+    }
 
     /** Stream the user's repo CAR into filename */
     protected abstract downloadCar(filename: string): Promise<void>;
@@ -77,9 +119,13 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
             });
         
             const newImport: ComponentMigrationSelect = await this.migrationRepo.create({name: 'historicalImport', componentId: this.dbComponent.id}) as ComponentMigrationSelect;
+            const startedAt = Date.now();
             try {
                 this.setStatus('Starting full mirror rebuild...');
                 await this.doHydrateHistoricalScrobbles({signal, allowFailures});
+                if(this.mirrorId !== undefined) {
+                    await this.mirrorRepo.addCoverage(this.mirrorId, [0, startedAt], this.coverageTag);
+                }
                 await this.migrationRepo.updateById(newImport.id, {success: true});
                 this.logger.info('Sync complete');
                 this.setStatus('Full mirror rebuild complete');
@@ -140,7 +186,7 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
             signal
         } = opts;
         // no historical_play_inputs rows, the raw record stays in the PDS
-        batch = batch.map(({input, ...x}) => ({...x, play: slimHistoricalPlay(x.play)}));
+        batch = batch.map(({input, ...x}) => ({...x, mirrorId: this.mirrorId, origin: this.type, play: slimHistoricalPlay(x.play)}));
         try {
             await this.playsHistoricalRepo.createPlays(batch);
             return [true, batch.length];
@@ -238,6 +284,13 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
                 this.logger.verbose('Most recent upstream plays were alerady mirrored.');
                 this.setStatus('Most recent upstream plays were alerady mirrored.');
             }
+            if(gapSynced && this.mirrorId !== undefined) {
+                // the recent plays overlap what was mirrored, so everything up to now is mirrored
+                const {coverage} = await this.mirrorRepo.getById(this.mirrorId) ?? {coverage: []};
+                if(coverage.length > 0) {
+                    await this.mirrorRepo.addCoverage(this.mirrorId, [coverage[coverage.length - 1][1], Date.now()], this.coverageTag);
+                }
+            }
             return [recent, gapSynced];
         } catch (e) {
             this.logger.warn(new Error('Recent plays sync failed', {cause: e}));
@@ -247,6 +300,12 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
 
     protected async postInitialize(): Promise<void> {
         await super.postInitialize();
+
+        try {
+            await this.useLockedMirror();
+        } catch (e) {
+            this.logger.warn(new Error('Could not move historical plays into a mirror, continuing without one', {cause: e}));
+        }
 
         spawn(new AbortController().signal, async (signal, {defer, fork}) => {
 

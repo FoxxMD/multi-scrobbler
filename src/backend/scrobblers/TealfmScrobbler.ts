@@ -202,6 +202,10 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         }
     }
 
+    protected getMirrorAccount(): string | undefined {
+        return this.client.client.userData?.did;
+    }
+
     protected async downloadCar(filename: string) {
         // TODO use `since` to get CAR diff instead of entire repo
         await this.client.client.getCARToFile(this.client.client.userData.did, filename);

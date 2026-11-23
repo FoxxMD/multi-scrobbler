@@ -6,7 +6,7 @@ import { historicalPlayInputs, playsHistorical } from "../schema/schema.ts";
 import type {FindWhere, FindMany, WhereClause, PlayHistoricalSelect, PlayHistoricalNew, HistoricalPlayInputNew, HistoricalPlayInputSelect} from "../drizzleTypes.ts";
 import type { MarkOptional } from "ts-essentials";
 import { removeUndefinedKeys } from '../../../../../core/DataUtils.ts';
-import { and, asc, count, desc, eq, gt, gte, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 import dayjs from "dayjs";
 import { EmptyFilter } from "drizzle-orm/relations";
 import { buildDateCompare, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
@@ -265,6 +265,27 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
             await this.db.update(historicalPlayInputs).set({data: {removedReason: 'Removed by compaction'}}).where(inArray(historicalPlayInputs.playId, ids));
             await this.db.update(playsHistorical).set({compacted: 'input'}).where(inArray(playsHistorical.id, ids));
         });
+    }
+
+    /** Move a component's plays that have no mirror into mirrorId, in batches. Returns how many moved */
+    assignComponentToMirror = async (componentId: number, mirrorId: number, origin: string, batchSize: number = 5000): Promise<number> => {
+        const t = playsHistorical;
+        let moved = 0;
+        while (true) {
+            const ids = (await this.db.select({id: t.id}).from(t).where(and(eq(t.componentId, componentId), isNull(t.mirrorId))).limit(batchSize)).map(x => x.id);
+            if (ids.length === 0) {
+                return moved;
+            }
+            await this.db.update(t).set({mirrorId, origin}).where(inArray(t.id, ids));
+            moved += ids.length;
+        }
+    }
+
+    /** Delete a component's plays that are in a mirror other than mirrorId. Returns how many were deleted */
+    deleteComponentOutsideMirror = async (componentId: number, mirrorId: number): Promise<number> => {
+        const t = playsHistorical;
+        const deleted = await this.db.delete(t).where(and(eq(t.componentId, componentId), isNotNull(t.mirrorId), ne(t.mirrorId, mirrorId))).returning({id: t.id});
+        return deleted.length;
     }
 
     /** Delete plays and their inputs */
