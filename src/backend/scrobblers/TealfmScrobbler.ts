@@ -1,8 +1,6 @@
 import { childLogger, type Logger } from "@foxxmd/logging";
 import type EventEmitter from "events";
-import fsPromise from 'node:fs/promises';
 import fs from 'node:fs';
-import path from 'path';
 
 import { Readable } from 'stream';
 import { COMPONENT_AUTH_TYPE, type ComponentAuthType } from "../../core/Atomic.ts";
@@ -186,7 +184,7 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
             let file: string;
             try {
                 logger.verbose('Fetching scrobbles from PDS...');
-                file = await this.fetchCarToFile();
+                file = await this.getCarFile();
                 signal?.throwIfAborted();
             } catch (e) {
                 throw new Error('Failed to fetch repo CAR', {cause: e});
@@ -196,8 +194,6 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
                 await this.parseScrobblesFromCar(file, 100, {allowFailures, logger: logger, signal});
             } catch (e) {
                 throw new Error('Failed to convert CAR without any error', {cause: e});
-            } finally {
-                await fsPromise.rm(file);
             }
         } catch (e) {
             const historicalWarnings = new Error('Unable to hydrate historical plays. The client will still work but may not be able to catch all duplicates.', {cause: e});
@@ -206,12 +202,9 @@ export default class TealScrobbler extends AbstractHistoricalScrobbleClient {
         }
     }
 
-    async fetchCarToFile() {
+    protected async downloadCar(filename: string) {
         // TODO use `since` to get CAR diff instead of entire repo
-        // can use last import date from migrations table
-        const filename = path.resolve(this.dataDir, `${this.getSafeExternalId()}-${dayjs().unix()}.car`);
-        await fsPromise.writeFile(filename, Buffer.from(((await this.client.client.getCAR(this.client.client.userData.did)))));
-        return filename;
+        await this.client.client.getCARToFile(this.client.client.userData.did, filename);
     }
 
     async parseScrobblesFromCar(filename: string, batchSize: number, opts: {allowFailures?: boolean, logger?: Logger, signal?: AbortSignal} = {}) {

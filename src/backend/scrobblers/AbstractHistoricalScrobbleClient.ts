@@ -11,6 +11,13 @@ import { buildTrackString } from "../../core/MusicMetadata.ts";
 import type { PlayObject } from "../../core/PlaySchema.ts";
 import { todayAwareFormat } from "../../core/TimeUtils.ts";
 import type { ComponentClientApiJson } from "../../core/Api.ts";
+import fsPromise from 'node:fs/promises';
+import path from 'node:path';
+import { AsyncTask, SimpleIntervalJob } from "toad-scheduler";
+
+/** How long a downloaded repo CAR is kept for reuse before it is deleted */
+export const CAR_KEEP_MS = 60 * 60 * 1000;
+const CAR_DELETE_JOB = 'carDelete';
 
 /**
  * Remove what a historical play doesn't need to store: raw upstream data, the record URL and the user (both derivable from the DID and rkey).
@@ -34,6 +41,11 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
     syncError?: ErrorIsh;
     override preloadScrobbles: boolean = false;
     protected addScrobbleToHistorical: boolean = true;
+
+    protected abstract dataDir: string;
+
+    /** Stream the user's repo CAR into filename */
+    protected abstract downloadCar(filename: string): Promise<void>;
 
     protected abstract doHydrateHistoricalScrobbles(opts: {allowFailures?: boolean, signal?: AbortSignal }): Promise<void>;
 
@@ -157,6 +169,55 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
         return [false, valid];
     }
 
+    protected get carPath(): string {
+        return path.resolve(this.dataDir, `historical-${this.dbComponent.id}.car`);
+    }
+
+    /**
+     * The repo CAR file. Reuses one downloaded less than CAR_KEEP_MS ago, else downloads it and schedules its deletion.
+     * Downloads to a .part file first so an interrupted download is never reused.
+     * */
+    protected async getCarFile(): Promise<string> {
+        const file = this.carPath;
+        const stat = await fsPromise.stat(file).catch(() => undefined);
+        const age = stat === undefined ? undefined : Date.now() - stat.mtimeMs;
+        if(age !== undefined && age < CAR_KEEP_MS) {
+            this.logger.verbose(`Reusing repo CAR downloaded ${Math.round(age / 60000)} minutes ago`);
+            if(!this.scheduler.existsById(CAR_DELETE_JOB)) {
+                this.scheduleCarDelete(CAR_KEEP_MS - age);
+            }
+            return file;
+        }
+        const part = `${file}.part`;
+        try {
+            await this.downloadCar(part);
+        } catch (e) {
+            await fsPromise.rm(part, {force: true});
+            throw e;
+        }
+        await fsPromise.rename(part, file);
+        this.scheduleCarDelete(CAR_KEEP_MS);
+        return file;
+    }
+
+    /** One-off job: delete the repo CAR after ms */
+    protected scheduleCarDelete(ms: number) {
+        if(this.scheduler.existsById(CAR_DELETE_JOB)) {
+            this.scheduler.removeById(CAR_DELETE_JOB);
+        }
+        this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({milliseconds: ms}, new AsyncTask('Delete repo CAR', async () => {
+            this.scheduler.removeById(CAR_DELETE_JOB);
+            await this.deleteCarFiles();
+            this.logger.verbose('Deleted repo CAR');
+        }, (err) => this.logger.warn(new Error('Failed to delete repo CAR', {cause: err}))), {id: CAR_DELETE_JOB}));
+    }
+
+    protected async deleteCarFiles() {
+        for(const f of [this.carPath, `${this.carPath}.part`]) {
+            await fsPromise.rm(f, {force: true});
+        }
+    }
+
     async getSOTScrobblesForPlay(play: PlayObject): Promise<PlayObject[]> {
         const closeTemporalPlays = await this.playsHistoricalRepo.getTemporallyClosePlays(play);
         return closeTemporalPlays.map(x => x.play);
@@ -225,6 +286,8 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
     protected async postDatabase(): Promise<void> {
         await super.postDatabase();
         this.playsHistoricalRepo = new DrizzlePlayHistoricalRepository(this.db, {componentId: this.dbComponent.id, logger: this.logger});
+        // left by a previous run, its deletion job did not survive the restart
+        await this.deleteCarFiles();
         const imports = this.dbComponent.migrations.filter(x => x.name === 'historicalImport');
         const [synced, reason] = await this.getHistoricalScrobblesAreSynced();
         this.synced = synced;

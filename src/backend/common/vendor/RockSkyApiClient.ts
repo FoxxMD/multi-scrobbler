@@ -30,8 +30,6 @@ import { stringSameness } from "@foxxmd/string-sameness";
 import clone from "clone";
 import { difference } from '../../../core/DataUtils.ts';
 import path from "node:path";
-import { ATProtoUnauthenticatedApiClient } from "./atproto/ATProtoUnauthenticatedApiClient.ts";
-import fsPromise from 'node:fs/promises';
 import { getDataDir } from "../index.ts";
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.ts";
 import { RockskyClientPool } from "./rocksky/RockskyClientPool.ts";
@@ -324,31 +322,43 @@ export class RockSkyApiClient extends AbstractApiClient {
         return rockskyScrobbleToPlay(obj);
     }
 
-    async fetchCarToFile() {
-        // TODO use `since` to get CAR diff instead of entire repo
-        // can use last import date from migrations table
-        if(this.userData === undefined) {
-            throw new Error('Cannot fetch CAR because atproto identifier has not been resolved');
-        }
-        const {did} = this.userData;
-        const filename = path.resolve(this.configDir, `${this.getSafeExternalId()}-${dayjs().unix()}.car`);
-        const atClient = new ATProtoUnauthenticatedApiClient('rocksky', { handleData: this.userData, identifier: this.config.handle }, { logger: this.logger });
-        await atClient.initClient();
-        await fsPromise.writeFile(filename, Buffer.from(await atClient.getCAR(did)));
-        return filename;
-    }
-
-    async syncSdkRepo(filename: string) {
-        if(this.userData === undefined) {
-            throw new Error('Cannot sync repo because atproto identifier has not been resolved');
-        }
-        await this.rsIndex.indexCar(this.userData.did, await fsPromise.readFile(filename));
-    }
-
     public getSafeExternalId() {
         return `${this.type}-${normalizeStr(this.name, {keepSingleWhitespace: false})}`;
     }
     
+}
+
+/**
+ * Write the keys RockskyIndex.indexCar writes for one repo record, so the index can be built from a streamed CAR
+ * instead of indexCar, which reads the whole CAR into memory.
+ * */
+export const indexRockskyRecord = async (index: RockskyIndex, did: string, collection: string, rkey: string, rec: Record<string, unknown>) => {
+    const s = (k: string): string => typeof rec[k] === 'string' ? rec[k] : '';
+    const uri = `at://${did}/${collection}/${rkey}`;
+    switch (collection) {
+        case 'app.rocksky.artist':
+            if (s('name')) {
+                await index.recordArtist(did, s('name'), uri);
+            }
+            break;
+        case 'app.rocksky.album':
+            if (s('title') && s('artist')) {
+                await index.recordAlbum(did, s('title'), s('artist'), uri);
+            }
+            break;
+        case 'app.rocksky.song':
+            if (s('title') && s('artist') && s('album')) {
+                await index.recordSong(did, s('title'), s('artist'), s('album'), uri);
+            }
+            break;
+        case 'app.rocksky.scrobble': {
+            const secs = Math.floor(Date.parse(s('createdAt')) / 1000);
+            if (s('title') && s('artist') && s('album') && !Number.isNaN(secs)) {
+                await index.recordScrobble(did, s('title'), s('artist'), s('album'), secs, uri);
+            }
+            break;
+        }
+    }
 }
 
 interface RsMatchSongInput {

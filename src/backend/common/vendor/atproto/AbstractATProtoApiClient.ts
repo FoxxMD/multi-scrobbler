@@ -3,7 +3,7 @@ import type {AbstractApiOptions} from "../../infrastructure/Atomic.ts";
 import AbstractApiClient from "../AbstractApiClient.ts";
 import type { MSCache } from "../../Cache.ts";
 import { UpstreamError } from "../../errors/UpstreamError.ts";
-import { streamBodyProgress } from "../../../utils/NetworkUtils.ts";
+import { streamBodyToFile } from "../../../utils/NetworkUtils.ts";
 import type {ATProtoUserIdentifierData, HandleData} from "../../infrastructure/config/client/atproto.ts";
 import { checkPds, isDID, identifierToAtProtoHandle, getATProtoIdentifier } from "./atUtils.ts";
 import type { Client} from '@atcute/client';
@@ -68,7 +68,8 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
         }
     }
 
-    async getCAR(did: AtprotoDid) {
+    /** Stream the repo CAR of did into filename */
+    async getCARToFile(did: AtprotoDid, filename: string): Promise<void> {
         const resp = await this.client.call(ComAtprotoSyncGetRepo, {
             params: {
                 did
@@ -83,7 +84,7 @@ export abstract class AbstractATProtoApiClient extends AbstractApiClient {
             throw new UpstreamError(`Failed to fetch repo CAR file. Response was ${resp.status} with response ${text}`, {responseBody: text});
         }
 
-        return await streamBodyProgress(resp.data, {
+        await streamBodyToFile(resp.data, filename, {
             logger: this.logger,
             chunkDefaultSize: 1024 * 1024 * 5, // report progress every 5 MB
             fileHint: 'repo CAR'

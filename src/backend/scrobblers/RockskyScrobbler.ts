@@ -12,13 +12,11 @@ import type {ListenPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
 
 import { isDebugMode } from "../utils.ts";
 import { durationToHuman } from '../../core/TimeUtils.ts';
-import { playToRockskyClientRecord, RockSkyApiClient, rockskyScrobbleToPlay, type RockskyScrobble, WRITE_PROBE_INTERVAL } from "../common/vendor/RockSkyApiClient.ts";
+import { indexRockskyRecord, playToRockskyClientRecord, RockSkyApiClient, rockskyScrobbleToPlay, type RockskyScrobble, WRITE_PROBE_INTERVAL } from "../common/vendor/RockSkyApiClient.ts";
 import type {RockSkyClientConfig} from "../common/infrastructure/config/client/rocksky.ts";
 import AbstractHistoricalScrobbleClient from "./AbstractHistoricalScrobbleClient.ts";
 import { fromStream } from '@atcute/repo';
-import fsPromise from 'node:fs/promises';
 import fs from 'node:fs';
-import path from 'path';
 import dayjs from "dayjs";
 import { Readable } from 'stream';
 import { ATProtoUnauthenticatedApiClient } from "../common/vendor/atproto/ATProtoUnauthenticatedApiClient.ts";
@@ -199,7 +197,7 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
             let file: string;
             try {
                 logger.verbose('Fetching scrobbles from PDS...');
-                file = await this.api.fetchCarToFile()
+                file = await this.getCarFile();
                 signal?.throwIfAborted();
             } catch (e) {
                 throw new Error('Failed to fetch repo CAR', {cause: e});
@@ -209,8 +207,6 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
                 await this.parseScrobblesFromCar(file, 100, {allowFailures, logger: logger, signal});
             } catch (e) {
                 throw new Error('Failed to convert CAR without any error', {cause: e});
-            } finally {
-                await fsPromise.rm(file);
             }
         } catch (e) {
             const historicalWarnings = new Error('Unable to hydrate historical plays. The client will still work but may not be able to catch all duplicates.', {cause: e});
@@ -219,18 +215,15 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         }
     }
 
-    async fetchCarToFile() {
+    protected async downloadCar(filename: string) {
         // TODO use `since` to get CAR diff instead of entire repo
-        // can use last import date from migrations table
         const {userData} = this.api;
         if(userData === undefined) {
             throw new Error('Cannot fetch CAR because atproto identifier has not been resolved');
         }
-        const filename = path.resolve(this.dataDir, `${this.getSafeExternalId()}-${dayjs().unix()}.car`);
         const atClient = new ATProtoUnauthenticatedApiClient('rocksky', { handleData: userData, identifier: this.config.data.handle }, { logger: this.logger });
         await atClient.initClient();
-        await fsPromise.writeFile(filename, Buffer.from(await atClient.getCAR(userData.did)));
-        return filename;
+        await atClient.getCARToFile(userData.did, filename);
     }
 
     async parseScrobblesFromCar(filename: string, batchSize: number, opts: { allowFailures?: boolean, logger?: Logger, signal?: AbortSignal } = {}) {
@@ -240,9 +233,8 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         }
         const {did} = this.api.userData;
 
-        if(this.api.rsAgent !== undefined) {
-            await this.api.syncSdkRepo(filename);
-        }
+        // the SDK index (exact-match dupe checks) is only used with PDS auth
+        const index = this.api.rsAgent !== undefined ? this.api.rsIndex : undefined;
 
         const {
             allowFailures = false,
@@ -263,6 +255,9 @@ export default class RockskyScrobbler extends AbstractHistoricalScrobbleClient {
         logger.info('Starting CAR conversion to historical plays...');
 
         for await (const entry of repo) {
+            if (index !== undefined) {
+                await indexRockskyRecord(index, did, entry.collection, entry.rkey, entry.record as Record<string, unknown>);
+            }
             if (entry.collection === 'app.rocksky.scrobble') {
                 let play: PlayObject;
                 try {
