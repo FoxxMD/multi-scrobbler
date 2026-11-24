@@ -7,7 +7,7 @@ import { NO_DEVICE } from "../../../core/Atomic.ts";
 import type { PlayObject } from "../../../core/PlaySchema.ts";
 import { UpstreamError } from "../../common/errors/UpstreamError.ts";
 
-import { ListenbrainzApiClient, listenResponseToPlay, listenPayloadToPlay } from "../../common/vendor/ListenbrainzApiClient.ts";
+import { ListenbrainzApiClient, listenResponseToPlay, listenPayloadToPlay, segmentByMappedArtists } from "../../common/vendor/ListenbrainzApiClient.ts";
 import { playToListenPayload } from '../../common/vendor/listenbrainz/lzUtils.ts';
 import type {ListenPayload, ListenResponse} from '../../../core/vendor/listenbrainz/interfaces.ts';
 import type {ExpectedResults} from "../utils/interfaces.ts";
@@ -24,6 +24,8 @@ import slightlyDifferentNames from './correctlyMapped/trackNameSlightlyDifferent
 // incorrect mappings
 import incorrectMultiArtistsTrackName from './incorrectlyMapped/multiArtistsInTrackName.json' with { type: "json" };
 import veryWrong from './incorrectlyMapped/veryWrong.json' with { type: "json" };
+import partialArtistMatch from './incorrectlyMapped/partialArtistMatch.json' with { type: "json" };
+import unusualJoinPhrases from './correctlyMapped/unusualJoinPhrases.json' with { type: "json" };
 import { generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
 import { nameToCredit, creditsToNames, namesToCredits, creditMbid } from "../../../core/MusicMetadata.ts";
 import { playStateFromRequest } from "../../sources/EndpointListenbrainzSource.ts";
@@ -48,6 +50,14 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
                 const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track?.name, test.expected.track);
                 assert.sameDeepMembers( creditsToNames(play.data.artists!), test.expected.artists);
+            }
+        });
+
+        it('Uses user-submitted values when mapped artists only partially explain user artist', async function () {
+            for(const test of partialArtistMatch as unknown as LZTestFixture[]) {
+                const play = listenResponseToPlay(test.data);
+                assert.equal(play.data.track?.name, test.expected.track);
+                assert.sameDeepMembers(creditsToNames(play.data.artists!), test.expected.artists);
             }
         });
 
@@ -123,6 +133,23 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
                 assert.equal(play.data.track?.name, test.expected.track);
                 assert.sameDeepMembers(creditsToNames(play.data.artists!), test.expected.artists);
             }
+        });
+
+        it('Uses mapped artists when user artist is fully explained by mapped artists and joiners', async function () {
+            for(const test of unusualJoinPhrases as unknown as LZTestFixture[]) {
+                const play = listenResponseToPlay(test.data);
+                assert.equal(play.data.track?.name, test.expected.track);
+                assert.deepEqual(creditsToNames(play.data.artists!), test.expected.artists);
+                const mappings = test.data.track_metadata.mbid_mapping!.artists!;
+                for(const artist of play.data.artists!) {
+                    assert.equal(creditMbid(artist, 'artist'), mappings.find(x => x.artist_credit_name === artist.name)?.artist_mbid);
+                }
+            }
+        });
+
+        it('Does not segment when a user word is only symbols', async function () {
+            assert.isUndefined(segmentByMappedArtists('Foo & !!!', [{artist_credit_name: 'Foo', artist_mbid: 'x', join_phrase: ''}]));
+            assert.deepEqual(segmentByMappedArtists('Foo & Bar', [{artist_credit_name: 'Foo', artist_mbid: 'x', join_phrase: ' & '}, {artist_credit_name: 'Bar', artist_mbid: 'y', join_phrase: ''}]), ['Foo', 'Bar']);
         });
 
         it('Detects and uses normalized artist/track names', async function () {

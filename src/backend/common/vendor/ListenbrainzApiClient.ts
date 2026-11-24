@@ -14,7 +14,7 @@ import {
     parseTrackCredits,
     uniqueNormalizedStrArr,
 } from "../../utils/StringUtils.ts";
-import { normalizeStr } from "../../../core/StringUtils.ts";
+import { normalizeStr, SYMBOLS_REGEX } from "../../../core/StringUtils.ts";
 import { findDelimiters } from "../../../core/StringUtils.ts";
 import { creditsWithIds, mbMeta, mergeCredit, withMetadata } from "../../../core/MusicMetadata.ts";
 import { UpstreamError } from "../errors/UpstreamError.ts";
@@ -26,7 +26,7 @@ import AbstractApiClient from "./AbstractApiClient.ts";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.ts';
 import { unique } from '../../utils.ts';
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
-import type {ListenPayload, ListenResponse, SubmitPayload} from '../../../core/vendor/listenbrainz/interfaces.ts';
+import type {ArtistMBIDMapping, ListenPayload, ListenResponse, SubmitPayload} from '../../../core/vendor/listenbrainz/interfaces.ts';
 import { baseFormatPlayObj } from '../../utils/PlayTransformUtils.ts';
 import { AuthError, ScrobbleSubmitError, SimpleError } from '../errors/MSErrors.ts';
 import pRetry from 'p-retry';
@@ -350,6 +350,50 @@ export const listenPayloadToPlay = (payload: ListenPayload, opts: ListenPayloadP
         return play;
     }
 
+const SEGMENT_JOINERS = ['with', 'x', '×', 'and', 'vs', 'ft', 'feat', 'featuring'];
+
+// symbols become whitespace (not removed) so "Foo/Bar" and "Foo / Bar" tokenize the same
+const segmentTokens = (str: string): string[] => normalizeStr(str.replace(SYMBOLS_REGEX, ' '), {keepSingleWhitespace: true}).split(' ').filter(x => x !== '');
+
+/**
+ * Returns mapped artist names, in user-submitted order, only if every word of the user-submitted artist string
+ * is part of a whole mapped artist name or is a joiner (known joiner words or words from mapped join phrases)
+ *
+ * Returns undefined if any word is unexplained, so a partially matching (possibly wrong) mapping is never trusted more
+ * */
+export const segmentByMappedArtists = (artistName: string, mappings: ArtistMBIDMapping[]): string[] | undefined => {
+    // a word made only of symbols would vanish when tokenized and wrongly count as explained
+    if (artistName.split(/\s+/).some(x => x !== '' && !/^[,&/\\+×]+$/.test(x) && segmentTokens(x).length === 0)) {
+        return undefined;
+    }
+    const userTokens = segmentTokens(artistName);
+    const names = mappings
+        .map(x => ({name: x.artist_credit_name, tokens: segmentTokens(x.artist_credit_name)}))
+        .filter(x => x.tokens.length > 0)
+        // longest first so "Lucas & L-Boy" wins over "Lucas"
+        .sort((a, b) => b.tokens.length - a.tokens.length);
+    const joiners = new Set([...SEGMENT_JOINERS, ...mappings.flatMap(x => segmentTokens(x.join_phrase))]);
+    // shortcut: greedy longest-first, gives up (falls back to existing parsing) where a different split would work, e.g. "Lucas L Boy" with "Lucas L", "Lucas", "L Boy"
+    const found: string[] = [];
+    let lastWasName = false;
+    let i = 0;
+    while (i < userTokens.length) {
+        const match = names.find(x => x.tokens.every((t, j) => userTokens[i + j] === t));
+        if (match !== undefined) {
+            found.push(match.name);
+            i += match.tokens.length;
+            lastWasName = true;
+        } else if (found.length > 0 && joiners.has(userTokens[i])) {
+            // joiners only count between names, otherwise "With Confidence" would segment to mapped "Confidence"
+            i++;
+            lastWasName = false;
+        } else {
+            return undefined;
+        }
+    }
+    return lastWasName ? unique(found) : undefined;
+}
+
 export const listenResponseToPlay = (listen: ListenResponse, opts?: ListenPayloadParseOptions): PlayObject => {
         const {
             listened_at,
@@ -397,14 +441,23 @@ export const listenResponseToPlay = (listen: ListenResponse, opts?: ListenPayloa
         let filteredSubmittedTrackName = track_name;
 
         let primaryArtist: string | undefined;
+        let segmentedArtists: string[] | undefined;
 
         if(artistMappings.length > 0) {
 
             // first get mapped artists they have joiners we usually look for
             const artistsWithJoiners = artistMappings.filter(x => findDelimiters(x.artist_credit_name) !== undefined);
+            // highest confidence: every word of user-submitted artist name is a mapped artist name or a joiner
+            segmentedArtists = segmentByMappedArtists(artist_name, artistMappings);
+            if(segmentedArtists !== undefined) {
+                artistsFromUserValues = segmentedArtists;
+                primaryArtistHint = segmentedArtists[0];
+                // fully explained, nothing left to parse
+                filteredSubmittedArtistName = '';
+            }
             if(artistsWithJoiners.length > 0) {
-                // verify if these exists in our name values
-                const artistsWithJoinersInArtistName = artistsWithJoiners.filter(x => filteredSubmittedArtistName.toLocaleLowerCase().includes(x.artist_credit_name.toLocaleLowerCase()));
+                // verify if these exists in our name values (none left if segmented)
+                const artistsWithJoinersInArtistName = segmentedArtists !== undefined ? [] : artistsWithJoiners.filter(x => filteredSubmittedArtistName.toLocaleLowerCase().includes(x.artist_credit_name.toLocaleLowerCase()));
                 if(artistsWithJoinersInArtistName.length > 0) {
                     //  if they do then add them as proper artists
                     artistsFromUserValues = artistsFromUserValues.concat(artistsWithJoinersInArtistName.map(x => x.artist_credit_name));
@@ -576,6 +629,10 @@ export const listenResponseToPlay = (listen: ListenResponse, opts?: ListenPayloa
             const samenessResults = stringSameness(normalizeStr(normalTrackName), normalizeStr(recording_name));
             const similar = samenessResults.highScore > 70;
             if(!mutuallyIncludes && !similar) {
+                if(segmentedArtists !== undefined) {
+                    // artists were split using only the mapping, which the track mismatch says is likely wrong
+                    return naivePlay;
+                }
                 // something went terrible wrong and this should not happen
                 // fallback to naive but with good artists?
                 return {

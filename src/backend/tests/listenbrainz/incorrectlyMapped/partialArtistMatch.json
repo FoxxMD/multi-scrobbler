@@ -1,0 +1,124 @@
+[
+  {
+    "data": {
+      "listened_at": 1794898023,
+      "track_metadata": {
+        "artist_name": "Chris Lake with Riovaz",
+        "track_name": "Round After Round",
+        "additional_info": {},
+        "mbid_mapping": {
+          "recording_name": "Round After Round",
+          "artists": [
+            {
+              "artist_credit_name": "Chris Lake",
+              "artist_mbid": "fca94d64-9ada-4264-9373-4158e2f7c7e7",
+              "join_phrase": ""
+            }
+          ],
+          "artist_mbids": [
+            "fca94d64-9ada-4264-9373-4158e2f7c7e7"
+          ]
+        }
+      }
+    },
+    "expected": {
+      "artists": [
+        "Chris Lake with Riovaz"
+      ],
+      "track": "Round After Round"
+    }
+  },
+  {
+    "data": {
+      "listened_at": 1794898023,
+      "track_metadata": {
+        "artist_name": "Lucas Grabeel",
+        "track_name": "Bop to the Top",
+        "additional_info": {},
+        "mbid_mapping": {
+          "recording_name": "Bop to the Top",
+          "artists": [
+            {
+              "artist_credit_name": "Lucas",
+              "artist_mbid": "00000000-0000-4000-8000-000000000003",
+              "join_phrase": ""
+            }
+          ],
+          "artist_mbids": [
+            "00000000-0000-4000-8000-000000000003"
+          ]
+        }
+      }
+    },
+    "expected": {
+      "artists": [
+        "Lucas Grabeel"
+      ],
+      "track": "Bop to the Top"
+    }
+  },
+  {
+    "data": {
+      "listened_at": 1794898023,
+      "track_metadata": {
+        "artist_name": "With Confidence",
+        "track_name": "Voldemort",
+        "additional_info": {},
+        "mbid_mapping": {
+          "recording_name": "Voldemort",
+          "artists": [
+            {
+              "artist_credit_name": "Confidence",
+              "artist_mbid": "00000000-0000-4000-8000-000000000004",
+              "join_phrase": ""
+            }
+          ],
+          "artist_mbids": [
+            "00000000-0000-4000-8000-000000000004"
+          ]
+        }
+      }
+    },
+    "expected": {
+      "artists": [
+        "With Confidence"
+      ],
+      "track": "Voldemort"
+    }
+  },
+  {
+    "data": {
+      "listened_at": 1794898023,
+      "track_metadata": {
+        "artist_name": "Foo with Bar",
+        "track_name": "Totally Different Track",
+        "additional_info": {},
+        "mbid_mapping": {
+          "recording_name": "Other",
+          "artists": [
+            {
+              "artist_credit_name": "Foo",
+              "artist_mbid": "00000000-0000-4000-8000-000000000005",
+              "join_phrase": " with "
+            },
+            {
+              "artist_credit_name": "Bar",
+              "artist_mbid": "00000000-0000-4000-8000-000000000006",
+              "join_phrase": ""
+            }
+          ],
+          "artist_mbids": [
+            "00000000-0000-4000-8000-000000000005",
+            "00000000-0000-4000-8000-000000000006"
+          ]
+        }
+      }
+    },
+    "expected": {
+      "artists": [
+        "Foo with Bar"
+      ],
+      "track": "Totally Different Track"
+    }
+  }
+]
