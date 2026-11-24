@@ -64,7 +64,10 @@ export interface EntryData extends PlaybackReportData {
      * Returned as *whole* minutes so it isn't very accurate
      * */
     minutesAgo: number,
-    playerId: string,
+    /**
+     * OpenSubsonic specifies an integer, some servers (Navidrome) return one
+     * */
+    playerId: string | number,
     username: string,
 }
 

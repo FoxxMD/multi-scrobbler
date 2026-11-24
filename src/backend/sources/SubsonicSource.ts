@@ -90,6 +90,7 @@ export class SubsonicSource extends MemoryPositionalSource {
         } = obj;
 
         const position = positionMs !== undefined ? positionMs / 1000 : undefined;
+        const deviceId = String(playerId);
 
         const play: PlayObjectMinimal = {
             data: {
@@ -107,7 +108,7 @@ export class SubsonicSource extends MemoryPositionalSource {
                 trackId: id,
                 newFromSource,
                 user: username,
-                deviceId: playerId,
+                deviceId,
                 mediaPlayerName: type ?? `${openSubsonic ? 'Open ' : ''}Subsonic`,
                 mediaPlayerVersion: type !== undefined && serverVersion !== undefined ? serverVersion : version,
                 ...(position === undefined ? {} : {trackProgressPosition: position})
@@ -116,7 +117,7 @@ export class SubsonicSource extends MemoryPositionalSource {
         const status = subsonicPlaybackStateToReportedStatus(state);
 
         return {
-            platformId: [playerId, username],
+            platformId: [deviceId, username],
             play: baseFormatPlayObj(obj, play),
             ...(status === undefined ? {} : {status}),
             ...(position === undefined ? {} : {position})

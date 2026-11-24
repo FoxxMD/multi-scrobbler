@@ -183,6 +183,13 @@ describe('Subsonic playback reports', () => {
         expect(state.play!.meta.trackProgressPosition).to.equal(12.345);
     });
 
+    it('stores a numeric playerId as a string deviceId', () => {
+        const state = SubsonicSource.formatPlayObj(entry(0, 180, {playerId: 1}));
+
+        expect(state.platformId).to.deep.equal(['1', 'user']);
+        expect(state.play!.meta.deviceId).to.equal('1');
+    });
+
     for (const [reportedState, expectedStatus] of [
         ['playing', REPORTED_PLAYER_STATUSES.playing],
         ['paused', REPORTED_PLAYER_STATUSES.paused],
