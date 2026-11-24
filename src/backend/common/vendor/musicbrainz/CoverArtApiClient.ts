@@ -119,12 +119,13 @@ export class CoverArtApiClient extends AbstractApiClient {
     }
 
     public getCoverThumbFromUrl = async (url: string): Promise<string | undefined> => {
-        const cachedLocation = await this.cache.get<string>(url);
+        // false is cached when there is no thumb (404) so we don't request it again
+        const cachedLocation = await this.cache.get<string | false>(url);
         if(cachedLocation !== undefined) {
-            return cachedLocation;
+            return cachedLocation === false ? undefined : cachedLocation;
         }
         const location = await this.coverThumbRequest(url);
-        await this.cache.set(url, false, '1hr');
+        await this.cache.set(url, location ?? false, '1hr');
         return location;
     }
 

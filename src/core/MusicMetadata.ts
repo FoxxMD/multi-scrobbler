@@ -43,7 +43,7 @@ export function withImage(credit: Credit, image: string | null | undefined): Cre
 export function withImage(credit: Credit | undefined, image: string | null | undefined): Credit | undefined;
 // eslint-disable-next-line no-redeclare
 export function withImage(credit: Credit | undefined, image: string | null | undefined): Credit | undefined {
-    if (credit === undefined || image === undefined || image === null || image === '') {
+    if (credit === undefined || typeof image !== 'string' || image === '') {
         return credit;
     }
     return { ...credit, image };

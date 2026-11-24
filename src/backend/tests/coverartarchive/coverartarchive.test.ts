@@ -261,6 +261,26 @@ describe('#CoverArt CoverArtArchive API', function () {
             }
     ));
 
+    it('Should cache thumb url and missing thumb',
+        async function () {
+            let requests = 0;
+            await withRequestInterception(
+                [
+                    http.get(`${CA_MOCK_URL_STR}/release/${RELEASE}/front-250`, () => { requests++; return new HttpResponse(null, { status: 307, headers: {location: `${CA_MOCK_URL_STR}/download/1.jpg`} }); }),
+                    http.get(`${CA_MOCK_URL_STR}/download/1.jpg`, () => new HttpResponse(null, { status: 302, headers: {location: `${CA_MOCK_URL_STR}/cdn/1.jpg`} })),
+                    http.get(`${CA_MOCK_URL_STR}/release/${INVALID_RELEASE}/front-250`, () => { requests++; return new HttpResponse(null, { status: 404 }); }),
+                ],
+                async function () {
+                    const api = createCoverArtApi({url: CA_MOCK_URL});
+                    for(let i = 0; i < 2; i++) {
+                        expect(await api.getCoverThumbFromUrl(`${CA_MOCK_URL_STR}/release/${RELEASE}/front-250`)).eq(`${CA_MOCK_URL_STR}/cdn/1.jpg`);
+                        expect(await api.getCoverThumbFromUrl(`${CA_MOCK_URL_STR}/release/${INVALID_RELEASE}/front-250`)).is.undefined;
+                    }
+                }
+            )();
+            expect(requests).eq(2);
+        });
+
     describe('#CoverArt Real API', function() {
 
         before(function () {
