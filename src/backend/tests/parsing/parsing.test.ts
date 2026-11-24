@@ -151,10 +151,11 @@ describe('Parse records', function () {
     it('LZ records a patch from submitted to parsed track and artists', function () {
         const play = listenResponseToPlay(listen({recording_name: 'Song', artists: [{artist_credit_name: 'Foo', join_phrase: ' × ', artist_mbid: 'a'}, {artist_credit_name: 'Bar', join_phrase: '', artist_mbid: 'b'}]}));
         const {submitted, patch} = play.meta.parseRecord!;
-        expect(creditsToNames(submitted!.artists)).to.deep.eq(['Foo with Bar']);
-        expect(patchObject(submitted!, patch!)).to.deep.eq({track: play.data.track, artists: play.data.artists});
-        // nothing to change, no patch
-        const unchanged = listenResponseToPlay({...listen(), track_metadata: {...listen().track_metadata, artist_name: 'Foo'}} as ListenResponse);
+        expect(submitted!.artists).to.deep.eq(['Foo with Bar']);
+        expect(patchObject(submitted!, patch!)).to.deep.eq({track: play.data.track!.name, artists: creditsToNames(play.data.artists!)});
+        // nothing to change, no patch -- even though the mapping adds MBIDs, only names are compared
+        const unchanged = listenResponseToPlay({...listen({recording_name: 'Song', artists: [{artist_credit_name: 'Foo', join_phrase: '', artist_mbid: 'a'}]}), track_metadata: {...listen().track_metadata, artist_name: 'Foo', mbid_mapping: {recording_name: 'Song', recording_mbid: 'r', artists: [{artist_credit_name: 'Foo', join_phrase: '', artist_mbid: 'a'}]}}} as ListenResponse);
+        expect(creditMbid(unchanged.data.artists![0], 'artist')).eq('a');
         expect(unchanged.meta.parseRecord!.patch).to.be.undefined;
     });
 

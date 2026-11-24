@@ -252,9 +252,9 @@ export type ParseDecision = z.output<typeof parseDecisionSchema>;
 export const parseRecordSchema = z.object({
     parser: z.enum(['listenbrainz', 'native']),
     decisions: parseDecisionSchema.array(),
-    /** Track and artists as submitted, before parsing. Left side of patch */
-    submitted: z.object({track: creditSchema.optional(), artists: creditSchema.array()}).optional(),
-    /** Changes from submitted to parsed track and artists. Undefined if identical */
+    /** Track and artist names as submitted, before parsing. Left side of patch */
+    submitted: z.object({track: z.string().optional(), artists: z.string().array()}).optional(),
+    /** Changes from submitted to parsed track and artist names (ids/metadata are not compared). Undefined if identical */
     patch: z.custom<Changeset>().optional(),
 }).meta({id: 'ParseRecord', description: 'How artists and track were parsed from submitted values'});
 /** How artists/track were parsed, in step order, so fallbacks are visible to users */

@@ -5,7 +5,7 @@ import type { BrainzMeta, ParseDecision, UnixTimestamp, URLData } from "../../..
 import type { PlayObject, PlayObjectMinimal, ScrobbleActionResult } from "../../../core/PlaySchema.ts";
 import { combinePartsToString } from "../../../core/StringUtils.ts";
 import { isrcMeta, nameToCredit } from "../../../core/MusicMetadata.ts";
-import { namesToCredits } from "../../../core/MusicMetadata.ts";
+import { creditsToNames, namesToCredits } from "../../../core/MusicMetadata.ts";
 import {
     normalizeListenbrainzUrl,
     parseCredits,
@@ -370,9 +370,10 @@ export const listenResponseToPlay = (listen: ListenResponse, opts?: ListenPayloa
 
         const {play: naivePlay, decisions: naiveDecisions} = listenToNaivePlayWithDecisions(listen, opts);
         // as submitted, so users can see exactly what parsing changed
-        const submitted = {track: nameToCredit(track_name), artists: artist_name !== undefined ? [nameToCredit(artist_name)] : []};
+        // names only: ids/metadata (MBIDs, ISRC) are attached to nearly every play and would hide what parsing actually changed
+        const submitted = {track: track_name, artists: artist_name !== undefined ? [artist_name] : []};
         const withParse = (p: PlayObject, decisions: ParseDecision[]): PlayObject => {
-            const patch = diffObjects(submitted, {track: p.data.track, artists: p.data.artists ?? []});
+            const patch = diffObjects(submitted, {track: p.data.track?.name, artists: creditsToNames(p.data.artists ?? [])});
             // new meta object so the record is not copied into original.play
             return {...p, meta: {...p.meta, parseRecord: {parser: 'listenbrainz', decisions, submitted, patch: patch.length > 0 ? patch : undefined}}};
         };
