@@ -129,6 +129,8 @@ export interface ParseResult {
     track?: string
     /** Artist strings passed through without being split (ignored, not split, or nothing parsed) */
     keptArtists: string[]
+    /** Number of leading entries in artists that came from artist strings, the rest were found in the track */
+    fromArtistsCount: number
     decisions: ParseDecision[]
 }
 
@@ -178,6 +180,9 @@ export const parseWithoutReference = (artists: string[], track: string, opts: Pa
         }
     }
 
+    // dedupe keeps first occurrences so artist string artists stay first, in the same order
+    const fromArtistsCount = uniqueNormalizedStrArr(found).length;
+
     let parsedTrack: string | undefined;
     if (parseTrack) {
         const trackCredits = parseTrackCredits(track, trackDelimiters);
@@ -195,7 +200,7 @@ export const parseWithoutReference = (artists: string[], track: string, opts: Pa
         reason: `Split ${[splitArtists ? `${splitPrimary ? '' : 'only credited (ft./feat./vs) '}artists using ${artistDelimiters === undefined ? 'default delimiters' : artistDelimiters.join(' ')}` : undefined, parseTrack ? `track using ${trackDelimiters === undefined ? 'default delimiters' : trackDelimiters.join(' ')}` : undefined].filter(x => x !== undefined).join(' and ') || 'nothing'}`,
         candidates: found
     });
-    return {artists: found, track: parsedTrack, keptArtists: kept, decisions};
+    return {artists: found, track: parsedTrack, keptArtists: kept, fromArtistsCount, decisions};
 }
 
 /** Exact match after normalizing, or string similarity above threshold */

@@ -181,3 +181,18 @@ describe('Parse records', function () {
         expect(slimHistoricalPlay(play).meta.parseRecord).to.be.undefined;
     });
 });
+
+describe('Naive artist_mbids', function () {
+    const naiveListen = (artist: string, track: string, artist_mbids: string[]) => ({listened_at: 1700000000, track_metadata: {artist_name: artist, track_name: track, additional_info: {artist_mbids}}}) as unknown as ListenResponse;
+    const ids = (play: PlayObject) => play.data.artists!.map(x => [x.name, creditMbid(x, 'artist')]);
+
+    it('Does not shift ids onto artists found in the track', function () {
+        // two ids for the (unsplit) artist string, not for Baz
+        expect(ids(listenToNaivePlay(naiveListen('Foo & Bar', 'Song feat. Baz', ['mbid-foo', 'mbid-bar'])))).to.deep.eq([['Foo & Bar', undefined], ['Baz', undefined]]);
+    });
+
+    it('Applies ids to artists from the artist string only', function () {
+        expect(ids(listenToNaivePlay(naiveListen('Foo', 'Song feat. Bar', ['mbid-foo'])))).to.deep.eq([['Foo', 'mbid-foo'], ['Bar', undefined]]);
+        expect(ids(listenToNaivePlay(naiveListen('Foo feat. Bar', 'Song', ['mbid-foo', 'mbid-bar'])))).to.deep.eq([['Foo', 'mbid-foo'], ['Bar', 'mbid-bar']]);
+    });
+});

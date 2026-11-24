@@ -487,11 +487,14 @@ export const listenToNaivePlayWithDecisions = (listen: ListenResponse, opts?: Li
 
         let normalTrackName = track_name;
         let artists: string[] = [];
+        // leading artists that came from submitted artist values, only these can be matched to artist_mbids
+        let fromArtistsCount = 0;
         const decisions: ParseDecision[] = [];
 
         if(artist_names.length > 0) {
             // player already sent artists as a list, use as-is
             artists = artist_names;
+            fromArtistsCount = artist_names.length;
             decisions.push({step: 'artistNames', outcome: 'applied', reason: 'Used artist list submitted by the player (additional_info.artist_names)', candidates: artist_names});
         } else if(typeof artist_name === 'string') {
             // This runs when there is no reference data (no MB mapping) or the mapping was rejected as likely wrong,
@@ -511,10 +514,12 @@ export const listenToNaivePlayWithDecisions = (listen: ListenResponse, opts?: Li
             // if we found "ft. something" in track string then we now have a "real" track name and more artists
             normalTrackName = parsed.track ?? track_name;
             artists = parsed.artists;
+            fromArtistsCount = parsed.fromArtistsCount;
             decisions.push(...parsed.decisions);
             if(artists.length === 0) {
                 // fallback to original artist_name string if we weren't able to parse anything from artists/track credits
                 artists.push(artist_name);
+                fromArtistsCount = 1;
             }
             artists = uniqueNormalizedStrArr(artists);
         }
@@ -534,7 +539,9 @@ export const listenToNaivePlayWithDecisions = (listen: ListenResponse, opts?: Li
             data: {
                 playDate: dayjs.unix(listened_at),
                 track: nameToCredit(normalTrackName, mbMeta(trackId, 'recording'), isrcMeta(isrc !== undefined ? isrcNoHyphens(isrc) : undefined)),
-                artists: creditsWithIds(namesToCredits(artists), artistMbids, 'musicbrainz', 'artist'),
+                // artist_mbids are positional and describe the submitted artist values, so they are only applied to artists from those values
+                // (and only when the counts match) -- artists found in the track would otherwise shift ids onto the wrong artist
+                artists: [...creditsWithIds(namesToCredits(artists.slice(0, fromArtistsCount)), artistMbids, 'musicbrainz', 'artist'), ...namesToCredits(artists.slice(fromArtistsCount))],
                 album: nameToCredit(release_name, mbMeta(release_mbid, 'release'), mbMeta(release_group_mbid, 'release-group')),
                 albumArtists: albumArtists !== undefined ? namesToCredits(albumArtists) : undefined,
                 duration: dur,
