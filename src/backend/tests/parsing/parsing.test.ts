@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import { describe, it } from 'mocha';
 import { parseToRegexOrLiteralSearch } from "@foxxmd/regex-buddy-core";
 import { nativeParse } from "../../common/transforms/NativeTransformer.ts";
-import { listenToNaivePlay } from "../../common/vendor/ListenbrainzApiClient.ts";
+import { listenToNaivePlay, stripMappedNames } from "../../common/vendor/ListenbrainzApiClient.ts";
 import { DELIMITERS } from "../../../core/Atomic.ts";
 import { creditsToNames } from "../../../core/MusicMetadata.ts";
 import type { PlayObject } from "../../../core/PlaySchema.ts";
@@ -64,4 +64,21 @@ describe('Parsing characterization', function () {
             }
         });
     }
+});
+
+describe('stripMappedNames', function () {
+    const mapping = (artist_credit_name: string, join_phrase = '') => ({artist_credit_name, join_phrase, artist_mbid: ''});
+
+    it('Removes mapped name with its join phrase and reports it as leading', function () {
+        expect(stripMappedNames('Lucas & L-Boy feat. Foo', [mapping('Lucas & L-Boy', ' feat. ')])).to.deep.eq({remaining: 'Foo', leading: 'Lucas & L-Boy'});
+    });
+
+    it('Removes mapped name without join phrase when join phrase is not present', function () {
+        expect(stripMappedNames('Foo, Lucas & L-Boy', [mapping('Lucas & L-Boy', ' feat. ')])).to.deep.eq({remaining: 'Foo, ', leading: undefined});
+    });
+
+    it('Matches case-insensitively and leaves unmatched string unchanged', function () {
+        expect(stripMappedNames('Song (feat. lucas & l-boy)', [mapping('Lucas & L-Boy')]).remaining).eq('Song (feat. )');
+        expect(stripMappedNames('Foo', [mapping('Bar & Baz')])).to.deep.eq({remaining: 'Foo', leading: undefined});
+    });
 });

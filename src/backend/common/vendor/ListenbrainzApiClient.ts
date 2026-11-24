@@ -394,6 +394,31 @@ export const segmentByMappedArtists = (artistName: string, mappings: ArtistMBIDM
     return lastWasName ? unique(found) : undefined;
 }
 
+/**
+ * Removes each mapped name from str, along with its join phrase when the join phrase directly follows it
+ *
+ * Returns the remaining string and the last mapped name that was found at the start of the (partially stripped) string
+ * */
+export const stripMappedNames = (str: string, mappings: ArtistMBIDMapping[]): {remaining: string, leading?: string} => {
+    let leading: string | undefined;
+    const remaining = mappings.reduce((acc, curr) => {
+        // join_phrase already includes surrounding whitespace
+        const needles = curr.join_phrase !== '' ? [`${curr.artist_credit_name}${curr.join_phrase}`, curr.artist_credit_name] : [curr.artist_credit_name];
+        for (const needle of needles) {
+            const index = acc.toLocaleLowerCase().indexOf(needle.toLocaleLowerCase());
+            if (index !== -1) {
+                if (index === 0) {
+                    // primary artist, most likely
+                    leading = curr.artist_credit_name;
+                }
+                return slice(acc, index, needle.length);
+            }
+        }
+        return acc;
+    }, str);
+    return {remaining, leading};
+}
+
 export const listenResponseToPlay = (listen: ListenResponse, opts?: ListenPayloadParseOptions): PlayObject => {
         const {
             listened_at,
@@ -464,52 +489,18 @@ export const listenResponseToPlay = (listen: ListenResponse, opts?: ListenPayloa
 
                     // then filter these out of user-submitted artist/track names
                     // -- additionally remove joiner if mapped artists has one and it is present
-                    filteredSubmittedArtistName = artistsWithJoinersInArtistName.reduce((acc, curr) => {
-                        if(curr.join_phrase !== '') {
-                            // join_phrase already includes surrounding whitespace
-                            const joinedName = `${curr.artist_credit_name}${curr.join_phrase}`;
-                            const index = acc.toLocaleLowerCase().indexOf(joinedName.toLocaleLowerCase());
-                            if(index !== -1) {
-                                if(index === 0) {
-                                    // primary artist, most likely
-                                    primaryArtistHint = curr.artist_credit_name;
-                                }
-                                return slice(acc, index, joinedName.length);
-                            }
-                        }
-                        // joiner doesn't exist or wasn't found
-                        const index = acc.toLocaleLowerCase().indexOf(curr.artist_credit_name.toLocaleLowerCase());
-                        if(index !== -1) {
-                            if(index === 0) {
-                                // primary artist, most likely
-                                primaryArtistHint = curr.artist_credit_name;
-                            }
-                            return slice(acc, index, curr.artist_credit_name.length);
-                        }
-                        return acc;
-                    }, filteredSubmittedArtistName);
+                    const strippedArtist = stripMappedNames(filteredSubmittedArtistName, artistsWithJoinersInArtistName);
+                    filteredSubmittedArtistName = strippedArtist.remaining;
+                    if(strippedArtist.leading !== undefined) {
+                        primaryArtistHint = strippedArtist.leading;
+                    }
                 }
 
                 const artistsWithJoinersInTrackName = artistsWithJoiners.filter(x => filteredSubmittedTrackName.toLocaleLowerCase().includes(x.artist_credit_name.toLocaleLowerCase()));
                 if(artistsWithJoinersInTrackName.length > 0) {
                     artistsFromUserValues = artistsFromUserValues.concat(artistsWithJoinersInTrackName.map(x => x.artist_credit_name));
 
-                    filteredSubmittedTrackName = artistsWithJoinersInTrackName.reduce((acc, curr) => {
-                        if(curr.join_phrase !== '') {
-                            // join_phrase already includes surrounding whitespace
-                            const joinedName = `${curr.artist_credit_name}${curr.join_phrase}`;
-                            const index = acc.toLocaleLowerCase().indexOf(joinedName.toLocaleLowerCase());
-                            if(index !== -1) {
-                                return slice(acc, index, joinedName.length);
-                            }
-                        }
-                        // joiner doesn't exist or wasn't found
-                        const index = acc.toLocaleLowerCase().indexOf(curr.artist_credit_name.toLocaleLowerCase());
-                        if(index !== -1) {
-                            return slice(acc, index, curr.artist_credit_name.length);
-                        }
-                        return acc;
-                    }, filteredSubmittedTrackName);
+                    filteredSubmittedTrackName = stripMappedNames(filteredSubmittedTrackName, artistsWithJoinersInTrackName).remaining;
                 }
                 artistsFromUserValues = uniqueNormalizedStrArr(artistsFromUserValues);
             }
