@@ -121,6 +121,8 @@ export interface ParseOptions {
      * When false only credits after a joiner are split, so "Earth, Wind & Fire" stays whole but "Foo ft. Bar, Baz" gives Foo, Bar, Baz
      * */
     splitPrimary?: boolean
+    /** Step name used in the recorded decision, so callers can tell apart different uses of this step. Default 'delimiters' */
+    stepName?: string
 }
 
 export interface ParseResult {
@@ -146,6 +148,7 @@ export const parseWithoutReference = (artists: string[], track: string, opts: Pa
         ignoreArtists = [],
         keepUnparsed = true,
         splitPrimary = true,
+        stepName = 'delimiters',
     } = opts;
     const decisions: ParseDecision[] = [];
 
@@ -195,7 +198,7 @@ export const parseWithoutReference = (artists: string[], track: string, opts: Pa
 
     found = uniqueNormalizedStrArr(found);
     decisions.push({
-        step: 'delimiters',
+        step: stepName,
         outcome: splitArtists || parseTrack ? 'applied' : 'skipped',
         reason: `Split ${[splitArtists ? `${splitPrimary ? '' : 'only credited (ft./feat./vs) '}artists using ${artistDelimiters === undefined ? 'default delimiters' : artistDelimiters.join(' ')}` : undefined, parseTrack ? `track using ${trackDelimiters === undefined ? 'default delimiters' : trackDelimiters.join(' ')}` : undefined].filter(x => x !== undefined).join(' and ') || 'nothing'}`,
         candidates: found

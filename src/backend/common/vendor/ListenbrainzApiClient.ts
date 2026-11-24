@@ -507,6 +507,8 @@ export const listenToNaivePlayWithDecisions = (listen: ListenResponse, opts?: Li
             // Users who want more aggressive splitting can opt in with a native stage, where they control artistsIgnore.
             const parsed = parseWithoutReference([artist_name], track_name ?? '', {
                 splitPrimary: false,
+                // distinct from the reference pipeline's 'delimiters' step, both are recorded when a mapping is rejected
+                stepName: 'naiveDelimiters',
                 artistDelimiters: [',', '/', '\\'],
                 splitArtists: extractArtists,
                 // default (all) delimiters for artists credited in track name, they are already marked by a joiner

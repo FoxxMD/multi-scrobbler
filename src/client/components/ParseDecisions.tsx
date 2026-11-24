@@ -27,6 +27,8 @@ const STEP_LABELS: Record<string, string> = {
     trackGate: 'Track name check',
     naive: 'Use submitted values',
     artistNames: 'Use submitted artist list',
+    naiveDelimiters: 'Split on delimiters (submitted values only)',
+    dropArtists: 'Drop existing artists',
 };
 
 /** User-friendly name for a parse step, falls back to the step name */

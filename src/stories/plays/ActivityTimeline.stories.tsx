@@ -181,7 +181,8 @@ export const ParseRejected = meta.story({
           {step: 'joinedNames', outcome: 'skipped', reason: 'No reference artists have delimiters in their names'},
           {step: 'delimiters', outcome: 'applied', reason: 'Split artists using default delimiters and track using default delimiters', candidates: ['Chris Lake with Bonobo', 'Alexis Roberts']},
           {step: 'primaryArtistGate', outcome: 'rejected', reason: "Primary artist candidate 'Chris Lake with Bonobo' did not match any reference artist"},
-          {step: 'naive', outcome: 'applied', reason: 'Used artists and track parsed from submitted values only'},
+          {step: 'naive', outcome: 'applied', reason: 'Parsed artists and track from submitted values only, without reference data'},
+          {step: 'naiveDelimiters', outcome: 'applied', reason: 'Split only credited (ft./feat./vs) artists using , / \\ and track using default delimiters', candidates: ['Chris Lake with Bonobo', 'Alexis Roberts']},
         ], ...parseChanges(['Chris Lake with Bonobo', 'Alexis Roberts'])}
       })
     }

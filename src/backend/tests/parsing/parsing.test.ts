@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 import { parseToRegexOrLiteralSearch } from "@foxxmd/regex-buddy-core";
-import { nativeParse } from "../../common/transforms/NativeTransformer.ts";
+import { nativeParse, nativeParseWithDecisions } from "../../common/transforms/NativeTransformer.ts";
 import { listenResponseToPlay, listenToNaivePlay } from "../../common/vendor/ListenbrainzApiClient.ts";
 import NativeTransformer from "../../common/transforms/NativeTransformer.ts";
 import { loggerTest } from "@foxxmd/logging";
@@ -162,9 +162,9 @@ describe('Parse records', function () {
     it('LZ records why the naive play was used', function () {
         const noMapping = listenResponseToPlay(listen());
         // naive records its own (conservative) delimiter step after the naive marker
-        expect(noMapping.meta.parseRecord!.decisions.map(x => [x.step, x.outcome])).to.deep.eq([['reference', 'skipped'], ['naive', 'applied'], ['delimiters', 'applied']]);
+        expect(noMapping.meta.parseRecord!.decisions.map(x => [x.step, x.outcome])).to.deep.eq([['reference', 'skipped'], ['naive', 'applied'], ['naiveDelimiters', 'applied']]);
         const rejected = listenResponseToPlay(listen({recording_name: 'Song', artists: [{artist_credit_name: 'Somebody', join_phrase: '', artist_mbid: 'a'}]}));
-        expect(rejected.meta.parseRecord!.decisions.map(x => x.step).slice(-3)).to.deep.eq(['primaryArtistGate', 'naive', 'delimiters']);
+        expect(rejected.meta.parseRecord!.decisions.map(x => x.step).slice(-3)).to.deep.eq(['primaryArtistGate', 'naive', 'naiveDelimiters']);
     });
 
     it('Native stage puts its decisions in transform inputs', async function () {
@@ -195,5 +195,14 @@ describe('Naive artist_mbids', function () {
     it('Applies ids to artists from the artist string only', function () {
         expect(ids(listenToNaivePlay(naiveListen('Foo', 'Song feat. Bar', ['mbid-foo'])))).to.deep.eq([['Foo', 'mbid-foo'], ['Bar', undefined]]);
         expect(ids(listenToNaivePlay(naiveListen('Foo feat. Bar', 'Song', ['mbid-foo', 'mbid-bar'])))).to.deep.eq([['Foo', 'mbid-foo'], ['Bar', 'mbid-bar']]);
+    });
+});
+
+describe('Native decisions', function () {
+    it('Records dropped artists when not parsing from artists', function () {
+        const {decisions} = nativeParseWithDecisions(asPlay(['Foo'], 'Song (feat. Bar)'), {artistsParseFrom: ['title']});
+        expect(decisions[0]).to.include({step: 'dropArtists', outcome: 'applied'});
+        expect(decisions[0].candidates).to.deep.eq(['Foo']);
+        expect(nativeParseWithDecisions(asPlay(['Foo'], 'Song')).decisions.map(x => x.step)).to.not.include('dropArtists');
     });
 });

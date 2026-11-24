@@ -210,6 +210,10 @@ export const nativeParseWithDecisions = (play: PlayObject, options?: NativeTrans
                 ignoreArtists: ignoreArtistsRegex,
             }
         );
+        if(!artistsParseFrom.includes('artists') && playArtists.length > 0) {
+            // make the (existing) behavior visible: only artists parsed from the title are kept
+            parsed.decisions.unshift({step: 'dropArtists', outcome: 'applied', reason: "Existing artists were dropped because artists are not parsed from 'artists', only artists found in the title are kept", candidates: creditsToNames(playArtists)});
+        }
         for(const d of parsed.decisions.filter(x => x.step === 'ignoreArtists')) {
             logger.debug(d.reason);
         }
