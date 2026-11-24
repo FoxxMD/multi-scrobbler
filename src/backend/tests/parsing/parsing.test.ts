@@ -2,7 +2,8 @@ import { expect } from 'chai';
 import { describe, it } from 'mocha';
 import { parseToRegexOrLiteralSearch } from "@foxxmd/regex-buddy-core";
 import { nativeParse } from "../../common/transforms/NativeTransformer.ts";
-import { listenToNaivePlay, stripMappedNames } from "../../common/vendor/ListenbrainzApiClient.ts";
+import { listenToNaivePlay } from "../../common/vendor/ListenbrainzApiClient.ts";
+import { parseWithReference, stripReferenceNames } from "../../utils/CreditPipeline.ts";
 import { DELIMITERS } from "../../../core/Atomic.ts";
 import { creditsToNames } from "../../../core/MusicMetadata.ts";
 import type { PlayObject } from "../../../core/PlaySchema.ts";
@@ -66,19 +67,45 @@ describe('Parsing characterization', function () {
     }
 });
 
-describe('stripMappedNames', function () {
-    const mapping = (artist_credit_name: string, join_phrase = '') => ({artist_credit_name, join_phrase, artist_mbid: ''});
+describe('stripReferenceNames', function () {
+    const mapping = (name: string, joinPhrase = '') => ({name, joinPhrase});
 
     it('Removes mapped name with its join phrase and reports it as leading', function () {
-        expect(stripMappedNames('Lucas & L-Boy feat. Foo', [mapping('Lucas & L-Boy', ' feat. ')])).to.deep.eq({remaining: 'Foo', leading: 'Lucas & L-Boy'});
+        expect(stripReferenceNames('Lucas & L-Boy feat. Foo', [mapping('Lucas & L-Boy', ' feat. ')])).to.deep.eq({remaining: 'Foo', leading: 'Lucas & L-Boy'});
     });
 
     it('Removes mapped name without join phrase when join phrase is not present', function () {
-        expect(stripMappedNames('Foo, Lucas & L-Boy', [mapping('Lucas & L-Boy', ' feat. ')])).to.deep.eq({remaining: 'Foo, ', leading: undefined});
+        expect(stripReferenceNames('Foo, Lucas & L-Boy', [mapping('Lucas & L-Boy', ' feat. ')])).to.deep.eq({remaining: 'Foo, ', leading: undefined});
     });
 
     it('Matches case-insensitively and leaves unmatched string unchanged', function () {
-        expect(stripMappedNames('Song (feat. lucas & l-boy)', [mapping('Lucas & L-Boy')]).remaining).eq('Song (feat. )');
-        expect(stripMappedNames('Foo', [mapping('Bar & Baz')])).to.deep.eq({remaining: 'Foo', leading: undefined});
+        expect(stripReferenceNames('Song (feat. lucas & l-boy)', [mapping('Lucas & L-Boy')]).remaining).eq('Song (feat. )');
+        expect(stripReferenceNames('Foo', [mapping('Bar & Baz')])).to.deep.eq({remaining: 'Foo', leading: undefined});
+    });
+});
+
+describe('parseWithReference decisions', function () {
+    const ref = (name: string, joinPhrase = '') => ({name, joinPhrase, credit: {name}});
+
+    it('Records segment applied and track accepted', function () {
+        const res = parseWithReference('Foo with Bar', 'Song', {artists: [ref('Foo', ' × '), ref('Bar')], track: 'Song'});
+        expect(creditsToNames(res.artists!)).to.deep.eq(['Foo', 'Bar']);
+        expect(res.decisions.map(x => [x.step, x.outcome])).to.deep.eq([
+            ['segment', 'applied'],
+            ['joinedNames', 'skipped'],
+            ['delimiters', 'applied'],
+            ['primaryArtistGate', 'applied'],
+            ['merge', 'applied'],
+            ['trackGate', 'applied'],
+        ]);
+    });
+
+    it('Records primary artist rejection with the failing candidate', function () {
+        const res = parseWithReference('Chris Lake with Riovaz', 'Song', {artists: [ref('Somebody Else')], track: 'Song'});
+        expect(res.artists).to.be.undefined;
+        const last = res.decisions[res.decisions.length - 1];
+        expect(last.step).eq('primaryArtistGate');
+        expect(last.outcome).eq('rejected');
+        expect(last.reason).to.include('Chris Lake with Riovaz');
     });
 });

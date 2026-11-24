@@ -7,11 +7,12 @@ import { NO_DEVICE } from "../../../core/Atomic.ts";
 import type { PlayObject } from "../../../core/PlaySchema.ts";
 import { UpstreamError } from "../../common/errors/UpstreamError.ts";
 
-import { ListenbrainzApiClient, listenResponseToPlay, listenPayloadToPlay, segmentByMappedArtists } from "../../common/vendor/ListenbrainzApiClient.ts";
+import { ListenbrainzApiClient, listenResponseToPlay, listenPayloadToPlay } from "../../common/vendor/ListenbrainzApiClient.ts";
 import { playToListenPayload } from '../../common/vendor/listenbrainz/lzUtils.ts';
 import type {ListenPayload, ListenResponse} from '../../../core/vendor/listenbrainz/interfaces.ts';
 import type {ExpectedResults} from "../utils/interfaces.ts";
 import { withRequestInterception } from "../utils/networking.ts";
+import { segmentByReferenceArtists } from "../../utils/CreditPipeline.ts";
 import artistWithProperJoiner from './correctlyMapped/artistProperHasJoinerInName.json' with { type: "json" };
 // correct mappings
 import multiArtistInArtistName from './correctlyMapped/multiArtistInArtistName.json' with { type: "json" };
@@ -148,8 +149,8 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
         });
 
         it('Does not segment when a user word is only symbols', async function () {
-            assert.isUndefined(segmentByMappedArtists('Foo & !!!', [{artist_credit_name: 'Foo', artist_mbid: 'x', join_phrase: ''}]));
-            assert.deepEqual(segmentByMappedArtists('Foo & Bar', [{artist_credit_name: 'Foo', artist_mbid: 'x', join_phrase: ' & '}, {artist_credit_name: 'Bar', artist_mbid: 'y', join_phrase: ''}]), ['Foo', 'Bar']);
+            assert.isUndefined(segmentByReferenceArtists('Foo & !!!', [{name: 'Foo', joinPhrase: ''}]));
+            assert.deepEqual(segmentByReferenceArtists('Foo & Bar', [{name: 'Foo', joinPhrase: ' & '}, {name: 'Bar', joinPhrase: ''}]), ['Foo', 'Bar']);
         });
 
         it('Detects and uses normalized artist/track names', async function () {

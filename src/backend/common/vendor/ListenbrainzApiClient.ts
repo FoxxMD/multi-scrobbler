@@ -1,32 +1,26 @@
-import { stringSameness } from '@foxxmd/string-sameness';
 import dayjs from "dayjs";
 import type { Request, Response } from 'superagent';
 import request from 'superagent';
-import type { BrainzMeta, Credit, UnixTimestamp, URLData } from "../../../core/Atomic.ts";
+import type { BrainzMeta, UnixTimestamp, URLData } from "../../../core/Atomic.ts";
 import type { PlayObject, PlayObjectMinimal, ScrobbleActionResult } from "../../../core/PlaySchema.ts";
-import { combinePartsToString, slice } from "../../../core/StringUtils.ts";
+import { combinePartsToString } from "../../../core/StringUtils.ts";
 import { isrcMeta, nameToCredit } from "../../../core/MusicMetadata.ts";
 import { namesToCredits } from "../../../core/MusicMetadata.ts";
 import {
     normalizeListenbrainzUrl,
-    parseArtistCredits,
     parseCredits,
-    parseTrackCredits,
     uniqueNormalizedStrArr,
 } from "../../utils/StringUtils.ts";
-import { normalizeStr, SYMBOLS_REGEX } from "../../../core/StringUtils.ts";
-import { findDelimiters } from "../../../core/StringUtils.ts";
 import { creditsWithIds, mbMeta, mergeCredit, withMetadata } from "../../../core/MusicMetadata.ts";
 import { UpstreamError } from "../errors/UpstreamError.ts";
 import { type AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, retryTiming, type FormatPlayObjectOptions, type PagelessListensTimeRangeOptions, type PagelessTimeRangeListens, type PagelessTimeRangeListensResult } from "../infrastructure/Atomic.ts";
-import { DELIMITERS } from '../../../core/Atomic.ts';
 import { DEVELOPER_CONTACT } from "../infrastructure/Atomic.ts";
 import { type ListenBrainzClientData, MAX_ITEMS_PER_GET_LZ } from "../infrastructure/config/client/listenbrainz.ts";
 import AbstractApiClient from "./AbstractApiClient.ts";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.ts';
 import { unique } from '../../utils.ts';
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
-import type {ArtistMBIDMapping, ListenPayload, ListenResponse, SubmitPayload} from '../../../core/vendor/listenbrainz/interfaces.ts';
+import type {ListenPayload, ListenResponse, SubmitPayload} from '../../../core/vendor/listenbrainz/interfaces.ts';
 import { baseFormatPlayObj } from '../../utils/PlayTransformUtils.ts';
 import { AuthError, ScrobbleSubmitError, SimpleError } from '../errors/MSErrors.ts';
 import pRetry from 'p-retry';
@@ -35,6 +29,7 @@ import { isSuperAgentResponseError } from '../errors/ErrorUtils.ts';
 import { playToSubmitPayload, type AllowDeviceList, type SubmitOptions } from './listenbrainz/lzUtils.ts';
 import { isrcNoHyphens } from '../../../core/PlayUtils.ts';
 import { getRoot } from '../../ioc.ts';
+import { parseWithReference, type CreditReference } from '../../utils/CreditPipeline.ts';
 
 export interface ListensResponse {
     count: number;
@@ -350,75 +345,6 @@ export const listenPayloadToPlay = (payload: ListenPayload, opts: ListenPayloadP
         return play;
     }
 
-const SEGMENT_JOINERS = ['with', 'x', '×', 'and', 'vs', 'ft', 'feat', 'featuring'];
-
-// symbols become whitespace (not removed) so "Foo/Bar" and "Foo / Bar" tokenize the same
-const segmentTokens = (str: string): string[] => normalizeStr(str.replace(SYMBOLS_REGEX, ' '), {keepSingleWhitespace: true}).split(' ').filter(x => x !== '');
-
-/**
- * Returns mapped artist names, in user-submitted order, only if every word of the user-submitted artist string
- * is part of a whole mapped artist name or is a joiner (known joiner words or words from mapped join phrases)
- *
- * Returns undefined if any word is unexplained, so a partially matching (possibly wrong) mapping is never trusted more
- * */
-export const segmentByMappedArtists = (artistName: string, mappings: ArtistMBIDMapping[]): string[] | undefined => {
-    // a word made only of symbols would vanish when tokenized and wrongly count as explained
-    if (artistName.split(/\s+/).some(x => x !== '' && !/^[,&/\\+×]+$/.test(x) && segmentTokens(x).length === 0)) {
-        return undefined;
-    }
-    const userTokens = segmentTokens(artistName);
-    const names = mappings
-        .map(x => ({name: x.artist_credit_name, tokens: segmentTokens(x.artist_credit_name)}))
-        .filter(x => x.tokens.length > 0)
-        // longest first so "Lucas & L-Boy" wins over "Lucas"
-        .sort((a, b) => b.tokens.length - a.tokens.length);
-    const joiners = new Set([...SEGMENT_JOINERS, ...mappings.flatMap(x => segmentTokens(x.join_phrase))]);
-    // shortcut: greedy longest-first, gives up (falls back to existing parsing) where a different split would work, e.g. "Lucas L Boy" with "Lucas L", "Lucas", "L Boy"
-    const found: string[] = [];
-    let lastWasName = false;
-    let i = 0;
-    while (i < userTokens.length) {
-        const match = names.find(x => x.tokens.every((t, j) => userTokens[i + j] === t));
-        if (match !== undefined) {
-            found.push(match.name);
-            i += match.tokens.length;
-            lastWasName = true;
-        } else if (found.length > 0 && joiners.has(userTokens[i])) {
-            // joiners only count between names, otherwise "With Confidence" would segment to mapped "Confidence"
-            i++;
-            lastWasName = false;
-        } else {
-            return undefined;
-        }
-    }
-    return lastWasName ? unique(found) : undefined;
-}
-
-/**
- * Removes each mapped name from str, along with its join phrase when the join phrase directly follows it
- *
- * Returns the remaining string and the last mapped name that was found at the start of the (partially stripped) string
- * */
-export const stripMappedNames = (str: string, mappings: ArtistMBIDMapping[]): {remaining: string, leading?: string} => {
-    let leading: string | undefined;
-    const remaining = mappings.reduce((acc, curr) => {
-        // join_phrase already includes surrounding whitespace
-        const needles = curr.join_phrase !== '' ? [`${curr.artist_credit_name}${curr.join_phrase}`, curr.artist_credit_name] : [curr.artist_credit_name];
-        for (const needle of needles) {
-            const index = acc.toLocaleLowerCase().indexOf(needle.toLocaleLowerCase());
-            if (index !== -1) {
-                if (index === 0) {
-                    // primary artist, most likely
-                    leading = curr.artist_credit_name;
-                }
-                return slice(acc, index, needle.length);
-            }
-        }
-        return acc;
-    }, str);
-    return {remaining, leading};
-}
-
 export const listenResponseToPlay = (listen: ListenResponse, opts?: ListenPayloadParseOptions): PlayObject => {
         const {
             listened_at,
@@ -454,194 +380,30 @@ export const listenResponseToPlay = (listen: ListenResponse, opts?: ListenPayloa
             return naivePlay;
         }
 
-        const mappedArtists = artistMappings.length > 0 ? artistMappings.map(x => x.artist_credit_name) : [];
-        const mappedArtistCredit = (name: string): Credit => nameToCredit(name, mbMeta(artistMappings.find(y => y.artist_credit_name === name)?.artist_mbid, 'artist'));
+        const reference: CreditReference = {
+            artists: artistMappings.map(x => ({name: x.artist_credit_name, joinPhrase: x.join_phrase, credit: nameToCredit(x.artist_credit_name, mbMeta(x.artist_mbid, 'artist'))})),
+            track: recording_name
+        };
+        const result = parseWithReference(artist_name, track_name, reference);
 
-        let normalTrackName: string = track_name;
-        let primaryArtistHint: string | undefined;
-        let artistsFromUserValues: string[] = [];
-        let derivedArtists: string[] = [];
-
-        let filteredSubmittedArtistName = artist_name;
-        let filteredSubmittedTrackName = track_name;
-
-        let primaryArtist: string | undefined;
-        let segmentedArtists: string[] | undefined;
-
-        if(artistMappings.length > 0) {
-
-            // first get mapped artists they have joiners we usually look for
-            const artistsWithJoiners = artistMappings.filter(x => findDelimiters(x.artist_credit_name) !== undefined);
-            // highest confidence: every word of user-submitted artist name is a mapped artist name or a joiner
-            segmentedArtists = segmentByMappedArtists(artist_name, artistMappings);
-            if(segmentedArtists !== undefined) {
-                artistsFromUserValues = segmentedArtists;
-                primaryArtistHint = segmentedArtists[0];
-                // fully explained, nothing left to parse
-                filteredSubmittedArtistName = '';
-            }
-            if(artistsWithJoiners.length > 0) {
-                // verify if these exists in our name values (none left if segmented)
-                const artistsWithJoinersInArtistName = segmentedArtists !== undefined ? [] : artistsWithJoiners.filter(x => filteredSubmittedArtistName.toLocaleLowerCase().includes(x.artist_credit_name.toLocaleLowerCase()));
-                if(artistsWithJoinersInArtistName.length > 0) {
-                    //  if they do then add them as proper artists
-                    artistsFromUserValues = artistsFromUserValues.concat(artistsWithJoinersInArtistName.map(x => x.artist_credit_name));
-
-                    // then filter these out of user-submitted artist/track names
-                    // -- additionally remove joiner if mapped artists has one and it is present
-                    const strippedArtist = stripMappedNames(filteredSubmittedArtistName, artistsWithJoinersInArtistName);
-                    filteredSubmittedArtistName = strippedArtist.remaining;
-                    if(strippedArtist.leading !== undefined) {
-                        primaryArtistHint = strippedArtist.leading;
-                    }
-                }
-
-                const artistsWithJoinersInTrackName = artistsWithJoiners.filter(x => filteredSubmittedTrackName.toLocaleLowerCase().includes(x.artist_credit_name.toLocaleLowerCase()));
-                if(artistsWithJoinersInTrackName.length > 0) {
-                    artistsFromUserValues = artistsFromUserValues.concat(artistsWithJoinersInTrackName.map(x => x.artist_credit_name));
-
-                    filteredSubmittedTrackName = stripMappedNames(filteredSubmittedTrackName, artistsWithJoinersInTrackName).remaining;
-                }
-                artistsFromUserValues = uniqueNormalizedStrArr(artistsFromUserValues);
-            }
-
-            // now we have track/artist names that don't include artists with joiners (that we know of) as part of their names
-            // and an array of artists we know were in the names
-            if(primaryArtistHint !== undefined) {
-                // if we filtered out the primary artists (seen first in artist name value)
-                // then lets make sure its first in our artists array
-                artistsFromUserValues = uniqueNormalizedStrArr([primaryArtistHint].concat(artistsFromUserValues));
-            }
-
-            // now try to extract any remaining artists from filtered artist/name values
-            const splitAmpersand = artistsWithJoiners.length === 0 && artistMappings.some(x => x.join_phrase.includes('&'));
-            let nonProperJoinedDelims = undefined;
-            if(artistsWithJoiners.length === 0) {
-                nonProperJoinedDelims = unique(artistMappings.filter(x => DELIMITERS.includes(x.join_phrase.trim())).map(x => x.join_phrase.trim()));
-                if(nonProperJoinedDelims.length === 0) {
-                    nonProperJoinedDelims = undefined;
-                }
-            }
-            const parsedArtists = parseArtistCredits(filteredSubmittedArtistName, nonProperJoinedDelims);
-            if (parsedArtists !== undefined) {
-                if (parsedArtists.primary !== undefined) {
-                    artistsFromUserValues.push(parsedArtists.primary);
-                }
-                if(parsedArtists.secondary !== undefined) {
-                    artistsFromUserValues = artistsFromUserValues.concat(parsedArtists.secondary);
-                }
-            }
-            const parsedTrackArtists = parseTrackCredits(filteredSubmittedTrackName);
-            if (parsedTrackArtists !== undefined) {
-                // if we found "ft. something" in track string then we now have a "real" track name and more artists
-                normalTrackName = parsedTrackArtists.primary;
-                artistsFromUserValues = artistsFromUserValues.concat(parsedTrackArtists.secondary ?? [])
-            }
-
-            artistsFromUserValues = uniqueNormalizedStrArr(artistsFromUserValues);
-
-            // at this point:
-            // * the primary artist should be first in the array
-            // * artists should be cleaned separated and those with proper joiners in names should be respected
-            // * the artist array only contains "proper joiner artists" or artists extracted from user submitted values
-            //
-            // now we check that primary artist exists in mapped artists
-            const candidatedPrimaryArtist = artistsFromUserValues[0];
-            const normalizedCandidatePrimary = normalizeStr(candidatedPrimaryArtist);
-            primaryArtist = mappedArtists.find(x => {
-                if(normalizeStr(x) === normalizedCandidatePrimary)
-                {
-                    return true;
-                }
-                // if not *exact* still return if string similarity is very close
-                const results = stringSameness(normalizeStr(x), normalizedCandidatePrimary);
-                if(results.highScore > 80) {
-                    return true;
-                }
-            });
-            if(primaryArtist === undefined) {
-                // if we STILL can't find primary artist after all of this then its likely the mapping is incorrect
-                // so return our naive play from user-submitted values only to be safe
-                return naivePlay;
-            }
-
-            // now we have the primary artist matched!
-            // at this point we assume any differences between user and MB artists is a data discrepancy rather than being outright wrong
-
-            /*
-            *
-            * Can safely use musicbrainz metadata beyond this point!
-            *
-            */
-
-            // next we match up user artists with mapped artists in order to use "more correct" spelling/punctuation/etc. from MB mapping
-            const mappedUserArtists: string[] = [];
-            for(const userArtist of artistsFromUserValues) {
-                const normalizedUserArtist = normalizeStr(userArtist)
-                const matchedArtist = mappedArtists.find(x => {
-                    if(normalizeStr(x) === normalizedUserArtist)
-                    {
-                        return true;
-                    }
-                    // if not *exact* still return if string similarity is very close
-                    const results = stringSameness(normalizeStr(x), normalizedUserArtist);
-                    // can be a little more lenient since we are confident on primary artist already
-                    if(results.highScore > 75) {
-                        return true;
-                    }
-                });
-                if(matchedArtist !== undefined) {
-                    derivedArtists.push(matchedArtist);
-                    mappedUserArtists.push(userArtist);
-                }
-            }
-            // now we can add any remainders from user/mb artists
-            const remainingUserArtists = artistsFromUserValues.filter(x => !mappedUserArtists.includes(x));
-            const remainingMappedArtists = artistMappings.filter(x => !derivedArtists.includes(x.artist_credit_name));
-            if(remainingUserArtists.length > 0) {
-                derivedArtists = derivedArtists.concat(remainingUserArtists);
-            }
-            if(remainingMappedArtists.length > 0) {
-                derivedArtists = derivedArtists.concat(remainingMappedArtists.map(x => x.artist_credit_name));
-            }
-
-            derivedArtists = uniqueNormalizedStrArr(derivedArtists);
+        if(result.artists === undefined) {
+            // mapping is likely incorrect so use user-submitted values only to be safe
+            return naivePlay;
         }
-
-
-        // if we've made it this far then there are mapped artists and we have confirmed a primary artist derived from user values matches a mapped one
-        // now we do a sanity check on track name and then adjust if mapped name is slightly different
-
-        if (recording_name !== undefined) {
-            // user value track name should be extracted (should not have artists in it anymore)
-            // MB name and user name should *either* have at least one include the other
-            // or they should have high similarity
-            const mutuallyIncludes = normalizeStr(normalTrackName).includes(normalizeStr(recording_name)) || normalizeStr(recording_name).includes(normalizeStr(normalTrackName));
-            const samenessResults = stringSameness(normalizeStr(normalTrackName), normalizeStr(recording_name));
-            const similar = samenessResults.highScore > 70;
-            if(!mutuallyIncludes && !similar) {
-                if(segmentedArtists !== undefined) {
-                    // artists were split using only the mapping, which the track mismatch says is likely wrong
-                    return naivePlay;
+        if(result.track === undefined) {
+            // track did not match mapping, use naive play but with good artists
+            return {
+                ...naivePlay,
+                data: {
+                    ...naivePlay.data,
+                    artists: result.artists
                 }
-                // something went terrible wrong and this should not happen
-                // fallback to naive but with good artists?
-                return {
-                    ...naivePlay,
-                    data: {
-                        ...naivePlay.data,
-                        artists: derivedArtists.map(mappedArtistCredit)
-                    }
-                };
-            }
-
-            // defer to MB name
-            normalTrackName = recording_name;
+            };
         }
 
         let albumArtists = naivePlay.data.albumArtists;
         // this should always find an artist but to be safe...
-        const primaryArtistMBMapping = artistMappings.find(x => x.artist_credit_name === primaryArtist);
+        const primaryArtistMBMapping = artistMappings.find(x => x.artist_credit_name === result.primaryArtist);
         if(primaryArtistMBMapping !== undefined && albumArtists !== undefined) {
             // only include as primary if musicbrainz does not disagree with us
             if(release_artist_names.length === 0 || (release_artist_names.length > 0 && release_artist_names.includes(primaryArtistMBMapping.artist_credit_name))) {
@@ -653,10 +415,10 @@ export const listenResponseToPlay = (listen: ListenResponse, opts?: ListenPayloa
         const play: PlayObject = {
             data: {
                 ...naivePlay.data,
-                track: mergeCredit(naivePlay.data.track, nameToCredit(normalTrackName)),
+                track: mergeCredit(naivePlay.data.track, nameToCredit(result.track)),
                 album: withMetadata(naivePlay.data.album, mbMeta(release_mbid, 'release'), mbMeta(release_group_mbid, 'release-group')),
                 albumArtists,
-                artists: derivedArtists.map(mappedArtistCredit)
+                artists: result.artists
             },
             meta: naivePlay.meta
         }
