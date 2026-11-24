@@ -26,6 +26,7 @@ const STEP_LABELS: Record<string, string> = {
     merge: 'Merge with reference artists',
     trackGate: 'Track name check',
     naive: 'Use submitted values',
+    artistNames: 'Use submitted artist list',
 };
 
 /** User-friendly name for a parse step, falls back to the step name */

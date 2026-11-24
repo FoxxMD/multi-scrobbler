@@ -29,7 +29,7 @@ import { isSuperAgentResponseError } from '../errors/ErrorUtils.ts';
 import { playToSubmitPayload, type AllowDeviceList, type SubmitOptions } from './listenbrainz/lzUtils.ts';
 import { isrcNoHyphens } from '../../../core/PlayUtils.ts';
 import { getRoot } from '../../ioc.ts';
-import { parseWithReference, type CreditReference } from '../../utils/CreditPipeline.ts';
+import { parseWithoutReference, parseWithReference, type CreditReference } from '../../utils/CreditPipeline.ts';
 
 export interface ListensResponse {
     count: number;
@@ -368,7 +368,7 @@ export const listenResponseToPlay = (listen: ListenResponse, opts?: ListenPayloa
         // mapped release mbid replaces the user's so prefer the mapped release group to keep them paired
         const release_group_mbid = mReleaseGroupMbid ?? aReleaseGroupMbid;
 
-        const naivePlay = listenToNaivePlay(listen, opts);
+        const {play: naivePlay, decisions: naiveDecisions} = listenToNaivePlayWithDecisions(listen, opts);
         // as submitted, so users can see exactly what parsing changed
         const submitted = {track: nameToCredit(track_name), artists: artist_name !== undefined ? [nameToCredit(artist_name)] : []};
         const withParse = (p: PlayObject, decisions: ParseDecision[]): PlayObject => {
@@ -376,7 +376,8 @@ export const listenResponseToPlay = (listen: ListenResponse, opts?: ListenPayloa
             // new meta object so the record is not copied into original.play
             return {...p, meta: {...p.meta, parseRecord: {parser: 'listenbrainz', decisions, submitted, patch: patch.length > 0 ? patch : undefined}}};
         };
-        const naive = (decisions: ParseDecision[]): PlayObject => withParse(naivePlay, [...decisions, {step: 'naive', outcome: 'applied', reason: 'Used artists and track parsed from submitted values only'}]);
+        // fallback when the mapping is missing or not trusted: the same no-reference pipeline step, in conservative mode (see listenToNaivePlayWithDecisions)
+        const naive = (decisions: ParseDecision[]): PlayObject => withParse(naivePlay, [...decisions, {step: 'naive', outcome: 'applied', reason: 'Parsed artists and track from submitted values only, without reference data'}, ...naiveDecisions]);
 
         if(artistMappings.length === 0 || track_name === undefined || artist_name === undefined) {
             // if there are no artist mappings its likely MB doesn't have info on this track so just use our internally derived attempt
@@ -437,7 +438,9 @@ export const listenResponseToPlay = (listen: ListenResponse, opts?: ListenPayloa
 /**
  * Try to parse true artists and track name without using MB information
  * */
-export const listenToNaivePlay = (listen: ListenResponse, opts?: ListenPayloadParseOptions): PlayObject => {
+export const listenToNaivePlay = (listen: ListenResponse, opts?: ListenPayloadParseOptions): PlayObject => listenToNaivePlayWithDecisions(listen, opts).play;
+
+export const listenToNaivePlayWithDecisions = (listen: ListenResponse, opts?: ListenPayloadParseOptions): {play: PlayObject, decisions: ParseDecision[]} => {
         const {
             listened_at,
             recording_msid,
@@ -484,27 +487,31 @@ export const listenToNaivePlay = (listen: ListenResponse, opts?: ListenPayloadPa
 
         let normalTrackName = track_name;
         let artists: string[] = [];
+        const decisions: ParseDecision[] = [];
 
         if(artist_names.length > 0) {
+            // player already sent artists as a list, use as-is
             artists = artist_names;
+            decisions.push({step: 'artistNames', outcome: 'applied', reason: 'Used artist list submitted by the player (additional_info.artist_names)', candidates: artist_names});
         } else if(typeof artist_name === 'string') {
-            if(extractArtists) {
-                // since we aren't using MB mappings we should be conservative and assume artist string with & are proper names (not joiner)
-                const parsedArtists = parseCredits(artist_name, [',', '/', '\\']);
-                if (parsedArtists !== undefined) {
-                    if (parsedArtists.primary !== undefined) {
-                        artists.push(parsedArtists.primary);
-                    }
-                    artists = artists.concat(parsedArtists.secondary ?? []);
-                }
-                // use all delimiters when trying to find artists in track name
-                const parsedTrackArtists = track_name !== undefined ? parseCredits(track_name) : undefined;
-                if (parsedTrackArtists !== undefined) {
-                    // if we found "ft. something" in track string then we now have a "real" track name and more artists
-                    normalTrackName = parsedTrackArtists.primary;
-                    artists = artists.concat(parsedTrackArtists.secondary ?? [])
-                }
-            }
+            // This runs when there is no reference data (no MB mapping) or the mapping was rejected as likely wrong,
+            // so the submitted artist string is the only fact we have and any split on delimiters is a guess:
+            // "Earth, Wind & Fire" is one artist, "Foo, Bar" may be two, and nothing here can tell them apart.
+            //
+            // To stay conservative the primary section of the artist string is never split (splitPrimary: false).
+            // Only credits after a joiner ("Foo ft. Bar, Baz") are split because the joiner explicitly marks them as other artists.
+            // Users who want more aggressive splitting can opt in with a native stage, where they control artistsIgnore.
+            const parsed = parseWithoutReference([artist_name], track_name ?? '', {
+                splitPrimary: false,
+                artistDelimiters: [',', '/', '\\'],
+                splitArtists: extractArtists,
+                // default (all) delimiters for artists credited in track name, they are already marked by a joiner
+                parseTrack: extractArtists && track_name !== undefined,
+            });
+            // if we found "ft. something" in track string then we now have a "real" track name and more artists
+            normalTrackName = parsed.track ?? track_name;
+            artists = parsed.artists;
+            decisions.push(...parsed.decisions);
             if(artists.length === 0) {
                 // fallback to original artist_name string if we weren't able to parse anything from artists/track credits
                 artists.push(artist_name);
@@ -563,7 +570,7 @@ export const listenToNaivePlay = (listen: ListenResponse, opts?: ListenPayloadPa
             }
         }
 
-        return baseFormatPlayObj(listen, play);
+        return {play: baseFormatPlayObj(listen, play), decisions};
     }
 
 

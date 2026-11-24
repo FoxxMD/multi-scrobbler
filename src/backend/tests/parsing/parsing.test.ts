@@ -160,9 +160,10 @@ describe('Parse records', function () {
 
     it('LZ records why the naive play was used', function () {
         const noMapping = listenResponseToPlay(listen());
-        expect(noMapping.meta.parseRecord!.decisions.map(x => [x.step, x.outcome])).to.deep.eq([['reference', 'skipped'], ['naive', 'applied']]);
+        // naive records its own (conservative) delimiter step after the naive marker
+        expect(noMapping.meta.parseRecord!.decisions.map(x => [x.step, x.outcome])).to.deep.eq([['reference', 'skipped'], ['naive', 'applied'], ['delimiters', 'applied']]);
         const rejected = listenResponseToPlay(listen({recording_name: 'Song', artists: [{artist_credit_name: 'Somebody', join_phrase: '', artist_mbid: 'a'}]}));
-        expect(rejected.meta.parseRecord!.decisions.map(x => x.step).slice(-2)).to.deep.eq(['primaryArtistGate', 'naive']);
+        expect(rejected.meta.parseRecord!.decisions.map(x => x.step).slice(-3)).to.deep.eq(['primaryArtistGate', 'naive', 'delimiters']);
     });
 
     it('Native stage puts its decisions in transform inputs', async function () {

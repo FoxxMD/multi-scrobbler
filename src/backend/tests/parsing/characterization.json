@@ -741,6 +741,7 @@
     ],
     "Foo -- Song (feat. Bar & Baz)": [
       [
+        "Foo",
         "Bar",
         "Baz"
       ],
@@ -748,6 +749,7 @@
     ],
     "Foo -- Song ft. Bar, Baz": [
       [
+        "Foo",
         "Bar",
         "Baz"
       ],
@@ -761,6 +763,7 @@
     ],
     "Foo, Bar -- Song (feat. Foo)": [
       [
+        "Foo, Bar",
         "Foo"
       ],
       "Song"

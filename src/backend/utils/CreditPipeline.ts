@@ -5,7 +5,7 @@ import { DELIMITERS } from '../../core/Atomic.ts';
 import { nameToCredit } from '../../core/MusicMetadata.ts';
 import { findDelimiters, normalizeStr, slice, SYMBOLS_REGEX } from '../../core/StringUtils.ts';
 import { unique } from '../utils.ts';
-import { parseArtistCredits, parseTrackCredits, uniqueNormalizedStrArr } from './StringUtils.ts';
+import { parseArtistCredits, parseCredits, parseTrackCredits, uniqueNormalizedStrArr } from './StringUtils.ts';
 
 /**
  * An artist from trusted-ish reference data (ex. a Musicbrainz mapping) used to help parse user-submitted values
@@ -115,6 +115,12 @@ export interface ParseOptions {
     ignoreArtists?: RegExp[]
     /** Keep an artist string as-is when nothing could be parsed from it, otherwise drop it. Default true */
     keepUnparsed?: boolean
+    /**
+     * Split the primary section of an artist string (before any joiner like "ft.") on delimiters. Default true
+     *
+     * When false only credits after a joiner are split, so "Earth, Wind & Fire" stays whole but "Foo ft. Bar, Baz" gives Foo, Bar, Baz
+     * */
+    splitPrimary?: boolean
 }
 
 export interface ParseResult {
@@ -137,6 +143,7 @@ export const parseWithoutReference = (artists: string[], track: string, opts: Pa
         parseTrack = true,
         ignoreArtists = [],
         keepUnparsed = true,
+        splitPrimary = true,
     } = opts;
     const decisions: ParseDecision[] = [];
 
@@ -158,7 +165,7 @@ export const parseWithoutReference = (artists: string[], track: string, opts: Pa
             kept.push(artist);
             continue;
         }
-        const credits = parseArtistCredits(artist, artistDelimiters);
+        const credits = splitPrimary ? parseArtistCredits(artist, artistDelimiters) : parseCredits(artist, artistDelimiters);
         if (credits !== undefined) {
             if (credits.primary !== undefined) {
                 found.push(credits.primary);
@@ -185,7 +192,7 @@ export const parseWithoutReference = (artists: string[], track: string, opts: Pa
     decisions.push({
         step: 'delimiters',
         outcome: splitArtists || parseTrack ? 'applied' : 'skipped',
-        reason: `Split ${[splitArtists ? `artists using ${artistDelimiters === undefined ? 'default delimiters' : artistDelimiters.join(' ')}` : undefined, parseTrack ? `track using ${trackDelimiters === undefined ? 'default delimiters' : trackDelimiters.join(' ')}` : undefined].filter(x => x !== undefined).join(' and ') || 'nothing'}`,
+        reason: `Split ${[splitArtists ? `${splitPrimary ? '' : 'only credited (ft./feat./vs) '}artists using ${artistDelimiters === undefined ? 'default delimiters' : artistDelimiters.join(' ')}` : undefined, parseTrack ? `track using ${trackDelimiters === undefined ? 'default delimiters' : trackDelimiters.join(' ')}` : undefined].filter(x => x !== undefined).join(' and ') || 'nothing'}`,
         candidates: found
     });
     return {artists: found, track: parsedTrack, keptArtists: kept, decisions};
