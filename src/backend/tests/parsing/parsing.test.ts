@@ -2,9 +2,15 @@ import { expect } from 'chai';
 import { describe, it } from 'mocha';
 import { parseToRegexOrLiteralSearch } from "@foxxmd/regex-buddy-core";
 import { nativeParse } from "../../common/transforms/NativeTransformer.ts";
-import { listenToNaivePlay } from "../../common/vendor/ListenbrainzApiClient.ts";
+import { listenResponseToPlay, listenToNaivePlay } from "../../common/vendor/ListenbrainzApiClient.ts";
+import NativeTransformer from "../../common/transforms/NativeTransformer.ts";
+import { loggerTest } from "@foxxmd/logging";
+import { Cacheable } from "cacheable";
+import { initMemoryCache } from "../../common/Cache.ts";
+import { statefulInvariantTransform } from "../../../core/PlayUtils.ts";
+import { slimHistoricalPlay } from "../../scrobblers/AbstractHistoricalScrobbleClient.ts";
 import { parseWithReference, stripReferenceNames } from "../../utils/CreditPipeline.ts";
-import { DELIMITERS } from "../../../core/Atomic.ts";
+import { DELIMITERS, type ParseRecord } from "../../../core/Atomic.ts";
 import { creditMbid, creditsToNames, mbMeta, nameToCredit } from "../../../core/MusicMetadata.ts";
 import type { PlayObject } from "../../../core/PlaySchema.ts";
 import type { ListenResponse } from "../../../core/vendor/listenbrainz/interfaces.ts";
@@ -127,5 +133,39 @@ describe('nativeParse credit metadata', function () {
         // a string that parses to itself is still a parsed artist
         const single = nativeParse(play(['Foo']));
         expect(creditMbid(single.data.artists![0], 'artist')).to.be.undefined;
+    });
+});
+
+describe('Parse records', function () {
+    const listen = (mapping?: object) => ({listened_at: 1700000000, track_metadata: {artist_name: 'Foo with Bar', track_name: 'Song', additional_info: {}, mbid_mapping: mapping}}) as unknown as ListenResponse;
+
+    it('LZ records reference decisions when mapping is used', function () {
+        const play = listenResponseToPlay(listen({recording_name: 'Song', artists: [{artist_credit_name: 'Foo', join_phrase: ' × ', artist_mbid: 'a'}, {artist_credit_name: 'Bar', join_phrase: '', artist_mbid: 'b'}]}));
+        expect(play.meta.parseRecord!.parser).eq('listenbrainz');
+        expect(play.meta.parseRecord!.decisions.at(-1)).to.include({step: 'trackGate', outcome: 'applied'});
+        // only the parsed play carries it, not the original
+        expect(play.original!.play!.meta.parseRecord).to.be.undefined;
+    });
+
+    it('LZ records why the naive play was used', function () {
+        const noMapping = listenResponseToPlay(listen());
+        expect(noMapping.meta.parseRecord!.decisions.map(x => [x.step, x.outcome])).to.deep.eq([['reference', 'skipped'], ['naive', 'applied']]);
+        const rejected = listenResponseToPlay(listen({recording_name: 'Song', artists: [{artist_credit_name: 'Somebody', join_phrase: '', artist_mbid: 'a'}]}));
+        expect(rejected.meta.parseRecord!.decisions.map(x => x.step).slice(-2)).to.deep.eq(['primaryArtistGate', 'naive']);
+    });
+
+    it('Native stage puts its decisions in transform inputs', async function () {
+        const t = new NativeTransformer({name: 'test', type: 'native'}, {logger: loggerTest, cache: new Cacheable({primary: initMemoryCache({ttl: '1ms'})})});
+        await t.initialize();
+        const data = await t.getTransformerData(asPlay(['Foo, Bar'], 'Song'), t.parseConfig({type: 'native'}));
+        expect(data.meta.lifecycleInputs).to.have.length(1);
+        expect(data.meta.lifecycleInputs![0].type).eq('parseDecisions');
+        expect((data.meta.lifecycleInputs![0].input as ParseRecord).parser).eq('native');
+    });
+
+    it('Is not carried into embedded or historical plays', function () {
+        const play = listenResponseToPlay(listen());
+        expect(statefulInvariantTransform(play).meta.parseRecord).to.be.undefined;
+        expect(slimHistoricalPlay(play).meta.parseRecord).to.be.undefined;
     });
 });

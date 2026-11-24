@@ -53,7 +53,7 @@ import type { ElementOf, MarkRequired } from "ts-essentials";
 import { serializeError } from "serialize-error";
 import { DrizzleQueueRepository } from "./database/drizzle/repositories/QueueRepository.ts";
 import { DrizzlePlayEventsRepository } from "./database/drizzle/repositories/PlayEventsRepository.ts";
-import { asPlayEvents, entityIsPlayEntity, playUpdateToEvent, queueCompletionStateToPlayEvent, queueStateToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from "./database/drizzle/entityUtils.ts";
+import { asPlayEvents, entityIsPlayEntity, parseToPlayEvent, playUpdateToEvent, queueCompletionStateToPlayEvent, queueStateToPlayEvent, stateChangeToPlayEvent, transformToPlayEvent } from "./database/drizzle/entityUtils.ts";
 import pMap from "p-map";
 import { prettifyError } from "zod";
 import { playTransformSchema } from "./transforms/stageSchemas.ts";
@@ -928,7 +928,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 const actionState = actionStep === undefined || actionStep.actionResult === actionTermSchema.enum.approve ? undefined : actionTermPlayState[actionStep.actionResult];
                 const {
                     data,
-                    meta,
+                    // parse decisions only ride on the play until persisted, then they are a PlayEvent
+                    meta: {parseRecord, ...meta},
                     original
                 } = queueablePlay
                 const createPlayData = playToRepositoryCreatePlayOpts({
@@ -946,7 +947,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 });
 
                 const playRow = await this.playRepo.createPlays([createPlayData]);
-                const transformEvents = priorSteps.length > 0 ? [{ playId: playRow[0].id, ...transformToPlayEvent(priorSteps) }] : [];
+                // parsing happened at the source, before any transforms
+                const parseEvents = parseRecord !== undefined ? [{ playId: playRow[0].id, ...parseToPlayEvent(parseRecord, (priorSteps.length > 0 ? dayjs(priorSteps[0].createdAt) : (playRow[0].seenAt ?? dayjs())).subtract(1, 'ms')) }] : [];
+                const transformEvents = [...parseEvents, ...(priorSteps.length > 0 ? [{ playId: playRow[0].id, ...transformToPlayEvent(priorSteps) }] : [])];
                 if (actionState !== undefined) {
                     const actionEvents = await this.playEventsRepo.createMany([
                         ...transformEvents,

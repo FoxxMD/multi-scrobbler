@@ -150,6 +150,22 @@ describe('Sources use transform plays correctly', function () {
         expect(discovered[0].data.track?.name).is.eq('my fun track');
     });
 
+    it('Persists parse decisions as a parse event, not as play meta', async function() {
+        await using source = await generateSource();
+        const play = generatePlay({track: nameToCredit('my cool track')});
+        play.meta.parseRecord = {parser: 'listenbrainz', decisions: [{step: 'segment', outcome: 'applied', reason: 'test'}]};
+        await source.queuePlay([play]);
+        await sleep(3);
+        const [row] = await source.playRepo.findPlays({});
+        const withEvents = await source.playRepo.findByIdWith<'events'>(row.id, ['events']);
+        expect(withEvents!.play.meta.parseRecord).to.be.undefined;
+        const parseEvent = withEvents!.events.find(x => x.eventName === 'parse');
+        expect(parseEvent).to.exist;
+        expect((parseEvent!.data as any).decisions[0].step).eq('segment');
+        // parsing happened before the play was queued
+        expect(withEvents!.events.map(x => x.eventName)[0]).eq('parse');
+    });
+
     it('Stage action sets Play state unless actions are ignored', async function() {
         await using source = await generateSource();
         source.config.options = {

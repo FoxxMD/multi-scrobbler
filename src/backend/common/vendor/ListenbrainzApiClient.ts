@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import type { Request, Response } from 'superagent';
 import request from 'superagent';
-import type { BrainzMeta, UnixTimestamp, URLData } from "../../../core/Atomic.ts";
+import type { BrainzMeta, ParseDecision, UnixTimestamp, URLData } from "../../../core/Atomic.ts";
 import type { PlayObject, PlayObjectMinimal, ScrobbleActionResult } from "../../../core/PlaySchema.ts";
 import { combinePartsToString } from "../../../core/StringUtils.ts";
 import { isrcMeta, nameToCredit } from "../../../core/MusicMetadata.ts";
@@ -369,15 +369,18 @@ export const listenResponseToPlay = (listen: ListenResponse, opts?: ListenPayloa
         const release_group_mbid = mReleaseGroupMbid ?? aReleaseGroupMbid;
 
         const naivePlay = listenToNaivePlay(listen, opts);
+        // new meta object so the decisions are not copied into original.play
+        const withParse = (p: PlayObject, decisions: ParseDecision[]): PlayObject => ({...p, meta: {...p.meta, parseRecord: {parser: 'listenbrainz', decisions}}});
+        const naive = (decisions: ParseDecision[]): PlayObject => withParse(naivePlay, [...decisions, {step: 'naive', outcome: 'applied', reason: 'Used artists and track parsed from submitted values only'}]);
 
         if(artistMappings.length === 0 || track_name === undefined || artist_name === undefined) {
             // if there are no artist mappings its likely MB doesn't have info on this track so just use our internally derived attempt
             // (and track/artist name are required by LZ so without them we can't do any better than naive)
-            return naivePlay;
+            return naive([{step: 'reference', outcome: 'skipped', reason: artistMappings.length === 0 ? 'Listen has no Musicbrainz artist mapping' : 'Listen is missing submitted artist or track name'}]);
         }
         if(opts?.extractArtists === false) {
             // user wants data as-is
-            return naivePlay;
+            return naive([{step: 'reference', outcome: 'skipped', reason: 'Artist extraction is disabled'}]);
         }
 
         const reference: CreditReference = {
@@ -388,17 +391,17 @@ export const listenResponseToPlay = (listen: ListenResponse, opts?: ListenPayloa
 
         if(result.artists === undefined) {
             // mapping is likely incorrect so use user-submitted values only to be safe
-            return naivePlay;
+            return naive(result.decisions);
         }
         if(result.track === undefined) {
             // track did not match mapping, use naive play but with good artists
-            return {
+            return withParse({
                 ...naivePlay,
                 data: {
                     ...naivePlay.data,
                     artists: result.artists
                 }
-            };
+            }, result.decisions);
         }
 
         let albumArtists = naivePlay.data.albumArtists;
@@ -423,7 +426,7 @@ export const listenResponseToPlay = (listen: ListenResponse, opts?: ListenPayloa
             meta: naivePlay.meta
         }
 
-        return baseFormatPlayObj(listen, play);
+        return withParse(baseFormatPlayObj(listen, play), result.decisions);
     }
 
 /**

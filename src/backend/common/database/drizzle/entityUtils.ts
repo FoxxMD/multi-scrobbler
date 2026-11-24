@@ -4,12 +4,12 @@ import type {PlayInputNew} from "./drizzleTypes.ts";
 import type {QueueStateNew} from "./drizzleTypes.ts";
 import type {ComponentNew} from "./drizzleTypes.ts";
 import type { MarkOptional, MarkRequired } from "ts-essentials";
-import type { ErrorLike, LifecycleStep } from "../../../../core/Atomic.ts";
+import type { ErrorLike, LifecycleStep, ParseRecord } from "../../../../core/Atomic.ts";
 import type { PlayObject } from "../../../../core/PlaySchema.ts";
-import dayjs from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../utils/PlayComparisonUtils.ts";
 import { hashObject } from "../../../utils/StringUtils.ts";
-import { PLAY_EVENT_TYPE, playEventSchema, type PlayEvent, type PlayEventDupeCheck, type PlayEventDupeCheckData, type PlayEventPlayStateChange, type PlayEventPlayStateChangeData, type PlayEventQueueStateChange, type PlayEventQueueStateChangeData, type PlayEventScrobbleResult, type PlayEventScrobbleResultData, type PlayEventTransform, type PlayEventUpdatePlay, type PlayEventUpdatePlayData } from "../../../../core/PlayEvent.ts";
+import { PLAY_EVENT_TYPE, playEventSchema, type PlayEvent, type PlayEventDupeCheck, type PlayEventDupeCheckData, type PlayEventPlayStateChange, type PlayEventPlayStateChangeData, type PlayEventQueueStateChange, type PlayEventQueueStateChangeData, type PlayEventScrobbleResult, type PlayEventScrobbleResultData, type PlayEventParse, type PlayEventTransform, type PlayEventUpdatePlay, type PlayEventUpdatePlayData } from "../../../../core/PlayEvent.ts";
 
 export const generateComponentEntity = (data: MarkOptional<ComponentNew, 'uid'>): ComponentNew => {
     assert(data.name !== undefined, 'Must provide name');
@@ -119,6 +119,12 @@ export const transformToPlayEvent = (lifecycle: LifecycleStep[]): Omit<PlayEvent
     eventName: PLAY_EVENT_TYPE.transform,
     createdAt: dayjs(lifecycle[0].createdAt),
     data: lifecycle
+});
+
+export const parseToPlayEvent = (record: ParseRecord, createdAt: Dayjs): Omit<PlayEventParse, 'playId'> => ({
+    eventName: PLAY_EVENT_TYPE.parse,
+    createdAt,
+    data: record
 });
 
 export const stateChangeToPlayEvent = (partial: PlayEventPlayStateChangeData): Omit<PlayEventPlayStateChange, 'playId'> => ({

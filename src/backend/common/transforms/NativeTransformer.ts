@@ -1,4 +1,4 @@
-import type { Credit } from "../../../core/Atomic.ts";
+import type { Credit, ParseDecision, ParseRecord } from "../../../core/Atomic.ts";
 import type { PlayObject } from "../../../core/PlaySchema.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
 import {applyTermSchema, type ApplyTerm, buildRulesSchema, buildStageSchema, type TransformerCommon} from "../../../core/Transform.ts";
@@ -149,13 +149,17 @@ export default class NativeTransformer extends AtomicPartsTransformer<ApplyTerm,
             delimiters = this.defaults.delimiters
         } = stageConfig || {};
 
-        const transformedPlay = nativeParse(play, {
+        const {play: transformedPlay, decisions} = nativeParseWithDecisions(play, {
             artistsParseFrom: parseArtistsFrom,
             artistsParseMonolithicOnly,
             ignoreArtistsRegex,
             delimiters,
             logger: this.logger
         });
+        const record: ParseRecord = {parser: 'native', decisions};
+        // shown with the transform step
+        // only this stage's input, AtomicPartsTransformer appends it to any existing inputs
+        transformedPlay.meta = {...transformedPlay.meta, lifecycleInputs: [{type: 'parseDecisions', input: record}]};
 
         return transformedPlay;
     }
@@ -179,7 +183,9 @@ export default class NativeTransformer extends AtomicPartsTransformer<ApplyTerm,
 
 }
 
-export const nativeParse = (play: PlayObject, options?: NativeTransformerDataStrong & {logger?: MaybeLogger}): PlayObject => {
+export const nativeParse = (play: PlayObject, options?: NativeTransformerDataStrong & {logger?: MaybeLogger}): PlayObject => nativeParseWithDecisions(play, options).play;
+
+export const nativeParseWithDecisions = (play: PlayObject, options?: NativeTransformerDataStrong & {logger?: MaybeLogger}): {play: PlayObject, decisions: ParseDecision[]} => {
         const {
             artistsParseFrom = ['artists', 'title'],
             titleClean = false,
@@ -212,12 +218,12 @@ export const nativeParse = (play: PlayObject, options?: NativeTransformerDataStr
         // keep the existing credit (and its metadata) only for artists passed through as-is, parsed names get new credits
         const artists = parsed.artists.map((x) => (parsed.keptArtists.includes(x) ? playArtists.find(y => y.name === x) : undefined) ?? nameToCredit(x));
 
-        return {
+        return {play: {
             ...play,
             data: {
                 ...play.data,
                 track,
                 artists
             }
-        };
+        }, decisions: parsed.decisions};
 }

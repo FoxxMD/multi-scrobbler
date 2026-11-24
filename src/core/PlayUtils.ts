@@ -39,7 +39,8 @@ export const genGroupIdStr = (id: PlayPlatformId) => {
 
 export const statefulInvariantTransform = (play: PlayObject, withIds?: boolean): PlayObjectMinimal => {
     const {
-        meta,
+        // only rides on a play until it is persisted
+        meta: {parseRecord: _parseRecord, ...meta},
         data,
         id,
         uid

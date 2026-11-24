@@ -1,6 +1,6 @@
 import { stringSameness } from '@foxxmd/string-sameness';
 import { parseRegexSingle } from '@foxxmd/regex-buddy-core';
-import type { Credit } from '../../core/Atomic.ts';
+import type { Credit, ParseDecision } from '../../core/Atomic.ts';
 import { DELIMITERS } from '../../core/Atomic.ts';
 import { nameToCredit } from '../../core/MusicMetadata.ts';
 import { findDelimiters, normalizeStr, slice, SYMBOLS_REGEX } from '../../core/StringUtils.ts';
@@ -21,16 +21,6 @@ export interface ReferenceArtist {
 export interface CreditReference {
     artists: ReferenceArtist[]
     track?: string
-}
-
-export type ParseDecisionOutcome = 'applied' | 'skipped' | 'rejected';
-
-/** Record of what one pipeline step did, and why, so fallbacks are visible */
-export interface ParseDecision {
-    step: string
-    outcome: ParseDecisionOutcome
-    reason: string
-    candidates?: string[]
 }
 
 export interface ReferenceParseResult {

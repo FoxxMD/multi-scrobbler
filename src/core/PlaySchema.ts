@@ -21,6 +21,7 @@ import * as z from "zod";
 import {
     creditSchema,
     parsedFromSchema,
+    parseRecordSchema,
     type DateLike,
     type LifecycleInput,
     type LifecycleStep,
@@ -163,6 +164,8 @@ export const playMetaSchema = z.object({
     /** Was the component activitely monitoring when this Play was created? */
     wasMonitored: z.boolean().optional().meta({description: 'Was the component activitely monitoring when this Play was created?'}),
     lifecycleInputs: z.custom<LifecycleInput>().array().optional(),
+    /** Carries parse decisions until the play is persisted, then moved to a 'parse' PlayEvent */
+    parseRecord: parseRecordSchema.optional(),
     playlistId: z.string().optional().meta({description: 'ID of the playlist the track was played from'}),
     playlistName: z.string().optional().meta({description: 'Name of the playlist the track was played from'}),
 }).meta({id: 'PlayMeta'});
@@ -378,7 +381,7 @@ export const publicPlayDataSchema = playDataSchema.pick({
     playDate: true, playDateCompleted: true, listenedFor: true, listenRanges: true, repeat: true,
 });
 
-type PlayMetaInternalKeys = 'sourceSOT' | 'scrobbleTsSOC' | 'comment' | 'wasMonitored' | 'lifecycleInputs' | 'jobId';
+type PlayMetaInternalKeys = 'sourceSOT' | 'scrobbleTsSOC' | 'comment' | 'wasMonitored' | 'lifecycleInputs' | 'parseRecord' | 'jobId';
 export const publicPlayMetaSchema = playMetaSchema.pick({
     source: true, seenAt: true, musicService: true, parsedFrom: true, trackId: true, playId: true, newFromSource: true,
     user: true, mediaType: true, server: true, library: true, trackProgressPosition: true, mediaPlayerName: true,
