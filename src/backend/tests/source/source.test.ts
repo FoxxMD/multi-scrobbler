@@ -166,6 +166,51 @@ describe('Sources use transform plays correctly', function () {
         expect(withEvents!.events.map(x => x.eventName)[0]).eq('parse');
     });
 
+    it('Persists parse event first in timeline and when a stage action sets state', async function() {
+        await using source = await generateSource();
+        source.config.options = {
+            playTransform: {
+                preCompare: {
+                    type: 'user',
+                    title: [{search: 'cool', replace: 'fun'}],
+                }
+            }
+        };
+        await source.buildTransformRules();
+        const withRecord = (track: string) => {
+            const play = generatePlay({track: nameToCredit(track)});
+            play.meta.parseRecord = {parser: 'listenbrainz', decisions: [{step: 'segment', outcome: 'applied', reason: 'test'}]};
+            return play;
+        }
+        await source.queuePlay([withRecord('my cool track')]);
+        await sleep(3);
+        const [transformed] = await source.playRepo.findPlays({});
+        const transformedEvents = (await source.playRepo.findByIdWith<'events'>(transformed.id, ['events']))!.events;
+        // timeline is ordered by createdAt, parsing happened at the source so it must come before everything else, including transforms
+        const byDate = [...transformedEvents].sort((a, b) => a.createdAt!.valueOf() - b.createdAt!.valueOf());
+        expect(byDate[0].eventName).eq('parse');
+        expect(byDate.some(x => x.eventName === 'transform')).is.true;
+        expect(byDate.filter(x => x.eventName !== 'parse').every(x => x.createdAt!.isAfter(byDate[0].createdAt!))).is.true;
+
+        source.config.options = {
+            playTransform: {
+                preCompare: {
+                    type: 'user',
+                    title: ['song'],
+                    onSuccessAction: 'review'
+                }
+            }
+        };
+        await source.buildTransformRules();
+        await source.queuePlay([withRecord('my song')]);
+        await sleep(3);
+        const reviewed = (await source.playRepo.findPlays({})).find(x => x.id !== transformed.id)!;
+        expect(reviewed.state).not.eq('queued');
+        const reviewedEvents = (await source.playRepo.findByIdWith<'events'>(reviewed.id, ['events']))!;
+        expect(reviewedEvents.play.meta.parseRecord).to.be.undefined;
+        expect([...reviewedEvents.events].sort((a, b) => a.createdAt!.valueOf() - b.createdAt!.valueOf())[0].eventName).eq('parse');
+    });
+
     it('Stage action sets Play state unless actions are ignored', async function() {
         await using source = await generateSource();
         source.config.options = {
