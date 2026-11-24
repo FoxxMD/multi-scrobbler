@@ -31,6 +31,21 @@ Because the LZ payload data can be so ambiguous MS processes LZ payload data thr
 
 It also enables "smarter" decisions about LZ **Source** data that includes `mbid_mapping` because it's possible the matched mappings *do not* actually align with the data you submitted: MS does string comparisons against these and if they are not highly aligned it falls back to the less-rich `additional_info` and `artist_name` fields instead of using the *mismatched* `mbid_mappings`.
 
+<details>
+
+<summary>See how a Play was parsed</summary>
+
+MS records the result of these decisions for every Play from this Source. In the dashboard, open the Play's activity timeline and expand the **ListenBrainz parsed artists and track** item:
+
+* **Decisions** lists each step, whether it was applied, skipped or rejected, and why.
+* **Changes** shows how the track and artist names changed from what was submitted.
+
+Include this information when you report an artist parsing problem.
+
+Plays queued by an import job do not have this record.
+
+</details>
+
 This additional processing is **enabled by default** because most users benefit from this strict matching and corrections.
 ___
 
