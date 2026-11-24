@@ -191,7 +191,10 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<A
         } = stageConfig;
 
         if(transformData.images === undefined) {
-            throw new StagePrerequisiteError('All search prerequisites failed, CoverArtArchive API could not be searched with the given Play',
+            const searched = (transformData.lifecycleInputs ?? []).some(x => !x.type.endsWith('-prereqFailure'));
+            throw new StagePrerequisiteError(searched
+                ? 'CoverArtArchive has no art for the release or release group of the given Play'
+                : 'All search prerequisites failed, CoverArtArchive API could not be searched with the given Play',
                 {
                     shortStack: true,
                     inputs: transformData.lifecycleInputs
