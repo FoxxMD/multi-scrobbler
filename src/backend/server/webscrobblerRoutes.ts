@@ -6,12 +6,17 @@ import path from "path";
 import { WebhookNotifier } from "../sources/ingressNotifiers/WebhookNotifier.ts";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
 import { WebScrobblerSource } from "../sources/WebScrobblerSource.ts";
-import { nonEmptyBody } from "./middleware.ts";
+import { ingressGate, nonEmptyBody } from "./middleware.ts";
 import type { createTypedRouter, TypedMiddleware } from "@minisylar/express-typed-router";
 import { webScrobblePayloadSchema, type WebScrobblerPayload } from '../common/vendor/webscrobbler/interfaces.ts';
 
 const corsOpts: cors.CorsOptions = {
     methods: ['POST']
+}
+
+const slugFromRequest = (req: Request) => {
+    const parts = path.parse(req.path);
+    return parts.name === 'webscrobbler' ? undefined : parts.name;
 }
 
 export const setupWebscrobblerRoutes = (app: Express, router: ReturnType<typeof createTypedRouter>, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
@@ -27,20 +32,23 @@ export const setupWebscrobblerRoutes = (app: Express, router: ReturnType<typeof 
         // }
     });
     const webhookIngress = new WebhookNotifier(logger);
-    const rawIngress: TypedMiddleware = async (req, res, next) => {
-        await webhookIngress.trackIngress(req, true);
-        next();
-    };
-    app.options('/api/webscrobbler*path', async (req, res, next) => {
-        await webhookIngress.trackIngress(req, true);
-        next();
-    },
-    cors(corsOpts));
+    const getSources = () => scrobbleSources.getByType('webscrobbler') as WebScrobblerSource[];
+
+    const gate = ingressGate({
+        label: 'WebScrobbler',
+        logger,
+        getSources,
+        match: (source, req) => source.matchSlug(slugFromRequest(req)),
+        describe: (req) => `Slug: ${slugFromRequest(req) ?? '(no slug)'}`,
+        track: (req) => webhookIngress.trackIngress(req, true),
+    });
+    app.options('/api/webscrobbler*path', gate, cors(corsOpts));
 
     router.post('/api/webscrobbler{*splat}',
         {
             docs: {operationId: 'accepts-a-webscrobbler-native-scrobble'},
-            middleware: [rawIngress,cors(corsOpts) as TypedMiddleware,webScrobblerJsonParser,nonEmptyBody(logger, 'WebScrobbler Extension')],
+            // cors before gate so a browser extension can read the 409
+            middleware: [cors(corsOpts) as TypedMiddleware,gate,webScrobblerJsonParser,nonEmptyBody(logger, 'WebScrobbler Extension')],
             bodySchema: webScrobblePayloadSchema,
             tags: ['WebScrobbler Ingress'],
             pathExample: '/api/webscrobbler',
@@ -52,8 +60,7 @@ export const setupWebscrobblerRoutes = (app: Express, router: ReturnType<typeof 
 
             res.sendStatus(200);
 
-            const parts = path.parse(req.path);
-            const slug = parts.name === 'webscrobbler' ? undefined : parts.name;
+            const slug = slugFromRequest(req as Request);
 
             // let cleanPath = req.path;
             // if (cleanPath.charAt(cleanPath.length - 1) === '/') {
@@ -64,24 +71,10 @@ export const setupWebscrobblerRoutes = (app: Express, router: ReturnType<typeof 
 
             const playerState = WebScrobblerSource.playStateFromRequest(req.body as unknown as WebScrobblerPayload);
 
-            const sources = scrobbleSources.getByType('webscrobbler') as WebScrobblerSource[];
-            if (sources.length === 0) {
-                logger.warn('Received WebScrobbler payload but no WebScrobbler sources are configured');
-            }
-
-            let slugMatched = false;
-            for (const source of sources) {
+            // gate middleware already rejected requests that no Source matches
+            for (const source of getSources()) {
                 if (source.matchSlug(slug)) {
                     await source.handle(playerState);
-                    slugMatched = true;
-                }
-            }
-
-            if (!slugMatched) {
-                if (slug === undefined) {
-                    logger.warn(`Request URL did not have a slug and no WebScrobbler source was configured without a slug.`);
-                } else {
-                    logger.warn(`No WebScrobbler souce had the given slug '${slug}'`);
                 }
             }
         });

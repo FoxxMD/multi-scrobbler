@@ -311,3 +311,51 @@ describe('Last.fm Endpoint', function () {
         }
     });
 });
+describe('Ingress gate', function () {
+
+    let clients: ScrobbleClients;
+    before(function () {
+        clients = new ScrobbleClients(new WildcardEmitter(), new WildcardEmitter(), internalConfig, loggerTest);
+    });
+
+    // larger than the default body-parser limit, so a 413 would mean the body was read
+    const tooLarge = JSON.stringify({payload: 'a'.repeat(200 * 1024)});
+
+    it('rejects /1/submit-listens before reading the body when no LZ Endpoint Source is configured', async function () {
+        const [app] = await initServer({sources: generateSources(), clients}, {testMode: true});
+        const response = await request(app).post('/1/submit-listens').set('Content-Type', 'application/json').send(tooLarge);
+        expect(response.status).eq(409);
+    });
+
+    it('rejects /1/submit-listens before reading the body when the token does not match', async function () {
+        const sources = generateSources();
+        await sources.addSource('endpointlz', [{...defaultLzConfig, data: {token: 'foo'}}]);
+        const [app] = await initServer({sources, clients}, {testMode: true});
+        const response = await request(app).post('/1/submit-listens')
+            .set('Authorization', 'Token bar')
+            .set('Content-Type', 'application/json')
+            .send(tooLarge);
+        expect(response.status).eq(409);
+    });
+
+    it('rejects /2.0/ when no Lastfm Endpoint Source is configured', async function () {
+        const [app] = await initServer({sources: generateSources(), clients}, {testMode: true});
+        const response = await request(app).post('/2.0/').send('method=track.scrobble');
+        expect(response.status).eq(409);
+    });
+
+    it('rejects /api/webscrobbler with a slug no Source has, with cors headers', async function () {
+        const sources = generateSources();
+        await sources.addSource('webscrobbler', [defaultWebscrobblerConfig]);
+        const [app] = await initServer({sources, clients}, {testMode: true});
+        const response = await request(app).post('/api/webscrobbler/nope').set('Origin', 'https://example.com').set('Content-Type', 'application/json').send(tooLarge);
+        expect(response.status).eq(409);
+        expect(response.header['access-control-allow-origin']).eq('*');
+    });
+
+    it('returns 404 for unknown /1/ routes when no LZ Endpoint Source is configured', async function () {
+        const [app] = await initServer({sources: generateSources(), clients}, {testMode: true});
+        const response = await request(app).post('/1/foo');
+        expect(response.status).eq(404);
+    });
+});

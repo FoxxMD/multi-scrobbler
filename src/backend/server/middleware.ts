@@ -9,6 +9,7 @@ import { timingSafeEqual } from "node:crypto";
 import { BlockList, isIP, isIPv4 } from "node:net";
 import type { AuthSettings } from "../common/auth/authSettings.ts";
 import type { PublicDashboardEmbed } from "../../core/UserSettings.ts";
+import { firstSeen, seenCache } from "../sources/ingressNotifiers/IngressNotifier.ts";
 
 export const nonEmptyBody = (logger: Logger, origin: string = 'Origin'): TypedMiddleware => async (req, res, next) => {
     const bodyEmpty = req.body === undefined || req.body === null || (typeof req.body === 'object' && Object.keys(req.body).length === 0);
@@ -28,6 +29,49 @@ export const nonEmptyBody = (logger: Logger, origin: string = 'Origin'): TypedMi
         return;
     }
     next();
+}
+
+export interface IngressGateOptions<T> {
+    /** name used in logs and the response, EX 'Listenbrainz Endpoint' */
+    label: string
+    logger: Logger
+    getSources: () => T[]
+    /** must only use the url and headers of the request, never body or query */
+    match: (source: T, req: Request) => boolean
+    /** describes the request identifiers (slug, redacted token) for logging when no Source matches */
+    describe: (req: Request) => string
+    track?: (req: Request) => Promise<void>
+}
+
+/**
+ * Rejects an unauthenticated ingress request before its body or query is read unless a Source of this type exists and matches it.
+ * Source config is not leaked to the caller: the response is the same for both cases, the reason is only logged.
+ * */
+export const ingressGate = <T>(opts: IngressGateOptions<T>): TypedMiddleware => {
+    const {label, logger, getSources, match, describe, track} = opts;
+    const error = {error: `No ${label} Source matched this request`, code: 409};
+    let warnedUnconfigured = false;
+    const unmatched = seenCache();
+    return async (req, res, next) => {
+        const sources = getSources();
+        if (sources.length === 0) {
+            // anyone can reach these routes so only warn once to avoid log spam from probes
+            logger[warnedUnconfigured ? 'debug' : 'warn'](`Received a ${label} request but no ${label} Sources are configured`);
+            warnedUnconfigured = true;
+            res.status(409).json(error);
+            return;
+        }
+        if (track !== undefined) {
+            await track(req);
+        }
+        if (!sources.some(x => match(x, req))) {
+            const identifiers = describe(req);
+            logger[await firstSeen(unmatched, identifiers) ? 'warn' : 'debug'](`No ${label} Source config matched => ${identifiers}`);
+            res.status(409).json(error);
+            return;
+        }
+        next();
+    }
 }
 
 export interface ComponentAwareRequest extends Request {

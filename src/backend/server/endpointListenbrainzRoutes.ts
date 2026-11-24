@@ -7,13 +7,13 @@ import type { EndpointListenbrainzSource} from "../sources/EndpointListenbrainzS
 import { playStateFromRequest, requestMatchers } from "../sources/EndpointListenbrainzSource.ts";
 import { LZEndpointNotifier } from "../sources/ingressNotifiers/LZEndpointNotifier.ts";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
-import { nonEmptyBody } from "./middleware.ts";
+import { ingressGate, nonEmptyBody } from "./middleware.ts";
 import {submitPayloadSchema, type PlayingNowPayload, type SubmitPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
 import type ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
 import { stringToDeterministicNumber } from '../utils/StringUtils.ts';
 import { messageWithCauses } from '../../core/ErrorUtils.ts';
-import type { createTypedRouter, TypedMiddleware, InferSchemaHandler } from "@minisylar/express-typed-router";
+import type { createTypedRouter, InferSchemaHandler } from "@minisylar/express-typed-router";
 import { stripIndents } from 'common-tags';
 import { parseDisplayIdentifiersFromRequest } from '../utils/RequestUtils.ts';
 
@@ -40,12 +40,21 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
 
     const webhookIngress = new LZEndpointNotifier(logger);
 
-    const rawIngress: TypedMiddleware = async (req, res, next) => {
-        await webhookIngress.trackIngress(req, true);
-        next();
-    };
+    const getSources = () => scrobbleSources.getByType('endpointlz') as EndpointListenbrainzSource[];
 
-    const middleware = [rawIngress,lzJsonParser,nonEmptyCheck] as const;
+    const gate = ingressGate({
+        label: 'Listenbrainz Endpoint',
+        logger,
+        getSources,
+        match: (source, req) => source.matchRequest(req),
+        describe: (req) => {
+            const [slug, token] = parseDisplayIdentifiersFromRequest(req, requestMatchers);
+            return `Slug: ${slug} | Token: ${token}`;
+        },
+        track: (req) => webhookIngress.trackIngress(req, true),
+    });
+
+    const middleware = [gate,lzJsonParser,nonEmptyCheck] as const;
 
     type SubmitHandler = InferSchemaHandler<{
         bodySchema: typeof submitPayloadSchema,
@@ -57,23 +66,8 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
 
         logger.trace({body: req.body}, "Recieved request Body");
 
-        //req.body.payload[0].track_metadata.additional_info.recording_mbid
-        const playerStates = playStateFromRequest(req.body as unknown as SubmitPayload);
-
-        const sources = scrobbleSources.getByType('endpointlz') as EndpointListenbrainzSource[];
-        if (sources.length === 0) {
-            logger.warn('Received Listenbrainz endpoint payload but no Listenbrainz endpoint sources are configured');
-            res.status(409).json({error: `Received Listenbrainz endpoint payload but no Listenbrainz endpoint sources are configured`, code: 409});
-            return;
-        }
-
-        const validSources = sources.filter(x => x.matchRequest(req));
-        if (validSources.length === 0) {
-            const [slug, token] = parseDisplayIdentifiersFromRequest(req, requestMatchers);
-            logger.warn(`No Listenbrainz endpoint config matched => Slug: ${slug} | Token: ${token}`);
-            res.status(409).json({error: `No Listenbrainz endpoint config matched => Slug: ${slug} | Token: ${token}`, code: 409});
-            return;
-        }
+        // gate middleware already rejected requests that no Source matches
+        const validSources = getSources().filter(x => x.matchRequest(req));
 
         try {
             for (const source of validSources) {
@@ -185,6 +179,11 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
         })
     });
     app.use(/\/1\/.*/, async function (req, res) {
+        // anyone can probe this path, only help users who actually use LZ Endpoint
+        if (getSources().length === 0) {
+            res.sendStatus(404);
+            return;
+        }
         logger.warn(`Received what looks like a Listenbrainz Endpoint request but it was to an invalid URL route: ${req.originalUrl}\nMake sure base URL path to MS endpoint is correct.`);
         res.sendStatus(404);
     });

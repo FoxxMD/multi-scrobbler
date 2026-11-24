@@ -4,7 +4,7 @@ import { childLogger, type Logger } from "@foxxmd/logging";
 import type {Writable} from 'ts-essentials'
 import bodyParser from "body-parser";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
-import { nonEmptyBody } from "./middleware.ts";
+import { ingressGate, nonEmptyBody } from "./middleware.ts";
 import { LFMEndpointNotifier } from "../sources/ingressNotifiers/LFMEndpointNotifier.ts";
 import type { EndpointLastfmSource} from "../sources/EndpointLastfmSource.ts";
 import { playStateFromRequest, requestMatchers } from "../sources/EndpointLastfmSource.ts";
@@ -22,6 +22,14 @@ const unmatchIdentifierWarn = seenCache();
 const looseQuery = z.looseObject({format: z.string().optional()});
 type LooseQuery = typeof looseQuery;
 
+const postOnly: TypedMiddleware = (req, res, next) => {
+    if (req.method !== 'POST') {
+        res.sendStatus(405);
+        return;
+    }
+    next();
+};
+
 export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeof createTypedRouter>, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
 
     const logger = childLogger(parentLogger, ['Ingress', 'LFM']);
@@ -30,16 +38,18 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
 
     const webhookIngress = new LFMEndpointNotifier(logger);
 
-    const rawIngress: TypedMiddleware = async (req, res, next) => {
-        await webhookIngress.trackIngress(req, true);
-        if (req.method !== 'POST') {
-            res.sendStatus(405);
-            return;
-        }
-        next();
-    };
+    const getSources = () => scrobbleSources.getByType('endpointlfm') as EndpointLastfmSource[];
 
-    const middleware = [rawIngress,bodyParser.urlencoded({ extended: true }),nonEmptyCheck] as const;
+    const gate = ingressGate({
+        label: 'Lastfm Endpoint',
+        logger,
+        getSources,
+        match: (source, req) => source.matchRequest(req),
+        describe: (req) => `Slug: ${parseDisplayIdentifiersFromRequest(req, requestMatchers)[0]}`,
+        track: (req) => webhookIngress.trackIngress(req, true),
+    });
+
+    const middleware = [gate,postOnly,bodyParser.urlencoded({ extended: true }),nonEmptyCheck] as const;
 
     type SubmitHandler = InferSchemaHandler<{
         bodySchema: typeof lastfmRequestSchema,
@@ -50,18 +60,8 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
     const submitRoute: SubmitHandler = async (req, res) => {
             await webhookIngress.trackIngress(req as Request, false);
 
-            const sources = scrobbleSources.getByType('endpointlfm') as EndpointLastfmSource[];
-            if (sources.length === 0) {
-                logger.warn('Received Lastfm endpoint payload but no Lastfm endpoint sources are configured');
-            }
-
-            const validSources = sources.filter(x => x.matchRequest(req));
-            if (validSources.length === 0) {
-                const [slug] = parseDisplayIdentifiersFromRequest(req, requestMatchers);
-                logger.warn(`No Lastfm endpoint config matched => Slug: ${slug}`);
-                res.sendStatus(409);
-                return;
-            }
+            // gate middleware already rejected requests that no Source matches
+            const validSources = getSources().filter(x => x.matchRequest(req));
 
             if(!('method' in req.body)) {
                 return res.status(400).json({error: `Missing 'method' param`});
@@ -179,6 +179,11 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
 
     app.use(/(\/api\/lastfm(?!\/callback))|(\/2.0\/?)$/,
         async function (req, res) {
+            // anyone can probe this path, only help users who actually use Lastfm Endpoint
+            if (getSources().length === 0) {
+                res.sendStatus(404);
+                return;
+            }
             logger.warn(`Received what looks like a Last.fm Endpoint request but it was to an invalid URL route: ${req.originalUrl}\nMake sure base URL path to MS endpoint is correct.`);
             res.sendStatus(404);
         });
