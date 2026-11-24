@@ -11,6 +11,7 @@ tableOfContents:
 import {LocalStorageText} from '@site/src/components/Storage/Text';
 import LastfmEndpointConfig from '@site/../config/endpointlfm.json.example?raw';
 import ENVConfig from "@site/src/content/docs/configuration/sources/_env_configs/_endpointlfm.md";
+import BodySize from "@site/src/components/snippets/_ingress_body_size.mdx";
 
 This Source enables multi-scrobbler to accept scrobbles from outside applications as if it was a Last.fm server.
 
@@ -165,6 +166,10 @@ If you service has accessible logging, check to see if it outputs the URL it is 
 If you decide to report this issue, please include this logging in your issue.
 
 ## Configuration
+
+<DetailsAdmo type="tip" summary="Request Body Size Limit">
+<BodySize name="LFM"/>
+</DetailsAdmo>
 
 <Config config="LastFMEndpointSourceConfig" fileContent={LastfmEndpointConfig} name="endpointlfm">
 <ENVConfig/>

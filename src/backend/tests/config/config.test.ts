@@ -14,7 +14,7 @@ import { projectRootDir } from "../../common/infrastructure/Atomic.ts";
 import { sourceTypes } from "../../../core/Atomic.ts";
 import { difference } from '../../../core/DataUtils.ts';
 import { getSourceEnvSchema, validateSourceJson } from '../../common/infrastructure/config/source/sourcesMap.ts';
-import { readJson } from '../../utils/DataUtils.ts';
+import { parseBytes, readJson } from '../../utils/DataUtils.ts';
 import { prettifyError, ZodError } from 'zod';
 import { getClientEnvSchema, validateClientJson } from '../../common/infrastructure/config/client/clientsMap.ts';
 import type { MSBackendEventMap } from '../../common/infrastructure/MSBackendEventMap.ts';
@@ -355,4 +355,19 @@ describe('Global ENVs with Config', function () {
         expect(sources.sources[0].config?.options?.scrobbleThresholds?.percent).to.eq(20);
     });
 
+});
+describe('Ingress maxBodySize', function () {
+
+    it('parses sizes with a unit, case-insensitive', function () {
+        expect(parseBytes('2MB')).eq(2 * 1024 * 1024);
+        expect(parseBytes('500kb')).eq(500 * 1024);
+        expect(parseBytes('1.5 Kb')).eq(1536);
+        expect(parseBytes('2')).is.undefined;
+        expect(parseBytes('2TB')).is.undefined;
+    });
+
+    it('rejects an invalid size in Source config', async function () {
+        await expect(validateSourceJson('endpointlz', {id: 'test', options: {maxBodySize: 'lots'}})).to.be.rejected;
+        await expect(validateSourceJson('endpointlfm', {id: 'test', options: {maxBodySize: '2mb'}})).to.be.fulfilled;
+    });
 });

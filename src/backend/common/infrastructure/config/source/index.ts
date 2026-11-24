@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { BYTE_SIZE_REGEX } from "../../../../../core/Atomic.ts";
 import {requestRetryOptionsSchema, commonConfigSchema, monitorOptionsSchema, deadLetterOptionsSchema} from "../common.ts";
 import {retentionConfigDurationValueSchema} from "../database.ts";
 import {type PlayTransformConfig, playTransformSchema} from "../../../transforms/stageSchemas.ts";
@@ -69,6 +70,15 @@ export const fileLogOptionsSchema = z.object({
     path: z.union([z.string(), z.custom<() => string>((val) => typeof val === 'function')]).optional(),
     level: z.union([logLevelSchema, z.literal(false)]).optional(),
 });
+
+/** For ingress Sources that accept a request body */
+export const maxBodySizeSchema = z.string()
+    .regex(BYTE_SIZE_REGEX, {message: "Must be a number followed by a unit (B, KB, MB, GB), EX '2MB'"})
+    .optional()
+    .meta({
+        description: "The largest request body this Source accepts, as a number and a unit (B, KB, MB, GB, case-insensitive). If not set, the limit is 100KB.",
+        examples: ['2MB']
+    });
 
 export const commonSourceOptionsSchema = z.object({
     ...monitorOptionsSchema.shape,

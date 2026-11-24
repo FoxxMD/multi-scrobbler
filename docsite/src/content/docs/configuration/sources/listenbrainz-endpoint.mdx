@@ -12,6 +12,7 @@ import {LocalStorageText} from '@site/src/components/Storage/Text';
 import ListenbrainzEndpointConfig from '@site/../config/endpointlz.json.example?raw';
 import ENVConfig from "@site/src/content/docs/configuration/sources/_env_configs/_endpointlz.md";
 import ArtistMatch from "@site/src/components/snippets/_lz_artist_match.mdx";
+import BodySize from "@site/src/components/snippets/_ingress_body_size.mdx";
 
 This Source enables multi-scrobbler to accept scrobbles from outside applications **as if it was a Listenbrainz server.**
 
@@ -261,6 +262,10 @@ If you decide to report this issue, please include this logging in your issue.
 
 <DetailsAdmo type="note" summary="Artist Extraction and Matching">
 <ArtistMatch name="LZE"/>
+</DetailsAdmo>
+
+<DetailsAdmo type="tip" summary="Request Body Size Limit">
+<BodySize name="LZE"/>
 </DetailsAdmo>
 
 <Config config="ListenbrainzEndpointSourceConfig" fileContent={ListenbrainzEndpointConfig} name="endpointlz">

@@ -4,7 +4,7 @@ import { childLogger, type Logger } from "@foxxmd/logging";
 import type {Writable} from 'ts-essentials'
 import bodyParser from "body-parser";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
-import { ingressGate, nonEmptyBody } from "./middleware.ts";
+import { ingressGate, nonEmptyBody, sourceBodyParser } from "./middleware.ts";
 import { LFMEndpointNotifier } from "../sources/ingressNotifiers/LFMEndpointNotifier.ts";
 import type { EndpointLastfmSource} from "../sources/EndpointLastfmSource.ts";
 import { playStateFromRequest, requestMatchers } from "../sources/EndpointLastfmSource.ts";
@@ -49,7 +49,14 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
         track: (req) => webhookIngress.trackIngress(req, true),
     });
 
-    const middleware = [gate,postOnly,bodyParser.urlencoded({ extended: true }),nonEmptyCheck] as const;
+    const parser = sourceBodyParser({
+        getSources,
+        match: (source, req) => source.matchRequest(req),
+        maxBodySize: (source) => source.config.options?.maxBodySize,
+        create: (limit) => bodyParser.urlencoded({ extended: true, limit }),
+    });
+
+    const middleware = [gate,postOnly,parser,nonEmptyCheck] as const;
 
     type SubmitHandler = InferSchemaHandler<{
         bodySchema: typeof lastfmRequestSchema,

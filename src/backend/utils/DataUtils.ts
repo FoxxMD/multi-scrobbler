@@ -3,6 +3,7 @@ import { constants, promises } from "fs";
 import { MaybeLogger } from '../common/MaybeLogger.ts';
 import { deepEqual } from 'fast-equals';
 import type {CommonConfigPrimitives} from "../common/infrastructure/config/common.ts";
+import { BYTE_SIZE_REGEX } from "../../core/Atomic.ts";
 import { parseBoolStrict } from "../utils.ts";
 import { removeUndefinedKeys } from '../../core/DataUtils.ts';
 import { nonEmptyStringOrDefault } from "../../core/StringUtils.ts";
@@ -207,6 +208,17 @@ export const getCommonComponentEnvConfig = (prefix: string): Partial<CommonConfi
 }
 
 const byteSizes = ['Bytes', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB']
+
+const BYTE_UNITS: Record<string, number> = {b: 1, kb: 1024, mb: 1024 ** 2, gb: 1024 ** 3};
+
+/** Parse a size like '2MB' or '500kb' (case-insensitive, 1024 based) into bytes */
+export const parseBytes = (val: string): number | undefined => {
+    const match = BYTE_SIZE_REGEX.exec(val.trim());
+    if(match === null) {
+        return undefined;
+    }
+    return Math.floor(Number.parseFloat(match[1]) * BYTE_UNITS[match[2].toLowerCase()]);
+}
 
 /**
  * Convert bytes into human readable size

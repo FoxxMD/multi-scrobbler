@@ -10,7 +10,7 @@ import { BlockList, isIP, isIPv4 } from "node:net";
 import type { AuthSettings } from "../common/auth/authSettings.ts";
 import type { PublicDashboardEmbed } from "../../core/UserSettings.ts";
 import { firstSeen, seenCache } from "../sources/ingressNotifiers/IngressNotifier.ts";
-import { formatBytes } from "../utils/DataUtils.ts";
+import { formatBytes, parseBytes } from "../utils/DataUtils.ts";
 
 export const nonEmptyBody = (logger: Logger, origin: string = 'Origin'): TypedMiddleware => async (req, res, next) => {
     const bodyEmpty = req.body === undefined || req.body === null || (typeof req.body === 'object' && Object.keys(req.body).length === 0);
@@ -204,6 +204,40 @@ export const safeModeMiddleware = (webFault: WebFault): RequestHandler => (req, 
         cause: webFault.fault.error.message,
         at: webFault.fault.at.toISOString()
     });
+}
+
+/** body-parser default limit */
+export const DEFAULT_BODY_LIMIT = 100 * 1024;
+
+export interface SourceBodyParserOptions<T> {
+    getSources: () => T[]
+    /** same matcher as ingressGate */
+    match: (source: T, req: Request) => boolean
+    maxBodySize: (source: T) => string | undefined
+    create: (limit: number) => RequestHandler
+}
+
+/**
+ * Parses the body with the largest maxBodySize of the Sources that match the request.
+ *
+ * body-parser fixes its limit when it is created so one parser is created, and reused, per limit. Must run after ingressGate.
+ * */
+export const sourceBodyParser = <T>(opts: SourceBodyParserOptions<T>): TypedMiddleware => {
+    const {getSources, match, maxBodySize, create} = opts;
+    const parsers = new Map<number, RequestHandler>();
+    return (req, res, next) => {
+        const limits = getSources().filter(x => match(x, req)).map(x => {
+            const size = maxBodySize(x);
+            return size === undefined ? DEFAULT_BODY_LIMIT : parseBytes(size) ?? DEFAULT_BODY_LIMIT;
+        });
+        const limit = limits.length === 0 ? DEFAULT_BODY_LIMIT : Math.max(...limits);
+        let parser = parsers.get(limit);
+        if(parser === undefined) {
+            parser = create(limit);
+            parsers.set(limit, parser);
+        }
+        parser(req, res, next);
+    }
 }
 
 /** Replaces express's default handler (console.error) so request errors reach the app logger */

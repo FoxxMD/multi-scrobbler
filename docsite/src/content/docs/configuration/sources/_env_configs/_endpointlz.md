@@ -7,3 +7,4 @@
 | `LZE_TOKEN`            | string  |                   | If an LZ submission request contains this token in the Authorization Header it will be used to match the submission with this Source                                      |
 | `LZE_USERNAME`         | string  |                   | The listenbrainz "username" to associate with this Source                                                                                                                 |
 | `LZE_EXTRACT_ARTISTS`  | boolean | true              | Tries to extract and match artists from comma-delimited listen data. Set to `false` to use listen data as-is (will likely lose fidelity!)                                 |
+| `LZE_MAX_BODY_SIZE`    | string  |                   | The largest request body this Source accepts, as a number and a unit (B, KB, MB, GB, case-insensitive). If not set, the limit is 100KB.                                   |

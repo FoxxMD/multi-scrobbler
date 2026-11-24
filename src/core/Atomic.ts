@@ -9,6 +9,9 @@ import type {IParseBaseOptions} from 'qs';
 import * as z from "zod";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
+/** A size like '2MB' or '500kb', case-insensitive */
+export const BYTE_SIZE_REGEX = /^(\d+(?:\.\d+)?)\s*(b|kb|mb|gb)$/i;
+
 export const musicServiceName = z.enum(['spotify', 'musicbrainz', 'youtube', 'jellyfin', 'plex', 'listenbrainz', 'rocksky', 'isrc']);
 export type MusicServiceName = z.infer<typeof musicServiceName>;
 

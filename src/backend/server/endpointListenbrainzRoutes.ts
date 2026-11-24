@@ -7,7 +7,7 @@ import type { EndpointListenbrainzSource} from "../sources/EndpointListenbrainzS
 import { playStateFromRequest, requestMatchers } from "../sources/EndpointListenbrainzSource.ts";
 import { LZEndpointNotifier } from "../sources/ingressNotifiers/LZEndpointNotifier.ts";
 import type ScrobbleSources from "../sources/ScrobbleSources.ts";
-import { ingressGate, nonEmptyBody } from "./middleware.ts";
+import { ingressGate, nonEmptyBody, sourceBodyParser } from "./middleware.ts";
 import {submitPayloadSchema, type PlayingNowPayload, type SubmitPayload} from '../../core/vendor/listenbrainz/interfaces.ts';
 import type ScrobbleClients from '../scrobblers/ScrobbleClients.ts';
 import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.ts';
@@ -23,19 +23,6 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
 
     const logger = childLogger(parentLogger, ['Ingress', 'Listenbrainz']);
 
-    const lzJsonParser = bodyParser.json({
-        type: (req) => {
-            // either Music Assistant, or the library it uses (libmusicbrainz),
-            // does not send a content-type header so we need to YOLO these requests
-            if(req.headers["content-type"] === undefined) {
-                return true;
-            }
-            if(TEXT_WILDCARD_REGEX.test(req.headers["content-type"]) || req.headers["content-type"].includes('application/json')) {
-                return true;
-            }
-            return false;
-        },
-    });
     const nonEmptyCheck = nonEmptyBody(logger, 'LZ Endpoint');
 
     const webhookIngress = new LZEndpointNotifier(logger);
@@ -52,6 +39,26 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
             return `Slug: ${slug} | Token: ${token}`;
         },
         track: (req) => webhookIngress.trackIngress(req, true),
+    });
+
+    const lzJsonParser = sourceBodyParser({
+        getSources,
+        match: (source, req) => source.matchRequest(req),
+        maxBodySize: (source) => source.config.options?.maxBodySize,
+        create: (limit) => bodyParser.json({
+            limit,
+            type: (req) => {
+                // either Music Assistant, or the library it uses (libmusicbrainz),
+                // does not send a content-type header so we need to YOLO these requests
+                if(req.headers["content-type"] === undefined) {
+                    return true;
+                }
+                if(TEXT_WILDCARD_REGEX.test(req.headers["content-type"]) || req.headers["content-type"].includes('application/json')) {
+                    return true;
+                }
+                return false;
+            },
+        }),
     });
 
     const middleware = [gate,lzJsonParser,nonEmptyCheck] as const;

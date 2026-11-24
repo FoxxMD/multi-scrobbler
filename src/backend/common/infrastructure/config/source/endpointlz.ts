@@ -1,5 +1,5 @@
 import * as z from "zod";
-import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, type EnvSourceSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, maxBodySizeSchema, type EnvSourceSchema} from "./index.ts";
 import { envMetaNormalize } from "../../../../utils/ZodUtils.ts";
 
 export const listenbrainzEndpointDataSchema = z.object({
@@ -45,6 +45,7 @@ export const listenbrainzEndpointOptionsSchema = z.object({
     extractArtists: z.boolean().optional().default(true).meta({
         description: 'Tries to extract and match artists from listen data. Set to `false` to use listen data as-is (will likely lose fidelity!)'
     }),
+    maxBodySize: maxBodySizeSchema,
     ...commonSourceOptionsSchema.shape,
 });
 
@@ -61,7 +62,8 @@ const envDataSchema = z.object({
     LZE_SLUG: listenbrainzEndpointDataSchema.shape.slug,
     LZE_TOKEN: listenbrainzEndpointDataSchema.shape.token,
     LZE_USERNAME: listenbrainzEndpointDataSchema.shape.username,
-    LZE_EXTRACT_ARTISTS: z.stringbool().optional().default(true).meta(envMetaNormalize(listenbrainzEndpointOptionsSchema.shape.extractArtists.meta()))
+    LZE_EXTRACT_ARTISTS: z.stringbool().optional().default(true).meta(envMetaNormalize(listenbrainzEndpointOptionsSchema.shape.extractArtists.meta())),
+    LZE_MAX_BODY_SIZE: maxBodySizeSchema,
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, ListenbrainzEndpointSourceConfig> = {
@@ -74,7 +76,8 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, ListenbrainzEndpo
                 username: partial.LZE_USERNAME
             },
             options: {
-                extractArtists: partial.LZE_EXTRACT_ARTISTS
+                extractArtists: partial.LZE_EXTRACT_ARTISTS,
+                maxBodySize: partial.LZE_MAX_BODY_SIZE
             }
     })
 };

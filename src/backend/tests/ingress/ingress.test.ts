@@ -347,6 +347,27 @@ describe('Ingress gate', function () {
         expect(response.body.error).to.include('Request body is 200');
     });
 
+    it('reads a body larger than the default limit when the matched LZ Source sets maxBodySize', async function () {
+        const sources = generateSources();
+        const config: ListenbrainzEndpointSourceConfig & {source: string} = {...defaultLzConfig, options: {extractArtists: true, maxBodySize: '1mb'}};
+        await sources.addSource('endpointlz', [config]);
+        const [app] = await initServer({sources, clients}, {testMode: true});
+        const response = await request(app).post('/1/submit-listens').set('Content-Type', 'application/json').send(tooLarge);
+        // body was read, then failed schema validation
+        expect(response.status).not.eq(413);
+        expect(response.status).not.eq(409);
+    });
+
+    it('reads a body larger than the default limit when the matched LFM Source sets maxBodySize', async function () {
+        const sources = generateSources();
+        const config: LastFMEndpointSourceConfig & {source: string} = {...defaultLfmConfig, options: {maxBodySize: '1MB'}};
+        await sources.addSource('endpointlfm', [config]);
+        const [app] = await initServer({sources, clients}, {testMode: true});
+        const response = await request(app).post('/2.0/').type('form').send(`method=foo&payload=${'a'.repeat(200 * 1024)}`);
+        expect(response.status).not.eq(413);
+        expect(response.status).not.eq(409);
+    });
+
     it('rejects /2.0/ when no Lastfm Endpoint Source is configured', async function () {
         const [app] = await initServer({sources: generateSources(), clients}, {testMode: true});
         const response = await request(app).post('/2.0/').send('method=track.scrobble');

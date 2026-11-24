@@ -6,3 +6,4 @@
 | `LFM_SLUG`             | string  |                   | When using **multiple sources without apikey/user**, or **not** using the standard base URL, this is the URL base path that should be used to identify scrobbles for this source |
 | `LFM_USERNAME`         | string  |                   | A fake username to differentiate LFM Endpoint Sources                                                                                                                            |
 | `LFM_API_KEY`          | string  |                   | A fake api key to differentiate LFM Endpoint Sources                                                                                                                             |
+| `LFM_MAX_BODY_SIZE`    | string  |                   | The largest request body this Source accepts, as a number and a unit (B, KB, MB, GB, case-insensitive). If not set, the limit is 100KB.                                          |

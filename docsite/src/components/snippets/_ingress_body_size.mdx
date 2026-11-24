@@ -1,0 +1,7 @@
+As a security practice, multi-scrobbler does not accept a request body that is larger than 100KB by default. It rejects the request with HTTP status `413` and logs a warning that shows the size of the body.
+
+A request that contains many scrobbles at once can be larger than 100KB. If a service sends requests that are too large, set a larger limit with the `maxBodySize` option. The value is a number and a unit (`B`, `KB`, `MB`, or `GB`). The unit is not case-sensitive.
+
+In a File or AIO configuration, use `"options": {"maxBodySize": "2MB"}`. In an ENV configuration, use <code>{props.name}_MAX_BODY_SIZE=2MB</code>.
+
+If more than one Source matches a request, multi-scrobbler uses the largest limit of those Sources.

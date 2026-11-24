@@ -1,5 +1,5 @@
 import * as z from "zod";
-import {commonSourceConfigSchema, commonSourceDataSchema, type EnvSourceSchema} from "./index.ts";
+import {commonSourceConfigSchema, commonSourceDataSchema, commonSourceOptionsSchema, maxBodySizeSchema, type EnvSourceSchema} from "./index.ts";
 
 export const lastFmEndpointDataSchema = z.object({
     /**
@@ -28,10 +28,16 @@ export const lastFmEndpointDataSchema = z.object({
 
 export type LastFMEndpointData = z.infer<typeof lastFmEndpointDataSchema>;
 
+export const lastFmEndpointOptionsSchema = z.object({
+    maxBodySize: maxBodySizeSchema,
+    ...commonSourceOptionsSchema.shape,
+});
+
 const envDataSchema = z.object({
     LFM_SLUG: lastFmEndpointDataSchema.shape.slug,
     LFM_USERNAME: lastFmEndpointDataSchema.shape.username,
-    LFM_API_KEY: lastFmEndpointDataSchema.shape.apiKey
+    LFM_API_KEY: lastFmEndpointDataSchema.shape.apiKey,
+    LFM_MAX_BODY_SIZE: maxBodySizeSchema,
 });
 
 export const envSchemas: EnvSourceSchema<typeof envDataSchema, LastFMEndpointSourceConfig> = {
@@ -42,6 +48,9 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, LastFMEndpointSou
                 slug: partial.LFM_SLUG,
                 username: partial.LFM_USERNAME,
                 apiKey: partial.LFM_API_KEY
+            },
+            options: {
+                maxBodySize: partial.LFM_MAX_BODY_SIZE
             }
     })
 };
@@ -49,6 +58,7 @@ export const envSchemas: EnvSourceSchema<typeof envDataSchema, LastFMEndpointSou
 export const lastFmEndpointSourceConfigSchema = z.object({
     ...commonSourceConfigSchema.shape,
     data: lastFmEndpointDataSchema.optional(),
+    options: lastFmEndpointOptionsSchema.optional(),
 });
 
 export type LastFMEndpointSourceConfig = z.infer<typeof lastFmEndpointSourceConfigSchema>;
