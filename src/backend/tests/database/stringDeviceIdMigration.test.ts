@@ -27,12 +27,7 @@ describe('String deviceId migration', function () {
         ]);
         await db.insert(playsHistorical).values(generatePlayHistoricalEntity(numericDevicePlay(2), {componentId: source.id}));
 
-        try {
-            await db.select().from(plays);
-            expect.fail('numeric deviceId should not validate');
-        } catch (e) {
-            expect((e as Error).message).not.eq('numeric deviceId should not validate');
-        }
+        await expect(db.select().from(plays)).to.be.rejected;
 
         const ctx = {db, logger: loggerTest};
         await up(db.$client, ctx);
