@@ -1,4 +1,4 @@
-import { creditId, creditIsrc, creditMbid, creditsToNames, isrcMeta, mbMeta, playImage, withAlbumArt } from "../../../core/MusicMetadata.ts";
+import { creditId, creditIsrc, creditMbid, creditsToNames, isrcMeta, mbMeta, playImage, spotifyMeta, withAlbumArt } from "../../../core/MusicMetadata.ts";
 import dayjs from "dayjs";
 import { rockskyRequiredFields, type Credit, type LifecycleInput, type RockskyConfidenceField, type RockskyMissingField, type URLData } from "../../../core/Atomic.ts";
 import type { PlayObject, PlayObjectMinimal, ScrobbleActionResult } from "../../../core/PlaySchema.ts";
@@ -11,11 +11,12 @@ import type {AbstractApiOptions, FormatPlayObjectOptions} from "../infrastructur
 import type {RockSkyClientData, RockSkyData, RockSkyOptions} from "../infrastructure/config/client/rocksky.ts";
 import AbstractApiClient from "./AbstractApiClient.ts";
 import { isPortReachableConnect, normalizeWebAddress } from '../../utils/NetworkUtils.ts';
+import { urlContainsKnownMediaDomain } from "../../utils/RequestUtils.ts";
 import type {ListenResponse, ListenType} from '../../../core/vendor/listenbrainz/interfaces.ts';
 import { getATProtoIdentifier, identifierToAtProtoHandle, isDID } from './atproto/atUtils.ts';
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.ts";
 import { AuthError, ScrobbleSubmitError, SimpleError } from "../errors/MSErrors.ts";
-import { type CreateScrobbleInput, RockskyClient, Agent, type SongViewDetailed, type ScrobbleInput, type ScrobbleViewBasic, RockskyError, type ActorTrackView } from "@rocksky/sdk";
+import { type CreateScrobbleInput, RockskyClient, Agent, type SongViewDetailed, type ScrobbleInput, type ScrobbleViewBasic, RockskyError, type ActorTrackView, type ScrobbleRecord, type SongResponseMbArtistsItemView } from "@rocksky/sdk";
 import { RockskyIndex } from "@rocksky/sdk/dedup";
 import { getRootCommon } from "../../iocCommon.ts";
 import type { MSCache } from "../Cache.ts";
@@ -430,8 +431,9 @@ export const songViewToPlay = (song: SongViewDetailedMS): PlayObject => {
 
     let artists: Credit[] = [],
     albumArtists: Credit[];
-    if(song.mbArtists !== undefined && song.mbArtists !== null && song.mbArtists.length > 0) {
-        artists = song.mbArtists.map(x => nameToCredit(x.name, mbMeta(x.mbid, 'artist')));
+    const mbArtists = mbArtistsToCredits(song.mbArtists);
+    if(mbArtists.length > 0) {
+        artists = mbArtists;
     } else if(song.artists !== undefined && song.artists !== null && song.artists.length > 0) {
         artists = song.artists.flatMap(x => x.name !== undefined ? [{name: x.name}] : [])
     } else if(song.artist !== undefined && song.artist !== null) {
@@ -448,15 +450,14 @@ export const songViewToPlay = (song: SongViewDetailedMS): PlayObject => {
         albumArtists = artists;
     }
 
-    // api returns mbId but type says mbid
-    const mb = song.mbid ?? (song as any).mbId;
+    const mb = song.mbId ?? song.mbid;
 
     const play: PlayObject = {
         data: {
-            track: nameToCredit(song.title, mbMeta(mb, 'recording'), isrcMeta(song.isrc)),
+            track: nameToCredit(song.title, mbMeta(mb, 'recording'), isrcMeta(song.isrc), spotifyMeta(spotifyTrackId(song.spotifyLink), 'track')),
             artists,
             albumArtists,
-            album: nameToCredit(song.album !== '' ? song.album : undefined),
+            album: nameToCredit(song.album !== '' ? song.album : undefined, mbMeta(song.mbReleaseId, 'release')),
             duration: song.duration !== undefined && song.duration !== 0 ? song.duration / 1000 : undefined,
         },
         meta: {
@@ -486,12 +487,14 @@ export const rockskyScrobbleToPlay = (obj: RockskyScrobble, opts: {playId?: stri
         web,
         user
     } = opts;
+    const mbArtists = mbArtistsToCredits(obj.artists);
     const play: PlayObjectMinimal = {
         data: {
-            track: nameToCredit(obj.title),
-            artists: namesToCredits(obj.artist !== undefined && nonEmptyStringOrDefault(obj.artist) ? [obj.artist] : []),
+            track: nameToCredit(obj.title, mbMeta(obj.mbid ?? obj.mbId, 'recording'), isrcMeta(obj.isrc), spotifyMeta(spotifyTrackId(obj.spotifyLink), 'track')),
+            artists: mbArtists.length > 0 ? mbArtists : namesToCredits(obj.artist !== undefined && nonEmptyStringOrDefault(obj.artist) ? [obj.artist] : []),
             albumArtists: namesToCredits(obj.albumArtist !== undefined && nonEmptyStringOrDefault(obj.albumArtist) ? [obj.albumArtist] : []),
             album: nameToCredit(nonEmptyStringOrDefault(obj.album)),
+            duration: obj.duration !== undefined && obj.duration > 0 ? obj.duration / 1000 : undefined,
             playDate: dayjs.utc(obj.createdAt).local()
         },
         meta: {
@@ -508,8 +511,10 @@ export const rockskyScrobbleToPlay = (obj: RockskyScrobble, opts: {playId?: stri
     // if('id' in obj) {
     //     play.meta.playId = obj.id as string;
     // }
-    if('albumArt' in obj) {
-        play.data = withAlbumArt(play.data, obj.albumArt as string);
+    // in a repo record albumArt is a blob ref, its url is albumArtUrl
+    const albumArt = typeof obj.albumArt === 'string' ? obj.albumArt : obj.albumArtUrl;
+    if(albumArt !== undefined) {
+        play.data = withAlbumArt(play.data, albumArt);
     }
 
     if(obj.uri !== undefined) {
@@ -549,7 +554,8 @@ export const playToRockskyClientRecord = (play: PlayObject): RealCreateScrobbleI
         mbId: creditMbid(play.data.track, 'recording'),
         isrc: isrc !== undefined ? isrcNoHyphens(isrc) : undefined,
         duration: play.data.duration !== undefined ? play.data.duration * 1000 : 0,
-        spotifyLink: play.meta.source === 'spotify' && play.meta.url?.web !== undefined ? play.meta.url?.web : undefined,
+        spotifyLink: playSpotifyLink(play),
+        albumArt: publicAlbumArt(play),
         timestamp: getScrobbleTsSOCDate(play).unix()
     }
     return csi;
@@ -570,10 +576,12 @@ export const playToRockskyAgentRecord = (play: PlayObject): ScrobbleInput => {
         // tsiry's advice is that if there really is no album artists then just use the same value as artist
         albumArtist: (play.data.albumArtists ?? []).length === 0 ? artistStr : creditsToNames(play.data.albumArtists).join(', '),
         album: album.name,
+        artists: (play.data.artists ?? []).length === 0 ? undefined : play.data.artists?.map(x => removeUndefinedKeys({name: x.name, mbid: creditMbid(x, 'artist')}, false)),
         mbid: creditMbid(play.data.track, 'recording'),
         isrc: isrc !== undefined ? isrcNoHyphens(isrc) : undefined,
         duration: play.data.duration !== undefined ? play.data.duration * 1000 : 0,
-        spotifyLink: play.meta.source === 'spotify' && play.meta.url?.web !== undefined ? play.meta.url?.web : undefined,
+        spotifyLink: playSpotifyLink(play),
+        albumArtUrl: publicAlbumArt(play),
         createdAt: getScrobbleTsSOCDate(play).toISOString()
     }
     return csi;
@@ -583,11 +591,34 @@ export const playToActorTrackView = (play: PlayObject): ActorTrackView => remove
     name: requirePlayTrack(play),
     artist: creditsToNames(play.data.artists).join(', '),
     album: creditToName(play.data.album),
-    albumCoverUrl: playImage(play.data),
+    albumCoverUrl: publicAlbumArt(play),
     durationMs: play.data.duration !== undefined ? Math.floor(play.data.duration * 1000) : undefined,
     source: play.meta.musicService,
     recordingMbId: creditMbid(play.data.track, 'recording')
  }, false)
+
+const playSpotifyLink = (play: PlayObject): string | undefined => {
+    const id = creditId(play.data.track, 'spotify', 'track');
+    if(id !== undefined) {
+        return `https://open.spotify.com/track/${id}`;
+    }
+    return play.meta.source === 'spotify' ? play.meta.url?.web : undefined;
+}
+
+/** Rocksky records are public, so only send art from known media hosts and never a url to a local server */
+export const publicAlbumArt = (play: PlayObject): string | undefined => {
+    const art = playImage(play.data, ['album', 'track']);
+    if(art === undefined) {
+        return undefined;
+    }
+    try {
+        const url = new URL(art);
+        return ['http:', 'https:'].includes(url.protocol) && urlContainsKnownMediaDomain(url) ? art : undefined;
+    } catch {
+        // relative url
+        return undefined;
+    }
+}
 
 const requirePlayTrack = (play: PlayObject): string => {
     if(play.data.track === undefined) {
@@ -609,10 +640,18 @@ const rockskyUriToData = (str: string): { web?: string, playId?: string, user?: 
     }
     return undefined;
 }
-export type RockskyScrobble = ScrobbleViewBasic;
+/** A scrobble from the API, or a scrobble record from the repository (CAR) */
+export type RockskyScrobble = Omit<ScrobbleViewBasic, 'albumArt'> & Partial<Pick<ScrobbleRecord, 'artists' | 'albumArtUrl'>> & {albumArt?: ScrobbleViewBasic['albumArt'] | ScrobbleRecord['albumArt']};
 
 export interface SongViewDetailedMS extends SongViewDetailed {
     requestQuery: string;
     requestQueries?: LifecycleInput[];
-    mbArtists?: { name: string; mbid: string; }[];
+    /** MusicBrainz release of the chosen match */
+    mbReleaseId?: string;
 }
+
+const mbArtistsToCredits = (artists: SongResponseMbArtistsItemView[] = []): Credit[] =>
+    artists.flatMap(x => x.name !== undefined && x.name !== '' ? [nameToCredit(x.name, mbMeta(x.mbid, 'artist'))] : []);
+
+const SPOTIFY_TRACK_REGEX = /open\.spotify\.com\/(?:[^/]+\/)?track\/([A-Za-z0-9]+)/;
+export const spotifyTrackId = (link: string | undefined): string | undefined => link === undefined ? undefined : SPOTIFY_TRACK_REGEX.exec(link)?.[1];
