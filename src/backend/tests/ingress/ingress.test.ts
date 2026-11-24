@@ -338,6 +338,15 @@ describe('Ingress gate', function () {
         expect(response.status).eq(409);
     });
 
+    it('responds 413 with the body size when a matched request body is too large', async function () {
+        const sources = generateSources();
+        await sources.addSource('endpointlz', [defaultLzConfig]);
+        const [app] = await initServer({sources, clients}, {testMode: true});
+        const response = await request(app).post('/1/submit-listens').set('Content-Type', 'application/json').send(tooLarge);
+        expect(response.status).eq(413);
+        expect(response.body.error).to.include('Request body is 200');
+    });
+
     it('rejects /2.0/ when no Lastfm Endpoint Source is configured', async function () {
         const [app] = await initServer({sources: generateSources(), clients}, {testMode: true});
         const response = await request(app).post('/2.0/').send('method=track.scrobble');

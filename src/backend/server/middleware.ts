@@ -10,6 +10,7 @@ import { BlockList, isIP, isIPv4 } from "node:net";
 import type { AuthSettings } from "../common/auth/authSettings.ts";
 import type { PublicDashboardEmbed } from "../../core/UserSettings.ts";
 import { firstSeen, seenCache } from "../sources/ingressNotifiers/IngressNotifier.ts";
+import { formatBytes } from "../utils/DataUtils.ts";
 
 export const nonEmptyBody = (logger: Logger, origin: string = 'Origin'): TypedMiddleware => async (req, res, next) => {
     const bodyEmpty = req.body === undefined || req.body === null || (typeof req.body === 'object' && Object.keys(req.body).length === 0);
@@ -207,6 +208,16 @@ export const safeModeMiddleware = (webFault: WebFault): RequestHandler => (req, 
 
 /** Replaces express's default handler (console.error) so request errors reach the app logger */
 export const errorHandlerMiddleware = (logger: Logger): ErrorRequestHandler => (err, req, res, next) => {
+    if(err?.type === 'entity.too.large') {
+        // body-parser sets length from Content-Length, or only received (bytes read before the limit) for chunked bodies
+        const size = err.length !== undefined ? formatBytes(err.length)[0] : `more than ${formatBytes(err.received)[0]}`;
+        const msg = `Request body is ${size}, larger than the limit of ${formatBytes(err.limit)[0]}`;
+        logger.warn(`${req.method} ${req.path} ${msg}`);
+        if(!res.headersSent) {
+            res.status(413).json({error: msg});
+        }
+        return;
+    }
     logger.error(new Error(`Unhandled error during ${req.method} ${req.path}`, {cause: err}));
     if(res.headersSent) {
         // response is partially written and can't be completed, same as express's default handler
