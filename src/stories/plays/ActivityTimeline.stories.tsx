@@ -161,3 +161,50 @@ export const TransformStop = meta.story({
     }
   ],
 });
+
+export const ParseRejected = meta.story({
+    loaders: [
+    async () => {
+      const {play: generated, steps} = generatePlayWithLifecycle();
+      const play = asJsonPlayObject(await playWithLifecycleScrobble(generated));
+      return {
+        activity: generatePlayApiCommonDetailed({
+        playOpts: [{play}],
+        inputOpts: [{play}],
+        steps,
+        parse: {parser: 'listenbrainz', decisions: [
+          {step: 'segment', outcome: 'skipped', reason: 'Artist has words that are not part of a reference artist or a joiner'},
+          {step: 'joinedNames', outcome: 'skipped', reason: 'No reference artists have delimiters in their names'},
+          {step: 'delimiters', outcome: 'applied', reason: 'Split artists using default delimiters and track using default delimiters', candidates: ['Chris Lake with Bonobo', 'Alexis Roberts']},
+          {step: 'primaryArtistGate', outcome: 'rejected', reason: "Primary artist candidate 'Chris Lake with Bonobo' did not match any reference artist"},
+          {step: 'naive', outcome: 'applied', reason: 'Used artists and track parsed from submitted values only'},
+        ]}
+      })
+    }
+  }
+  ],
+});
+
+export const ParseWithReference = meta.story({
+    loaders: [
+    async () => {
+      const {play: generated, steps} = generatePlayWithLifecycle();
+      const play = asJsonPlayObject(await playWithLifecycleScrobble(generated));
+      return {
+        activity: generatePlayApiCommonDetailed({
+        playOpts: [{play}],
+        inputOpts: [{play}],
+        steps,
+        parse: {parser: 'listenbrainz', decisions: [
+          {step: 'segment', outcome: 'applied', reason: 'Every word of artist is a reference artist or a joiner', candidates: ['Chris Lake', 'Bonobo', 'Alexis Roberts']},
+          {step: 'joinedNames', outcome: 'skipped', reason: 'No reference artists have delimiters in their names'},
+          {step: 'delimiters', outcome: 'applied', reason: 'Split artists using default delimiters and track using default delimiters', candidates: []},
+          {step: 'primaryArtistGate', outcome: 'applied', reason: "Primary artist candidate 'Chris Lake' matched reference artist 'Chris Lake'"},
+          {step: 'merge', outcome: 'applied', reason: 'Replaced candidates with matching reference artists and added unmatched reference artists', candidates: ['Chris Lake', 'Bonobo', 'Alexis Roberts']},
+          {step: 'trackGate', outcome: 'applied', reason: "Track 'Our Wave' matched reference track 'Our Wave'"},
+        ]}
+      })
+    }
+  }
+  ],
+});

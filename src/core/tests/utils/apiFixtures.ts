@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import type {MsSseEvent, SseEventData, SseEventName, AlbumSearchResult, ArtistSearchResult, ComponentClientApiJson, ComponentCommonApiJson, ComponentHistoricalApiJson, ComponentSourceApiJson, ComponentState, PlayApiCommon, PlayApiCommonDetailed, PlayInputApi, QueueStateApi, TrackSearchResult} from "../../Api.ts";
-import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ErrorLike, type ComponentType, QUEUE_STATUSES, sourceSotTypes, type MBID, type Credit, type MusicServices, musicServiceName, type LifecycleStep } from "../../Atomic.ts";
+import { INGRESS_QUEUE, COMPONENT_AUTH_TYPE, type ErrorLike, type ComponentType, QUEUE_STATUSES, sourceSotTypes, type MBID, type Credit, type MusicServices, musicServiceName, type LifecycleStep, type ParseRecord } from "../../Atomic.ts";
 import type { JsonPlayObject, PlayObject, SourcePlayerJson } from "../../PlaySchema.ts";
 import { generateISRC, generateMbid, generatePlay, normalizePlays } from "./PlayTestUtils.ts";
 import { generatePlayInput, generatePlayWithLifecycle, playWithLifecycleScrobble, randomPlayState } from "./fixtures.ts";
@@ -86,12 +86,15 @@ export const generatePlayApiCommonDetailed = (opts: {
     queueOpts?: Parameters<typeof generateQueueStateApi>
     /** Transform steps, added as a transform event */
     steps?: LifecycleStep[]
+    /** Parse decisions, added as a parse event before any other event */
+    parse?: ParseRecord
 } = {}, error: ErrorLike | null = null): PlayApiCommonDetailed => {
     const {
         playOpts = [],
         inputOpts = [],
         queueOpts = [],
-        steps = [] } =  opts;
+        steps = [],
+        parse } =  opts;
 
     const playCommon = generatePlayApiCommon(...playOpts);
     const inputRes = generatePlayInputApi(...inputOpts);
@@ -103,6 +106,7 @@ export const generatePlayApiCommonDetailed = (opts: {
         queueStates: [queueRes],
         error,
         events: [
+            ...(parse !== undefined ? [{eventName: 'parse' as const, playId: 1, data: parse}] : []),
             ...(steps.length > 0 ? [{eventName: 'transform' as const, playId: 1, data: steps}] : []),
             {eventName: 'queueStateChange', playId: 1, data: {queueName: 'ingress', queueStatus: 'queued', retries: 2,
                 error: serializeError(generateFakeError()),

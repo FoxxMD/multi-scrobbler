@@ -6,9 +6,9 @@ import React from "react";
 import { BiWrench } from "react-icons/bi";
 import { HiMiniMagnifyingGlass } from "react-icons/hi2";
 import { IoMdCodeDownload } from "react-icons/io";
-import { TbDatabaseEdit } from "react-icons/tb";
+import { TbArrowsSplit, TbDatabaseEdit } from "react-icons/tb";
 import type {PlayApiCommonDetailed} from "../../core/Api";
-import { DEAD_QUEUE, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, QUEUE_STATUS_QUEUED, type ComponentType, type LifecycleStep } from "../../core/Atomic";
+import { DEAD_QUEUE, QUEUE_STATUS_COMPLETED, QUEUE_STATUS_FAILED, QUEUE_STATUS_QUEUED, type ComponentType, type LifecycleStep, type ParseRecord } from "../../core/Atomic";
 import type { JsonPlayObject, PlayMatchResult, ScrobbleResult } from "../../core/PlaySchema";
 import { sortByNewestDate } from "../../core/PlayUtils";
 import { capitalizeWords } from "../../core/StringUtils";
@@ -25,6 +25,7 @@ import { ScrobbleMatchResult } from "./ScrobbleMatchResult";
 import { TimelineErrorIcon } from "./timeline/TimelineIcon";
 import { diffElement, diffElements, TransformSteps } from "./TransformSteps";
 import { Muted } from "./Typography";
+import { ParseDecisions, parseRecordRejection, parseRecordUsedNaive, parseStepLabel } from "./ParseDecisions";
 import type { PlayEventPlayStateChange, PlayEventQueueStateChange, PlayEventUpdatePlay } from '../../core/PlayEvent';
 import { FaInfo } from "react-icons/fa6";
 import { patchObject } from '../../core/DataUtils';
@@ -120,6 +121,53 @@ const NewItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen' | 'compone
                 </Timeline.Title>
             </Timeline.Content>
         </Timeline.Item>
+    )
+}
+
+const PARSER_NAMES: Record<ParseRecord['parser'], string> = {listenbrainz: 'ListenBrainz', native: 'Native'};
+
+const ParseItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen'> & { record: ParseRecord }) => {
+    const {
+        record,
+        collapsibleOpen,
+    } = props;
+    const rejection = parseRecordRejection(record);
+    let result: React.JSX.Element;
+    if (parseRecordUsedNaive(record)) {
+        result = rejection !== undefined
+            ? <Span> <Muted>from submitted values only,</Muted> <Span color="orange.solid">reference data rejected</Span> <Muted>at</Muted> {parseStepLabel(rejection.step)}</Span>
+            : <Span> <Muted>from submitted values only</Muted></Span>;
+    } else if (rejection !== undefined) {
+        result = <Span> <Muted>using reference data,</Muted> <Span color="orange.solid">partially rejected</Span> <Muted>at</Muted> {parseStepLabel(rejection.step)}</Span>;
+    } else {
+        result = <Span> <Muted>using reference data</Muted></Span>;
+    }
+    return (<Timeline.Item>
+        <Timeline.Connector>
+            <Timeline.Separator />
+            <Timeline.Indicator>
+                <Icon {...timelineIconProps}>
+                    <TbArrowsSplit />
+                </Icon>
+            </Timeline.Indicator>
+        </Timeline.Connector>
+        <Timeline.Content>
+            <Timeline.Title>
+                <MSCollapsible
+                    triggerProps={indicatorProps}
+                    indicator={<TimelineItemSummaryText>{PARSER_NAMES[record.parser]} <Muted>parsed artists and track</Muted>{result}</TimelineItemSummaryText>}
+                    unmountOnExit
+                    defaultOpen={collapsibleOpen}
+                    timeline>
+                    <Card.Root bgColor="bg.muted" size="sm">
+                        <Card.Body textStyle="sm">
+                            <ParseDecisions record={record}/>
+                        </Card.Body>
+                    </Card.Root>
+                </MSCollapsible>
+            </Timeline.Title>
+        </Timeline.Content>
+    </Timeline.Item>
     )
 }
 
@@ -557,6 +605,9 @@ export const ActivityTimeline = (props: ActivityTimelineProps) => {
                 const [__, finalPlay] = diffElements(lastTransformedPlay, event.data);
                 lastTransformedPlay = finalPlay;
             } break;
+            case 'parse':
+                timelineElements.push(<ParseItem key={event.id} record={event.data} collapsibleOpen={collapsibleOpen}/>);
+                break;
             case 'queueStateChange': {
                 timelineElements.push(<QueueTimelineItem key={event.id} queueState={event} collapsibleOpen={collapsibleOpen}/>);
             } break;
