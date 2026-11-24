@@ -129,6 +129,10 @@ This can be used by omitting the `name` in your [modification Stage](/configurat
 ```
 </details>
 
+### Parse Decisions
+
+The Native Stage records how it parsed each Play. In the dashboard, open the Play's activity timeline, expand the transform item, then open the **Inputs** tab of the Native Stage step. It lists each step (ignored artists, split on delimiters, dropped artists), whether it was applied, and why.
+
 ## ENV Configuration
 
 The default configuration shown above can also be applied using [ENV Config](/configuration?configType=env#configuration-types) for individual Sources/Clients.

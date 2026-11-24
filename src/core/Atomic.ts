@@ -241,6 +241,25 @@ export const playMetaSchema = z.looseObject({
     url: playMetaUrlSchema.optional()
 })
 
+export const parseDecisionSchema = z.object({
+    step: z.string().meta({description: 'Name of the parsing step'}),
+    outcome: z.enum(['applied', 'skipped', 'rejected']).meta({description: 'Whether the step changed the result, did not apply, or rejected the reference data'}),
+    reason: z.string(),
+    candidates: z.string().array().optional().meta({description: 'Artist names the step produced'}),
+}).meta({id: 'ParseDecision'});
+export type ParseDecision = z.output<typeof parseDecisionSchema>;
+
+export const parseRecordSchema = z.object({
+    parser: z.enum(['listenbrainz', 'native']),
+    decisions: parseDecisionSchema.array(),
+    /** Track and artist names as submitted, before parsing. Left side of patch */
+    submitted: z.object({track: z.string().optional(), artists: z.string().array()}).optional(),
+    /** Changes from submitted to parsed track and artist names (ids/metadata are not compared). Undefined if identical */
+    patch: z.custom<Changeset>().optional(),
+}).meta({id: 'ParseRecord', description: 'How artists and track were parsed from submitted values'});
+/** How artists/track were parsed, in step order, so fallbacks are visible to users */
+export type ParseRecord = z.output<typeof parseRecordSchema>;
+
 export interface LifecycleInput {
     type: string, input: (object | string)
 }

@@ -61,7 +61,8 @@ export const coverageForPlay = (play: PlayObject): TimeRange | undefined => {
  * */
 export const slimHistoricalPlay = (play: PlayObject): PlayObject => {
     const {original, ...rest} = play;
-    const {user, url: {web, ...url} = {}, ...meta} = rest.meta;
+    // parseRecord only rides on a play until it is persisted as a play (with events), not as a historical play
+    const {user, parseRecord, url: {web, ...url} = {}, ...meta} = rest.meta;
     return {...rest, meta: Object.keys(url).length > 0 ? {...meta, url} : meta};
 }
 

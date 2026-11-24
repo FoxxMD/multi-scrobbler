@@ -1,17 +1,18 @@
 import type { Dayjs } from "dayjs";
 import type { Changeset } from "json-diff-ts";
 import * as z from "zod";
-import { PLAY_STATES, queueContextSchema, QUEUE_STATUSES, type DateLike, type ErrorLike, type LifecycleStep, type PlayState, type QueueStatus } from "./Atomic.ts";
+import { PLAY_STATES, parseRecordSchema, queueContextSchema, QUEUE_STATUSES, type DateLike, type ErrorLike, type LifecycleStep, type PlayState, type QueueStatus } from "./Atomic.ts";
 import { playMatchResultSchema, playObjectSchema, scrobbleResultSchema, zDayjs, type PlayMatchResult, type ScrobbleResult } from "./PlaySchema.ts";
 
-export type PlayEventType = 'transform' | 'queueStateChange' | 'playStateChange' | 'dupeCheck' | 'scrobbleResult' | 'updatePlay';
+export type PlayEventType = 'transform' | 'queueStateChange' | 'playStateChange' | 'dupeCheck' | 'scrobbleResult' | 'updatePlay' | 'parse';
 export const PLAY_EVENT_TYPE = {
     transform: 'transform',
     updatePlay: 'updatePlay',
     queueStateChange: 'queueStateChange',
     playStateChange: 'playStateChange',
     dupeCheck: 'dupeCheck',
-    scrobbleResult: 'scrobbleResult'
+    scrobbleResult: 'scrobbleResult',
+    parse: 'parse'
 } as const satisfies Record<string, PlayEventType>;
 
 const errorLikeSchema = z.custom<ErrorLike>();
@@ -49,6 +50,7 @@ export const playEventSchema = z.discriminatedUnion('eventName', [
     basePlayEventSchema.extend({eventName: z.literal('dupeCheck'), data: playMatchResultSchema}).meta({title: 'Dupe Check Event'}),
     basePlayEventSchema.extend({eventName: z.literal('scrobbleResult'), data: scrobbleResultSchema}).meta({title: 'Scrobble Result Event'}),
     basePlayEventSchema.extend({eventName: z.literal('updatePlay'), data: playEventUpdatePlayDataSchema}).meta({title: 'Update Play Event'}),
+    basePlayEventSchema.extend({eventName: z.literal('parse'), data: parseRecordSchema}).meta({title: 'Parse Event'}),
 ]).meta({id: 'PlayEvent'});
 
 /** Selects the JSON (string dates) or backend (Dayjs dates) side of playEventSchema. Distributes over DateLike. */
@@ -72,3 +74,6 @@ export type PlayEventScrobbleResult<D extends DateLike = Dayjs> = PlayEventOf<'s
 
 export type PlayEventUpdatePlayData = z.output<typeof playEventUpdatePlayDataSchema>;
 export type PlayEventUpdatePlay<D extends DateLike = Dayjs> = PlayEventOf<'updatePlay', D>;
+
+export type PlayEventParseData = z.output<typeof parseRecordSchema>;
+export type PlayEventParse<D extends DateLike = Dayjs> = PlayEventOf<'parse', D>;

@@ -2,7 +2,7 @@ import { Box, Icon, Span, Stack, Text, Timeline, Tabs} from '@chakra-ui/react';
 import React, { Fragment, useMemo } from "react";
 import { BsExclamationTriangle, BsSkipForward, BsStoplights } from "react-icons/bs";
 import { MdMusicNote } from "react-icons/md";
-import type { ErrorLike, LifecycleStep } from "../../core/Atomic";
+import type { ErrorLike, LifecycleStep, ParseRecord } from "../../core/Atomic";
 import type { JsonPlayObject } from "../../core/PlaySchema";
 import { patchObject } from "../../core/DataUtils";
 import { isErrorIsh } from "../../core/ErrorUtils";
@@ -12,6 +12,7 @@ import { ErrorAlert } from "./ErrorAlert";
 import { MSCollapsible, type MSCollapsibleExternalProps } from "./MSCollapsible";
 import { PlayData } from "./play/PlayData";
 import { Muted } from "./Typography";
+import { ParseDecisions } from "./ParseDecisions";
 import { JsonDiffPatch } from "./diffs/JsonDiff";
 import type { Changeset } from 'json-diff-ts';
 
@@ -184,7 +185,9 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                 if(inputs !== undefined && inputs.length > 0) {
                     inputsElm = (
                         <Stack gap="1">
-                            {inputs.map((y, inputsIndex) => <ChakraCodeBlockShort key={`inputs-${inputsIndex}`} code={y.input} title={y.type} />)}
+                            {inputs.map((y, inputsIndex) => y.type === 'parseDecisions'
+                                ? <ParseDecisions key={`inputs-${inputsIndex}`} record={y.input as ParseRecord}/>
+                                : <ChakraCodeBlockShort key={`inputs-${inputsIndex}`} code={y.input} title={y.type} />)}
                         </Stack>
                     );
                 }

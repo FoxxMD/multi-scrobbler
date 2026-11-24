@@ -1,11 +1,11 @@
-import type { Credit } from "../../../core/Atomic.ts";
+import type { Credit, ParseDecision, ParseRecord } from "../../../core/Atomic.ts";
 import type { PlayObject } from "../../../core/PlaySchema.ts";
 import type {WebhookPayload} from "../infrastructure/config/health/webhooks.ts";
 import {applyTermSchema, type ApplyTerm, buildRulesSchema, buildStageSchema, type TransformerCommon} from "../../../core/Transform.ts";
 import * as z from "zod";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.ts";
-import { parseArtistCredits, parseTrackCredits, uniqueNormalizedStrArr } from "../../utils/StringUtils.ts";
-import { parseRegexSingle, parseToRegexOrLiteralSearch } from "@foxxmd/regex-buddy-core";
+import { parseWithoutReference } from "../../utils/CreditPipeline.ts";
+import { parseToRegexOrLiteralSearch } from "@foxxmd/regex-buddy-core";
 import type {TransformerOptions} from "./AbstractTransformer.ts";
 import { DELIMITERS_NO_AMP } from '../../../core/Atomic.ts';
 import { asArray } from "../../utils/DataUtils.ts";
@@ -149,13 +149,17 @@ export default class NativeTransformer extends AtomicPartsTransformer<ApplyTerm,
             delimiters = this.defaults.delimiters
         } = stageConfig || {};
 
-        const transformedPlay = nativeParse(play, {
+        const {play: transformedPlay, decisions} = nativeParseWithDecisions(play, {
             artistsParseFrom: parseArtistsFrom,
             artistsParseMonolithicOnly,
             ignoreArtistsRegex,
             delimiters,
             logger: this.logger
         });
+        const record: ParseRecord = {parser: 'native', decisions};
+        // shown with the transform step
+        // only this stage's input, AtomicPartsTransformer appends it to any existing inputs
+        transformedPlay.meta = {...transformedPlay.meta, lifecycleInputs: [{type: 'parseDecisions', input: record}]};
 
         return transformedPlay;
     }
@@ -179,7 +183,9 @@ export default class NativeTransformer extends AtomicPartsTransformer<ApplyTerm,
 
 }
 
-export const nativeParse = (play: PlayObject, options?: NativeTransformerDataStrong & {logger?: MaybeLogger}): PlayObject => {
+export const nativeParse = (play: PlayObject, options?: NativeTransformerDataStrong & {logger?: MaybeLogger}): PlayObject => nativeParseWithDecisions(play, options).play;
+
+export const nativeParseWithDecisions = (play: PlayObject, options?: NativeTransformerDataStrong & {logger?: MaybeLogger}): {play: PlayObject, decisions: ParseDecision[]} => {
         const {
             artistsParseFrom = ['artists', 'title'],
             titleClean = false,
@@ -189,68 +195,39 @@ export const nativeParse = (play: PlayObject, options?: NativeTransformerDataStr
             logger = new MaybeLogger()
         } = options || {};
 
-        let artists: Credit[] = [];
-        let track = play.data.track;
-
-        if(artistsParseFrom.includes('artists')) {
-
-            const playArtists = play.data.artists ?? [];
-            if(playArtists.length === 1 || (playArtists.length > 1 && artistsParseMonolithicOnly === false)) {
-
-                for(const artist of playArtists) {
-                
-                    const matchedIgnoreArtists = ignoreArtistsRegex.flatMap(x => {
-                        const res = parseRegexSingle(x, artist.name);
-                        return res !== undefined ? [{reg: x.toString(), res}] : [];
-                    });
-                    if(matchedIgnoreArtists.length > 0) {
-                        logger.debug(`Will not parse artist because it matched an ignore regex:\n${matchedIgnoreArtists.map(x => `Reg: ${x.reg} => ${x.res.match}`).join('\n')}`);
-                        artists.push(artist);
-                    } else {
-                        const artistCredits = parseArtistCredits(artist.name, delimiters);
-                        if (artistCredits !== undefined) {
-                            if (artistCredits.primary !== undefined) {
-                                artists.push({name: artistCredits.primary});
-                            }
-                            if (artistCredits.secondary !== undefined) {
-                                artists = artists.concat(artistCredits.secondary.map((x) => nameToCredit(x)));
-                            }
-                        } else {
-                            // couldn't parse anything from artist string, use as-is
-                            artists.push(artist);
-                        }
-                    }
-
-                }
-
-            } else {
+        const playArtists = play.data.artists ?? [];
+        const parsed = parseWithoutReference(
+            // shortcut: artists are dropped when not parsing from 'artists', kept to preserve existing behavior
+            artistsParseFrom.includes('artists') ? creditsToNames(playArtists) : [],
+            play.data.track?.name ?? '',
+            {
+                artistDelimiters: delimiters,
+                trackDelimiters: delimiters,
                 // user does not want to try to parse artists when we already have more than one artist string
                 // -- likely this is because the user knows the artist data is already good and shouldn't be modified
-                artists = playArtists;
+                splitArtists: playArtists.length === 1 || artistsParseMonolithicOnly === false,
+                parseTrack: artistsParseFrom.includes('title') && play.data.track !== undefined,
+                ignoreArtists: ignoreArtistsRegex,
             }
-
+        );
+        if(!artistsParseFrom.includes('artists') && playArtists.length > 0) {
+            // make the (existing) behavior visible: only artists parsed from the title are kept
+            parsed.decisions.unshift({step: 'dropArtists', outcome: 'applied', reason: "Existing artists were dropped because artists are not parsed from 'artists', only artists found in the title are kept", candidates: creditsToNames(playArtists)});
+        }
+        for(const d of parsed.decisions.filter(x => x.step === 'ignoreArtists')) {
+            logger.debug(d.reason);
         }
 
-        if(artistsParseFrom.includes('title')) {
-            const trackArtists = play.data.track !== undefined ? parseTrackCredits(play.data.track.name, delimiters) : undefined;
-            if (trackArtists !== undefined && trackArtists.secondary !== undefined) {
-                artists = artists.concat(trackArtists.secondary.map((x) => nameToCredit(x)));
-                if(titleClean) {
-                    track = {...play.data.track!, name: trackArtists.primary};
-                }
-            }
-        }
+        const track = titleClean && parsed.track !== undefined ? {...play.data.track!, name: parsed.track} : play.data.track;
+        // keep the existing credit (and its metadata) only for artists passed through as-is, parsed names get new credits
+        const artists = parsed.artists.map((x) => (parsed.keptArtists.includes(x) ? playArtists.find(y => y.name === x) : undefined) ?? nameToCredit(x));
 
-        // keep the existing credit (and its metadata) for any artist name that survives deduplication
-        const parsedArtists = artists;
-        artists = uniqueNormalizedStrArr(creditsToNames(parsedArtists)).map((x) => parsedArtists.find(y => y.name === x) ?? nameToCredit(x));
-
-        return {
+        return {play: {
             ...play,
             data: {
                 ...play.data,
                 track,
                 artists
             }
-        };
+        }, decisions: parsed.decisions};
 }

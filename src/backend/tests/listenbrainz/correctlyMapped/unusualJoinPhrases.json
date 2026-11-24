@@ -1,0 +1,196 @@
+[
+  {
+    "data": {
+      "listened_at": 1794898023,
+      "track_metadata": {
+        "artist_name": "Chris Lake with Bonobo ft. Alexis Roberts",
+        "track_name": "Falling",
+        "additional_info": {},
+        "mbid_mapping": {
+          "recording_name": "Falling",
+          "artists": [
+            {
+              "artist_credit_name": "Chris Lake",
+              "artist_mbid": "fca94d64-9ada-4264-9373-4158e2f7c7e7",
+              "join_phrase": " × "
+            },
+            {
+              "artist_credit_name": "Bonobo",
+              "artist_mbid": "9a709693-b4f8-4da9-8cc1-038c911a61be",
+              "join_phrase": " ft. "
+            },
+            {
+              "artist_credit_name": "Alexis Roberts",
+              "artist_mbid": "7689466c-d9c4-49a0-a998-be5698c08793",
+              "join_phrase": ""
+            }
+          ],
+          "artist_mbids": [
+            "fca94d64-9ada-4264-9373-4158e2f7c7e7",
+            "9a709693-b4f8-4da9-8cc1-038c911a61be",
+            "7689466c-d9c4-49a0-a998-be5698c08793"
+          ]
+        }
+      }
+    },
+    "expected": {
+      "artists": [
+        "Chris Lake",
+        "Bonobo",
+        "Alexis Roberts"
+      ],
+      "track": "Falling"
+    }
+  },
+  {
+    "data": {
+      "listened_at": 1794898023,
+      "track_metadata": {
+        "artist_name": "Chris Lake with Abel Balder",
+        "track_name": "Ease My Mind",
+        "additional_info": {},
+        "mbid_mapping": {
+          "recording_name": "Ease My Mind",
+          "artists": [
+            {
+              "artist_credit_name": "Chris Lake",
+              "artist_mbid": "fca94d64-9ada-4264-9373-4158e2f7c7e7",
+              "join_phrase": " × "
+            },
+            {
+              "artist_credit_name": "Abel Balder",
+              "artist_mbid": "00000000-0000-4000-8000-000000000001",
+              "join_phrase": ""
+            }
+          ],
+          "artist_mbids": [
+            "fca94d64-9ada-4264-9373-4158e2f7c7e7",
+            "00000000-0000-4000-8000-000000000001"
+          ]
+        }
+      }
+    },
+    "expected": {
+      "artists": [
+        "Chris Lake",
+        "Abel Balder"
+      ],
+      "track": "Ease My Mind"
+    }
+  },
+  {
+    "data": {
+      "listened_at": 1794898023,
+      "track_metadata": {
+        "artist_name": "Chris Lake × Abel Balder",
+        "track_name": "Ease My Mind",
+        "additional_info": {},
+        "mbid_mapping": {
+          "recording_name": "Ease My Mind",
+          "artists": [
+            {
+              "artist_credit_name": "Chris Lake",
+              "artist_mbid": "fca94d64-9ada-4264-9373-4158e2f7c7e7",
+              "join_phrase": " × "
+            },
+            {
+              "artist_credit_name": "Abel Balder",
+              "artist_mbid": "00000000-0000-4000-8000-000000000001",
+              "join_phrase": ""
+            }
+          ],
+          "artist_mbids": [
+            "fca94d64-9ada-4264-9373-4158e2f7c7e7",
+            "00000000-0000-4000-8000-000000000001"
+          ]
+        }
+      }
+    },
+    "expected": {
+      "artists": [
+        "Chris Lake",
+        "Abel Balder"
+      ],
+      "track": "Ease My Mind"
+    }
+  },
+  {
+    "data": {
+      "listened_at": 1794898023,
+      "track_metadata": {
+        "artist_name": "Chris Lake with Riovaz",
+        "track_name": "Round After Round",
+        "additional_info": {},
+        "mbid_mapping": {
+          "recording_name": "Round After Round",
+          "artists": [
+            {
+              "artist_credit_name": "Chris Lake",
+              "artist_mbid": "fca94d64-9ada-4264-9373-4158e2f7c7e7",
+              "join_phrase": " with "
+            },
+            {
+              "artist_credit_name": "Riovaz",
+              "artist_mbid": "00000000-0000-4000-8000-000000000002",
+              "join_phrase": ""
+            }
+          ],
+          "artist_mbids": [
+            "fca94d64-9ada-4264-9373-4158e2f7c7e7",
+            "00000000-0000-4000-8000-000000000002"
+          ]
+        }
+      }
+    },
+    "expected": {
+      "artists": [
+        "Chris Lake",
+        "Riovaz"
+      ],
+      "track": "Round After Round"
+    }
+  },
+  {
+    "data": {
+      "listened_at": 1794898023,
+      "track_metadata": {
+        "artist_name": "Foo with Bar",
+        "track_name": "Song (feat. Polo & Pan)",
+        "additional_info": {},
+        "mbid_mapping": {
+          "recording_name": "Song",
+          "artists": [
+            {
+              "artist_credit_name": "Foo",
+              "artist_mbid": "00000000-0000-4000-8000-000000000005",
+              "join_phrase": " with "
+            },
+            {
+              "artist_credit_name": "Bar",
+              "artist_mbid": "00000000-0000-4000-8000-000000000006",
+              "join_phrase": " feat. "
+            },
+            {
+              "artist_credit_name": "Polo & Pan",
+              "artist_mbid": "00000000-0000-4000-8000-000000000007",
+              "join_phrase": ""
+            }
+          ],
+          "artist_mbids": [
+            "00000000-0000-4000-8000-000000000005",
+            "00000000-0000-4000-8000-000000000006",
+            "00000000-0000-4000-8000-000000000007"
+          ]
+        }
+      }
+    },
+    "expected": {
+      "artists": [
+        "Foo",
+        "Bar",
+        "Polo & Pan"
+      ],
+      "track": "Song"
+    }
+  }
+]

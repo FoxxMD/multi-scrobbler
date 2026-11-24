@@ -1,0 +1,876 @@
+{
+  "native": {
+    "Foo -- Song": [
+      [
+        "Foo"
+      ],
+      "Song"
+    ],
+    "Foo, Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo & Bar -- Song": [
+      [
+        "Foo & Bar"
+      ],
+      "Song"
+    ],
+    "Foo / Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo \\ Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo feat. Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo ft. Bar & Baz -- Song": [
+      [
+        "Foo",
+        "Bar",
+        "Baz"
+      ],
+      "Song"
+    ],
+    "Foo vs. Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo x Bar -- Song": [
+      [
+        "Foo x Bar"
+      ],
+      "Song"
+    ],
+    "Foo with Bar -- Song": [
+      [
+        "Foo with Bar"
+      ],
+      "Song"
+    ],
+    "Foo × Bar -- Song": [
+      [
+        "Foo × Bar"
+      ],
+      "Song"
+    ],
+    "Foo -- Song (feat. Bar & Baz)": [
+      [
+        "Foo",
+        "Bar",
+        "Baz"
+      ],
+      "Song (feat. Bar & Baz)"
+    ],
+    "Foo -- Song ft. Bar, Baz": [
+      [
+        "Foo",
+        "Bar",
+        "Baz"
+      ],
+      "Song ft. Bar, Baz"
+    ],
+    "Foo -- Song [with Bar]": [
+      [
+        "Foo"
+      ],
+      "Song [with Bar]"
+    ],
+    "Foo, Bar -- Song (feat. Foo)": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song (feat. Foo)"
+    ],
+    "Foo & Bar | Baz, Qux -- Song": [
+      [
+        "Foo & Bar",
+        "Baz, Qux"
+      ],
+      "Song"
+    ],
+    "Earth, Wind & Fire -- Song": [
+      [
+        "Earth",
+        "Wind",
+        "Fire"
+      ],
+      "Song"
+    ]
+  },
+  "native_titleClean_DELIM": {
+    "Foo -- Song": [
+      [
+        "Foo"
+      ],
+      "Song"
+    ],
+    "Foo, Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo & Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo / Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo \\ Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo feat. Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo ft. Bar & Baz -- Song": [
+      [
+        "Foo",
+        "Bar",
+        "Baz"
+      ],
+      "Song"
+    ],
+    "Foo vs. Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo x Bar -- Song": [
+      [
+        "Foo x Bar"
+      ],
+      "Song"
+    ],
+    "Foo with Bar -- Song": [
+      [
+        "Foo with Bar"
+      ],
+      "Song"
+    ],
+    "Foo × Bar -- Song": [
+      [
+        "Foo × Bar"
+      ],
+      "Song"
+    ],
+    "Foo -- Song (feat. Bar & Baz)": [
+      [
+        "Foo",
+        "Bar",
+        "Baz"
+      ],
+      "Song"
+    ],
+    "Foo -- Song ft. Bar, Baz": [
+      [
+        "Foo",
+        "Bar",
+        "Baz"
+      ],
+      "Song"
+    ],
+    "Foo -- Song [with Bar]": [
+      [
+        "Foo"
+      ],
+      "Song [with Bar]"
+    ],
+    "Foo, Bar -- Song (feat. Foo)": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo & Bar | Baz, Qux -- Song": [
+      [
+        "Foo & Bar",
+        "Baz, Qux"
+      ],
+      "Song"
+    ],
+    "Earth, Wind & Fire -- Song": [
+      [
+        "Earth",
+        "Wind",
+        "Fire"
+      ],
+      "Song"
+    ]
+  },
+  "native_noMono": {
+    "Foo -- Song": [
+      [
+        "Foo"
+      ],
+      "Song"
+    ],
+    "Foo, Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo & Bar -- Song": [
+      [
+        "Foo & Bar"
+      ],
+      "Song"
+    ],
+    "Foo / Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo \\ Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo feat. Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo ft. Bar & Baz -- Song": [
+      [
+        "Foo",
+        "Bar",
+        "Baz"
+      ],
+      "Song"
+    ],
+    "Foo vs. Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo x Bar -- Song": [
+      [
+        "Foo x Bar"
+      ],
+      "Song"
+    ],
+    "Foo with Bar -- Song": [
+      [
+        "Foo with Bar"
+      ],
+      "Song"
+    ],
+    "Foo × Bar -- Song": [
+      [
+        "Foo × Bar"
+      ],
+      "Song"
+    ],
+    "Foo -- Song (feat. Bar & Baz)": [
+      [
+        "Foo",
+        "Bar",
+        "Baz"
+      ],
+      "Song (feat. Bar & Baz)"
+    ],
+    "Foo -- Song ft. Bar, Baz": [
+      [
+        "Foo",
+        "Bar",
+        "Baz"
+      ],
+      "Song ft. Bar, Baz"
+    ],
+    "Foo -- Song [with Bar]": [
+      [
+        "Foo"
+      ],
+      "Song [with Bar]"
+    ],
+    "Foo, Bar -- Song (feat. Foo)": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song (feat. Foo)"
+    ],
+    "Foo & Bar | Baz, Qux -- Song": [
+      [
+        "Foo & Bar",
+        "Baz",
+        "Qux"
+      ],
+      "Song"
+    ],
+    "Earth, Wind & Fire -- Song": [
+      [
+        "Earth",
+        "Wind",
+        "Fire"
+      ],
+      "Song"
+    ]
+  },
+  "native_ignore": {
+    "Foo -- Song": [
+      [
+        "Foo"
+      ],
+      "Song"
+    ],
+    "Foo, Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo & Bar -- Song": [
+      [
+        "Foo & Bar"
+      ],
+      "Song"
+    ],
+    "Foo / Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo \\ Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo feat. Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo ft. Bar & Baz -- Song": [
+      [
+        "Foo",
+        "Bar",
+        "Baz"
+      ],
+      "Song"
+    ],
+    "Foo vs. Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo x Bar -- Song": [
+      [
+        "Foo x Bar"
+      ],
+      "Song"
+    ],
+    "Foo with Bar -- Song": [
+      [
+        "Foo with Bar"
+      ],
+      "Song"
+    ],
+    "Foo × Bar -- Song": [
+      [
+        "Foo × Bar"
+      ],
+      "Song"
+    ],
+    "Foo -- Song (feat. Bar & Baz)": [
+      [
+        "Foo",
+        "Bar",
+        "Baz"
+      ],
+      "Song (feat. Bar & Baz)"
+    ],
+    "Foo -- Song ft. Bar, Baz": [
+      [
+        "Foo",
+        "Bar",
+        "Baz"
+      ],
+      "Song ft. Bar, Baz"
+    ],
+    "Foo -- Song [with Bar]": [
+      [
+        "Foo"
+      ],
+      "Song [with Bar]"
+    ],
+    "Foo, Bar -- Song (feat. Foo)": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song (feat. Foo)"
+    ],
+    "Foo & Bar | Baz, Qux -- Song": [
+      [
+        "Foo & Bar",
+        "Baz, Qux"
+      ],
+      "Song"
+    ],
+    "Earth, Wind & Fire -- Song": [
+      [
+        "Earth, Wind & Fire"
+      ],
+      "Song"
+    ]
+  },
+  "native_titleOnly": {
+    "Foo -- Song": [
+      [],
+      "Song"
+    ],
+    "Foo, Bar -- Song": [
+      [],
+      "Song"
+    ],
+    "Foo & Bar -- Song": [
+      [],
+      "Song"
+    ],
+    "Foo / Bar -- Song": [
+      [],
+      "Song"
+    ],
+    "Foo \\ Bar -- Song": [
+      [],
+      "Song"
+    ],
+    "Foo feat. Bar -- Song": [
+      [],
+      "Song"
+    ],
+    "Foo ft. Bar & Baz -- Song": [
+      [],
+      "Song"
+    ],
+    "Foo vs. Bar -- Song": [
+      [],
+      "Song"
+    ],
+    "Foo x Bar -- Song": [
+      [],
+      "Song"
+    ],
+    "Foo with Bar -- Song": [
+      [],
+      "Song"
+    ],
+    "Foo × Bar -- Song": [
+      [],
+      "Song"
+    ],
+    "Foo -- Song (feat. Bar & Baz)": [
+      [
+        "Bar",
+        "Baz"
+      ],
+      "Song (feat. Bar & Baz)"
+    ],
+    "Foo -- Song ft. Bar, Baz": [
+      [
+        "Bar",
+        "Baz"
+      ],
+      "Song ft. Bar, Baz"
+    ],
+    "Foo -- Song [with Bar]": [
+      [],
+      "Song [with Bar]"
+    ],
+    "Foo, Bar -- Song (feat. Foo)": [
+      [
+        "Foo"
+      ],
+      "Song (feat. Foo)"
+    ],
+    "Foo & Bar | Baz, Qux -- Song": [
+      [],
+      "Song"
+    ],
+    "Earth, Wind & Fire -- Song": [
+      [],
+      "Song"
+    ]
+  },
+  "native_artistsOnly": {
+    "Foo -- Song": [
+      [
+        "Foo"
+      ],
+      "Song"
+    ],
+    "Foo, Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo & Bar -- Song": [
+      [
+        "Foo & Bar"
+      ],
+      "Song"
+    ],
+    "Foo / Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo \\ Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo feat. Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo ft. Bar & Baz -- Song": [
+      [
+        "Foo",
+        "Bar",
+        "Baz"
+      ],
+      "Song"
+    ],
+    "Foo vs. Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo x Bar -- Song": [
+      [
+        "Foo x Bar"
+      ],
+      "Song"
+    ],
+    "Foo with Bar -- Song": [
+      [
+        "Foo with Bar"
+      ],
+      "Song"
+    ],
+    "Foo × Bar -- Song": [
+      [
+        "Foo × Bar"
+      ],
+      "Song"
+    ],
+    "Foo -- Song (feat. Bar & Baz)": [
+      [
+        "Foo"
+      ],
+      "Song (feat. Bar & Baz)"
+    ],
+    "Foo -- Song ft. Bar, Baz": [
+      [
+        "Foo"
+      ],
+      "Song ft. Bar, Baz"
+    ],
+    "Foo -- Song [with Bar]": [
+      [
+        "Foo"
+      ],
+      "Song [with Bar]"
+    ],
+    "Foo, Bar -- Song (feat. Foo)": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song (feat. Foo)"
+    ],
+    "Foo & Bar | Baz, Qux -- Song": [
+      [
+        "Foo & Bar",
+        "Baz, Qux"
+      ],
+      "Song"
+    ],
+    "Earth, Wind & Fire -- Song": [
+      [
+        "Earth",
+        "Wind",
+        "Fire"
+      ],
+      "Song"
+    ]
+  },
+  "naive": {
+    "Foo -- Song": [
+      [
+        "Foo"
+      ],
+      "Song"
+    ],
+    "Foo, Bar -- Song": [
+      [
+        "Foo, Bar"
+      ],
+      "Song"
+    ],
+    "Foo & Bar -- Song": [
+      [
+        "Foo & Bar"
+      ],
+      "Song"
+    ],
+    "Foo / Bar -- Song": [
+      [
+        "Foo / Bar"
+      ],
+      "Song"
+    ],
+    "Foo \\ Bar -- Song": [
+      [
+        "Foo \\ Bar"
+      ],
+      "Song"
+    ],
+    "Foo feat. Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo ft. Bar & Baz -- Song": [
+      [
+        "Foo",
+        "Bar",
+        "Baz"
+      ],
+      "Song"
+    ],
+    "Foo vs. Bar -- Song": [
+      [
+        "Foo",
+        "Bar"
+      ],
+      "Song"
+    ],
+    "Foo x Bar -- Song": [
+      [
+        "Foo x Bar"
+      ],
+      "Song"
+    ],
+    "Foo with Bar -- Song": [
+      [
+        "Foo with Bar"
+      ],
+      "Song"
+    ],
+    "Foo × Bar -- Song": [
+      [
+        "Foo × Bar"
+      ],
+      "Song"
+    ],
+    "Foo -- Song (feat. Bar & Baz)": [
+      [
+        "Foo",
+        "Bar",
+        "Baz"
+      ],
+      "Song"
+    ],
+    "Foo -- Song ft. Bar, Baz": [
+      [
+        "Foo",
+        "Bar",
+        "Baz"
+      ],
+      "Song"
+    ],
+    "Foo -- Song [with Bar]": [
+      [
+        "Foo"
+      ],
+      "Song [with Bar]"
+    ],
+    "Foo, Bar -- Song (feat. Foo)": [
+      [
+        "Foo, Bar",
+        "Foo"
+      ],
+      "Song"
+    ],
+    "Earth, Wind & Fire -- Song": [
+      [
+        "Earth, Wind & Fire"
+      ],
+      "Song"
+    ]
+  },
+  "naive_noExtract": {
+    "Foo -- Song": [
+      [
+        "Foo"
+      ],
+      "Song"
+    ],
+    "Foo, Bar -- Song": [
+      [
+        "Foo, Bar"
+      ],
+      "Song"
+    ],
+    "Foo & Bar -- Song": [
+      [
+        "Foo & Bar"
+      ],
+      "Song"
+    ],
+    "Foo / Bar -- Song": [
+      [
+        "Foo / Bar"
+      ],
+      "Song"
+    ],
+    "Foo \\ Bar -- Song": [
+      [
+        "Foo \\ Bar"
+      ],
+      "Song"
+    ],
+    "Foo feat. Bar -- Song": [
+      [
+        "Foo feat. Bar"
+      ],
+      "Song"
+    ],
+    "Foo ft. Bar & Baz -- Song": [
+      [
+        "Foo ft. Bar & Baz"
+      ],
+      "Song"
+    ],
+    "Foo vs. Bar -- Song": [
+      [
+        "Foo vs. Bar"
+      ],
+      "Song"
+    ],
+    "Foo x Bar -- Song": [
+      [
+        "Foo x Bar"
+      ],
+      "Song"
+    ],
+    "Foo with Bar -- Song": [
+      [
+        "Foo with Bar"
+      ],
+      "Song"
+    ],
+    "Foo × Bar -- Song": [
+      [
+        "Foo × Bar"
+      ],
+      "Song"
+    ],
+    "Foo -- Song (feat. Bar & Baz)": [
+      [
+        "Foo"
+      ],
+      "Song (feat. Bar & Baz)"
+    ],
+    "Foo -- Song ft. Bar, Baz": [
+      [
+        "Foo"
+      ],
+      "Song ft. Bar, Baz"
+    ],
+    "Foo -- Song [with Bar]": [
+      [
+        "Foo"
+      ],
+      "Song [with Bar]"
+    ],
+    "Foo, Bar -- Song (feat. Foo)": [
+      [
+        "Foo, Bar"
+      ],
+      "Song (feat. Foo)"
+    ],
+    "Earth, Wind & Fire -- Song": [
+      [
+        "Earth, Wind & Fire"
+      ],
+      "Song"
+    ]
+  }
+}
