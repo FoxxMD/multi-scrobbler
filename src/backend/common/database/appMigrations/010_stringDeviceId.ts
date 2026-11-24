@@ -27,9 +27,8 @@ export const up: Migration<MigrateBaseContext>['up'] = async (db: SqliteDatabase
     ctx.logger.info('Converting numeric deviceId of stored plays to string');
     for(const table of PLAY_TABLES) {
         for(const path of DEVICE_ID_PATHS) {
-            const p = sql.raw(`'${path}'`);
-            await ctx.db.run(sql`update ${sql.identifier(table)} set play = json_set(play, ${p}, cast(json_extract(play, ${p}) as text))
-                where json_type(play, ${p}) in ('integer', 'real')`);
+            await ctx.db.run(sql`update ${sql.identifier(table)} set play = json_set(play, ${path}, cast(json_extract(play, ${path}) as text))
+                where json_type(play, ${path}) in ('integer', 'real')`);
         }
     }
     ctx.logger.info('Done.');
