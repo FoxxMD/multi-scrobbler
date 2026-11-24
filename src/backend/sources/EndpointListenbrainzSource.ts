@@ -54,6 +54,14 @@ export class EndpointListenbrainzSource extends MemorySource {
         };
     }
 
+    protected async doBuildInitData(): Promise<true | string | undefined> {
+        const {token, slug} = this.config.data ?? {};
+        if ((token ?? '').trim() === '' && (slug ?? '').trim() === '') {
+            this.logger.warn(`No token or slug is configured so this Source accepts listens from anyone that can reach multi-scrobbler. This is deprecated and will be removed in a future release. Configure a token (recommended) or a slug.`);
+        }
+        return;
+    }
+
     matchRequest(req: Pick<ExpressRequest, 'baseUrl' | 'originalUrl' | 'header'>): boolean {
         const {token: configToken, slug: configSlug} = this.config.data ?? {};
         let matchesToken = configToken === undefined;

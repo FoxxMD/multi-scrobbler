@@ -59,6 +59,9 @@ export class WebScrobblerSource extends MemorySource {
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
         this.logger.info(`Accepting requests at ${joinedUrl(this.localUrl, 'api/webscrobbler', this.config.data?.slug ?? '')}`);
+        if ((this.config.data?.slug ?? '').trim() === '') {
+            this.logger.warn(`No slug is configured so this Source accepts scrobbles from anyone that can reach multi-scrobbler. This is deprecated and will be removed in a future release. Configure a slug.`);
+        }
         return true;
     }
 

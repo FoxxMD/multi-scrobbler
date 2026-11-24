@@ -48,6 +48,14 @@ export class EndpointLastfmSource extends MemorySource {
         };
     }
 
+    protected async doBuildInitData(): Promise<true | string | undefined> {
+        const {apiKey, slug} = this.config.data ?? {};
+        if ((apiKey ?? '').trim() === '' && (slug ?? '').trim() === '') {
+            this.logger.warn(`No apiKey or slug is configured so this Source accepts scrobbles from anyone that can reach multi-scrobbler. This is deprecated and will be removed in a future release. Configure an apiKey or a slug.`);
+        }
+        return;
+    }
+
     matchRequest(req: Pick<ExpressRequest, 'baseUrl' | 'originalUrl' | 'header'>): boolean {
         const slug = parseSlugFromRequest(req, requestMatchers);
         if (slug === false) {
