@@ -25,7 +25,7 @@ import slightlyDifferentNames from './correctlyMapped/trackNameSlightlyDifferent
 import incorrectMultiArtistsTrackName from './incorrectlyMapped/multiArtistsInTrackName.json' with { type: "json" };
 import veryWrong from './incorrectlyMapped/veryWrong.json' with { type: "json" };
 import { generatePlay } from "../../../core/tests/utils/PlayTestUtils.ts";
-import { nameToCredit, creditsToNames, namesToCredits } from "../../../core/MusicMetadata.ts";
+import { nameToCredit, creditsToNames, namesToCredits, creditMbid } from "../../../core/MusicMetadata.ts";
 import { playStateFromRequest } from "../../sources/EndpointListenbrainzSource.ts";
 
 interface LZTestFixture {
@@ -69,6 +69,28 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
                 assert.equal(play.data.track?.name, test.expected.track);
                 assert.sameDeepMembers(creditsToNames(play.data.artists!), test.expected.artists);
             }
+        });
+
+        it('Uses mapped release group MBID', async function () {
+            const listen: ListenResponse = {
+                listened_at: 1700000000,
+                track_metadata: {
+                    track_name: 'My Song',
+                    artist_name: 'My Artist',
+                    release_name: 'My Album',
+                    additional_info: {},
+                    mbid_mapping: {
+                        recording_name: 'My Song',
+                        artists: [{artist_credit_name: 'My Artist', artist_mbid: '1d0c7c8b-6e2c-4b8b-9a3d-3f1e1f6c2a11', join_phrase: ''}],
+                        recording_mbid: 'b802961e-5371-4d8f-b356-8f58b57e2884',
+                        release_mbid: 'ae1c552a-0231-4659-95f3-37eaf5039ba8',
+                        release_group_mbid: 'aad8a495-d447-477f-b4eb-15bef65aa311',
+                    }
+                }
+            };
+            const play = listenResponseToPlay(listen);
+            expect(creditMbid(play.data.album, 'release')).eq('ae1c552a-0231-4659-95f3-37eaf5039ba8');
+            expect(creditMbid(play.data.album, 'release-group')).eq('aad8a495-d447-477f-b4eb-15bef65aa311');
         });
 
         it('Uses all mapped artists', async function () {

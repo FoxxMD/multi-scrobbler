@@ -360,14 +360,18 @@ export const listenResponseToPlay = (listen: ListenResponse, opts?: ListenPayloa
                     recording_name,
                     artists: artistMappings = [],
                     recording_mbid: mRecordingMbid,
-                    release_mbid
+                    release_mbid,
+                    release_group_mbid: mReleaseGroupMbid
                 } = {},
                 additional_info: {
                     release_artist_names = [],
-                    release_group_mbid
+                    release_group_mbid: aReleaseGroupMbid
                 } = {}
             } = {}
         } = listen;
+
+        // mapped release mbid replaces the user's so prefer the mapped release group to keep them paired
+        const release_group_mbid = mReleaseGroupMbid ?? aReleaseGroupMbid;
 
         const naivePlay = listenToNaivePlay(listen, opts);
 

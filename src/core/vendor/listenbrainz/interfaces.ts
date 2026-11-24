@@ -141,6 +141,7 @@ export const mbidMappingSchema = z.object({
     caa_release_mbid: z.string().optional(),
     recording_mbid: recordingMbidSchema.optional(),
     release_mbid: releaseMbidSchema.optional(),
+    release_group_mbid: releaseGroupMbidSchema.optional(),
 });
 export type MbidMapping = z.infer<typeof mbidMappingSchema>;
 
