@@ -87,11 +87,11 @@ export const LoginForm = () => {
                 <Stack gap="4">
                     <Field.Root required>
                         <Field.Label>Username</Field.Label>
-                        <Input value={username ?? status?.username ?? ''} onChange={(e) => setUsername(e.target.value)} autoComplete="username"/>
+                        <Input autoFocus={!status?.username} value={username ?? status?.username ?? ''} onChange={(e) => setUsername(e.target.value)} autoComplete="username"/>
                     </Field.Root>
                     <Field.Root required>
                         <Field.Label>Password</Field.Label>
-                        <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" autoFocus/>
+                        <Input autoFocus={!!status?.username} type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password"/>
                     </Field.Root>
                     <FormError error={error !== null ? errorMessage(error) : undefined}/>
                     <Box display="flex" justifyContent="right" width="full">
