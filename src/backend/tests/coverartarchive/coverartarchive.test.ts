@@ -15,6 +15,7 @@ import type { CoverArtApiConfig } from '../../common/vendor/musicbrainz/CoverArt
 import CoverArtArchiveTransformer from '../../common/transforms/coverartarchive/CoverArtArchiveTransformer.ts';
 import { generateCoverReleaseImageResponse, generateCoverResponse } from './caaFixtures.ts';
 import { faker } from '@faker-js/faker';
+import { SkipTransformStageError, StagePrerequisiteError } from '../../common/errors/MSErrors.ts';
 
 chai.use(asPromised);
 
@@ -32,6 +33,7 @@ const createTransformer = () => new CoverArtArchiveTransformer({
         cache: memorycache()
     })
 const transformer = createTransformer();
+const mbNotFound = http.get(/musicbrainz\.org\/+ws\/2\/release\/.+/, () => HttpResponse.json({error: 'Not Found'}, { status: 404 }));
 
 describe('CoverArtArchive Transformer', function () {
 
@@ -47,6 +49,7 @@ describe('CoverArtArchive Transformer', function () {
             await withRequestInterception(
                 [
                 http.get(/coverartarchive\.org\/(release|release-group)\/.+/, () => HttpResponse.json(coverResponse, { status: 200 })),
+                mbNotFound,
                 http.get(/.+/, () => new HttpResponse(null, { status: 302, headers: {location: imageResponse!} }))
                 ], async function() {
                     await transformer.initialize();
@@ -70,6 +73,7 @@ describe('CoverArtArchive Transformer', function () {
                 [
                 http.get('https://coverartarchive.org/release-group/:mbid', () => HttpResponse.json(coverResponse, { status: 200 })),
                 http.get('https://coverartarchive.org/release/:mbid', () => new HttpResponse(null, {status: 404})),
+                mbNotFound,
                 http.get(/.+/, () => new HttpResponse(null, { status: 302, headers: {location: imageResponse!} }))
                 ], async function() {
                     await transformer.initialize();
@@ -83,6 +87,55 @@ describe('CoverArtArchive Transformer', function () {
             )();
         });
 
+        it('looks up release group from Musicbrainz when play only has release MBID', async function () {
+
+            this.timeout(350000);
+
+            const coverResponse = generateCoverResponse({images: [generateCoverReleaseImageResponse({types: ['Front'], front: true})]});
+            const rgMbid = faker.string.uuid();
+            let requestedRg: string | undefined;
+
+            await withRequestInterception(
+                [
+                http.get(/musicbrainz\.org\/+ws\/2\/release\/.+/, () => HttpResponse.json({'release-group': {id: rgMbid}}, { status: 200 })),
+                http.get('https://coverartarchive.org/release-group/:mbid', ({params}) => {
+                    requestedRg = params.mbid as string;
+                    return HttpResponse.json(coverResponse, { status: 200 });
+                }),
+                http.get('https://coverartarchive.org/release/:mbid', () => new HttpResponse(null, {status: 404})),
+                ], async function() {
+                    await transformer.initialize();
+                    const play = withBrainz(generatePlay(), {include: ['album']});
+                    const res = await transformer.getTransformerData(play, {
+                        type: 'coverartarchive'
+                    });
+                    expect(requestedRg).eq(rgMbid);
+                    expect(res.type).eq('releaseGroup');
+                }
+            )();
+        });
+
+        it('skips when play has no release or release group MBID', async function () {
+            await transformer.initialize();
+            await expect(transformer.handlePreFetch(generatePlay(), {type: 'coverartarchive'})).to.be.rejectedWith(SkipTransformStageError);
+        });
+
+        it('reports no art when searches ran but CAA had nothing', async function () {
+            await transformer.initialize();
+            await expect(transformer.handlePostFetch(generatePlay(), {
+                requestQuery: 'x',
+                lifecycleInputs: [{type: 'rsQuery-album-empty', input: 'x'}, {type: 'rsQuery-releaseGroup-prereqFailure', input: 'x'}]
+            } as any, {type: 'coverartarchive'})).to.be.rejectedWith(StagePrerequisiteError, /has no art/);
+        });
+
+        it('reports prerequisite failure when no search ran', async function () {
+            await transformer.initialize();
+            await expect(transformer.handlePostFetch(generatePlay(), {
+                requestQuery: 'x',
+                lifecycleInputs: [{type: 'rsQuery-album-prereqFailure', input: 'x'}, {type: 'rsQuery-releaseGroup-prereqFailure', input: 'x'}]
+            } as any, {type: 'coverartarchive'})).to.be.rejectedWith(StagePrerequisiteError, /All search prerequisites failed/);
+        });
+
         it('should not return result if filtered out by requirement for type', async function () {
 
             this.timeout(350000);
@@ -93,6 +146,7 @@ describe('CoverArtArchive Transformer', function () {
             await withRequestInterception(
                 [
                 http.get('https://coverartarchive.org/release/:mbid', () => HttpResponse.json(coverResponse, { status: 200 })),
+                mbNotFound,
                 http.get(/.+/, () => new HttpResponse(null, { status: 302, headers: {location: imageResponse!} }))
                 ], async function() {
                     await transformer.initialize();
@@ -116,6 +170,7 @@ describe('CoverArtArchive Transformer', function () {
             await withRequestInterception(
                 [
                 http.get('https://coverartarchive.org/release/:mbid', () => HttpResponse.json(coverResponse, { status: 200 })),
+                mbNotFound,
                 http.get(/.+/, () => new HttpResponse(null, { status: 302, headers: {location: imageResponse!} }))
                 ], async function() {
                     await transformer.initialize();
@@ -144,6 +199,7 @@ describe('CoverArtArchive Transformer', function () {
             await withRequestInterception(
                 [
                 http.get('https://coverartarchive.org/release/:mbid', () => HttpResponse.json(coverResponse, { status: 200 })),
+                mbNotFound,
                 http.get(/.+/, () => new HttpResponse(null, { status: 302, headers: {location: imageResponse!} }))
                 ], async function() {
                     await transformer.initialize();

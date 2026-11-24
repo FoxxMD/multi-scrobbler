@@ -401,6 +401,12 @@ export class MusicbrainzApiClientPool extends AbstractApiClient {
         return res;
     }
 
+    /** Get the release group MBID of a release */
+    getReleaseGroupMbid = async(releaseMbid: string, options?: OptionalCacheUsage): Promise<string | undefined> => {
+        const res = await this.callApiPool<IRelease>((mb) => mb.lookup('release', releaseMbid, ['release-groups']), {...options, cacheKey: `mb-release-rg-${releaseMbid}`});
+        return res['release-group']?.id;
+    }
+
     testConnection = async () => {
         for(const a of this.config.apis) {
             try {

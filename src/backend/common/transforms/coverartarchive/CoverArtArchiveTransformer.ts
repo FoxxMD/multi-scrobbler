@@ -14,6 +14,7 @@ import type { Cacheable } from "cacheable";
 import { hasArtFields, type CAAMissingType, type CoverArtArchiveStage, coverArtArchiveStageSchema, type CoverArtArchiveTransformData, type CovertArtArchiveTransformerConfig } from "./CoverArtArchiveTransformerUtil.ts";
 import { CoverArtClientPool } from "../../vendor/musicbrainz/CovertArtApiPool.ts";
 import { coverImageHas, type CoverArtReleaseResponse } from "../../vendor/musicbrainz/CoverArtApiTypes.ts";
+import { MusicbrainzApiClientPool } from "../../vendor/musicbrainz/MusicbrainzApiClientPool.ts";
 
 export type CoverArtArchiveTransformDataStrong = CoverArtArchiveTransformData & Required<Pick<CoverArtArchiveTransformData, 'searchWhenMissing' | 'allowedTypes' | 'forceSearch' | 'allowedSizes'>>;
 
@@ -53,6 +54,8 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<A
     protected defaults!: CoverArtArchiveTransformDataStrong;
 
     protected api!: CoverArtClientPool;
+    /** Used to find the release group of a release when the Play only has a release MBID */
+    protected mbApi!: MusicbrainzApiClientPool;
     protected clientCache?: Cacheable;
 
     public constructor(config: CovertArtArchiveTransformerConfig, options: TransformerOptions & {clientCache?: Cacheable}) {
@@ -68,6 +71,7 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<A
         this.defaults = parseStageConfig(this.config.defaults, childLogger(this.logger, 'Defaults'));
 
         this.api = new CoverArtClientPool(this.config.name, this.config.data ?? {}, {logger: this.logger, cache: this.clientCache});   
+        this.mbApi = new MusicbrainzApiClientPool(this.config.name, {apis: [{enable: true}]}, {logger: this.logger, cache: this.clientCache});
 
         return true;
     }
@@ -85,6 +89,10 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<A
             searchWhenMissing = this.defaults.searchWhenMissing,
             forceSearch = this.defaults.forceSearch
         } = stageConfig;
+
+        if(creditMbid(play.data.album, 'release') === undefined && creditMbid(play.data.album, 'release-group') === undefined) {
+            throw new SkipTransformStageError('Play has no release or release group MBID to search with', {shortStack: true});
+        }
 
         const found: CAAMissingType[] = hasArtFields(play);
         if(searchWhenMissing === true) {
@@ -164,7 +172,10 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<A
     }
 
     public async searchByMbid(play: PlayObject, mbidType: 'album' | 'releaseGroup', stageConfig: CoverArtArchiveTransformerDataStage, opts: OptionalCacheUsage = {}): Promise<MSCoverArtReleaseResponse> {
-        const mbid = creditMbid(play.data.album, mbidType === 'album' ? 'release' : 'release-group');
+        let mbid = creditMbid(play.data.album, mbidType === 'album' ? 'release' : 'release-group');
+        if(mbid === undefined && mbidType === 'releaseGroup') {
+            mbid = await this.lookupReleaseGroup(play, opts);
+        }
         if(mbid === undefined) {
             throw new SearchPrerequisiteError(`Play does not have ${mbidType} MBID`);
         }
@@ -180,6 +191,23 @@ export default class CoverArtArchiveTransformer extends AtomicPartsTransformer<A
         } catch (e: any) {
             e.requestQuery = requestQuery;
             throw e;
+        }
+    }
+
+    protected async lookupReleaseGroup(play: PlayObject, opts: OptionalCacheUsage): Promise<string | undefined> {
+        const releaseMbid = creditMbid(play.data.album, 'release');
+        if(releaseMbid === undefined) {
+            return undefined;
+        }
+        try {
+            const rgMbid = await this.mbApi.getReleaseGroupMbid(releaseMbid, opts);
+            if(rgMbid !== undefined) {
+                this.logger.debug(`Found release group MBID ${rgMbid} for release MBID ${releaseMbid} using Musicbrainz`);
+            }
+            return rgMbid;
+        } catch (e) {
+            this.logger.warn(new SimpleError(`Could not get release group for release MBID ${releaseMbid} from Musicbrainz`, {cause: e, shortStack: true}));
+            return undefined;
         }
     }
 
