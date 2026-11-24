@@ -7,6 +7,10 @@ import {Provider} from "../../client/components/Provider.js";
 import { generatePlayApiCommonDetailed } from "../../core/tests/utils/apiFixtures.js";
 import { generatePlayWithLifecycle, playWithLifecycleScrobble } from "../../core/tests/utils/fixtures.js";
 import { asJsonPlayObject } from '../../core/PlayMarshalUtils.js';
+import { diffObjects } from '../../core/DataUtils.js';
+
+const submitted = {track: {name: 'Our Wave'}, artists: [{name: 'Chris Lake with Bonobo ft. Alexis Roberts'}]};
+const parseChanges = (artists: object[]) => ({submitted, patch: diffObjects(submitted, {track: {name: 'Our Wave'}, artists})});
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
@@ -178,7 +182,7 @@ export const ParseRejected = meta.story({
           {step: 'delimiters', outcome: 'applied', reason: 'Split artists using default delimiters and track using default delimiters', candidates: ['Chris Lake with Bonobo', 'Alexis Roberts']},
           {step: 'primaryArtistGate', outcome: 'rejected', reason: "Primary artist candidate 'Chris Lake with Bonobo' did not match any reference artist"},
           {step: 'naive', outcome: 'applied', reason: 'Used artists and track parsed from submitted values only'},
-        ]}
+        ], ...parseChanges([{name: 'Chris Lake with Bonobo'}, {name: 'Alexis Roberts'}])}
       })
     }
   }
@@ -202,7 +206,7 @@ export const ParseWithReference = meta.story({
           {step: 'primaryArtistGate', outcome: 'applied', reason: "Primary artist candidate 'Chris Lake' matched reference artist 'Chris Lake'"},
           {step: 'merge', outcome: 'applied', reason: 'Replaced candidates with matching reference artists and added unmatched reference artists', candidates: ['Chris Lake', 'Bonobo', 'Alexis Roberts']},
           {step: 'trackGate', outcome: 'applied', reason: "Track 'Our Wave' matched reference track 'Our Wave'"},
-        ]}
+        ], ...parseChanges(['Chris Lake', 'Bonobo', 'Alexis Roberts'].map((name, i) => ({name, metadata: [{name: 'musicbrainz', idType: 'artist', id: `00000000-0000-0000-0000-00000000000${i}`}]})))}
       })
     }
   }

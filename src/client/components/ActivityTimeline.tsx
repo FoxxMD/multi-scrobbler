@@ -132,6 +132,11 @@ const ParseItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen'> & { rec
         collapsibleOpen,
     } = props;
     const rejection = parseRecordRejection(record);
+    let diff: React.JSX.Element | undefined;
+    if (record.submitted !== undefined) {
+        const res = diffElement({original: record.submitted, patch: record.patch});
+        diff = res.error ?? res.diff ?? <Text>Track and artists were not changed by parsing</Text>;
+    }
     let result: React.JSX.Element;
     if (parseRecordUsedNaive(record)) {
         result = rejection !== undefined
@@ -161,7 +166,16 @@ const ParseItem = (props: Pick<ActivityTimelineProps, 'collapsibleOpen'> & { rec
                     timeline>
                     <Card.Root bgColor="bg.muted" size="sm">
                         <Card.Body textStyle="sm">
-                            <ParseDecisions record={record}/>
+                            {diff === undefined ? <ParseDecisions record={record}/> : (
+                                <Tabs.Root size="sm" variant="outline" defaultValue="Decisions">
+                                    <Tabs.List>
+                                        <Tabs.Trigger value="Decisions">Decisions</Tabs.Trigger>
+                                        <Tabs.Trigger value="Changes">Changes</Tabs.Trigger>
+                                    </Tabs.List>
+                                    <Tabs.Content value="Decisions"><ParseDecisions record={record}/></Tabs.Content>
+                                    <Tabs.Content value="Changes">{diff}</Tabs.Content>
+                                </Tabs.Root>
+                            )}
                         </Card.Body>
                     </Card.Root>
                 </MSCollapsible>

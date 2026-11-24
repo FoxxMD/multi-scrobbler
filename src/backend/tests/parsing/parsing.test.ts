@@ -8,6 +8,7 @@ import { loggerTest } from "@foxxmd/logging";
 import { Cacheable } from "cacheable";
 import { initMemoryCache } from "../../common/Cache.ts";
 import { statefulInvariantTransform } from "../../../core/PlayUtils.ts";
+import { patchObject } from "../../../core/DataUtils.ts";
 import { slimHistoricalPlay } from "../../scrobblers/AbstractHistoricalScrobbleClient.ts";
 import { parseWithReference, stripReferenceNames } from "../../utils/CreditPipeline.ts";
 import { DELIMITERS, type ParseRecord } from "../../../core/Atomic.ts";
@@ -145,6 +146,16 @@ describe('Parse records', function () {
         expect(play.meta.parseRecord!.decisions.at(-1)).to.include({step: 'trackGate', outcome: 'applied'});
         // only the parsed play carries it, not the original
         expect(play.original!.play!.meta.parseRecord).to.be.undefined;
+    });
+
+    it('LZ records a patch from submitted to parsed track and artists', function () {
+        const play = listenResponseToPlay(listen({recording_name: 'Song', artists: [{artist_credit_name: 'Foo', join_phrase: ' × ', artist_mbid: 'a'}, {artist_credit_name: 'Bar', join_phrase: '', artist_mbid: 'b'}]}));
+        const {submitted, patch} = play.meta.parseRecord!;
+        expect(creditsToNames(submitted!.artists)).to.deep.eq(['Foo with Bar']);
+        expect(patchObject(submitted!, patch!)).to.deep.eq({track: play.data.track, artists: play.data.artists});
+        // nothing to change, no patch
+        const unchanged = listenResponseToPlay({...listen(), track_metadata: {...listen().track_metadata, artist_name: 'Foo'}} as ListenResponse);
+        expect(unchanged.meta.parseRecord!.patch).to.be.undefined;
     });
 
     it('LZ records why the naive play was used', function () {

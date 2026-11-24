@@ -19,7 +19,7 @@ import { type ListenBrainzClientData, MAX_ITEMS_PER_GET_LZ } from "../infrastruc
 import AbstractApiClient from "./AbstractApiClient.ts";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.ts';
 import { unique } from '../../utils.ts';
-import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
+import { diffObjects, removeUndefinedKeys } from '../../../core/DataUtils.ts';
 import type {ListenPayload, ListenResponse, SubmitPayload} from '../../../core/vendor/listenbrainz/interfaces.ts';
 import { baseFormatPlayObj } from '../../utils/PlayTransformUtils.ts';
 import { AuthError, ScrobbleSubmitError, SimpleError } from '../errors/MSErrors.ts';
@@ -369,8 +369,13 @@ export const listenResponseToPlay = (listen: ListenResponse, opts?: ListenPayloa
         const release_group_mbid = mReleaseGroupMbid ?? aReleaseGroupMbid;
 
         const naivePlay = listenToNaivePlay(listen, opts);
-        // new meta object so the decisions are not copied into original.play
-        const withParse = (p: PlayObject, decisions: ParseDecision[]): PlayObject => ({...p, meta: {...p.meta, parseRecord: {parser: 'listenbrainz', decisions}}});
+        // as submitted, so users can see exactly what parsing changed
+        const submitted = {track: nameToCredit(track_name), artists: artist_name !== undefined ? [nameToCredit(artist_name)] : []};
+        const withParse = (p: PlayObject, decisions: ParseDecision[]): PlayObject => {
+            const patch = diffObjects(submitted, {track: p.data.track, artists: p.data.artists ?? []});
+            // new meta object so the record is not copied into original.play
+            return {...p, meta: {...p.meta, parseRecord: {parser: 'listenbrainz', decisions, submitted, patch: patch.length > 0 ? patch : undefined}}};
+        };
         const naive = (decisions: ParseDecision[]): PlayObject => withParse(naivePlay, [...decisions, {step: 'naive', outcome: 'applied', reason: 'Used artists and track parsed from submitted values only'}]);
 
         if(artistMappings.length === 0 || track_name === undefined || artist_name === undefined) {
