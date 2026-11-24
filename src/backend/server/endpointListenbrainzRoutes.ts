@@ -40,8 +40,8 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
 
     const webhookIngress = new LZEndpointNotifier(logger);
 
-    const rawIngress: TypedMiddleware = (req, res, next) => {
-        webhookIngress.trackIngress(req, true);
+    const rawIngress: TypedMiddleware = async (req, res, next) => {
+        await webhookIngress.trackIngress(req, true);
         next();
     };
 
@@ -53,7 +53,7 @@ export const setupLZEndpointRoutes = (app: Express, router: ReturnType<typeof cr
     }>;
 
     const submitRoute: SubmitHandler = async (req, res) => {
-        webhookIngress.trackIngress(req as Request, false);
+        await webhookIngress.trackIngress(req as Request, false);
 
         logger.trace({body: req.body}, "Recieved request Body");
 

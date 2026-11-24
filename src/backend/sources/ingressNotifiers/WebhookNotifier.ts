@@ -1,7 +1,7 @@
 import type {Logger} from "@foxxmd/logging";
 import type {Request} from "express";
 import path from "path";
-import { IngressNotifier } from "./IngressNotifier.ts";
+import { firstSeen, IngressNotifier } from "./IngressNotifier.ts";
 
 export class WebhookNotifier extends IngressNotifier {
 
@@ -9,15 +9,13 @@ export class WebhookNotifier extends IngressNotifier {
         super('WebScrobbler', logger);
     }
 
-    seenSlugs: Record<string, boolean> = {};
-    notifyBySource(req: Request, isRaw: boolean): [boolean, (string | undefined)] {
+    async notifyBySource(req: Request, isRaw: boolean): Promise<[boolean, (string | undefined)]> {
 
         if(!isRaw) {
             const parts = path.parse(req.path);
             const slug = parts.name;
 
-            if(this.seenSlugs[slug] === undefined) {
-                this.seenSlugs[slug] = true;
+            if(await firstSeen(this.seenSlugs, slug)) {
                 return [true, `Received data for API URL slug '${slug === 'webscrobbler' ? '(none)' : slug}' for the first time.`];
             }
         }

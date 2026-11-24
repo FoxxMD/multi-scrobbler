@@ -15,8 +15,9 @@ import type { createTypedRouter, TypedMiddleware, InferSchemaHandler } from "@mi
 import { parseDisplayIdentifiersFromRequest } from '../utils/RequestUtils.ts';
 import * as z from 'zod';
 import { stripIndent } from 'common-tags';
+import { firstSeen, seenCache } from '../sources/ingressNotifiers/IngressNotifier.ts';
 
-const unmatchIdentifierWarn: string[] = [];
+const unmatchIdentifierWarn = seenCache();
 
 const looseQuery = z.looseObject({format: z.string().optional()});
 type LooseQuery = typeof looseQuery;
@@ -29,8 +30,8 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
 
     const webhookIngress = new LFMEndpointNotifier(logger);
 
-    const rawIngress: TypedMiddleware = (req, res, next) => {
-        webhookIngress.trackIngress(req, true);
+    const rawIngress: TypedMiddleware = async (req, res, next) => {
+        await webhookIngress.trackIngress(req, true);
         if (req.method !== 'POST') {
             res.sendStatus(405);
             return;
@@ -47,7 +48,7 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
     }>;
 
     const submitRoute: SubmitHandler = async (req, res) => {
-            webhookIngress.trackIngress(req as Request, false);
+            await webhookIngress.trackIngress(req as Request, false);
 
             const sources = scrobbleSources.getByType('endpointlfm') as EndpointLastfmSource[];
             if (sources.length === 0) {
@@ -83,9 +84,8 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
             if(req.body.api_key !== undefined) {
                 source = validSources.find(x => x.config.data?.apiKey === req.body.api_key);
                 if(source === undefined) {
-                    const level = unmatchIdentifierWarn.includes(req.body.api_key) ? 'trace' : 'warn';
+                    const level = await firstSeen(unmatchIdentifierWarn, req.body.api_key) ? 'warn' : 'trace';
                     logger[level](`No LFM Endpoint Source has the apiKey '${req.body.api_key}' configured so will use the first Endpoint Source listed instead.`);
-                    unmatchIdentifierWarn.push(req.body.api_key);
                 }
             } else {
                 if (req.body.method === 'auth.getMobileSession') {
@@ -93,18 +93,16 @@ export const setupLastfmEndpointRoutes = (app: Express, router: ReturnType<typeo
                         const u = req.body.username;
                         source = validSources.find(x => x.config.data?.username === u);
                         if (source === undefined) {
-                            const level = unmatchIdentifierWarn.includes(req.body.username) ? 'trace' : 'warn';
+                            const level = await firstSeen(unmatchIdentifierWarn, req.body.username) ? 'warn' : 'trace';
                             logger[level](`No LFM Endpoint Source has the username '${req.body.username}' configured so will use the first Endpoint Source listed instead.`);
-                            unmatchIdentifierWarn.push(req.body.username);
                         }
                     }
                 } else if(source === undefined && `sk` in req.body && req.body.sk !== undefined) {
                     const sk = req.body.sk;
                     source = validSources.find(x => crypto.createHash('md5').update(x.getUid()).digest('hex') === sk);
                     if(source === undefined) {
-                        const level = unmatchIdentifierWarn.includes(req.body.sk) ? 'trace' : 'warn';
+                        const level = await firstSeen(unmatchIdentifierWarn, req.body.sk) ? 'warn' : 'trace';
                         logger[level](`No LFM Endpoint Source has an ID md5 that matches the provided session key (sk) '${req.body.sk}' configured so will use the first Endpoint Source listed instead.`);
-                        unmatchIdentifierWarn.push(req.body.sk);
                     }
                 }
             }

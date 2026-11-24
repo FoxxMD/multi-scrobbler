@@ -1,6 +1,6 @@
 import type {Logger} from "@foxxmd/logging";
 import type {Request} from "express";
-import { IngressNotifier } from "./IngressNotifier.ts";
+import { firstSeen, IngressNotifier } from "./IngressNotifier.ts";
 import { parseIdentifiersFromRequest } from "../../utils/RequestUtils.ts";
 import { requestMatchers } from "../EndpointLastfmSource.ts";
 
@@ -10,8 +10,7 @@ export class LFMEndpointNotifier extends IngressNotifier {
         super('Lastfm Endpoint', logger);
     }
 
-    seenSlugs: Record<string, boolean> = {};
-    notifyBySource(req: Request, isRaw: boolean): [boolean, (string | undefined)] {
+    async notifyBySource(req: Request, isRaw: boolean): Promise<[boolean, (string | undefined)]> {
 
         if(!isRaw) {
 
@@ -23,8 +22,7 @@ export class LFMEndpointNotifier extends IngressNotifier {
 
             const identifier = `${slugStr}`;
 
-            if(this.seenSlugs[identifier] === undefined) {
-                this.seenSlugs[identifier] = true;
+            if(await firstSeen(this.seenSlugs, identifier)) {
                 return [true, `Received a request to endpoint with -- Slug: ${slugStr} -- for the first time.`];
             }
         }

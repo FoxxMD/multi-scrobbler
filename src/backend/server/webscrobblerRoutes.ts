@@ -27,12 +27,12 @@ export const setupWebscrobblerRoutes = (app: Express, router: ReturnType<typeof 
         // }
     });
     const webhookIngress = new WebhookNotifier(logger);
-    const rawIngress: TypedMiddleware = (req, res, next) => {
-        webhookIngress.trackIngress(req, true);
+    const rawIngress: TypedMiddleware = async (req, res, next) => {
+        await webhookIngress.trackIngress(req, true);
         next();
     };
     app.options('/api/webscrobbler*path', async (req, res, next) => {
-        webhookIngress.trackIngress(req, true);
+        await webhookIngress.trackIngress(req, true);
         next();
     },
     cors(corsOpts));
@@ -48,7 +48,7 @@ export const setupWebscrobblerRoutes = (app: Express, router: ReturnType<typeof 
             description: 'Use the default path `/api/webscrobbler` for standard configs or append a suffix if using a slug EX `/api/webscrobbler/mySlug`'
         },
         async (req, res) => {
-            webhookIngress.trackIngress(req as Request, false);
+            await webhookIngress.trackIngress(req as Request, false);
 
             res.sendStatus(200);
 
