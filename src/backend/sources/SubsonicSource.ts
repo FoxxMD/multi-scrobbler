@@ -4,7 +4,7 @@ import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
 import type EventEmitter from "events";
 import type { Request } from 'superagent';
 import request from 'superagent';
-import { COMPONENT_AUTH_TYPE, REPORTED_PLAYER_STATUSES } from "../../core/Atomic.ts";
+import { COMPONENT_AUTH_TYPE, NO_DEVICE, REPORTED_PLAYER_STATUSES } from "../../core/Atomic.ts";
 import type { PlayObject, PlayObjectMinimal } from "../../core/PlaySchema.ts";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
 import { UpstreamError } from "../common/errors/UpstreamError.ts";
@@ -90,6 +90,7 @@ export class SubsonicSource extends MemoryPositionalSource {
         } = obj;
 
         const position = positionMs !== undefined ? positionMs / 1000 : undefined;
+        const deviceId = playerId === undefined || playerId === null ? undefined : String(playerId);
 
         const play: PlayObjectMinimal = {
             data: {
@@ -107,7 +108,7 @@ export class SubsonicSource extends MemoryPositionalSource {
                 trackId: id,
                 newFromSource,
                 user: username,
-                deviceId: playerId,
+                deviceId,
                 mediaPlayerName: type ?? `${openSubsonic ? 'Open ' : ''}Subsonic`,
                 mediaPlayerVersion: type !== undefined && serverVersion !== undefined ? serverVersion : version,
                 ...(position === undefined ? {} : {trackProgressPosition: position})
@@ -116,7 +117,7 @@ export class SubsonicSource extends MemoryPositionalSource {
         const status = subsonicPlaybackStateToReportedStatus(state);
 
         return {
-            platformId: [playerId, username],
+            platformId: [deviceId ?? NO_DEVICE, username],
             play: baseFormatPlayObj(obj, play),
             ...(status === undefined ? {} : {status}),
             ...(position === undefined ? {} : {position})
