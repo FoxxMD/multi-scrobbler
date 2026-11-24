@@ -1,4 +1,5 @@
 import { stringSameness } from '@foxxmd/string-sameness';
+import { parseRegexSingle } from '@foxxmd/regex-buddy-core';
 import type { Credit } from '../../core/Atomic.ts';
 import { DELIMITERS } from '../../core/Atomic.ts';
 import { nameToCredit } from '../../core/MusicMetadata.ts';
@@ -111,6 +112,95 @@ export const stripReferenceNames = (str: string, artists: Pick<ReferenceArtist, 
     return {remaining, leading};
 }
 
+export interface ParseOptions {
+    /** Delimiters used to split artist strings. Undefined uses parser defaults */
+    artistDelimiters?: string[]
+    /** Delimiters used to split artists found in track ("ft. ..."). Undefined uses parser defaults */
+    trackDelimiters?: string[]
+    /** Split artist strings, otherwise they are kept as-is. Default true */
+    splitArtists?: boolean
+    /** Parse artists from track ("ft. ...") and remove them from the track name. Default true */
+    parseTrack?: boolean
+    /** Artist strings matching any of these are kept as-is */
+    ignoreArtists?: RegExp[]
+    /** Keep an artist string as-is when nothing could be parsed from it, otherwise drop it. Default true */
+    keepUnparsed?: boolean
+}
+
+export interface ParseResult {
+    artists: string[]
+    /** Track with artists removed, undefined if no artists were found in track */
+    track?: string
+    /** Artist strings passed through without being split (ignored, not split, or nothing parsed) */
+    keptArtists: string[]
+    decisions: ParseDecision[]
+}
+
+/**
+ * Least confident step, used on its own when there is no reference data: split artists and track on delimiters
+ * */
+export const parseWithoutReference = (artists: string[], track: string, opts: ParseOptions = {}): ParseResult => {
+    const {
+        artistDelimiters,
+        trackDelimiters,
+        splitArtists = true,
+        parseTrack = true,
+        ignoreArtists = [],
+        keepUnparsed = true,
+    } = opts;
+    const decisions: ParseDecision[] = [];
+
+    let found: string[] = [];
+    const kept: string[] = [];
+    for (const artist of artists) {
+        if (!splitArtists) {
+            found.push(artist);
+            kept.push(artist);
+            continue;
+        }
+        const ignoredBy = ignoreArtists.flatMap(x => {
+            const res = parseRegexSingle(x, artist);
+            return res !== undefined ? [`${x.toString()} => ${res.match}`] : [];
+        });
+        if (ignoredBy.length > 0) {
+            decisions.push({step: 'ignoreArtists', outcome: 'applied', reason: `Did not split '${artist}' because it matched an ignore regex: ${ignoredBy.join(' | ')}`, candidates: [artist]});
+            found.push(artist);
+            kept.push(artist);
+            continue;
+        }
+        const credits = parseArtistCredits(artist, artistDelimiters);
+        if (credits !== undefined) {
+            if (credits.primary !== undefined) {
+                found.push(credits.primary);
+            }
+            found = found.concat(credits.secondary ?? []);
+        } else if (keepUnparsed) {
+            // couldn't parse anything from artist string, use as-is
+            found.push(artist);
+            kept.push(artist);
+        }
+    }
+
+    let parsedTrack: string | undefined;
+    if (parseTrack) {
+        const trackCredits = parseTrackCredits(track, trackDelimiters);
+        if (trackCredits !== undefined) {
+            // if we found "ft. something" in track string then we now have a "real" track name and more artists
+            parsedTrack = trackCredits.primary;
+            found = found.concat(trackCredits.secondary ?? []);
+        }
+    }
+
+    found = uniqueNormalizedStrArr(found);
+    decisions.push({
+        step: 'delimiters',
+        outcome: splitArtists || parseTrack ? 'applied' : 'skipped',
+        reason: `Split ${[splitArtists ? `artists using ${artistDelimiters === undefined ? 'default delimiters' : artistDelimiters.join(' ')}` : undefined, parseTrack ? `track using ${trackDelimiters === undefined ? 'default delimiters' : trackDelimiters.join(' ')}` : undefined].filter(x => x !== undefined).join(' and ') || 'nothing'}`,
+        candidates: found
+    });
+    return {artists: found, track: parsedTrack, keptArtists: kept, decisions};
+}
+
 /** Exact match after normalizing, or string similarity above threshold */
 const findSimilar = (names: string[], name: string, threshold: number): string | undefined => {
     const normalName = normalizeStr(name);
@@ -190,24 +280,11 @@ export const parseWithReference = (artistName: string, trackName: string, refere
             delimiters = undefined;
         }
     }
-    let parsedTrack = trackName;
-    const parsedArtists = parseArtistCredits(remainingArtist, delimiters);
-    if (parsedArtists !== undefined) {
-        if (parsedArtists.primary !== undefined) {
-            candidates.push(parsedArtists.primary);
-        }
-        if (parsedArtists.secondary !== undefined) {
-            candidates = candidates.concat(parsedArtists.secondary);
-        }
-    }
-    const parsedTrackArtists = parseTrackCredits(remainingTrack);
-    if (parsedTrackArtists !== undefined) {
-        // if we found "ft. something" in track string then we now have a "real" track name and more artists
-        parsedTrack = parsedTrackArtists.primary;
-        candidates = candidates.concat(parsedTrackArtists.secondary ?? []);
-    }
-    candidates = uniqueNormalizedStrArr(candidates);
-    decisions.push({step: 'delimiters', outcome: 'applied', reason: `Parsed remaining artist/track using ${delimiters === undefined ? 'default delimiters' : `delimiters from reference join phrases: ${delimiters.join(' ')}`}`, candidates});
+    const parsed = parseWithoutReference([remainingArtist], remainingTrack, {artistDelimiters: delimiters, keepUnparsed: false});
+    // track is only replaced when artists were found in it, otherwise keep the (unstripped) original
+    const parsedTrack = parsed.track ?? trackName;
+    candidates = uniqueNormalizedStrArr(candidates.concat(parsed.artists));
+    decisions.push(...parsed.decisions);
 
     // 4. primaryArtistGate
     const primaryArtist = findSimilar(refNames, candidates[0], 80);

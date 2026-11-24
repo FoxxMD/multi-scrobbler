@@ -5,7 +5,7 @@ import { nativeParse } from "../../common/transforms/NativeTransformer.ts";
 import { listenToNaivePlay } from "../../common/vendor/ListenbrainzApiClient.ts";
 import { parseWithReference, stripReferenceNames } from "../../utils/CreditPipeline.ts";
 import { DELIMITERS } from "../../../core/Atomic.ts";
-import { creditsToNames } from "../../../core/MusicMetadata.ts";
+import { creditMbid, creditsToNames, mbMeta, nameToCredit } from "../../../core/MusicMetadata.ts";
 import type { PlayObject } from "../../../core/PlaySchema.ts";
 import type { ListenResponse } from "../../../core/vendor/listenbrainz/interfaces.ts";
 import characterization from './characterization.json' with { type: 'json' };
@@ -107,5 +107,25 @@ describe('parseWithReference decisions', function () {
         expect(last.step).eq('primaryArtistGate');
         expect(last.outcome).eq('rejected');
         expect(last.reason).to.include('Chris Lake with Riovaz');
+    });
+});
+
+describe('nativeParse credit metadata', function () {
+    const withMbid = (name: string) => nameToCredit(name, mbMeta(`${name}-mbid`, 'artist'));
+    const play = (artists: string[], track = 'Song') => ({data: {artists: artists.map(withMbid), track: {name: track}}, meta: {}}) as unknown as PlayObject;
+
+    it('Keeps metadata for artists passed through as-is', function () {
+        const ignored = nativeParse(play(['Foo & Bar']), {ignoreArtistsRegex: [parseToRegexOrLiteralSearch('Foo & Bar')]});
+        expect(creditMbid(ignored.data.artists![0], 'artist')).eq('Foo & Bar-mbid');
+        const notSplit = nativeParse(play(['Foo, Bar', 'Baz']));
+        expect(notSplit.data.artists!.map(x => creditMbid(x, 'artist'))).to.deep.eq(['Foo, Bar-mbid', 'Baz-mbid']);
+    });
+
+    it('Uses new credits for parsed artists', function () {
+        const parsed = nativeParse(play(['Foo, Bar']));
+        expect(parsed.data.artists!.map(x => creditMbid(x, 'artist'))).to.deep.eq([undefined, undefined]);
+        // a string that parses to itself is still a parsed artist
+        const single = nativeParse(play(['Foo']));
+        expect(creditMbid(single.data.artists![0], 'artist')).to.be.undefined;
     });
 });
