@@ -278,6 +278,10 @@ export const jobs = sqliteTable("jobs", {
   exportUpstreamCheck: integer({mode: 'boolean'}).notNull().default(true),
   // true => plays a job transform discarded are created in target clients in the discarded state, false => they are not sent
   exportDiscarded: integer({mode: 'boolean'}).notNull().default(false),
+  // true => plays with a bad timestamp (see isBadTimestamp) are not sent
+  exportSkipBadTimestamps: integer({mode: 'boolean'}).notNull().default(false),
+  // true => only the first play of each burst (in export order) is sent
+  exportCollapseBursts: integer({mode: 'boolean'}).notNull().default(false),
   // raw stage config snapshot (always a list), parsed again when exporting
   transformOptions: text({ mode: 'json' }).$type<unknown[]>(),
   transformSource: text({ mode: 'json' }).$type<JobTransformSource>(),
@@ -311,6 +315,8 @@ export const jobTargets = sqliteTable("job_targets", {
   exported: integer().notNull().default(0),
   // plays the client created from them (some may be skipped as already queued/scrobbled)
   queued: integer().notNull().default(0),
+  // mirror rows not sent because of the job's data issue options (exportSkipBadTimestamps, exportCollapseBursts)
+  skipped: integer().notNull().default(0),
   stats: text({ mode: 'json' }).$type<JobTargetStats>(),
   // plays per state that a cleanup deleted from the client. Added to live stats so exports keep their numbers
   removedStats: text({ mode: 'json' }).$type<JobTargetStats>(),

@@ -73,6 +73,8 @@ export interface JobTargetApiJson {
     exported: number
     /** client plays created from them, the rest were already queued or scrobbled */
     queued: number
+    /** mirror plays not sent because of the job's data issue options */
+    skipped: number
     /** the job's client plays by state, including ones a cleanup deleted. Frozen once completed */
     stats: Partial<Record<string, number>> | null
     /** the job's client plays in the Client right now */
@@ -111,6 +113,10 @@ export interface JobApiJson {
     exportUpstreamCheck: boolean
     /** true => plays a job transform discarded are kept in clients in the discarded state, false => they are not sent */
     exportDiscarded: boolean
+    /** true => plays with a bad timestamp are not sent */
+    exportSkipBadTimestamps: boolean
+    /** true => only the first play of each burst (in export order) is sent. Waits for the import to finish */
+    exportCollapseBursts: boolean
     targets: JobTargetApiJson[]
     /** mirror plays in the job's range, what an export will go through */
     mirrorPlaysInRange: number
