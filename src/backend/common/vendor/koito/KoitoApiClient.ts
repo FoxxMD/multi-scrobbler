@@ -147,7 +147,7 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
     }
 
     getUserListens = async (options: GetListensOptions): Promise<ListensResponse> => {
-        const {page = 0} = options;
+        const {page = 0, from, to} = options;
         try {
 
             const resp = await this.callApi(() => request
@@ -155,7 +155,10 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
                 .query({
                     period: 'all_time',
                     page,
-                    ...options
+                    ...options,
+                    // Koito treats a 0 timestamp as unset and drops the whole time range, returning every listen
+                    ...(from !== undefined ? {from: Math.max(1, from)} : {}),
+                    ...(to !== undefined ? {to: Math.max(1, to)} : {}),
                 })
             );
             const { body } = resp as any;
