@@ -18,6 +18,7 @@ import { generatePlay, generatePlayPlatformId, generatePlays, generateSourcePlay
 import MockDate from 'mockdate';
 
 import { NowPlayingScrobbler, TestAuthScrobbler, TestScrobbler } from "./TestScrobbler.ts";
+import { CachedFetchError } from '../../common/errors/MSErrors.ts';
 import { type PaginatedTimeRangeOptions, REFRESH_STALE_DEFAULT } from '../../common/infrastructure/Atomic.ts';
 import type {PlayPlatformId, QueueContext} from '../../../core/Atomic.ts';
 import { shuffleArray } from '../../utils/DataUtils.ts';
@@ -672,6 +673,20 @@ describe('Upstream Scrobbles', function() {
             await scrobbler.initialize();
             scrobbler.testRecentScrobbles = generatePlays(HISTORICAL_BUCKET_FETCH_MAX);
             await expect(scrobbler.getSOTScrobblesForPlay(generatePlay({playDate: bucketStart().add(1, 'hour')}))).to.be.rejectedWith('Cannot get historical plays');
+        });
+
+        it('skips fetching a bucket that just failed, naming the failure', async function () {
+            await using scrobbler = await generateTestScrobbler();
+            await scrobbler.initialize();
+            scrobbler.testRecentScrobbles = generatePlays(HISTORICAL_BUCKET_FETCH_MAX);
+            const sp = spy(scrobbler, 'getScrobblesForTimeRange');
+            await expect(scrobbler.getSOTScrobblesForPlay(generatePlay({playDate: bucketStart().add(1, 'hour')}))).to.be.rejected;
+
+            const err = await scrobbler.getSOTScrobblesForPlay(generatePlay({playDate: bucketStart().add(2, 'hour')})).catch((e) => e);
+            expect(err).to.be.instanceOf(CachedFetchError);
+            expect(err.message).to.include('failed for a previous Play').and.include('too many to compare against');
+            expect(err.cause.message).to.include('too many to compare against');
+            expect(sp.callCount).eq(1);
         });
     });
 

@@ -51,7 +51,7 @@ import pMap from "p-map";
 import { existingScrobble, type ExistingScrobbleOpts } from "../utils/PlayComparisonUtils.ts";
 import { statefulInvariantTransform } from "../../core/PlayUtils.ts";
 import type { Counter, Gauge } from 'prom-client';
-import { generateLoggableAbortReason, PlayParkedError, ScrobbleSubmitError, SimpleError, StageChangeError } from "../common/errors/MSErrors.ts";
+import { CachedFetchError, generateLoggableAbortReason, PlayParkedError, ScrobbleSubmitError, SimpleError, StageChangeError } from "../common/errors/MSErrors.ts";
 import { serializeError} from 'serialize-error';
 import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges, HISTORICAL_BUCKET_FETCH_MAX, HISTORICAL_BUCKET_TTL_MS, historicalBucketRange } from "../utils/ListenFetchUtils.ts";
 import { spawn, isAbortError, delay, waitForEvent } from 'abort-controller-x';
@@ -745,14 +745,17 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
         const cachedPlaysRes = useCache ? await this.cache.cacheClientScrobbles.get<PlayObject[] | Error>(this.getScrobbleCacheKey(range.from, range.to)) : undefined;
         if(cachedPlaysRes instanceof Error) {
-            throw new SimpleError('Cannot get historical plays due to cached error', {cause: cachedPlaysRes, shortStack: true});
+            throw new CachedFetchError(`Skipped fetching scrobbles between ${todayAwareFormat(dayjs.unix(range.from))} and ${todayAwareFormat(dayjs.unix(range.to))}, the same fetch failed for a previous Play: ${cachedPlaysRes.message}`, {cause: cachedPlaysRes, shortStack: true});
         }
         if(cachedPlaysRes !== undefined) {
             return cachedPlaysRes;
         }
+        // a bucket with too many scrobbles fails the same way every time, so its error is cached as long as its scrobbles would be
+        let tooMany = false;
         try {
             const fetched = await this.getScrobblesForTimeRange(bucket === undefined ? range : {...range, fetchMax: HISTORICAL_BUCKET_FETCH_MAX});
             if(bucket !== undefined && fetched.length >= HISTORICAL_BUCKET_FETCH_MAX) {
+                tooMany = true;
                 // a partial list would miss duplicates, so fail like any other fetch error
                 throw new Error(`Service returned ${HISTORICAL_BUCKET_FETCH_MAX} or more scrobbles between ${todayAwareFormat(dayjs.unix(range.from))} and ${todayAwareFormat(dayjs.unix(range.to))}, too many to compare against`);
             }
@@ -761,7 +764,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             await this.cache.cacheClientScrobbles.set<PlayObject[] | Error>(this.getScrobbleCacheKey(range.from, range.to), plays, bucket !== undefined ? HISTORICAL_BUCKET_TTL_MS : (this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT) * 1000);
             return plays;
         } catch (e: any) {
-            await this.cache.cacheClientScrobbles.set<PlayObject[] | Error>(this.getScrobbleCacheKey(range.from, range.to), e, '10s');
+            await this.cache.cacheClientScrobbles.set<PlayObject[] | Error>(this.getScrobbleCacheKey(range.from, range.to), e, tooMany ? HISTORICAL_BUCKET_TTL_MS : '10s');
             throw new SimpleError('Cannot get historical plays', {cause: e, shortStack: true});
         }
     }
@@ -1297,7 +1300,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     }
 
                     let historicalError: Error;
-                    if (e.message === 'Cannot get historical plays due to cached error') {
+                    if (e instanceof CachedFetchError) {
                         logger.warn(`${buildTrackString(playEntity.play)} from Source '${playEntity.play.meta.source}' => Previous error while getting historical scrobbles means this scrobble cannot be compared, will queue as dead for now.`);
                         logger.trace(e);
                         historicalError = e;

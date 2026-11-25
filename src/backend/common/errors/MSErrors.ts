@@ -115,6 +115,12 @@ export class SimpleError extends Error implements HasSimpleError {
 }
 addKnownErrorConstructor(SimpleError, () => new SimpleError(''))
 
+/** A Play's upstream scrobbles were not fetched because the same fetch failed recently for a previous Play. `cause` is that failure */
+export class CachedFetchError extends SimpleError {
+    override name = 'CachedFetchError';
+}
+addKnownErrorConstructor(CachedFetchError, () => new CachedFetchError(''))
+
 export class StageTransformError extends NamedError {
     override name = 'Stage Transform';
     lifecycleInputs?: LifecycleInput[]
