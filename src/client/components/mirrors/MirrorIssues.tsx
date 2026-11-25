@@ -18,6 +18,8 @@ export const issueSummaryText = (summary: MirrorIssueSummaryJson): string => {
     return `${summary.plays.toLocaleString()} Play${summary.plays === 1 ? '' : 's'} (${parts.join(', ')})`;
 }
 
+export const DATA_ISSUES_DOCS = 'docs/transfer/overview/#data-issues';
+
 const durationText = (ms: number): string => ms < 60_000 ? `${Math.round(ms / 1000)}s` : `${Math.round(ms / 60_000)}m`;
 
 const IssueRow = (props: { group: MirrorIssueGroupJson }) => {
@@ -71,7 +73,7 @@ export const MirrorIssues = (props: { mirrorId: number }) => {
     } else {
         content = <>
             <TextMuted textStyle="sm">
-                These Plays look invalid. Nothing was changed: exports send them as they are.
+                These Plays look invalid. Nothing was changed. Exports send them as they are, unless the job is set to skip them.
             </TextMuted>
             <DataList.Root orientation="horizontal" size="sm">
                 <DataList.Item>
@@ -104,8 +106,30 @@ export const MirrorIssues = (props: { mirrorId: number }) => {
     );
 }
 
+/** Data issues of a mirror (in range) next to the job export options, nothing when there are none */
+export const MirrorIssuesPreview = (props: { mirrorId: number, range?: [number, number] }) => {
+    const {data} = useQuery(tanQueries.mirrors.issues(props.mirrorId, props.range));
+    if (data === undefined || data.plays === 0) {
+        return null;
+    }
+    return <TextMuted textStyle="sm">{issueSummaryText(data)} in this range of the mirror look invalid. See them on the mirror page.</TextMuted>;
+}
+
+const exportIssuesText = (job: Pick<JobApiJson, 'exportSkipBadTimestamps' | 'exportCollapseBursts'>): string => {
+    if (job.exportSkipBadTimestamps && job.exportCollapseBursts) {
+        return 'Exports skip bad timestamps and send one Play per burst.';
+    }
+    if (job.exportSkipBadTimestamps) {
+        return 'Exports skip bad timestamps and send bursts as they are.';
+    }
+    if (job.exportCollapseBursts) {
+        return 'Exports send one Play per burst and send bad timestamps as they are.';
+    }
+    return 'Exports send them as they are.';
+}
+
 /** Shown on a job when its range of the mirror has data issues */
-export const JobIssuesAlert = (props: { job: Pick<JobApiJson, 'mirror' | 'rangeFrom' | 'rangeTo' | 'importStatus'> }) => {
+export const JobIssuesAlert = (props: { job: Pick<JobApiJson, 'mirror' | 'rangeFrom' | 'rangeTo' | 'importStatus' | 'exportSkipBadTimestamps' | 'exportCollapseBursts'> }) => {
     const {job} = props;
     const range: [number, number] = [job.rangeFrom === null ? Number.MIN_SAFE_INTEGER : dayjs(job.rangeFrom).valueOf(), dayjs(job.rangeTo).valueOf()];
     // fetched again when the import changes status, not on every imported batch (each fetch reads the whole range)
@@ -118,7 +142,7 @@ export const JobIssuesAlert = (props: { job: Pick<JobApiJson, 'mirror' | 'rangeF
             <Alert.Indicator/>
             <Alert.Content>
                 <Alert.Description>
-                    {issueSummaryText(data)} in this job's range look invalid. Exports send them as they are.
+                    {issueSummaryText(data)} in this job's range look invalid. {exportIssuesText(job)}{' '}
                     See them in Mirror <ChakraLink asChild textDecoration="underline"><Link to={`/mirrors/${job.mirror.id}`}>{job.mirror.name}</Link></ChakraLink>.
                 </Alert.Description>
             </Alert.Content>

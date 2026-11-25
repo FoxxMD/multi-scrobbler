@@ -132,7 +132,7 @@ export const mergeJobUpdate = (old: JobApiJson, data: Record<string, unknown>): 
 }
 
 /** Export progress from 0 to 1, undefined when it can't be known yet */
-export const exportProgress = (job: Pick<JobApiJson, 'importStatus' | 'mirrorPlaysInRange'>, target: Pick<JobTargetApiJson, 'status' | 'exported'>): number | undefined => {
+export const exportProgress = (job: Pick<JobApiJson, 'importStatus' | 'mirrorPlaysInRange'>, target: Pick<JobTargetApiJson, 'status' | 'exported' | 'skipped'>): number | undefined => {
     if (target.status === 'completed') {
         return 1;
     }
@@ -140,7 +140,7 @@ export const exportProgress = (job: Pick<JobApiJson, 'importStatus' | 'mirrorPla
     if (job.importStatus !== 'completed' || job.mirrorPlaysInRange === 0) {
         return undefined;
     }
-    return Math.min(1, target.exported / job.mirrorPlaysInRange);
+    return Math.min(1, (target.exported + target.skipped) / job.mirrorPlaysInRange);
 }
 
 export const ExportProgressBar = (props: { job: JobApiJson, target: JobTargetApiJson } & Omit<Progress.RootProps, 'value'>) => {

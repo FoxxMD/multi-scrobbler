@@ -10,7 +10,7 @@ import { type CleanupAction, EXPORT_QUEUE_LIMIT_MAX, type JobApiJson, type JobMe
 import { ChakraClip } from "../ChakraClipboard";
 import { capitalize } from "../../../core/StringUtils";
 import { TextMuted } from "../TextMuted";
-import { JobIssuesAlert } from "../mirrors/MirrorIssues";
+import { DATA_ISSUES_DOCS, JobIssuesAlert } from "../mirrors/MirrorIssues";
 import { CleanupProgress, taskText, useMirrorEvents } from "../mirrors/mirrorUtils";
 import { CleanupButtons } from "./CleanupButtons";
 import { tanQueries } from "../../queries";
@@ -359,6 +359,7 @@ export const ExportTarget = (props: { job: JobApiJson, target: JobTargetApiJson 
             {target.status === 'running' ? <RateLimitText rateLimit={runtime?.rateLimit}/> : undefined}
             {stats !== undefined ? <Text textStyle="sm" color="fg.muted">In the Client: {stats}</Text> : undefined}
             {target.exported > target.queued ? <Text textStyle="sm" color="fg.muted">{(target.exported - target.queued).toLocaleString()} were already in the Client and were skipped.</Text> : undefined}
+            {target.skipped > 0 ? <Text textStyle="sm" color="fg.muted">{target.skipped.toLocaleString()} were not sent because of the data issue options.</Text> : undefined}
             {runtime?.waiting !== undefined ? <Text textStyle="sm" color="fg.warning">{runtime.waiting}</Text> : undefined}
             {target.status !== 'running' && target.status !== 'completed' && queuedLeft > 0 ? <Text textStyle="sm" color="fg.muted">{queuedLeft.toLocaleString()} queued Plays will still be sent to the Client.</Text> : undefined}
             {target.status === 'running' && target.breaker.failedInARow > 0 ? <Text textStyle="sm" color="fg.warning">{target.breaker.failedInARow} failed in a row, the export stops at {Math.max(job.exportQueueLimit, 10)}.</Text> : undefined}
@@ -436,6 +437,37 @@ export const KeepDiscarded = (props: { job: JobApiJson }) => {
                     </Stack>
                 </InfoPopover></Checkbox.Label>
         </Checkbox.Root>
+    );
+}
+
+export const DataIssueOptions = (props: { job: JobApiJson }) => {
+    const {job} = props;
+    const setJob = useSetJob();
+    const {mutate, isPending} = useMutation({
+        mutationFn: (json: Partial<Pick<JobApiJson, 'exportSkipBadTimestamps' | 'exportCollapseBursts'>>) => ky.patch(`jobs/${job.id}`, {baseUrl, json}).json<JobApiJson>(),
+        onSuccess: setJob,
+        onError: (e) => toaster.create({type: 'error', title: 'Could not change the data issue options', description: apiErrorMessage(e)}),
+    });
+    return (
+        <Stack gap="1">
+            <Checkbox.Root size="sm" checked={job.exportSkipBadTimestamps} disabled={isPending} onCheckedChange={(d) => mutate({exportSkipBadTimestamps: d.checked === true})}>
+                <Checkbox.HiddenInput/>
+                <Checkbox.Control/>
+                <Checkbox.Label>Skip bad timestamps</Checkbox.Label>
+            </Checkbox.Root>
+            <Checkbox.Root size="sm" checked={job.exportCollapseBursts} disabled={isPending} onCheckedChange={(d) => mutate({exportCollapseBursts: d.checked === true})}>
+                <Checkbox.HiddenInput/>
+                <Checkbox.Control/>
+                <Checkbox.Label>One Play per burst
+                    <InfoPopover question>
+                        <Stack>
+                            <Text>Only the first Play of each burst, in export order, is sent. Exports wait for the import to finish.</Text>
+                            <Text>The mirror is never changed. See the <ChakraLink textDecoration="underline" href={DATA_ISSUES_DOCS} target="_blank">docs</ChakraLink>.</Text>
+                            <Text textStyle="xs" color="fg.muted">Note: Changes apply to Plays exported next.</Text>
+                        </Stack>
+                    </InfoPopover></Checkbox.Label>
+            </Checkbox.Root>
+        </Stack>
     );
 }
 
@@ -532,6 +564,7 @@ export const ExportPanel = (props: { job: JobApiJson }) => {
                             </Stack>
                         </DataItem>
                         {job.transformOptions !== null ? <DataItem label="Discarded Plays"><KeepDiscarded job={job}/></DataItem> : undefined}
+                        <DataItem label="Data Issues"><DataIssueOptions job={job}/></DataItem>
                     </DataList.Root>
                     {job.targets.map((t, i) => <Box key={t.id}>
                         {i > 0 ? <Separator mb="4"/> : undefined}
