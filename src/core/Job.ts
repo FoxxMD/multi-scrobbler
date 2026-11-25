@@ -240,6 +240,69 @@ export interface MirrorApiJson {
     updatedAt: string
 }
 
+/** Mirror Plays timestamped before this (unix ms, 1970-01-02) have an invalid timestamp. Last.fm files them under 01 Jan 1970 when it got no date */
+export const BAD_TIMESTAMP_BEFORE_MS = 86_400_000;
+/** Plays of the same track and artists at most this far apart (ms) are in one burst. Real repeat listens are a track length apart */
+export const BURST_MAX_GAP_MS = 2000;
+/** fewest Plays in a burst */
+export const BURST_MIN_PLAYS = 3;
+
+export const MIRROR_ISSUE_TAGS = ['badTimestamp', 'burst'] as const;
+export type MirrorIssueTag = typeof MIRROR_ISSUE_TAGS[number];
+
+/** Counts of suspicious Plays in a mirror, found when read. Nothing is changed */
+export interface MirrorIssueSummaryJson {
+    /** Plays timestamped before BAD_TIMESTAMP_BEFORE_MS */
+    badTimestamp: number
+    bursts: number
+    /** Plays in bursts */
+    burstPlays: number
+    /** distinct Plays with any issue */
+    plays: number
+}
+
+/** A MirrorIssueGroup as read from the database */
+export interface MirrorIssueGroupRow {
+    /** id of the group's first Play */
+    id: number
+    count: number
+    /** Plays in the group with a bad timestamp */
+    bad: number
+    firstPlayedAt: number
+    lastPlayedAt: number
+}
+
+/** Tags and summary of issue groups. Pure, so the backend can cache the rows */
+export const issueGroupTags = (row: Pick<MirrorIssueGroupRow, 'count' | 'bad'>): MirrorIssueTag[] => [
+    ...(row.bad > 0 ? ['badTimestamp' as const] : []),
+    ...(row.count >= BURST_MIN_PLAYS ? ['burst' as const] : []),
+];
+
+export const summarizeIssueGroups = (rows: Pick<MirrorIssueGroupRow, 'count' | 'bad'>[]): MirrorIssueSummaryJson => {
+    const summary: MirrorIssueSummaryJson = {badTimestamp: 0, bursts: 0, burstPlays: 0, plays: 0};
+    for (const row of rows) {
+        summary.badTimestamp += row.bad;
+        summary.plays += row.count;
+        if (row.count >= BURST_MIN_PLAYS) {
+            summary.bursts++;
+            summary.burstPlays += row.count;
+        }
+    }
+    return summary;
+}
+
+/** One burst, or one Play with a bad timestamp that is not in a burst */
+export interface MirrorIssueGroup<P = unknown> {
+    tags: MirrorIssueTag[]
+    count: number
+    /** unix ms */
+    firstPlayedAt: number
+    /** unix ms */
+    lastPlayedAt: number
+    /** the first Play of the group */
+    play: P
+}
+
 /** Plays import jobs created in a Client */
 export interface ClientJobPlaysSummaryJson {
     total: number

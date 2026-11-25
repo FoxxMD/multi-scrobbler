@@ -8,10 +8,15 @@ import { DrizzlePlayHistoricalRepository } from "../common/database/drizzle/repo
 import type { WildcardEmitter } from "../common/WildcardEmitter.ts";
 import { subtractRanges, type TimeRange } from "../utils/RangeUtils.ts";
 import { JobConflictError, mirrorLockKey } from "./JobRunner.ts";
-import { isLockedMirror } from "../../core/Job.ts";
+import { isLockedMirror, issueGroupTags, type MirrorIssueGroup, type MirrorIssueGroupRow, type MirrorIssueSummaryJson, summarizeIssueGroups } from "../../core/Job.ts";
+import type { PaginatedResponse } from "../../core/Api.ts";
+import type { PlayObject } from "../../core/PlaySchema.ts";
 import type { LockRegistry } from "./LockRegistry.ts";
 
 export type CleanupAction = 'compact' | 'delete';
+
+/** mirror + range combinations whose issue groups are cached */
+const MAX_ISSUE_CACHE = 20;
 
 /** Locked mirrors hold the plays their Client uses to find duplicates. The Client manages them */
 export const lockedMessage = (mirror: Pick<PlayMirrorSelect, 'name' | 'service'>) => `Mirror '${mirror.name}' is managed by its ${mirror.service} Client, which needs its Plays to find duplicates. It can't be cleaned up or deleted`;
@@ -67,6 +72,7 @@ export class MirrorService {
     protected logger: Logger;
     protected tasks = new Map<number, MirrorTask>();
     protected aborts = new Map<number, AbortController>();
+    protected issueCache = new Map<string, {version: string, rows: Promise<MirrorIssueGroupRow[]>}>();
 
     constructor(deps: MirrorServiceDeps) {
         this.deps = deps;
@@ -112,6 +118,56 @@ export class MirrorService {
             gaps,
             jobs: await this.jobRepo.findByMirror(id),
             task: this.tasks.get(id),
+        };
+    }
+
+    /**
+     * Issue groups of a mirror (in range). Finding them reads every play of the mirror (~1s per 300k plays),
+     * so they are cached until the mirror's plays change. The promise is cached, so concurrent requests share one read.
+     * */
+    protected issueRows = async (id: number, range?: TimeRange): Promise<MirrorIssueGroupRow[]> => {
+        const key = `${id}:${range?.join('-') ?? 'all'}`;
+        const version = await this.historicalRepo.mirrorVersion(id);
+        const hit = this.issueCache.get(key);
+        if (hit !== undefined && hit.version === version) {
+            return hit.rows;
+        }
+        const entry = {version, rows: this.historicalRepo.mirrorIssueGroupRows({mirrorId: id, range})};
+        this.issueCache.delete(key);
+        this.issueCache.set(key, entry);
+        for (const oldest of this.issueCache.keys()) {
+            if (this.issueCache.size <= MAX_ISSUE_CACHE) {
+                break;
+            }
+            this.issueCache.delete(oldest);
+        }
+        entry.rows.catch(() => {
+            if (this.issueCache.get(key) === entry) {
+                this.issueCache.delete(key);
+            }
+        });
+        return entry.rows;
+    }
+
+    /** Counts of bad-timestamp and burst plays. Read-only */
+    issueSummary = async (id: number, range?: TimeRange): Promise<MirrorIssueSummaryJson> => summarizeIssueGroups(await this.issueRows(id, range));
+
+    /** A page of bursts and bad-timestamp plays, oldest first. Read-only */
+    issueGroups = async (id: number, opts: {range?: TimeRange, offset?: number, limit?: number} = {}): Promise<PaginatedResponse<MirrorIssueGroup<PlayObject>>> => {
+        const {range, offset = 0, limit = 50} = opts;
+        const rows = await this.issueRows(id, range);
+        const page = rows.slice(offset, offset + limit);
+        const plays = await this.historicalRepo.getPlaysByIds(page.map(x => x.id));
+        return {
+            // a play deleted after the rows were read is skipped
+            data: page.filter(x => plays.has(x.id)).map(x => ({
+                tags: issueGroupTags(x),
+                count: x.count,
+                firstPlayedAt: x.firstPlayedAt,
+                lastPlayedAt: x.lastPlayedAt,
+                play: plays.get(x.id)!,
+            })),
+            meta: {offset, limit, total: rows.length},
         };
     }
 
