@@ -28,12 +28,14 @@ import type { PlayEventTransform } from "../../../../../core/PlayEvent.ts";
  * The relational `queueStates` filter compiles to EXISTS, so SQLite walks every play of the component (slow once a component has many plays).
  * This form reads play_queue_state_component_idx instead. It also filters plays by `componentId`, so callers must not.
  * */
-const inQueue = (q: {componentId?: number | SQLWrapper, queueName: string | SQLWrapper, status: QueueStateSelect['queueStatus'] | SQLWrapper, retries?: number | SQLWrapper}) => (t: typeof plays): SQL => {
+/** @param q.dupeChecked only plays that will be dupe checked (not queued with dupeCheck: false) */
+const inQueue = (q: {componentId?: number | SQLWrapper, queueName: string | SQLWrapper, status: QueueStateSelect['queueStatus'] | SQLWrapper, retries?: number | SQLWrapper, dupeChecked?: boolean}) => (t: typeof plays): SQL => {
     const conds = [
         q.componentId === undefined ? undefined : eq(queueStates.componentId, q.componentId),
         eq(queueStates.queueName, q.queueName),
         eq(queueStates.queueStatus, q.status),
         q.retries === undefined ? undefined : lte(queueStates.retries, q.retries),
+        q.dupeChecked === true ? sql`coalesce(json_extract(${queueStates.context}, '$.dupeCheck'), 1) != 0` : undefined,
     ];
     const inQueueSql = sql`${t.id} in (select ${queueStates.playId} from ${queueStates} where ${and(...conds)})`;
     // unary + stops SQLite from scanning a plays componentId index, so it looks up the subquery ids by rowid instead
@@ -622,7 +624,8 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
                     id: true
         },
         where: {
-            RAW: inQueue({componentId: this.componentId, queueName: sql.placeholder('queueName'), status: 'queued', retries: sql.placeholder('retries')}),
+            // ranges are only fetched for dupe checks
+            RAW: inQueue({componentId: this.componentId, queueName: sql.placeholder('queueName'), status: 'queued', retries: sql.placeholder('retries'), dupeChecked: true}),
         }
     }).prepare()
 
@@ -636,7 +639,8 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
 
     protected prepareGetQueuedScrobbleRange = () => this.db.query.plays.findMany({
         where: {
-            RAW: inQueue({componentId: this.componentId, queueName: sql.placeholder('queueName'), status: 'queued', retries: sql.placeholder('retries')}),
+            // ranges are only fetched for dupe checks
+            RAW: inQueue({componentId: this.componentId, queueName: sql.placeholder('queueName'), status: 'queued', retries: sql.placeholder('retries'), dupeChecked: true}),
         },
         orderBy: {
             seenAt: 'asc',

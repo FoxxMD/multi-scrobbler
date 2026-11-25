@@ -1436,6 +1436,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         // if we have seen a play with close temporality with the exact input hash then skip it entirely
         // import job plays are transformed by the job before queueing, so match on the untransformed mirror play they carry
         const isJobPlay = queueablePlay.meta?.jobId !== undefined;
+        if(isJobPlay && context?.dupeCheck === false) {
+            // checkExisting matches burst plays a second apart to each other, so only look for the same mirror play queued again (IE after a restart)
+            return await this.playRepo.findJobPlayExact(queueablePlay, {jobId: queueablePlay.meta.jobId!, input: queueablePlay.original?.play ?? queueablePlay, notStates: ['failed']});
+        }
         const cheapInputExisting = await this.playRepo.checkExisting(queueablePlay, {
                 inputHash: isJobPlay ? (queueablePlay.original?.play ?? queueablePlay) : queueablePlay,
                 // existing should have been created *before* this play

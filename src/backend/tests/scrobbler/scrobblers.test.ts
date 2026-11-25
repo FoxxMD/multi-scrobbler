@@ -19,7 +19,7 @@ import MockDate from 'mockdate';
 
 import { NowPlayingScrobbler, TestAuthScrobbler, TestScrobbler } from "./TestScrobbler.ts";
 import { type PaginatedTimeRangeOptions, REFRESH_STALE_DEFAULT } from '../../common/infrastructure/Atomic.ts';
-import type {PlayPlatformId} from '../../../core/Atomic.ts';
+import type {PlayPlatformId, QueueContext} from '../../../core/Atomic.ts';
 import { shuffleArray } from '../../utils/DataUtils.ts';
 import { DEFAULT_CONSOLIDATE_DURATION, groupPlaysToTimeRanges, HISTORICAL_BUCKET_DURATION, HISTORICAL_BUCKET_FETCH_MAX, HISTORICAL_BUCKET_PADDING, historicalBucketRange } from '../../utils/ListenFetchUtils.ts';
 import { asPlay } from '../../../core/PlayMarshalUtils.ts';
@@ -1627,6 +1627,55 @@ describe('Import job plays', function() {
         expect(await repo.findJobPlayExact(jobPlay(mirrorPlay, 'A'), {jobId: jobId + 1, input: mirrorPlay})).is.undefined;
         await repo.setStateById('failed', [first.id]);
         expect(await repo.findJobPlayExact(jobPlay(mirrorPlay, 'A'), {jobId, input: mirrorPlay, notStates: ['failed']})).is.undefined;
+    });
+
+    describe('without a dupe check', function() {
+        const burst = (count: number) => {
+            const first = generatePlay({playDate: dayjs('1970-01-01T00:00:01Z')});
+            return Array.from({length: count}, (_, i) => {
+                const p = clone(first);
+                p.data.playDate = first.data.playDate!.add(i, 's');
+                return p;
+            });
+        }
+
+        it('queues every play of a burst, and each mirror play only once', async function() {
+            await using testScrobbler = await generateTestScrobbler();
+            const jobId = await createJob(testScrobbler);
+            const plays = burst(5);
+            // the fuzzy pre-queue check finds each play's earlier sibling
+            const checked = await createJob(testScrobbler);
+            expect(await testScrobbler.queuePlay(plays.map(p => jobPlay(p, 'A')), undefined, {jobId: checked})).length.lessThan(5);
+
+            expect(await testScrobbler.queuePlay(plays.map(p => jobPlay(p, 'A')), {dupeCheck: false}, {jobId})).length(5);
+            // queued again (IE a restart before the export saved its cursor)
+            expect(await testScrobbler.queuePlay(plays.map(p => jobPlay(p, 'A')), {dupeCheck: false}, {jobId})).length(0);
+        });
+
+        it('keeps dupeCheck and upstreamCheck when queued again, unless the request sets them', async function() {
+            await using testScrobbler = await generateTestScrobbler();
+            const jobId = await createJob(testScrobbler);
+            const [created] = await testScrobbler.queuePlay([jobPlay(burst(1)[0], 'A')], {dupeCheck: false, upstreamCheck: false}, {jobId});
+            const context = async () => (await testScrobbler.playRepoTest.findByUid(created.uid))!.queueStates.find(x => x.queueName === INGRESS_QUEUE)!.context;
+            const requeue = async (ctx?: QueueContext) => testScrobbler.queuePlay([(await testScrobbler.playRepoTest.findByUid(created.uid))!], ctx);
+
+            // like a dead letter retry
+            await requeue({reason: 'dead'});
+            expect(await context()).to.deep.eq({dupeCheck: false, upstreamCheck: false, reason: 'dead'});
+            await requeue({isRetry: true, dupeCheck: true});
+            expect(await context()).to.deep.eq({dupeCheck: true, upstreamCheck: false, isRetry: true});
+        });
+
+        it('leaves them out of the ranges fetched for dupe checks', async function() {
+            await using testScrobbler = await generateTestScrobbler();
+            const jobId = await createJob(testScrobbler);
+            const [unchecked, checked] = burst(2);
+            checked.data.track = nameToCredit('Other');
+            await testScrobbler.queuePlay([jobPlay(unchecked, 'A')], {dupeCheck: false}, {jobId});
+            await testScrobbler.queuePlay([jobPlay(checked, 'B')], undefined, {jobId});
+            const ranged = await testScrobbler.playRepoTest.getQueuedScrobbleRange(INGRESS_QUEUE);
+            expect(ranged.map(x => x.data.track?.name)).to.deep.eq(['B']);
+        });
     });
 
     it('counts scrobbled job plays as non-live', async function() {

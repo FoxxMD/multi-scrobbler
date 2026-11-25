@@ -33,7 +33,7 @@ import { hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.ts";
 import { normalizeStr } from "../../core/StringUtils.ts";
 import { playContentCacheHash } from "../utils/PlayComparisonUtils.ts";
 import type { MSCache } from "./Cache.ts";
-import { diffObjects, diffObjectsConsoleOutput, patchObject } from "../../core/DataUtils.ts";
+import { diffObjects, diffObjectsConsoleOutput, patchObject, removeUndefinedKeys } from "../../core/DataUtils.ts";
 import clone from "clone";
 import { loggerNoop } from "./MaybeLogger.ts";
 import { objectsEqual } from "../utils/DataUtils.ts";
@@ -867,14 +867,17 @@ export default abstract class AbstractComponent extends AbstractInitializable {
              */
             for (const playSelect of dataArray) {
                 let queue = playSelect.queueStates.find(x => x.queueName === INGRESS_QUEUE);
+                // a retry (user or dead letter) keeps how the play was queued to be dupe checked (IE an export without one), unless it asks otherwise
+                const {dupeCheck, upstreamCheck} = queue?.context ?? {};
+                const queueContext: QueueContext = {...removeUndefinedKeys({dupeCheck, upstreamCheck}, false), ...removeUndefinedKeys({...context}, false)};
                 if (queue === undefined) {
-                    queue = await this.queueRepo.create({ componentId: this.dbComponent.id, playId: playSelect.id, queueName: INGRESS_QUEUE, context }) as QueueStateSelect;
+                    queue = await this.queueRepo.create({ componentId: this.dbComponent.id, playId: playSelect.id, queueName: INGRESS_QUEUE, context: queueContext }) as QueueStateSelect;
                 } else {
-                    this.queueRepo.updateById(queue.id, { queueStatus: 'queued', context, error: undefined });
+                    this.queueRepo.updateById(queue.id, { queueStatus: 'queued', context: queueContext, error: undefined });
                 }
                 const events = await this.playEventsRepo.createMany([
                     { playId: playSelect.id, ...stateChangeToPlayEvent({ state: 'queued' }) },
-                    { playId: playSelect.id, ...queueStateToPlayEvent({ ...queue, queueStatus: 'queued', error: undefined, context: context ?? queue.context }) }
+                    { playId: playSelect.id, ...queueStateToPlayEvent({ ...queue, queueStatus: 'queued', error: undefined, context: queueContext }) }
                 ]) as PlayEventSelect[];
                 playSelect.state = 'queued';
                 await this.playRepo.updateById(playSelect.id, {state: 'queued'});
