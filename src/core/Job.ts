@@ -306,9 +306,11 @@ export interface MirrorIssueGroup<P = unknown> {
 
 export type MirrorIssueGroupJson = MirrorIssueGroup<PlayApiCommon['play']>;
 
+// '' (IE `from=`) would coerce to 0
+const optionalMs = z.preprocess(x => x === '' ? undefined : x, z.coerce.number().int().optional());
 const issueRangeSchema = z.object({
-    from: z.coerce.number().int().optional().meta({description: 'Only Plays played at or after this unix ms timestamp'}),
-    to: z.coerce.number().int().optional().meta({description: 'Only Plays played at or before this unix ms timestamp'}),
+    from: optionalMs.meta({description: 'Only Plays played at or after this unix ms timestamp'}),
+    to: optionalMs.meta({description: 'Only Plays played at or before this unix ms timestamp'}),
 });
 export const mirrorIssuesQuerySchema = issueRangeSchema.refine(x => x.from === undefined || x.to === undefined || x.from <= x.to, {message: 'from must not be after to'});
 export const mirrorIssueListQuerySchema = issueRangeSchema.extend({

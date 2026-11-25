@@ -11,7 +11,7 @@ import { LockRegistry } from '../../jobs/LockRegistry.ts';
 import { MirrorService } from '../../jobs/MirrorService.ts';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { nameToCredit, namesToCredits } from '../../../core/MusicMetadata.ts';
-import { MIRROR_SERVICE_MIXED } from '../../../core/Job.ts';
+import { BAD_TIMESTAMP_BEFORE_MS, MIRROR_SERVICE_MIXED } from '../../../core/Job.ts';
 
 const HOUR = 3_600_000;
 // after the bad-timestamp cutoff
@@ -88,6 +88,43 @@ describe('Mirror data issues', function () {
         const page = await service.issueGroups(mirror.id, {offset: 1, limit: 1});
         expect(page.meta).to.deep.eq({offset: 1, limit: 1, total: 3});
         expect(page.data.map(x => x.play.data.track?.name)).to.deep.eq(['B']);
+    });
+
+    it('joins plays at most 2 seconds apart, including ties', async function () {
+        const {mirror, service, insert} = await setup();
+        // 2000ms gaps join
+        await insert([T, T + 2000, T + 4000], 'A');
+        // a 2001ms gap splits 2 + 2
+        await insert([T, T + 1000, T + 3001, T + 4001], 'B');
+        // same second, distinct uids
+        await insert([T, T, T], 'C');
+        const {data} = await service.issueGroups(mirror.id);
+        expect(data.map(x => [x.play.data.track?.name, x.count])).to.deep.eq([['A', 3], ['C', 3]]);
+    });
+
+    it('counts bad timestamps of a burst that spans the cutoff', async function () {
+        const {mirror, service, insert} = await setup();
+        await insert(seconds(BAD_TIMESTAMP_BEFORE_MS - 2000, 4));
+        expect(await service.issueSummary(mirror.id)).to.deep.eq({badTimestamp: 2, bursts: 1, burstPlays: 4, plays: 4});
+        expect((await service.issueGroups(mirror.id)).data[0].tags).to.deep.eq(['badTimestamp', 'burst']);
+    });
+
+    it('cuts bursts at the range edge', async function () {
+        const {mirror, service, insert} = await setup();
+        await insert(seconds(T, 4));
+        expect((await service.issueSummary(mirror.id, [T + 1000, T + 10_000])).bursts).eq(1);
+        expect((await service.issueSummary(mirror.id, [T + 2000, T + 10_000])).bursts).eq(0);
+    });
+
+    it('never puts plays without a track name in a burst', async function () {
+        const {mirror, repo, service} = await setup();
+        await repo.insertIgnoreDuplicates(seconds(T, 3).map((ms, i) => {
+            const play = generatePlay({playDate: dayjs(ms)});
+            play.data.track = undefined;
+            play.data.artists = [];
+            return {uid: `nameless${i}`, mirrorId: mirror.id, play};
+        }));
+        expect((await service.issueSummary(mirror.id)).bursts).eq(0);
     });
 
     it('caches until the mirror plays change', async function () {

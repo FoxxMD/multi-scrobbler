@@ -557,6 +557,10 @@ describe('Job API', function () {
             expect(summary.body).eql({badTimestamp: 3, bursts: 2, burstPlays: 6, plays: 6});
             expect((await request(app).get(`/api/mirrors/${mirror.id}/issues`).query({from: t})).body.bursts).eq(1);
             expect((await request(app).get(`/api/mirrors/${mirror.id}/issues`).query({from: t, to: 0})).status).eq(400);
+            expect((await request(app).get(`/api/mirrors/${mirror.id}/issues`).query({to: t - 1})).body.bursts).eq(1);
+            // an empty edge is unset, not 0
+            expect((await request(app).get(`/api/mirrors/${mirror.id}/issues?from=&to=${t - 1}`)).body.bursts).eq(1);
+            expect((await request(app).get(`/api/mirrors/${mirror.id}/issues?from=${t}&to=`)).body.bursts).eq(1);
 
             const list = await request(app).get(`/api/mirrors/${mirror.id}/issues/list`).query({offset: 1, limit: 1});
             expect(list.status, JSON.stringify(list.body)).eq(200);

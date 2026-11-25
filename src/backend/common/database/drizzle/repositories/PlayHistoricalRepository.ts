@@ -267,7 +267,9 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         const rangeSql = range === undefined ? sql`` : sql` AND playedAt >= ${range[0]} AND playedAt <= ${range[1]}`;
         return sql`WITH r AS (
     SELECT id, playedAt,
-        lower(trim(coalesce(json_extract(play, '$.data.track.name'), ''))) || char(0) || lower(coalesce(json_extract(play, '$.data.artists'), '')) AS k
+        -- a play without a track name gets its own key, so it is never in a burst
+        CASE WHEN trim(coalesce(json_extract(play, '$.data.track.name'), '')) = '' THEN 'id:' || id
+            ELSE lower(trim(json_extract(play, '$.data.track.name'))) || char(0) || lower(coalesce(json_extract(play, '$.data.artists'), '')) END AS k
     FROM plays_historical
     WHERE mirrorId = ${mirrorId} AND playedAt IS NOT NULL${rangeSql}
 ), f AS (
