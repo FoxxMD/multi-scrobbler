@@ -297,6 +297,12 @@ export class SonosSource extends MemoryPositionalSource {
 }
 
 
+/**
+ * Sonos reports durations/positions as a timestamp string (0:03:16) when known.
+ * When unknown it may report "NOT_IMPLEMENTED" or, for some inputs like bluetooth, an empty object.
+ * */
+export const isSonosTimestamp = (val: unknown): val is string => typeof val === 'string' && val !== "NOT_IMPLEMENTED";
+
 export const formatPlayObj = (obj: SonosState, options: FormatPlayObjectOptions & { device?: SonosDevice } = {}): PlayObject => {
 
     const {
@@ -360,14 +366,14 @@ export const formatPlayObj = (obj: SonosState, options: FormatPlayObjectOptions 
     } = mergedMetadata;
 
     let dur: number | undefined;
-    if (Duration !== undefined && Duration !== "NOT_IMPLEMENTED") {
+    if (isSonosTimestamp(Duration)) {
         dur = parseDurationFromTimestamp(Duration)?.asSeconds();
-    } else if (TrackDuration !== undefined && TrackDuration !== "NOT_IMPLEMENTED") {
+    } else if (isSonosTimestamp(TrackDuration)) {
         dur = parseDurationFromTimestamp(TrackDuration)?.asSeconds();
     }
 
     let progress: number | undefined;
-    if (RelTime !== undefined && RelTime !== "NOT_IMPLEMENTED") {
+    if (isSonosTimestamp(RelTime)) {
         progress = parseDurationFromTimestamp(RelTime)?.asSeconds();
     }
 
