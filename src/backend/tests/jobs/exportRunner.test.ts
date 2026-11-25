@@ -584,6 +584,23 @@ describe('Job export runner', function () {
                 await runner.stopExport(target.id, 'stopped');
             });
 
+            it('tries the check again after it fails, and offers a decision meanwhile', async function () {
+                const {runner, target, targetRepo, client} = await epochSetup();
+                let fail = true;
+                client.countScrobblesBefore = async () => {
+                    if (fail) {
+                        throw new Error('down');
+                    }
+                    return 0;
+                };
+                await runner.startExport(target.id);
+                await until(() => runner.runtime.exports[target.id]?.waiting?.startsWith('Could not check') === true);
+                expect(runner.runtime.exports[target.id]?.epochPlays).null;
+                fail = false;
+                await exportTask(runner, target.id);
+                expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', epochDecision: 'empty'});
+            });
+
             it('does not check again after a decision', async function () {
                 const {runner, target, targetRepo, client, checks} = await epochSetup({found: 3});
                 await targetRepo.update(target.id, {epochDecision: 'send'});

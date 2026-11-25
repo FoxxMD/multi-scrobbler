@@ -18,7 +18,7 @@ import { baseUrl } from "../../utils";
 import { ErrorAlert } from "../ErrorAlert";
 import { toaster } from "../Toaster";
 import { JobBackButton } from "./JobList";
-import { apiErrorMessage, exportProgress, ExportProgressBar, FILE_FORMAT_NAMES, formatJobDate, formatPlayedDate, importCountsText, ImportProgressBar, importOriginText, importProgress, JobStatusBadge, ProcessRateText, RateLimitText, useProcessRate, useJobEvents, useSetJob } from "./jobUtils";
+import { apiErrorMessage, BURST_MODE_LABELS, BURST_MODES, type BurstMode, burstMode, burstModeOptions, exportProgress, ExportProgressBar, FILE_FORMAT_NAMES, formatJobDate, formatPlayedDate, importCountsText, ImportProgressBar, importOriginText, importProgress, JobStatusBadge, ProcessRateText, RateLimitText, useProcessRate, useJobEvents, useSetJob } from "./jobUtils";
 import { InfoPopover } from '../ToggleTip';
 
 type ControlAction = 'start' | 'pause' | 'stop';
@@ -332,6 +332,29 @@ const statsText = (stats: JobTargetApiJson['stats']): string | undefined => {
     return parts.length > 0 ? parts.join(', ') : undefined;
 }
 
+const EPOCH_DECISION_TEXT: Record<NonNullable<JobTargetApiJson['epochDecision']>, string> = {
+    empty: 'Plays before 1970 are sent without a dupe check, the Client had none.',
+    send: 'Plays before 1970 are sent without a dupe check, as you chose.',
+    skip: 'Plays before 1970 are skipped, as you chose.',
+};
+
+/** The export waits until the user decides what to do with Plays before 1970 for a Client that already has some */
+const EpochDecisionButtons = (props: { job: JobApiJson, target: JobTargetApiJson }) => {
+    const {job, target} = props;
+    const setJob = useSetJob();
+    const {mutate, isPending} = useMutation({
+        mutationFn: (epochDecision: 'send' | 'skip') => ky.patch(`jobs/${job.id}/targets/${target.id}`, {baseUrl, json: {epochDecision}}).json<JobApiJson>(),
+        onSuccess: setJob,
+        onError: (e) => toaster.create({type: 'error', title: 'Could not save the choice', description: apiErrorMessage(e)}),
+    });
+    return (
+        <HStack wrap="wrap">
+            <Button size="xs" colorPalette="orange" loading={isPending} onClick={() => mutate('send')}>Send anyway (may duplicate)</Button>
+            <Button size="xs" variant="outline" loading={isPending} onClick={() => mutate('skip')}>Skip Plays before 1970</Button>
+        </HStack>
+    );
+}
+
 export const ExportTarget = (props: { job: JobApiJson, target: JobTargetApiJson }) => {
     const {job, target} = props;
     const runtime = job.runtime.exports[target.id];
@@ -361,6 +384,8 @@ export const ExportTarget = (props: { job: JobApiJson, target: JobTargetApiJson 
             {target.exported > target.queued ? <Text textStyle="sm" color="fg.muted">{(target.exported - target.queued).toLocaleString()} were already in the Client and were skipped.</Text> : undefined}
             {target.skipped > 0 ? <Text textStyle="sm" color="fg.muted">{target.skipped.toLocaleString()} were not sent because of the data issue options.</Text> : undefined}
             {runtime?.waiting !== undefined ? <Text textStyle="sm" color="fg.warning">{runtime.waiting}</Text> : undefined}
+            {runtime?.epochPlays !== undefined && target.epochDecision === null ? <EpochDecisionButtons job={job} target={target}/> : undefined}
+            {job.exportKeepEpochBursts && target.epochDecision !== null ? <Text textStyle="sm" color="fg.muted">{EPOCH_DECISION_TEXT[target.epochDecision]}</Text> : undefined}
             {target.status !== 'running' && target.status !== 'completed' && queuedLeft > 0 ? <Text textStyle="sm" color="fg.muted">{queuedLeft.toLocaleString()} queued Plays will still be sent to the Client.</Text> : undefined}
             {target.status === 'running' && target.breaker.failedInARow > 0 ? <Text textStyle="sm" color="fg.warning">{target.breaker.failedInARow} failed in a row, the export stops at {Math.max(job.exportQueueLimit, 10)}.</Text> : undefined}
             {target.error !== null && target.status === 'failed' ? <ErrorAlert error={target.error}/> : undefined}
@@ -444,7 +469,7 @@ export const DataIssueOptions = (props: { job: JobApiJson }) => {
     const {job} = props;
     const setJob = useSetJob();
     const {mutate, isPending} = useMutation({
-        mutationFn: (json: Partial<Pick<JobApiJson, 'exportSkipBadTimestamps' | 'exportCollapseBursts'>>) => ky.patch(`jobs/${job.id}`, {baseUrl, json}).json<JobApiJson>(),
+        mutationFn: (json: Partial<Pick<JobApiJson, 'exportSkipBadTimestamps' | 'exportCollapseBursts' | 'exportKeepEpochBursts'>>) => ky.patch(`jobs/${job.id}`, {baseUrl, json}).json<JobApiJson>(),
         onSuccess: setJob,
         onError: (e) => toaster.create({type: 'error', title: 'Could not change the data issue options', description: apiErrorMessage(e)}),
     });
@@ -455,18 +480,24 @@ export const DataIssueOptions = (props: { job: JobApiJson }) => {
                 <Checkbox.Control/>
                 <Checkbox.Label>Skip bad timestamps</Checkbox.Label>
             </Checkbox.Root>
-            <Checkbox.Root size="sm" checked={job.exportCollapseBursts} disabled={isPending} onCheckedChange={(d) => mutate({exportCollapseBursts: d.checked === true})}>
-                <Checkbox.HiddenInput/>
-                <Checkbox.Control/>
-                <Checkbox.Label>One Play per burst
-                    <InfoPopover question>
-                        <Stack>
-                            <Text>Only the first Play of each burst, in export order, is sent. Exports wait for the import to finish.</Text>
-                            <Text>The mirror is never changed. See the <ChakraLink textDecoration="underline" href={DATA_ISSUES_DOCS} target="_blank">docs</ChakraLink>.</Text>
-                            <Text textStyle="xs" color="fg.muted">Note: Changes apply to Plays exported next.</Text>
-                        </Stack>
-                    </InfoPopover></Checkbox.Label>
-            </Checkbox.Root>
+            <HStack gap="1">
+                <Text textStyle="sm">Bursts</Text>
+                <InfoPopover question>
+                    <Stack>
+                        <Text>One Play per burst only sends the first Play of each burst, in export order. Exports wait for the import to finish.</Text>
+                        <Text>Keeping bursts before 1970 sends play counts copied from older software whole, without a dupe check. Each Client is checked for scrobbles before 1970 first. If it has some, the export waits for you to choose.</Text>
+                        <Text>The mirror is never changed. See the <ChakraLink textDecoration="underline" href={DATA_ISSUES_DOCS} target="_blank">docs</ChakraLink>.</Text>
+                        <Text textStyle="xs" color="fg.muted">Note: Changes apply to Plays exported next.</Text>
+                    </Stack>
+                </InfoPopover>
+            </HStack>
+            <RadioGroup.Root size="sm" value={burstMode(job)} disabled={isPending} onValueChange={(d) => mutate(burstModeOptions(d.value as BurstMode))}>
+                <Stack gap="1" ps="2">
+                    {BURST_MODES.map(x => <RadioGroup.Item key={x} value={x}>
+                        <RadioGroup.ItemHiddenInput/><RadioGroup.ItemIndicator/><RadioGroup.ItemText>{BURST_MODE_LABELS[x]}</RadioGroup.ItemText>
+                    </RadioGroup.Item>)}
+                </Stack>
+            </RadioGroup.Root>
         </Stack>
     );
 }

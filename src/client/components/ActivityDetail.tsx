@@ -253,6 +253,7 @@ const opts = formOptions.strictSchema(queueContextSchema, {
         defaultValues: {
             transform: true,
             dupeCheck: true,
+            upstreamCheck: true,
             useCache: true,
             ignoreActions: false
         },
@@ -262,9 +263,15 @@ const opts = formOptions.strictSchema(queueContextSchema, {
         }],
 });
 
-const RetryWithDialog = (props: { open: boolean, setOpen: (open: boolean) => void, onSubmit: (vals: QueueContext) => void }) => {
+/** @param props.context how the Play was last queued, its dupe checks are shown as they were (IE an export without one) */
+const RetryWithDialog = (props: { open: boolean, setOpen: (open: boolean) => void, onSubmit: (vals: QueueContext) => void, context?: QueueContext | null }) => {
     const form = useForm({
         ...opts,
+        defaultValues: {
+            ...opts.defaultValues,
+            dupeCheck: props.context?.dupeCheck ?? opts.defaultValues.dupeCheck,
+            upstreamCheck: props.context?.upstreamCheck ?? opts.defaultValues.upstreamCheck,
+        },
         onSubmit: ({ schemaOutputs }) => {
             props.onSubmit(schemaOutputs[0]);
             props.setOpen(false);
@@ -306,6 +313,10 @@ const RetryWithDialog = (props: { open: boolean, setOpen: (open: boolean) => voi
                                 <form.Field
                                     name="dupeCheck"
                                     children={(field) => (<FormCheckbox field={field} label="Check for Duplicate?"/>)}
+                                />
+                                <form.Field
+                                    name="upstreamCheck"
+                                    children={(field) => (<FormCheckbox field={field} label="Check the service for Duplicates?"/>)}
                                 />
                                 <form.Field
                                     name="useCache"
@@ -546,7 +557,7 @@ export const ActivityStateActions = (props: {activity: PlayApiCommonDetailed, co
         }
     return (
         <Stack>
-            <RetryWithDialog open={retryOpen} setOpen={setRetryOpen} onSubmit={(vals) => mutate({action: 'queue', context: vals})}/>
+            <RetryWithDialog open={retryOpen} setOpen={setRetryOpen} onSubmit={(vals) => mutate({action: 'queue', context: vals})} context={queueStates.find(x => x.queueName === INGRESS_QUEUE)?.context}/>
             <DeleteDialog open={deleteOpen} setOpen={setDeleteOpen} onSubmit={() => mutate({action: 'delete'})} source={props.componentType === 'source'}/>
             <HStack>
                 <PlayStateBadge {...badgeProps} minH="32px" alignItems="anchor-center" size={{base: 'xs', sm: 'lg', mdTo2xl: 'lg'}} hasDeadQueue={hasDeadQueue} state={props.activity.state} suffix={suffix} />

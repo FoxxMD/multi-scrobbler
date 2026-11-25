@@ -817,7 +817,8 @@ export class JobRunner {
                     } catch (e) {
                         signal.throwIfAborted();
                         logger.warn(new Error('Could not check the Client for scrobbles before 2 Jan 1970, will try again', {cause: e}));
-                        await wait('Could not check the Client for scrobbles before 2 Jan 1970, will try again', 'Epoch Play check failed');
+                        // the user can still decide, IE when the service is down for a while
+                        await wait('Could not check the Client for scrobbles before 2 Jan 1970, will try again. Or choose to send this job\'s Plays from before then without a dupe check, or to skip them', 'Epoch Play check failed', null);
                         continue;
                     }
                     if(found === 0) {

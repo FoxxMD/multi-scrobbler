@@ -15,7 +15,7 @@ import { FormCheckbox, FormFieldErrors, FormNativeSelect, FormNumberInput, FormR
 import { TextMuted } from "../TextMuted";
 import { toaster } from "../Toaster";
 import { JobBackButton } from "./JobList";
-import { apiErrorMessage, useSetJob } from "./jobUtils";
+import { apiErrorMessage, BURST_MODE_LABELS, BURST_MODES, type BurstMode, burstModeOptions, useSetJob } from "./jobUtils";
 import { InfoPopover } from '../ToggleTip';
 import { DATA_ISSUES_DOCS, MirrorIssuesPreview } from "../mirrors/MirrorIssues";
 
@@ -53,7 +53,7 @@ const formSchema = z.object({
     upstreamCheck: z.boolean(),
     exportDiscarded: z.boolean(),
     exportSkipBadTimestamps: z.boolean(),
-    exportCollapseBursts: z.boolean(),
+    bursts: z.enum(BURST_MODES),
     transforms: z.enum(['none', 'preset', 'component']),
     preset: z.string(),
     /** `componentId:hook` */
@@ -137,7 +137,7 @@ const formSchema = z.object({
             upstreamCheck: v.upstreamCheck,
             exportDiscarded: v.exportDiscarded,
             exportSkipBadTimestamps: v.exportSkipBadTimestamps,
-            exportCollapseBursts: v.exportCollapseBursts,
+            ...burstModeOptions(v.bursts),
             transforms,
             start: v.start,
         },
@@ -231,7 +231,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                 upstreamCheck: true,
                 exportDiscarded: false,
                 exportSkipBadTimestamps: false,
-                exportCollapseBursts: false,
+                bursts: 'send' as BurstMode,
                 transforms: 'none' as TransformsKind,
                 preset: options.presets[0]?.name ?? '',
                 transformComponent: options.componentTransforms[0] !== undefined ? `${options.componentTransforms[0].componentId}:${options.componentTransforms[0].preCompare !== undefined ? 'preCompare' : 'postCompare'}` : '',
@@ -505,9 +505,9 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                                             children={(field) => <FormCheckbox field={field} label="Skip bad timestamps" helperText="Plays dated 1 Jan 1970, or dated after they were imported, are not sent."/>}
                                         />
                                         <form.Field
-                                            name="exportCollapseBursts"
-                                            children={(field) => <FormCheckbox field={field} label="One Play per burst"
-                                                helperText="Only the first Play of each burst (the same track many times within seconds) is sent. Exports wait for the import to finish."/>}
+                                            name="bursts"
+                                            children={(field) => <FormRadio field={field} label="Bursts" items={BURST_MODES.map(x => ({value: x, label: BURST_MODE_LABELS[x]}))}
+                                                helperText={<>A burst is the same track many times within seconds. One Play per burst only sends the first Play of each, and exports wait for the import to finish. Keeping bursts before 1970 sends play counts copied from older software whole, without a dupe check, if each Client has no scrobbles before 1970 yet.</>}/>}
                                         />
                                     </Fieldset.Content>
                                 </Fieldset.Root>

@@ -15,6 +15,7 @@ import { menuItem, type MenuItemRender } from '../buttonMenus/menuItemUtils.js';
 import { RetryIcon } from '../icons/ChakraIcons.js';
 import { PrimaryButtonMenu } from '../buttonMenus/ButtonMenu.js';
 import ky from 'ky';
+import * as z from "zod";
 import { formOptions, useForm } from '@tanstack/react-form';
 import { FormCheckbox, FormRadio, type RadioFormItem } from '../form/formComponents.js';
 import { queryPlayOptsRefreshableToJson } from '../../utils/ComponentUtils.js';
@@ -250,15 +251,26 @@ const playInWindow = (data: PlayApiCommonDetailed, query: QueryPlaysOptsJson): b
   return true;
 }
 
-const opts = formOptions.strictSchema(actionContextSchema, {
+// each Play may have been queued with its own dupe checks (IE an export without one), so the default keeps them
+const ownOrSet = z.enum(['own', 'yes', 'no']);
+const bulkContextSchema = actionContextSchema.extend({dupeCheck: ownOrSet, upstreamCheck: ownOrSet});
+const ownOrSetItems: RadioFormItem[] = [
+  {value: 'own', label: "Each Play's own"},
+  {value: 'yes', label: 'Yes'},
+  {value: 'no', label: 'No'},
+];
+const ownOrSetValue = (x: z.infer<typeof ownOrSet>): boolean | undefined => x === 'own' ? undefined : x === 'yes';
+
+const opts = formOptions.strictSchema(bulkContextSchema, {
         defaultValues: {
             transform: true,
-            dupeCheck: true,
+            dupeCheck: 'own',
+            upstreamCheck: 'own',
             useCache: true,
             action: 'failures'
         },
         validators: [{
-            run: actionContextSchema,
+            run: bulkContextSchema,
             triggers: [],
         }],
 });
@@ -272,7 +284,8 @@ const RetryWithDialog = (props: { open: boolean, setOpen: (open: boolean) => voi
     const form = useForm({
         ...opts,
         onSubmit: ({ schemaOutputs }) => {
-            props.onSubmit(schemaOutputs[0]);
+            const {dupeCheck, upstreamCheck, ...rest} = schemaOutputs[0];
+            props.onSubmit({...rest, dupeCheck: ownOrSetValue(dupeCheck), upstreamCheck: ownOrSetValue(upstreamCheck)});
             props.setOpen(false);
         }
     });
@@ -316,7 +329,13 @@ const RetryWithDialog = (props: { open: boolean, setOpen: (open: boolean) => voi
                                 />
                                 <form.Field
                                     name="dupeCheck"
-                                    children={(field) => (<FormCheckbox field={field} label="Check for Duplicate?"/>)}
+                                    // @ts-expect-error same as action
+                                    children={(field) => (<FormRadio field={field} label="Check for Duplicate?" items={ownOrSetItems}/>)}
+                                />
+                                <form.Field
+                                    name="upstreamCheck"
+                                    // @ts-expect-error same as action
+                                    children={(field) => (<FormRadio field={field} label="Check the service for Duplicates?" items={ownOrSetItems}/>)}
                                 />
                                 <form.Field
                                     name="useCache"

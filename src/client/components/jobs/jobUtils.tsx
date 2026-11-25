@@ -226,3 +226,14 @@ export const RateLimitText = (props: { rateLimit: RateLimitStatusJson | undefine
         </Text>
     );
 }
+
+export const BURST_MODES = ['send', 'collapse', 'keepEpoch'] as const;
+/** The 3-way bursts choice, stored as exportCollapseBursts + exportKeepEpochBursts */
+export type BurstMode = typeof BURST_MODES[number];
+export const BURST_MODE_LABELS: Record<BurstMode, string> = {
+    send: 'Send them as they are',
+    collapse: 'One Play per burst',
+    keepEpoch: 'One Play per burst, keep bursts before 1970',
+};
+export const burstMode = (job: Pick<JobApiJson, 'exportCollapseBursts' | 'exportKeepEpochBursts'>): BurstMode => !job.exportCollapseBursts ? 'send' : job.exportKeepEpochBursts ? 'keepEpoch' : 'collapse';
+export const burstModeOptions = (mode: BurstMode): Pick<JobApiJson, 'exportCollapseBursts' | 'exportKeepEpochBursts'> => ({exportCollapseBursts: mode !== 'send', exportKeepEpochBursts: mode === 'keepEpoch'});

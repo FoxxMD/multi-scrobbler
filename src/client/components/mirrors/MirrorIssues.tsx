@@ -115,21 +115,22 @@ export const MirrorIssuesPreview = (props: { mirrorId: number, range?: [number, 
     return <TextMuted textStyle="sm">{issueSummaryText(data)} in this range of the mirror look invalid. See them on the mirror page.</TextMuted>;
 }
 
-const exportIssuesText = (job: Pick<JobApiJson, 'exportSkipBadTimestamps' | 'exportCollapseBursts'>): string => {
+const exportIssuesText = (job: Pick<JobApiJson, 'exportSkipBadTimestamps' | 'exportCollapseBursts' | 'exportKeepEpochBursts'>): string => {
+    const keep = job.exportCollapseBursts && job.exportKeepEpochBursts ? ' Bursts before 1970 are sent whole.' : '';
     if (job.exportSkipBadTimestamps && job.exportCollapseBursts) {
-        return 'Exports skip bad timestamps and send one Play per burst.';
+        return `Exports skip bad timestamps and send one Play per burst.${keep}`;
     }
     if (job.exportSkipBadTimestamps) {
         return 'Exports skip bad timestamps and send bursts as they are.';
     }
     if (job.exportCollapseBursts) {
-        return 'Exports send one Play per burst and send bad timestamps as they are.';
+        return `Exports send one Play per burst and send bad timestamps as they are.${keep}`;
     }
     return 'Exports send them as they are.';
 }
 
 /** Shown on a job when its range of the mirror has data issues */
-export const JobIssuesAlert = (props: { job: Pick<JobApiJson, 'mirror' | 'rangeFrom' | 'rangeTo' | 'importStatus' | 'exportSkipBadTimestamps' | 'exportCollapseBursts'> }) => {
+export const JobIssuesAlert = (props: { job: Pick<JobApiJson, 'mirror' | 'rangeFrom' | 'rangeTo' | 'importStatus' | 'exportSkipBadTimestamps' | 'exportCollapseBursts' | 'exportKeepEpochBursts'> }) => {
     const {job} = props;
     const range: [number, number] = [job.rangeFrom === null ? Number.MIN_SAFE_INTEGER : dayjs(job.rangeFrom).valueOf(), dayjs(job.rangeTo).valueOf()];
     // fetched again when the import changes status, not on every imported batch (each fetch reads the whole range)
