@@ -14,9 +14,11 @@ import AutoImport from 'astro-auto-import';
 import starlightChangelogs, { makeChangelogsSidebarLinks } from 'starlight-changelogs';
 import starlightHeadingBadges from 'starlight-heading-badges'
 import starlightAnnouncement from 'starlight-announcement'
+import mermaid from 'astro-mermaid';
 import { changelogsBase, changelogsEnabled } from './plugins/changelogs.mjs';
 import { satteriBaseLinks } from './plugins/satteriBaseLinks.mjs';
 import { satteriGithubAlerts } from './plugins/satteriGithubAlerts.mjs';
+import { satteriMermaidMdx } from './plugins/satteriMermaidMdx.mjs';
 import { docsBase, codeblocksOptions } from './ec.config.mjs';
 import { rootSidebar } from './plugins/rootSidebar.mjs';
 import { prepareSpec, apiRedirects } from './plugins/openapiSpec.mjs';
@@ -70,6 +72,9 @@ export default defineConfig({
           // native `## Heading {#custom-id}` support, works unescaped in .mdx
           features: { headingAttributes: true },
           hastPlugins: [satteriBaseLinks(base), satteriGithubAlerts()],
+          // runs before astro-mermaid's own plugin, see the file. Remove once https://github.com/joesaby/astro-mermaid/issues/74
+          // is resolved or https://github.com/joesaby/astro-mermaid/pull/92 is merged and released
+          mdastPlugins: [satteriMermaidMdx()],
         }),
   },
   // Astro does not prefix redirect destinations with `base`, so do it here
@@ -108,6 +113,10 @@ export default defineConfig({
         { [comp('snippets/_file-config.mdx')]: [['default', 'FileType']] },
         { [comp('snippets/_aio-config.mdx')]: [['default', 'AIOType']] },
       ],
+    }),
+    mermaid({
+      theme: 'base',
+      autoTheme: true
     }),
     starlight({
       title: 'Multi-Scrobbler',
@@ -183,7 +192,7 @@ export default defineConfig({
     }),
     react(),
     // explicit (Starlight would add it itself): astro-auto-import skips setup if MDX isn't registered yet when its hook runs
-    mdx(),
+    mdx()
   ],
   vite: {
     server: {
