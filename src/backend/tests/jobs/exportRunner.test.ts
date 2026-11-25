@@ -426,6 +426,69 @@ describe('Job export runner', function () {
             expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', skipped: 0});
         });
 
+        it('stops a page at the queue limit with skipped plays between kept ones', async function () {
+            const {runner, target, targetRepo, client, historical, mirror} = await setup({timestamps: [], rangeTo: 30_000, coverage: [[0, 30_000]], collapse: true, order: 'asc', limit: 2});
+            await insertTrack(historical, mirror.id, 'B', [1000, 2000, 3000]);
+            await insertTrack(historical, mirror.id, 'X', [10_000]);
+            await insertTrack(historical, mirror.id, 'Y', [20_000]);
+            await runner.startExport(target.id);
+            await until(() => runner.runtime.exports[target.id]?.waiting === 'Client queue is full');
+            expect(titles(client.queued)).to.deep.eq(['B', 'X']);
+            expect((await targetRepo.getById(target.id))!).to.deep.include({exported: 2, skipped: 2});
+            expect((await targetRepo.getById(target.id))!.cursor?.playedAt).eq(10_000);
+            client.process();
+            await exportTask(runner, target.id);
+            expect(titles(client.queued)).to.deep.eq(['B', 'X', 'Y']);
+            expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', exported: 3, skipped: 2});
+        });
+
+        it('keeps the first good play of a burst when bad timestamps are skipped too', async function () {
+            const {runner, target, targetRepo, client, historical, mirror} = await setup({timestamps: [], rangeTo: DAY + 10_000, coverage: [[0, DAY + 10_000]], collapse: true, skipBad: true, order: 'asc'});
+            await insertTrack(historical, mirror.id, 'B', [DAY - 1000, DAY, DAY + 1000]);
+            await runner.startExport(target.id);
+            await exportTask(runner, target.id);
+            expect(client.queued.map(x => x.data.playDate?.valueOf())).to.deep.eq([DAY]);
+            expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', exported: 1, skipped: 2});
+        });
+
+        it('finds bursts again when the mirror changes mid-export', async function () {
+            const {runner, target, targetRepo, client, historical, mirror} = await setup({timestamps: [], rangeTo: 40_000, coverage: [[0, 40_000]], collapse: true, limit: 1});
+            await insertTrack(historical, mirror.id, 'X', [30_000]);
+            await insertTrack(historical, mirror.id, 'Y', [20_000]);
+            await runner.startExport(target.id);
+            await until(() => runner.runtime.exports[target.id]?.waiting === 'Client queue is full');
+            await insertTrack(historical, mirror.id, 'C', [25_000, 25_500, 26_000]);
+            client.process();
+            await until(() => client.queued.length === 2);
+            client.process();
+            await until(() => client.queued.length === 3);
+            client.process();
+            await exportTask(runner, target.id);
+            expect(client.queued.map(x => [x.data.track?.name, x.data.playDate?.valueOf()])).to.deep.eq([['X', 30_000], ['C', 26_000], ['Y', 20_000]]);
+            expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', skipped: 2});
+        });
+
+        it('applies an option turned on mid-export to the plays not exported yet', async function () {
+            const {runner, target, targetRepo, client, jobRepo, job} = await setup({timestamps: [100, 200, DAY + 100, DAY + 200], rangeTo: DAY + 1000, coverage: [[0, DAY + 1000]], limit: 1});
+            await runner.startExport(target.id);
+            await until(() => runner.runtime.exports[target.id]?.waiting === 'Client queue is full');
+            await jobRepo.update(job.id, {exportSkipBadTimestamps: true});
+            client.process();
+            await until(() => client.queued.length === 2);
+            client.process();
+            await exportTask(runner, target.id);
+            expect(titles(client.queued)).to.deep.eq([`T${DAY + 200}`, `T${DAY + 100}`]);
+            expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', exported: 2, skipped: 2});
+        });
+
+        it('says when collapsing bursts waits on a halted import', async function () {
+            const {runner, target, jobRepo, job} = await setup({importing: true, collapse: true});
+            await jobRepo.update(job.id, {importStatus: 'failed'});
+            await runner.startExport(target.id);
+            await until(() => runner.runtime.exports[target.id]?.waiting === 'Waiting for the import to finish, so bursts are complete. The import is failed');
+            await runner.stopExport(target.id, 'stopped');
+        });
+
         it('reads past many skipped plays in few passes, never over the queue limit', async function () {
             const bad = Array.from({length: 600}, (_, i) => i * 10);
             const {runner, target, targetRepo, client} = await setup({timestamps: [...bad, DAY + 100, DAY + 200], rangeTo: DAY + 1000, coverage: [[0, DAY + 1000]], order: 'asc', limit: 1, skipBad: true});

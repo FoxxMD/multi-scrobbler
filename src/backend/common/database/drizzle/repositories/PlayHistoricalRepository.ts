@@ -303,13 +303,14 @@ SELECT * FROM (
 
     /**
      * Ids of every burst play in range except the first one in `order`, IE what an export that collapses bursts skips.
+     * `keepGood` keeps the first one without a bad timestamp instead, so a burst isn't dropped when bad timestamps are skipped too.
      * One pass over the mirror's plays (in range), so callers should cache it (see mirrorVersion).
      * */
-    burstSkipIds = async (args: {mirrorId: number, range: [number, number], order: 'asc' | 'desc'}): Promise<number[]> => {
+    burstSkipIds = async (args: {mirrorId: number, range: [number, number], order: 'asc' | 'desc', keepGood?: boolean}): Promise<number[]> => {
         const dir = sql.raw(args.order === 'desc' ? 'DESC' : 'ASC');
         const rows = await this.db.all<{id: number}>(sql`${this.mirrorIssueRuns(args.mirrorId, args.range)}
 SELECT id FROM (
-    SELECT id, ROW_NUMBER() OVER (PARTITION BY k, run ORDER BY playedAt ${dir}, id ${dir}) AS rn
+    SELECT id, ROW_NUMBER() OVER (PARTITION BY k, run ORDER BY ${args.keepGood === true ? sql`bad, ` : sql``}playedAt ${dir}, id ${dir}) AS rn
     FROM n WHERE runSize >= ${BURST_MIN_PLAYS}
 ) WHERE rn > 1`);
         return rows.map(x => x.id);

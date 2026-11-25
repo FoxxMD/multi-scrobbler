@@ -216,7 +216,7 @@ On the Job page, **skipped** is the number of imported Plays that were not added
 A Job has two options for these Plays. They are in the **Data Issues** part of the **Export** section. Both are off by default. You can change them on the Job page at any time. A change applies to the Plays that the Job exports next.
 
 * **Skip bad timestamps**: the export does not send Plays with a bad timestamp.
-* **One Play per burst**: the export sends only one Play of each burst. This is the first Play of the burst in the export order: the newest Play for **Newest first**, the oldest for **Oldest first**. The other Plays of the burst are not sent.
+* **One Play per burst**: the export sends only one Play of each burst. This is the first Play of the burst in the export order: the newest Play for **Newest first**, the oldest for **Oldest first**. The other Plays of the burst are not sent. If **Skip bad timestamps** is also on, the first Play without a bad timestamp is sent.
 
 The Mirror keeps all of the Plays. On the Job page, each Client shows how many Plays these options did not send.
 

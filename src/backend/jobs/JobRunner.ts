@@ -120,9 +120,9 @@ export const componentLockKey = (componentId: number) => `component:${componentI
 /** held while a mirror's plays are cleaned up */
 export const mirrorLockKey = (mirrorId: number) => `mirror:${mirrorId}`;
 
-/** Failed scrobbles in a row that stop an export. At least the queue limit, so one bad batch doesn't trip it on its own */
-/** rows read per pass while the job skips data issues, at least the client's room */
+/** rows read per pass after a pass that skipped data issues, at least the client's room */
 const EXPORT_SKIP_READ = 500;
+/** Failed scrobbles in a row that stop an export. At least the queue limit, so one bad batch doesn't trip it on its own */
 export const breakerThreshold = (exportQueueLimit: number) => Math.max(exportQueueLimit, 10);
 
 /** Fields of a target sent in jobUpdate events */
@@ -611,6 +611,8 @@ export class JobRunner {
         let {cursor, exported, queued, skipped} = initial;
         // burst plays the export skips, read again when the mirror changes
         let burstSkip: {key: string, ids: Set<number>} | undefined;
+        // read past skipped rows only when the last page had some, a client freeing one slot at a time shouldn't cost 500 rows per play
+        let skipping: boolean = true;
         const breaker: JobTargetBreaker = {failedInARow: 0};
         let lastFailure: string | undefined;
         let listening: EventEmitter | undefined;
@@ -738,7 +740,8 @@ export class JobRunner {
             const importDone = job.importStatus === 'completed' || (job.componentFromId === null && job.importFile === null);
             if(job.exportCollapseBursts && !importDone) {
                 // a partly imported burst can look like 2 plays (not a burst), and queued plays can't be taken back
-                await wait('Waiting for the import to finish, so bursts are complete');
+                const halted = job.importStatus === 'idle' || job.importStatus === 'running' ? undefined : job.importStatus;
+                await wait(halted === undefined ? 'Waiting for the import to finish, so bursts are complete' : `Waiting for the import to finish, so bursts are complete. The import is ${halted}`, 'Waiting for the import to finish, so bursts are complete');
                 continue;
             }
             if(!importDone && job.importOverlap === 'replace' && job.importReplacedAt === null) {
@@ -755,15 +758,15 @@ export class JobRunner {
             }
             let burstIds: Set<number> | undefined;
             if(job.exportCollapseBursts) {
-                const key = `${await this.historicalRepo.mirrorVersion(job.mirrorId)}:${job.exportOrder}`;
+                const key = `${await this.historicalRepo.mirrorVersion(job.mirrorId)}:${job.exportOrder}:${job.exportSkipBadTimestamps}`;
                 if(burstSkip?.key !== key) {
-                    burstSkip = {key, ids: new Set(await stage('burst_read', () => this.historicalRepo.burstSkipIds({mirrorId: job.mirrorId, range, order: job.exportOrder})))};
+                    burstSkip = {key, ids: new Set(await stage('burst_read', () => this.historicalRepo.burstSkipIds({mirrorId: job.mirrorId, range, order: job.exportOrder, keepGood: job.exportSkipBadTimestamps})))};
                 }
                 burstIds = burstSkip.ids;
             }
             const filtering = job.exportSkipBadTimestamps || burstIds !== undefined;
             // read past skipped rows so thousands of them don't cost a pass each
-            const limit = filtering ? Math.max(room, EXPORT_SKIP_READ) : room;
+            const limit: number = filtering && skipping ? Math.max(room, EXPORT_SKIP_READ) : room;
             const rows = frontier === undefined ? [] : await stage('page_read', () => this.historicalRepo.findPageForExport({mirrorId: job.mirrorId, range: frontier, order: job.exportOrder, after: cursor ?? undefined, limit}));
 
             if(rows.length === 0) {
@@ -834,6 +837,7 @@ export class JobRunner {
             exported += kept.length;
             queued += created.length;
             skipped += pageSkipped;
+            skipping = pageSkipped > 0;
             const update: Partial<JobTargetNew> = {cursor, exported, queued, skipped, breaker};
             if(Date.now() - statsAt >= this.timings.exportStats) {
                 update.stats = addStats((await stage('stats', () => this.targetRepo.playStats(this.jobId, componentId))).get(componentId), initial.removedStats);
