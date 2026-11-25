@@ -13,7 +13,8 @@ import Bluesky from "@site/src/components/snippets/_bluesky.mdx";
 import Handle from "@site/src/components/snippets/_atmosphere_id.mdx";
 import ENVConfig from "@site/src/content/docs/configuration/clients/_env_configs/_tealfm.md";
 import RateLimitReserve from "@site/src/components/snippets/_rate_limit_reserve.mdx";
-import History from "@site/src/components/snippets/_atproto_history.mdx";
+import Mirror from "@site/src/components/snippets/_atproto_mirror.mdx";
+import Sync from "@site/src/components/snippets/_atproto_sync.mdx";
 
 :::tip[Other Uses]
 
@@ -54,23 +55,24 @@ If you don't know what a PDS is or how to find this just use Bluesky:
   * Settings -> Privacy and Security -> App passwords
 * Create a new **App Password** and save it somewhere, it will not be shown again
 
-## Configuration
+## More Details
 
 <DetailsAdmo type="tip" summary="Determining Your Atmosphere Handle/Identifier">
 <Handle/>
 </DetailsAdmo>
 
-<DetailsAdmo type="note" summary="Rate Limit Reserve">
+<DetailsAdmo summary="Rate Limit Reserve">
 
 <RateLimitReserve env="TEALFM"/>
 
 </DetailsAdmo>
 
-<DetailsAdmo type="note" summary="Scrobble History, Sync, and Duplicates">
+<Mirror name="Teal.fm" env="TEALFM" />
 
-<History name="Teal.fm" env="TEALFM"/>
+<Sync name="Teal.fm" env="TEALFM" />
 
-</DetailsAdmo>
+
+## Configuration
 
 <Config config="TealClientConfig" fileContent={JsonConfig} client ambiguous name="tealfm">
 <ENVConfig/>

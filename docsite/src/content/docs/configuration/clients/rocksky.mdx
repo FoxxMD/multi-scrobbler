@@ -10,7 +10,8 @@ import Handle from "@site/src/components/snippets/_atmosphere_id.mdx";
 import JsonConfig from '@site/../config/rocksky.json.example?raw';
 import ENVConfig from "@site/src/content/docs/configuration/clients/_env_configs/_rocksky.md";
 import RateLimitReserve from "@site/src/components/snippets/_rate_limit_reserve.mdx";
-import History from "@site/src/components/snippets/_atproto_history.mdx";
+import Mirror from "@site/src/components/snippets/_atproto_mirror.mdx";
+import Sync from "@site/src/components/snippets/_atproto_sync.mdx";
 
 
 
@@ -79,7 +80,7 @@ If you don't know what a PDS is or how to find this just use Bluesky:
 
 Use this App Password with ENV as `ROCKSKY_APP_PW` or as `appPassword` in File/AIO configuration.
 
-<DetailsAdmo type="note" summary="Scrobble Data Validation and Automatically Fixing It">
+<DetailsAdmo summary="Scrobble Data Validation and Automatically Fixing It">
 
 When using the **PDS approach** Multi-scrobbler will validate that your scrobble data meets Rocksky's [scrobble data quality](#scrobble-data-standards) before it is sent:
 
@@ -211,30 +212,25 @@ Use this token for the env `ROCKSKY_TOKEN` or `token` field in File/AIO configur
 </TabItem>
 </Tabs>
 
-
-## Configuration
+## More Details
 
 <DetailsAdmo type="tip" summary="Determining Your Atmosphere Handle/Identifier">
 <Handle/>
 </DetailsAdmo>
 
-<DetailsAdmo type="note" summary="Rate Limit Reserve">
-
-<Aside type="note">
-
-The rate limit reserve works only with the [PDS approach](#setup). With the Server approach, Multi-Scrobbler does not write to your PDS.
-
-</Aside>
+<DetailsAdmo summary="Rate Limit Reserve">
 
 <RateLimitReserve env="ROCKSKY"/>
 
 </DetailsAdmo>
 
-<DetailsAdmo type="note" summary="Scrobble History, Sync, and Duplicates">
+<Mirror name="Rocksky" env="ROCKSKY" />
 
-<History name="Rocksky" env="ROCKSKY"/>
+<Sync name="Rocksky" env="ROCKSKY" />
 
-</DetailsAdmo>
+
+
+## Configuration
 
 <Config config="RockSkyClientConfig" fileContent={JsonConfig} client ambiguous name="rocksky">
 <ENVConfig/>
