@@ -5,7 +5,7 @@ import { COMPONENT_TYPE_CLIENT, COMPONENT_TYPE_SOURCE, type ErrorLike, type Queu
 import type { PlayObject } from "../../../../../core/PlaySchema.ts";
 import { asPlay } from "../../../../../core/PlayMarshalUtils.ts";
 import type {JobImportCursor, JobImportFile, JobTargetBreaker, JobTargetCursor, JobTargetStats, JobTransformSource} from "../../../infrastructure/Job.ts";
-import { JOB_IMPORT_OVERLAPS, JOB_PROCESS_STATUSES, type MirrorSegment } from "../../../../../core/Job.ts";
+import { EPOCH_DECISIONS, JOB_IMPORT_OVERLAPS, JOB_PROCESS_STATUSES, type MirrorSegment } from "../../../../../core/Job.ts";
 import { serializeError, deserializeError } from "serialize-error";
 import { generatePlayUid } from "../../../../../core/StringUtils.ts";
 import { users, sessions, accounts, verifications, appSettings, apikeys, userSettings } from "./auth.ts";
@@ -282,6 +282,8 @@ export const jobs = sqliteTable("jobs", {
   exportSkipBadTimestamps: integer({mode: 'boolean'}).notNull().default(false),
   // true => only the first play of each burst (in export order) is sent
   exportCollapseBursts: integer({mode: 'boolean'}).notNull().default(false),
+  // true (with exportCollapseBursts) => bursts before 2 Jan 1970 are kept whole and plays before then are sent without a dupe check
+  exportKeepEpochBursts: integer({mode: 'boolean'}).notNull().default(false),
   // raw stage config snapshot (always a list), parsed again when exporting
   transformOptions: text({ mode: 'json' }).$type<unknown[]>(),
   transformSource: text({ mode: 'json' }).$type<JobTransformSource>(),
@@ -317,6 +319,8 @@ export const jobTargets = sqliteTable("job_targets", {
   queued: integer().notNull().default(0),
   // mirror rows not sent because of the job's data issue options (exportSkipBadTimestamps, exportCollapseBursts)
   skipped: integer().notNull().default(0),
+  // exportKeepEpochBursts: null => the client was not checked for plays before 2 Jan 1970 yet, empty => it had none, send/skip => the user's choice when it had some
+  epochDecision: text({enum: EPOCH_DECISIONS}),
   stats: text({ mode: 'json' }).$type<JobTargetStats>(),
   // plays per state that a cleanup deleted from the client. Added to live stats so exports keep their numbers
   removedStats: text({ mode: 'json' }).$type<JobTargetStats>(),

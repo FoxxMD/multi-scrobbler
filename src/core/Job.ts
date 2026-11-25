@@ -75,6 +75,8 @@ export interface JobTargetApiJson {
     queued: number
     /** mirror plays not sent because of the job's data issue options */
     skipped: number
+    /** exportKeepEpochBursts: null => the Client was not checked for scrobbles before 2 Jan 1970 yet, empty => it had none, send/skip => the user's choice when it had some */
+    epochDecision: EpochDecision | null
     /** the job's client plays by state, including ones a cleanup deleted. Frozen once completed */
     stats: Partial<Record<string, number>> | null
     /** the job's client plays in the Client right now */
@@ -117,6 +119,8 @@ export interface JobApiJson {
     exportSkipBadTimestamps: boolean
     /** true => only the first play of each burst (in export order) is sent. Waits for the import to finish */
     exportCollapseBursts: boolean
+    /** with exportCollapseBursts: bursts of Epoch Plays are sent whole, and Epoch Plays are sent without a dupe check */
+    exportKeepEpochBursts: boolean
     targets: JobTargetApiJson[]
     /** mirror plays in the job's range, what an export will go through */
     mirrorPlaysInRange: number
@@ -256,6 +260,13 @@ export const BURST_MIN_PLAYS = 3;
 
 /** Mirror Plays timestamped more than this (ms) after their row was created (seenAt, when imported) have an invalid timestamp */
 export const BAD_TIMESTAMP_FUTURE_MS = 86_400_000;
+
+/** Mirror play is timestamped before BAD_TIMESTAMP_BEFORE_MS. Onboarding bursts (play counts copied from older software) are here */
+export const isEpochPlay = (playedAt: number): boolean => playedAt < BAD_TIMESTAMP_BEFORE_MS;
+
+/** What an export with exportKeepEpochBursts does with Epoch Plays for one target. empty => the Client had no scrobbles before 2 Jan 1970, send/skip => the user's choice when it had some */
+export const EPOCH_DECISIONS = ['empty', 'send', 'skip'] as const;
+export type EpochDecision = typeof EPOCH_DECISIONS[number];
 
 /** Mirror play timestamp is invalid. Same rule as the data issue detector (mirrorIssueRuns) */
 export const isBadTimestamp = (playedAt: number, seenAt: number | null): boolean => playedAt < BAD_TIMESTAMP_BEFORE_MS || (seenAt !== null && playedAt > seenAt + BAD_TIMESTAMP_FUTURE_MS);
@@ -417,6 +428,7 @@ export const jobCreateSchema = z.object({
     exportDiscarded: z.boolean().default(false).meta({description: "true => scrobbles that the job's transforms discard are added to each Client in the discarded state, without scrobbling them. false => they are not sent to the Clients"}),
     exportSkipBadTimestamps: z.boolean().default(false).meta({description: 'true => mirror scrobbles with a bad timestamp (see the mirror data issues) are not sent to the Clients'}),
     exportCollapseBursts: z.boolean().default(false).meta({description: 'true => only the first scrobble of each burst (see the mirror data issues), in export order, is sent to the Clients. Exports wait for the import to finish'}),
+    exportKeepEpochBursts: z.boolean().default(false).meta({description: 'Only with exportCollapseBursts. true => bursts before 2 Jan 1970 (IE play counts copied from older software) are sent whole and every scrobble before 2 Jan 1970 is sent without a dupe check. Each Client is first checked for scrobbles before 2 Jan 1970, if it has some the export waits for a decision (send or skip) for that Client'}),
     start: z.boolean().default(false).meta({description: 'Start the import and all exports once created'}),
 }).meta({title: 'Create Job'});
 export type JobCreate = z.input<typeof jobCreateSchema>;
@@ -449,4 +461,5 @@ export const jobUpdateSchema = z.object({
     exportDiscarded: z.boolean().optional().meta({description: 'See exportDiscarded on Create Job. Applies to scrobbles exported after the change'}),
     exportSkipBadTimestamps: z.boolean().optional().meta({description: 'See exportSkipBadTimestamps on Create Job. Applies to scrobbles exported after the change'}),
     exportCollapseBursts: z.boolean().optional().meta({description: 'See exportCollapseBursts on Create Job. Applies to scrobbles exported after the change'}),
+    exportKeepEpochBursts: z.boolean().optional().meta({description: 'See exportKeepEpochBursts on Create Job. Applies to scrobbles exported after the change'}),
 }).meta({title: 'Update Job'});
