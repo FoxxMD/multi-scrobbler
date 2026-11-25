@@ -75,6 +75,8 @@ export class SonosSource extends MemoryPositionalSource {
 
         this.requiresAuth = false;
         this.canPoll = true;
+        // each sonos device (or group coordinator) plays independently
+        this.multiPlatform = true;
         this.manager = new SonosManager();
         this.deviceHashSeen = new FixedSizeList<string>(100);
         this.uniqueDropReasons = new FixedSizeList<string>(100);
