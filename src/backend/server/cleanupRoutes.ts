@@ -3,7 +3,7 @@ import type { createTypedRouter } from "@minisylar/express-typed-router";
 import bodyParser from "body-parser";
 import dayjs from "dayjs";
 import * as z from "zod";
-import { cleanupBodySchema, type ClientJobPlaysSummaryJson, mirrorCleanupBodySchema, type MirrorApiJson, mirrorUpdateSchema } from "../../core/Job.ts";
+import { cleanupBodySchema, type ClientJobPlaysSummaryJson, issueQueryRange, mirrorCleanupBodySchema, type MirrorApiJson, mirrorIssueListQuerySchema, mirrorIssuesQuerySchema, type MirrorIssueSummaryJson, mirrorUpdateSchema } from "../../core/Job.ts";
 import { MirrorRepository } from "../common/database/drizzle/repositories/MirrorRepository.ts";
 import type ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
 import { toMirrorApiJson } from "../jobs/jobApi.ts";
@@ -55,6 +55,21 @@ export const setupCleanupRoutes = (router: Router, jobs: JobManager, clients: Sc
             return;
         }
         return res.json(await mirrorJson(req.params.id));
+    });
+
+    router.get('/mirrors/:id/issues', {docs: {operationId: 'get-mirror-issues'}, paramsSchema: idParams, querySchema: mirrorIssuesQuerySchema, tags: ['Mirrors'], summary: 'Get Mirror Data Issues', description: 'Counts of scrobbles with bad timestamps (before 1970-01-02) and of bursts (the same track scrobbled again within seconds). Read-only'}, async (req, res) => {
+        if (await userMirror(req, res, req.params.id) === undefined) {
+            return;
+        }
+        return res.json(await jobs.mirrors.issueSummary(req.params.id, issueQueryRange(req.query)) satisfies MirrorIssueSummaryJson);
+    });
+
+    router.get('/mirrors/:id/issues/list', {docs: {operationId: 'get-mirror-issue-list'}, paramsSchema: idParams, querySchema: mirrorIssueListQuerySchema, tags: ['Mirrors'], summary: 'List Mirror Data Issues', description: 'Bursts, and scrobbles with bad timestamps that are not in a burst, oldest first. Read-only'}, async (req, res) => {
+        if (await userMirror(req, res, req.params.id) === undefined) {
+            return;
+        }
+        const {offset, limit} = req.query;
+        return res.json(await jobs.mirrors.issueGroups(req.params.id, {range: issueQueryRange(req.query), offset, limit}));
     });
 
     router.patch('/mirrors/:id', {docs: {operationId: 'update-mirror'}, paramsSchema: idParams, middleware: [jsonParser], bodySchema: mirrorUpdateSchema, tags: ['Mirrors'], summary: 'Update Mirror'}, async (req, res) => {

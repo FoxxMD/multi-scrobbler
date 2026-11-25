@@ -1,6 +1,7 @@
 import * as z from "zod";
 import type { ErrorObject } from "serialize-error";
 import type { RateLimitStatusJson } from "./RateLimit.ts";
+import type { PlayApiCommon } from "./Api.ts";
 
 /**
  * Status of a job process (import, or export to one target).
@@ -302,6 +303,23 @@ export interface MirrorIssueGroup<P = unknown> {
     /** the first Play of the group */
     play: P
 }
+
+export type MirrorIssueGroupJson = MirrorIssueGroup<PlayApiCommon['play']>;
+
+const issueRangeSchema = z.object({
+    from: z.coerce.number().int().optional().meta({description: 'Only Plays played at or after this unix ms timestamp'}),
+    to: z.coerce.number().int().optional().meta({description: 'Only Plays played at or before this unix ms timestamp'}),
+});
+export const mirrorIssuesQuerySchema = issueRangeSchema.refine(x => x.from === undefined || x.to === undefined || x.from <= x.to, {message: 'from must not be after to'});
+export const mirrorIssueListQuerySchema = issueRangeSchema.extend({
+    offset: z.coerce.number().int().min(0).default(0),
+    limit: z.coerce.number().int().min(1).max(200).default(50),
+}).refine(x => x.from === undefined || x.to === undefined || x.from <= x.to, {message: 'from must not be after to'});
+
+/** undefined when neither edge is given */
+export const issueQueryRange = (q: {from?: number, to?: number}): [number, number] | undefined => q.from === undefined && q.to === undefined
+    ? undefined
+    : [q.from ?? Number.MIN_SAFE_INTEGER, q.to ?? Number.MAX_SAFE_INTEGER];
 
 /** Plays import jobs created in a Client */
 export interface ClientJobPlaysSummaryJson {
