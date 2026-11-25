@@ -64,7 +64,7 @@ jobs:
       actions: read
       # reaction on the PR conversation
       issues: write
-      pull-requests: read
+      pull-requests: write
     outputs:
       pr-number: ${{ steps.find.outputs.pr-number }}
       sha: ${{ steps.find.outputs.sha }}
