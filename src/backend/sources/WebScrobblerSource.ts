@@ -99,8 +99,17 @@ export class WebScrobblerSource extends MemorySource {
             platformId: [play.meta.deviceId ?? NO_DEVICE, NO_USER],
             play,
             status: WebScrobblerSource.webhookEventAsPlayerStatus(eventName),
-            stateUpdatedAt: dayjs.unix(time)
+            stateUpdatedAt: WebScrobblerSource.parseEventTime(time)
         }
+    }
+
+    /**
+     * The WebScrobbler extension sends `time` as Date.now() (milliseconds).
+     * Accept seconds as well, for anything else posting to this endpoint.
+     * 1e11 is unambiguous: as seconds it is the year 5138, as milliseconds it is 1973.
+     * */
+    static parseEventTime(time: number): Dayjs {
+        return time > 1e11 ? dayjs(time) : dayjs.unix(time);
     }
 
     static formatPlayObj(obj: WebScrobblerSong, options: FormatPlayObjectOptions & {

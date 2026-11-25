@@ -20,6 +20,8 @@ import pEvent from 'p-event';
 import type { LastFMEndpointSourceConfig } from '../../common/infrastructure/config/source/endpointlfm.ts';
 import { lastfmNowPlayingPayloadSchema, lastfmScrobblePayloadSchema } from '../../common/vendor/LastfmApiClient.ts';
 import { removeUndefinedKeys } from '../../../core/DataUtils.ts';
+import { WebScrobblerSource } from '../../sources/WebScrobblerSource.ts';
+import { NowPlayingPlayerState } from '../../sources/PlayerState/NowPlayingPlayerState.ts';
 
 chai.use(asPromised);
 
@@ -163,6 +165,13 @@ describe('Listenbrainz Endpoint', function() {
 
 });
 
+const generateNowPlayingWebscrobblerPayload = (time: number, duration = 120) => zocker(webScrobblePayloadSchema)
+    .override(z.ZodString,() => faker.word.words({ count: { min: 1, max: 5 } }))
+    .supply(webScrobblePayloadSchema.shape.time, time)
+    .supply(webScrobblePayloadSchema.shape.data.shape.song.shape.processed.shape.duration, duration)
+    .supply(webScrobblePayloadSchema.shape.data.shape.song.shape.parsed.shape.duration, duration)
+    .supply(webScrobblePayloadSchema.shape.eventName, 'nowplaying').generate();
+
 describe('Webscrobbler Endpoint', function() {
 
     let clients: ScrobbleClients;
@@ -200,6 +209,28 @@ describe('Webscrobbler Endpoint', function() {
             console.log(JSON.stringify(payload));
             throw e;
         }
+    });
+
+    describe('Event time', function () {
+
+        it('parses time sent in milliseconds, as the extension sends it', function () {
+            const now = dayjs();
+            const state = WebScrobblerSource.playStateFromRequest(generateNowPlayingWebscrobblerPayload(now.valueOf()));
+            expect(Math.abs(state.stateUpdatedAt.diff(now, 'ms'))).lt(1000);
+        });
+
+        it('parses time sent in seconds', function () {
+            const now = dayjs();
+            const state = WebScrobblerSource.playStateFromRequest(generateNowPlayingWebscrobblerPayload(now.unix()));
+            expect(Math.abs(state.stateUpdatedAt.diff(now, 'ms'))).lt(1000);
+        });
+
+        it('orphans a now playing player after its track should have ended', function () {
+            const state = WebScrobblerSource.playStateFromRequest(generateNowPlayingWebscrobblerPayload(dayjs().subtract(10, 'minutes').valueOf(), 120));
+            const player = new NowPlayingPlayerState(loggerTest, state.platformId);
+            player.update(state);
+            expect(player.isOrphaned()).is.true;
+        });
     });
 });
 
