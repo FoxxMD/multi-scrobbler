@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import type { EventEmitter } from "node:events";
 import { COMPONENT_STATE, type ComponentState } from "../../core/Api.ts";
 import type { LifecycleStep, QueueContext, TransformPlayResult } from "../../core/Atomic.ts";
-import { isBadTimestamp, type JobProcessStatus } from "../../core/Job.ts";
+import { BAD_TIMESTAMP_BEFORE_MS, EPOCH_CHECK_MAX, type EpochDecision, isBadTimestamp, isEpochPlay, type JobProcessStatus } from "../../core/Job.ts";
 import { policyWindow, type RateLimitStatusJson } from "../../core/RateLimit.ts";
 import { todayAwareFormat } from "../../core/TimeUtils.ts";
 import type { PlayObject } from "../../core/PlaySchema.ts";
@@ -49,6 +49,8 @@ export interface ExportClient {
     /** for Clients that check duplicates against their own mirror (Teal, Rocksky): resolves once it covers ranges. signal stops waiting. The ranges are kept until releaseCoverage(hold) */
     ensureCoverage?(ranges: TimeRange[], signal?: AbortSignal, hold?: string): Promise<void>
     releaseCoverage?(hold: string): void
+    /** the Client's scrobbles played before `ms`, at most `max`. undefined => it can't fetch them */
+    countScrobblesBefore?(ms: number, max: number): Promise<number | undefined>
 }
 
 export interface JobRunnerDeps {
@@ -83,6 +85,8 @@ export interface JobProcessRuntime {
     progress?: number
     /** the export Client's rate limit, when it reports one */
     rateLimit?: RateLimitStatusJson
+    /** see JobProcessRuntimeJson */
+    epochPlays?: number | null
 }
 
 /** A cleanup of the job's scrobbles in its Clients. Not persisted */
@@ -609,8 +613,11 @@ export class JobRunner {
         const targetId = initial.id;
         const {componentId} = initial;
         let {cursor, exported, queued, skipped} = initial;
+        let epochDecision: EpochDecision | null = initial.epochDecision ?? null;
         // burst plays the export skips, read again when the mirror changes
         let burstSkip: {key: string, ids: Set<number>} | undefined;
+        // Epoch Plays in bursts, kept when bad timestamps are skipped
+        let epochBursts: {key: string, ids: Set<number>} | undefined;
         // read past skipped rows only when the last page had some, a client freeing one slot at a time shouldn't cost 500 rows per play
         let skipping: boolean = true;
         const breaker: JobTargetBreaker = {failedInARow: 0};
@@ -653,12 +660,15 @@ export class JobRunner {
         let coverageEnsured = false;
         let coverageHeld = false;
         const coverageHold = `job-${this.jobId}-target-${targetId}`;
-        /** @param key fixed reason for metrics, `reason` can hold numbers and dates */
-        const wait = async (reason: string, key: string = reason) => {
+        /**
+         * @param key fixed reason for metrics, `reason` can hold numbers and dates
+         * @param epochPlays set when waiting for an Epoch Play decision
+         * */
+        const wait = async (reason: string, key: string = reason, epochPlays?: number | null) => {
             const waitStart = performance.now();
             const current = this.runtime.exports[targetId];
-            if(current?.waiting !== reason || current?.rateLimit?.remaining !== rateLimit?.remaining || current?.rateLimit?.limit !== rateLimit?.limit) {
-                this.runtime.exports[targetId] = {waiting: reason, rateLimit};
+            if(current?.waiting !== reason || current?.rateLimit?.remaining !== rateLimit?.remaining || current?.rateLimit?.limit !== rateLimit?.limit || current?.epochPlays !== epochPlays) {
+                this.runtime.exports[targetId] = epochPlays === undefined ? {waiting: reason, rateLimit} : {waiting: reason, rateLimit, epochPlays};
                 this.emitUpdate({runtime: this.runtime});
             }
             try {
@@ -756,15 +766,25 @@ export class JobRunner {
                 const covered = contiguousCoveredFrom(job.exportOrder === 'desc' ? range[1] : range[0], job.exportOrder, mirror?.coverage ?? []);
                 frontier = covered === undefined ? undefined : [Math.max(covered[0], range[0]), Math.min(covered[1], range[1])];
             }
+            // onboarding bursts (play counts copied from older software) are kept whole and Epoch Plays are sent without a dupe check
+            const keepEpoch = job.exportCollapseBursts && job.exportKeepEpochBursts;
             let burstIds: Set<number> | undefined;
+            let epochBurstIds: Set<number> | undefined;
             if(job.exportCollapseBursts) {
-                const key = `${await this.historicalRepo.mirrorVersion(job.mirrorId)}:${job.exportOrder}:${job.exportSkipBadTimestamps}`;
+                const version = await this.historicalRepo.mirrorVersion(job.mirrorId);
+                const key = `${version}:${job.exportOrder}:${job.exportSkipBadTimestamps}:${keepEpoch}`;
                 if(burstSkip?.key !== key) {
-                    burstSkip = {key, ids: new Set(await stage('burst_read', () => this.historicalRepo.burstSkipIds({mirrorId: job.mirrorId, range, order: job.exportOrder, keepGood: job.exportSkipBadTimestamps})))};
+                    burstSkip = {key, ids: new Set(await stage('burst_read', () => this.historicalRepo.burstSkipIds({mirrorId: job.mirrorId, range, order: job.exportOrder, keepGood: job.exportSkipBadTimestamps, keepEpoch})))};
                 }
                 burstIds = burstSkip.ids;
+                if(keepEpoch && job.exportSkipBadTimestamps) {
+                    if(epochBursts?.key !== String(version)) {
+                        epochBursts = {key: String(version), ids: new Set(await stage('burst_read', () => this.historicalRepo.epochBurstIds({mirrorId: job.mirrorId, range})))};
+                    }
+                    epochBurstIds = epochBursts.ids;
+                }
             }
-            const filtering = job.exportSkipBadTimestamps || burstIds !== undefined;
+            const filtering = job.exportSkipBadTimestamps || burstIds !== undefined || (keepEpoch && epochDecision === 'skip');
             // read past skipped rows so thousands of them don't cost a pass each
             const limit: number = filtering && skipping ? Math.max(room, EXPORT_SKIP_READ) : room;
             const rows = frontier === undefined ? [] : await stage('page_read', () => this.historicalRepo.findPageForExport({mirrorId: job.mirrorId, range: frontier, order: job.exportOrder, after: cursor ?? undefined, limit}));
@@ -785,12 +805,43 @@ export class JobRunner {
                 return (await this.setTarget(targetId, {status: 'completed', completedAt: dayjs(), stats, breaker}, true))!;
             }
 
+            /** skipped by the data issue options, not counting an Epoch Play decision */
+            const issueSkip = (r: typeof rows[number]) => (job.exportSkipBadTimestamps && isBadTimestamp(r.playedAt, r.seenAt) && epochBurstIds?.has(r.id) !== true) || burstIds?.has(r.id) === true;
+            if(keepEpoch && epochDecision === null && rows.some(r => isEpochPlay(r.playedAt) && !issueSkip(r))) {
+                // the user may have decided while the export waited
+                epochDecision = (await this.targetRepo.getById(targetId))?.epochDecision ?? null;
+                if(epochDecision === null) {
+                    let found: number | undefined;
+                    try {
+                        found = await stage('epoch_check', async () => await client.countScrobblesBefore?.(BAD_TIMESTAMP_BEFORE_MS, EPOCH_CHECK_MAX));
+                    } catch (e) {
+                        signal.throwIfAborted();
+                        logger.warn(new Error('Could not check the Client for scrobbles before 2 Jan 1970, will try again', {cause: e}));
+                        await wait('Could not check the Client for scrobbles before 2 Jan 1970, will try again', 'Epoch Play check failed');
+                        continue;
+                    }
+                    if(found === 0) {
+                        epochDecision = 'empty';
+                        await this.setTarget(targetId, {epochDecision});
+                    } else {
+                        const reason = found === undefined
+                            ? "This Client can't check its service for scrobbles before 2 Jan 1970. Choose to send this job's Plays from before then without a dupe check, or to skip them"
+                            : `The Client already has ${found >= EPOCH_CHECK_MAX ? `${EPOCH_CHECK_MAX}+` : found} scrobbles before 2 Jan 1970. Choose to send this job's Plays from before then without a dupe check (they may be duplicated), or to skip them`;
+                        await wait(reason, 'Waiting for an Epoch Play decision', found ?? null);
+                        continue;
+                    }
+                }
+                // a skip decision changes which rows are skipped, read the page again
+                continue;
+            }
+            const sendUnchecked = keepEpoch && (epochDecision === 'empty' || epochDecision === 'send');
+
             const kept: typeof rows = [];
             let pageSkipped = 0;
             let consumed = rows.length;
             for(let i = 0; i < rows.length; i++) {
                 const r = rows[i];
-                if((job.exportSkipBadTimestamps && isBadTimestamp(r.playedAt, r.seenAt)) || burstIds?.has(r.id) === true) {
+                if(issueSkip(r) || (keepEpoch && epochDecision === 'skip' && isEpochPlay(r.playedAt))) {
                     pageSkipped++;
                     continue;
                 }
@@ -802,13 +853,19 @@ export class JobRunner {
             }
 
             let plays: PlayObject[] = kept.map(r => ({...r.play, original: {play: r.play}}));
+            // queued without a dupe check
+            const unchecked = new Set<PlayObject>(sendUnchecked ? plays.filter((_, i) => isEpochPlay(kept[i].playedAt)) : []);
             let discarded = 0;
             const jobSteps = new Map<PlayObject, LifecycleStep[]>();
             let review = 0;
             if(stages !== undefined) {
                 const results = await stage('job_transform', () => pMap(plays, async (p) => client.transformPlay(p, 'postCompare', {stages}), {concurrency: 5}));
+                const before = plays;
                 plays = [];
-                for(const {play, steps} of results) {
+                for(const [i, {play, steps}] of results.entries()) {
+                    if(unchecked.delete(before[i])) {
+                        unchecked.add(play);
+                    }
                     const step = getLastLifecycleStepWithAction(steps);
                     if(step?.actionResult === 'discard') {
                         discarded++;
@@ -831,7 +888,20 @@ export class JobRunner {
                 // a cleanup started while this page was read, the next pass waits for it and reads the page again
                 continue;
             }
-            const created = plays.length === 0 ? [] : await stage('queue_play', () => client.queuePlay(plays, job.exportUpstreamCheck ? undefined : {upstreamCheck: false}, {jobId: this.jobId, steps: jobSteps.size > 0 ? jobSteps : undefined}));
+            const context: QueueContext | undefined = job.exportUpstreamCheck ? undefined : {upstreamCheck: false};
+            const queueOpts = {jobId: this.jobId, steps: jobSteps.size > 0 ? jobSteps : undefined};
+            const created: unknown[] = [];
+            // one call per run of plays with the same context, in export order
+            for(let start = 0; start < plays.length;) {
+                const isUnchecked = unchecked.has(plays[start]);
+                let end = start + 1;
+                while(end < plays.length && unchecked.has(plays[end]) === isUnchecked) {
+                    end++;
+                }
+                const run = plays.slice(start, end);
+                created.push(...await stage('queue_play', () => client.queuePlay(run, isUnchecked ? {...context, dupeCheck: false} : context, queueOpts)));
+                start = end;
+            }
             const last = rows[consumed - 1];
             cursor = {playedAt: last.playedAt, id: last.id} satisfies JobTargetCursor;
             exported += kept.length;

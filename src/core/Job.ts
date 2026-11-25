@@ -47,6 +47,8 @@ export interface JobProcessRuntimeJson {
     progress?: number
     /** the export Client's rate limit, when it reports one */
     rateLimit?: RateLimitStatusJson
+    /** the export waits for an Epoch Play decision (epochDecision): the Client's scrobbles before 2 Jan 1970, at most EPOCH_CHECK_MAX. null => the Client can't check */
+    epochPlays?: number | null
 }
 
 export type JobImportOriginJson = { kind: 'component', componentId: number | null, name?: string }
@@ -266,6 +268,8 @@ export const isEpochPlay = (playedAt: number): boolean => playedAt < BAD_TIMESTA
 
 /** What an export with exportKeepEpochBursts does with Epoch Plays for one target. empty => the Client had no scrobbles before 2 Jan 1970, send/skip => the user's choice when it had some */
 export const EPOCH_DECISIONS = ['empty', 'send', 'skip'] as const;
+/** The Epoch Play check stops counting a Client's scrobbles before 2 Jan 1970 here */
+export const EPOCH_CHECK_MAX = 100;
 export type EpochDecision = typeof EPOCH_DECISIONS[number];
 
 /** Mirror play timestamp is invalid. Same rule as the data issue detector (mirrorIssueRuns) */

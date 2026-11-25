@@ -20,6 +20,7 @@ import type { PlayObject } from '../../../core/PlaySchema.ts';
 import type { StageCommon } from '../../../core/Transform.ts';
 import type { LifecycleStep } from '../../../core/Atomic.ts';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
+import { BAD_TIMESTAMP_BEFORE_MS, EPOCH_CHECK_MAX } from '../../../core/Job.ts';
 import { nameToCredit, namesToCredits } from '../../../core/MusicMetadata.ts';
 import { TestScrobbler } from '../scrobbler/TestScrobbler.ts';
 import type { WriteBudget } from '../../common/vendor/atproto/WriteBudget.ts';
@@ -37,6 +38,8 @@ class FakeClient implements ExportClient {
     running = true;
     queued: PlayObject[] = [];
     contexts: unknown[] = [];
+    /** context each queued play was queued with */
+    playContexts: unknown[] = [];
     transformedWith: StageCommon[][] = [];
     /** titles of plays given to queuePlay with transform steps */
     withSteps: (string | undefined)[] = [];
@@ -48,6 +51,7 @@ class FakeClient implements ExportClient {
     budget?: WriteBudget;
     ensureCoverage?: ExportClient['ensureCoverage'];
     releaseCoverage?: ExportClient['releaseCoverage'];
+    countScrobblesBefore?: ExportClient['countScrobblesBefore'];
 
     constructor(componentId: number) {
         this.componentId = componentId;
@@ -65,6 +69,7 @@ class FakeClient implements ExportClient {
         this.withSteps.push(...[...(opts.steps?.keys() ?? [])].map(x => x.data.track?.name));
         this.queued.push(...data);
         this.contexts.push(context);
+        this.playContexts.push(...data.map(() => context));
         this.queuedLength += data.length;
         if (this.failAll) {
             for (let i = 0; i < data.length; i++) {
@@ -91,7 +96,7 @@ class FakeClient implements ExportClient {
     }
 }
 
-const setup = async (opts: {db?: DbConcrete, timestamps?: number[], limit?: number, order?: 'asc' | 'desc', rangeTo?: number, coverage?: [number, number][], importing?: boolean, transformOptions?: unknown[], upstreamCheck?: boolean, exportDiscarded?: boolean, skipBad?: boolean, collapse?: boolean, realClient?: ExportClient} = {}) => {
+const setup = async (opts: {db?: DbConcrete, timestamps?: number[], limit?: number, order?: 'asc' | 'desc', rangeTo?: number, coverage?: [number, number][], importing?: boolean, transformOptions?: unknown[], upstreamCheck?: boolean, exportDiscarded?: boolean, skipBad?: boolean, collapse?: boolean, keepEpoch?: boolean, realClient?: ExportClient} = {}) => {
     const db = opts.db ?? await transientDb();
     const mirrors = new MirrorRepository(db);
     const mirror = await mirrors.findOrCreate({userId: null as unknown as string, service: 'lastfm', account: null, name: 'test'});
@@ -119,6 +124,7 @@ const setup = async (opts: {db?: DbConcrete, timestamps?: number[], limit?: numb
         exportDiscarded: opts.exportDiscarded,
         exportSkipBadTimestamps: opts.skipBad,
         exportCollapseBursts: opts.collapse,
+        exportKeepEpochBursts: opts.keepEpoch,
     });
     const componentId = opts.realClient?.componentId ?? (await db.insert(components).values({type: 'test', name: 'fake', mode: 'client', uid: `fake-${Math.random()}`}).returning())[0].id;
     const targetRepo = new JobTargetRepository(db);
@@ -510,6 +516,100 @@ describe('Job export runner', function () {
             expect(titles(client.queued)).to.deep.eq([`T${DAY + 100}`, `T${DAY + 200}`]);
             expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', exported: 2, skipped: 600});
             expect(reads).lessThan(10);
+        });
+
+        describe('keeping onboarding bursts', function () {
+            const RANGE = DAY + 30_000;
+            /** an onboarding burst B, a single Epoch Play S and a burst C after the cutoff */
+            const epochSetup = async (opts: Parameters<typeof setup>[0] & {found?: number} = {}) => {
+                const ctx = await setup({timestamps: [], rangeTo: RANGE, coverage: [[0, RANGE]], collapse: true, keepEpoch: true, order: 'asc', ...opts});
+                await insertTrack(ctx.historical, ctx.mirror.id, 'B', [1000, 2000, 3000, 4000, 5000]);
+                await insertTrack(ctx.historical, ctx.mirror.id, 'S', [50_000]);
+                await insertTrack(ctx.historical, ctx.mirror.id, 'C', [DAY + 5000, DAY + 6000, DAY + 7000]);
+                let checks = 0;
+                ctx.client.countScrobblesBefore = async (ms, max) => {
+                    checks++;
+                    expect(ms).eq(BAD_TIMESTAMP_BEFORE_MS);
+                    return Math.min(opts.found ?? 0, max);
+                };
+                return {...ctx, checks: () => checks};
+            }
+            /** [title, dupeCheck] of each queued play */
+            const sent = (client: FakeClient) => client.queued.map((x, i) => [x.data.track?.name, (client.playContexts[i] as {dupeCheck?: boolean} | undefined)?.dupeCheck]);
+
+            for (const order of ['asc', 'desc'] as const) {
+                it(`sends Epoch Plays without a dupe check to a Client without any, in ${order} order`, async function () {
+                    const {runner, target, targetRepo, client, checks} = await epochSetup({order});
+                    await runner.startExport(target.id);
+                    await exportTask(runner, target.id);
+                    const epoch = [...Array(5).fill(['B', false]), ['S', false]];
+                    expect(sent(client)).to.deep.eq(order === 'asc' ? [...epoch, ['C', undefined]] : [['C', undefined], ...epoch.reverse()]);
+                    expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', exported: 7, skipped: 2, epochDecision: 'empty'});
+                    expect(checks()).eq(1);
+                });
+            }
+
+            it('waits for a decision when the Client has scrobbles before 2 Jan 1970, then sends them', async function () {
+                const {runner, target, targetRepo, client} = await epochSetup({found: 3});
+                await runner.startExport(target.id);
+                await until(() => runner.runtime.exports[target.id]?.epochPlays === 3);
+                expect(runner.runtime.exports[target.id]?.waiting).match(/already has 3 scrobbles before 2 Jan 1970/);
+                expect(client.queued).length(0);
+                expect((await targetRepo.getById(target.id))!.cursor).is.null;
+                await targetRepo.update(target.id, {epochDecision: 'send'});
+                runner.wake();
+                await exportTask(runner, target.id);
+                expect(sent(client)).to.deep.eq([...Array(5).fill(['B', false]), ['S', false], ['C', undefined]]);
+                expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', exported: 7, epochDecision: 'send'});
+            });
+
+            it('skips Epoch Plays when the user decided so', async function () {
+                const {runner, target, targetRepo, client} = await epochSetup({found: 500});
+                await runner.startExport(target.id);
+                await until(() => runner.runtime.exports[target.id]?.epochPlays === EPOCH_CHECK_MAX);
+                expect(runner.runtime.exports[target.id]?.waiting).match(new RegExp(`already has ${EPOCH_CHECK_MAX}\\+ scrobbles`));
+                await targetRepo.update(target.id, {epochDecision: 'skip'});
+                runner.wake();
+                await exportTask(runner, target.id);
+                expect(sent(client)).to.deep.eq([['C', undefined]]);
+                expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', exported: 1, skipped: 8});
+            });
+
+            it('waits for a decision when the Client cannot check', async function () {
+                const {runner, target, client} = await epochSetup();
+                client.countScrobblesBefore = undefined;
+                await runner.startExport(target.id);
+                await until(() => runner.runtime.exports[target.id]?.epochPlays === null);
+                expect(runner.runtime.exports[target.id]?.waiting).match(/can't check/);
+                await runner.stopExport(target.id, 'stopped');
+            });
+
+            it('does not check again after a decision', async function () {
+                const {runner, target, targetRepo, client, checks} = await epochSetup({found: 3});
+                await targetRepo.update(target.id, {epochDecision: 'send'});
+                await runner.startExport(target.id);
+                await exportTask(runner, target.id);
+                expect(client.queued).length(7);
+                expect(checks()).eq(0);
+            });
+
+            it('keeps onboarding bursts when bad timestamps are skipped, and keeps the upstream check option', async function () {
+                const {runner, target, targetRepo, client} = await epochSetup({skipBad: true, upstreamCheck: false});
+                await runner.startExport(target.id);
+                await exportTask(runner, target.id);
+                expect(titles(client.queued)).to.deep.eq([...Array(5).fill('B'), 'C']);
+                expect(client.playContexts).to.deep.eq([...Array(5).fill({upstreamCheck: false, dupeCheck: false}), {upstreamCheck: false}]);
+                expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', exported: 6, skipped: 3});
+            });
+
+            it('collapses onboarding bursts without the option', async function () {
+                const {runner, target, client, jobRepo, job, checks} = await epochSetup();
+                await jobRepo.update(job.id, {exportKeepEpochBursts: false});
+                await runner.startExport(target.id);
+                await exportTask(runner, target.id);
+                expect(sent(client)).to.deep.eq([['B', undefined], ['S', undefined], ['C', undefined]]);
+                expect(checks()).eq(0);
+            });
         });
     });
 
