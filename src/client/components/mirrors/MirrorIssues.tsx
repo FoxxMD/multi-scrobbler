@@ -5,6 +5,7 @@ import { Link } from "react-router";
 import { BURST_MAX_GAP_MS, BURST_MIN_PLAYS, type JobApiJson, type MirrorIssueGroupJson, type MirrorIssueSummaryJson } from "../../../core/Job";
 import { fetchMirrorIssuePage, tanQueries } from "../../queries";
 import { ActivitySummary } from "../ActivityDetail";
+import { FullDateDisplay } from "../DateDisplay";
 import { ErrorAlert } from "../ErrorAlert";
 import { TextMuted } from "../TextMuted";
 
@@ -23,7 +24,9 @@ const IssueRow = (props: { group: MirrorIssueGroupJson }) => {
     const {group} = props;
     return (
         <Flex gap="3" alignItems="center" paddingY="2" borderBottomWidth="1px" borderColor="gray.border">
-            <ActivitySummary sortBy="played" activity={{play: group.play, updatedAt: `${group.firstPlayedAt}`}}/>
+            <ActivitySummary sortBy="played" activity={{play: group.play, updatedAt: `${group.firstPlayedAt}`}}
+                // bad timestamps in UTC, so a 1 Jan 1970 play doesn't show as 31 Dec 1969 west of UTC
+                dateDisplay={<FullDateDisplay date={dayjs(group.firstPlayedAt).toISOString()} prefix="Played" utc={group.tags.includes('badTimestamp')}/>}/>
             <Stack gap="1" alignItems="flex-end" flexShrink="0">
                 {group.tags.includes('burst') ? <Badge variant="surface" colorPalette="orange">×{group.count.toLocaleString()} within {durationText(group.lastPlayedAt - group.firstPlayedAt)}</Badge> : undefined}
                 {group.tags.includes('badTimestamp') ? <Badge variant="surface" colorPalette="red">Bad timestamp</Badge> : undefined}
