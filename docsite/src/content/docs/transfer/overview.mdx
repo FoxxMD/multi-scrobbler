@@ -7,6 +7,7 @@ tableOfContents:
   minHeadingLevel: 2
   maxHeadingLevel: 3
 ---
+import { Badge } from '@astrojs/starlight/components';
 
 Multi-Scrobbler can bulk import your Play (scrobble) history and export it to your [Clients](/configuration/clients).
 
@@ -35,6 +36,14 @@ In the **Import** section:
 
 The Mirror records the date range that each import covers. You can see these ranges on the Mirror's page (**Menu -> Mirrors**) after it is created.
 
+<details>
+
+<summary>Skipped plays on Job page</summary>
+
+On the **Job** page, **skipped** is the number of imported Plays that were not added to the Mirror. The Mirror already had them, or they were exact duplicates (same second, artist and track) in the import.
+
+</details>
+
 <Aside type="note">
 
 Only Last.fm data sources are available now because of the [API key deadline](/configuration/clients/lastfm). More sources will come later.
@@ -45,11 +54,7 @@ Only Last.fm data sources are available now because of the [API key deadline](/c
 
 In the **Export** section, select the Clients that get the Plays. Each Client exports separately and has its own progress and controls.
 
-Exported Plays go through a Client the same way as live scrobbles:
-
-* The Client applies its own [transforms](/configuration/transforms).
-* The Client skips Plays that its service already has. See [Duplicate Checks](#duplicate-checks).
-* The Client sends the Plays to its service one at a time.
+Exported Plays go through a Client [the same way as live scrobbles.](#job-client-interaction)
 
 The Client always skips Plays that Multi-Scrobbler already sent to it. Because of this, you can export the same Plays two times without duplicates on the service.
 
@@ -107,7 +112,7 @@ Your Plays from 2008 to 2012 exist only on Last.fm, and a file has your Plays fr
 
 Only one Job at a time can import into a Mirror.
 
-### Plays Already in the Mirror
+<DetailsAdmo summary="Handling Plays Already in the Mirror">
 
 When you import into a Mirror that already has Plays, select what happens where the date ranges overlap:
 
@@ -120,6 +125,8 @@ Replace deletes every Play in the Job's date range. It does not compare Plays on
 
 </Aside>
 
+</DetailsAdmo>
+
 ## 6. Clean Up
 
 Imported Plays, and the records that Clients keep of exported Plays, use disk space. When your exports finish, you can clean them up:
@@ -131,13 +138,118 @@ Plays that a Client already sent stay on its service. Cleanup changes only what 
 
 You can clean up in three places:
 
-* The **Clean Up** section of a Job page. It cleans up the Mirror Plays in the Job's range and the Plays the Job sent to each Client. If you **Delete** the Job, it asks what to do with the same Plays.
-* The Mirror page. You can clean up a date range or delete the whole Mirror. (You should delete the Mirror's Jobs first.)
-* The **Job Plays** section of a Client page. It cleans up all Plays that Jobs exported to that Client.
+<Tabs groupId="cleanupPlace">
+<TabItem value="job" label="Job">
+
+The **Clean Up** section of a Job page. It cleans up the Mirror Plays in the Job's range and the Plays the Job sent to each Client. If you **Delete** the Job, it asks what to do with the same Plays.
+
+</TabItem>
+<TabItem value="mirror" label="Mirror">
+
+The Mirror page. You can clean up a date range or delete the whole Mirror. (You should delete the Mirror's Jobs first.)
+
+</TabItem>
+<TabItem value="client" label="Client">
+
+The **Job Plays** section of a Client page. It cleans up all Plays that Jobs exported to that Client.
+
+</TabItem>
+</Tabs>
 
 Other Jobs can use the same Mirror. A Mirror cleanup affects all of them.
 
 ## More Details
+
+### Understanding Job Exports and Clients Interaction {#job-client-interaction}
+
+It's important to understand that Jobs, when exporting, *only* ever interact with Multi-Scrobbler's [Client](/configuration/clients) *entity* and not the downstream service itself.
+
+<details>
+
+<summary>What's the difference?</summary>
+
+* Client (Multi-Scrobbler) - The "[Koito](/configuration/clients/koito)" representation within MS. Responsible for queueing Plays, processing them, and then scrobbling *downstream* to the (actual service)
+  * It keeps Plays it has seen/processed in the MS database
+* Client (actual service) - The literal Koito instance that that the Client (Multi-Scrobbler) scrobbles to.
+
+</details>
+
+The Job "exports" Plays to the Client *within multi-scrobbler* by adding Plays to the Client's queue. This is the extent of a Job's interaction with Clients.
+
+After a Play is added to the Client's queue it goes through the same processing any Play from a [Source](/configuration/sources) would go through, including the Client's own Transforms, duplicate checks, etc..
+
+*So, when a Job mentions exporting to a "Client" or that plays were skipped being sent to a "Client" it means the Client **within Multi-Scrobbler**.*
+
+<DetailsAdmo summary="Simplified Walkthrough and Visualization">
+
+The (simplified) Job export process works like this:
+
+1. Job pulls page Y containing X number of Plays from its [Mirror](#2-import-your-plays-into-a-mirror) and iterates them:
+2. Checks a Play to see if exists in the *Multi-Scrobbler database* for *Client (Multi-Scrobbler)*. If it exists then it skipped being exported
+3. If it does not exist in MS database then it "Exports" this Play by sending it to the queue for *Client (Multi-Scrobbler)*
+4. Move to the next Play, repeat 2-4
+5. When its runs out of Plays in page Y, go back to 1.
+
+<Tabs groupId="jobExportFlowchart">
+<TabItem value="normal" label="Normal Play Flow">
+
+Visually, this is the normal Play/Scrobble flow (not a Job) from a Source to a *Client (Multi-Scrobbler)* to the downstream *(actual service) Client*
+
+```mermaid
+flowchart TD
+    Source[MS Source]
+
+    subgraph Client[MS Client]
+        direction TD
+        Queue[(Queue)]
+        Process[Process Queue]
+        Queue --> Process
+    end
+
+    Downstream[Downstream Service]
+
+    Source -->|Play| Queue
+    Process -->|"scrobble (on success)"| Downstream
+```
+
+</TabItem>
+<TabItem value="jobExport" label="Play in Job Export">
+
+Visually, this is the same normal Play/Scrobble flow but it also shows how a Job processes and exports Plays to a *Client (Multi-Scrobbler)*
+
+```mermaid
+flowchart TB
+    subgraph Sources[" "]
+        direction TB
+        Source[MS Source]
+        Job[Job]
+        Mirror[(Mirror)]
+        Job -->|import| Mirror
+        Mirror -->|data| Job
+    end
+
+    subgraph Client[MS Client]
+        direction TB
+        Queue[(Queue)]
+        Process[Process Queue]
+        Queue --> Process
+    end
+
+    Downstream[Downstream Service]
+
+    Source -->|Play| Queue
+    Job -->|"export (Play)"| Queue
+    Process -->|"scrobble (on success)"| Downstream
+```
+
+</TabItem>
+</Tabs>
+
+
+
+
+
+</DetailsAdmo>
 
 ### Import from a File
 
@@ -186,76 +298,90 @@ Multi-Scrobbler never deletes files in this folder. Only one Job can use each fi
 </TabItem>
 </Tabs>
 
-### Rate Limits
-
-The [Teal.fm](/configuration/clients/tealfm#configuration) and [Rocksky](/configuration/clients/rocksky#configuration) Clients write to your PDS. Your PDS has a rate limit for each account, and a large Export can use all of it. Then your other apps, for example Bluesky, cannot write to your account.
-
-These Clients keep a reserve of points free. When the reserve is reached, the Export waits until the limit resets. You can see the points that are used in the Export section of the Job page.
-
-### Teal.fm and Rocksky Mirrors
-
-The Teal.fm and Rocksky Clients each keep a locked Mirror of your account. By default, it has the scrobbles of the last 30 days. The Client uses it to find duplicates. You cannot clean up a locked Mirror, or delete it while it has Plays.
-
-Before an Export to one of these Clients starts, the Client copies the scrobbles in the Job's range from your PDS into its Mirror. For more information, see the [Teal.fm](/configuration/clients/tealfm#configuration) and [Rocksky](/configuration/clients/rocksky#configuration) pages.
-
 ### Data Issues
 
-Imported history can have Plays that look invalid. Multi-Scrobbler imports them as they are, so you keep a full copy of your data. It finds two kinds:
+Imported history can have Plays that look invalid. Multi-Scrobbler finds two kinds:
 
-* **Bad timestamp**: the Play is dated before 2 Jan 1970 (UTC), or more than one day after it was imported. Last.fm files Plays that it got no date for under 1 Jan 1970. A Play dated in the future comes from a wrong clock or a broken source.
-* **Burst**: the same track and artists 3 or more times in a row, each within 2 seconds of the last. Real repeat listens are a track length apart. Bursts are often fake Plays that were added to carry over a play count from another player.
+* **Bad timestamp**: the Play is dated before 2 Jan 1970, or in the future.
+* **Burst**: the same track 3 or more times in a row, each within 2 seconds of the last.
 
-The **Data Issues** section of a Mirror page lists these Plays. Each burst shows as one row with its number of Plays. If the Mirror has issues in a Job's range, the Job page shows a notice with a link to the Mirror.
+The **Data Issues** section of a Mirror page lists these Plays. If a Job's range has some, the Job page shows a notice. The Mirror keeps all Plays as they are imported.
 
-The Mirror is never changed. By default, exports send these Plays as they are. To leave them out of an export, use the Job options in [Skipping Data Issues](#skipping-data-issues).
+<details>
 
-On the Job page, **skipped** is the number of imported Plays that were not added to the Mirror. Either the Mirror already had them, or they were exact duplicates (same second, artist and track) of another Play in the import.
+<summary>How Multi-Scrobbler finds these Plays</summary>
+
+* A bad timestamp is before 2 Jan 1970 (UTC), or more than one day after the import. Last.fm changes Plays that originally had no date to have the date **1 Jan 1970**. A Play dated in the future comes from a wrong clock or a broken source.
+* Real repeat listens are a track length apart. Bursts are often fake Plays that were added to carry over a play count from another player.
+
+</details>
 
 #### Skipping Data Issues
 
-A Job has options for these Plays. They are in the **Data Issues** part of the **Export** section. By default, the export sends all Plays. You can change the options on the Job page at any time. A change applies to the Plays that the Job exports next.
+By default, an export sends all Plays. To leave some out, change the **Data Issues** options in the **Export** section of the Job. You can change them on the Job page at any time. A change applies to the Plays that the Job exports next.
 
-* **Skip bad timestamps**: the export does not send Plays with a bad timestamp.
-* **Bursts**: choose one of these:
-  * **Send them as they are** (default): the export sends every Play of each burst.
-  * **One Play per burst**: the export sends only one Play of each burst. This is the first Play of the burst in the export order: the newest Play for **Newest first**, the oldest for **Oldest first**. The other Plays of the burst are not sent. If **Skip bad timestamps** is also on, the first Play without a bad timestamp is sent.
-  * **One Play per burst, keep bursts before 1970**: the same as **One Play per burst**, but bursts dated before 2 Jan 1970 are sent whole. See [Keeping Onboarding Bursts](#keeping-onboarding-bursts).
+**Skip bad timestamps**: the export does not send Plays with a bad timestamp.
 
-The Mirror keeps all of the Plays. On the Job page, each Client shows how many Plays these options did not send.
+**Bursts**: select one of these.
 
-**One Play per burst** needs a finished import. While an import runs, part of a burst can be missing from the Mirror. Then the Plays that are there do not look like a burst, and the export would send all of them. Plays that are sent cannot be taken back. So, when this option is on, the export waits until the import is finished.
+<Tabs groupId="burstMode">
+<TabItem value="send" label="Send them as they are">
 
-##### Keeping Onboarding Bursts
+This is the default. The export sends every Play of each burst.
 
-Some people copied their play counts from older software into Last.fm when they started to use it. These Plays are bursts dated on 1 Jan 1970, one second apart. In this guide they are called **onboarding bursts**. Use **One Play per burst, keep bursts before 1970** to keep these play counts and still send only one Play of each other burst.
+</TabItem>
+<TabItem value="collapse" label="One Play per burst">
 
-Multi-Scrobbler cannot check onboarding bursts for duplicates. The Plays of a burst look like duplicates of each other, and a service can have too many Plays near 1 Jan 1970 to compare. So, with this option, the export sends **every Play dated before 2 Jan 1970 without a duplicate check**. If **Skip bad timestamps** is also on, it still skips Plays before 2 Jan 1970 that are not in a burst.
+The export sends one Play of each burst. With this option, the export waits until the import is finished.
 
-To prevent duplicates, the export first checks each Client for scrobbles dated before 2 Jan 1970:
+<details>
 
-* If the Client has none, the export continues.
-* If the Client has some, the export waits. On the Job page, select one of these for that Client:
-  * **Send anyway**: the export sends the Plays from before 2 Jan 1970 without a duplicate check. Plays that the service already has are sent again.
-  * **Skip Plays before 1970**: the export does not send any Plays from before 2 Jan 1970 to that Client.
-* If the Client cannot get its scrobbles from its service, or the check fails, the export also waits for you to select one of these. A failed check is tried again.
+<summary>Which Play is sent, and why the export waits</summary>
 
-The check runs one time for each Client, before the first Play from before 2 Jan 1970 is sent. So turn this option on before the export gets to these Plays. If you export more Mirrors to the same Client, the first Job that sends onboarding bursts continues by itself. The next Jobs find these scrobbles and wait for you to select.
+The export sends the first Play of the burst in the export order. This is the newest Play for **Newest first**, and the oldest for **Oldest first**. If **Skip bad timestamps** is also on, it sends the first Play without a bad timestamp.
+
+While an import runs, part of a burst can be missing from the Mirror. Then the export would send all of the Plays that are there. Plays that are sent cannot be taken back.
+
+</details>
+
+</TabItem>
+<TabItem value="keepEpoch" label="One Play per burst, keep bursts before 1970">
+
+Use this option if you copied play counts from older software into Last.fm when you started to use it. These Plays are bursts dated on 1 Jan 1970. The export sends these bursts whole, and one Play of each other burst.
+
+The export sends bursts before 1970 without a duplicate check. So, before it sends them, the export looks for scrobbles before 1970 in each Client. If a Client has some, the export waits. On the Job page, select one of these for that Client:
+
+* **Send anyway**: the export sends the Plays before 1970. Plays that the service already has are sent again.
+  * <Badge text="Warning" size="small" variant="caution" /> This is essentially "YOLO, ignore all checks and send it." Re-exporting the same data again, or using another mirror with duplicate data, sent to the same client will absolutely result in duplicates
+* **Skip Plays before 1970**: the export does not send Plays before 1970 to that Client.
 
 :::caution
-* Some services do not accept Plays dated in 1970. Then each of these Plays fails, and the export stops after too many failures in a row.
-* Koito cannot find a scrobble dated at exactly 00:00:00 on 1 Jan 1970 in this check.
-* If a retried Play was sent without a duplicate check, it is retried without one. In **Retry With...**, you can turn **Check for Duplicate?** on.
+Some services do not accept Plays dated in 1970. Each of these Plays then fails, and the export stops after too many failures in a row.
 :::
+
+<details>
+
+<summary>More about this option</summary>
+
+* The Plays of a burst look like duplicates of each other. A service can also have too many Plays near 1 Jan 1970 to compare. This is why these Plays get no duplicate check.
+* If **Skip bad timestamps** is also on, the export still skips Plays before 2 Jan 1970 that are not in a burst.
+* Koito cannot find a scrobble dated at exactly 00:00:00 on 1 Jan 1970, you will need to use this option for this scenario
+
+</details>
+
+</TabItem>
+</Tabs>
+
+On the Job page, each Client shows how many Plays these options did not send.
 
 <Aside type="tip">
 
-If you are not sure that your data is good, import first and export after you check it:
+If you are not sure that your data is good, import first and export after you look at it:
 
-1. Create a Job with no Clients in **Export To**, so it only imports.
-2. When the import is finished, open the Mirror page and look at **Data Issues**.
-3. Create a new Job with **Import From** set to **Existing mirror**. Select the Clients and the Data Issues options that you want.
-
-You can also create one Job with **Start now** off. Start the import from the Job page. When the import is finished, check the Mirror and set the Data Issues options. Then start the exports.
+1. Create a Job with **Start now** off.
+2. Start the import from the Job page.
+3. When the import is finished, look at **Data Issues** on the Mirror page.
+4. Set the Data Issues options on the Job page. Then start the exports.
 
 </Aside>
 
@@ -263,10 +389,16 @@ You can also create one Job with **Start now** off. Start the import from the Jo
 
 If many exported Plays fail in a row, the Export stops and shows the last error. The limit is 10, or the Queue Limit if it is higher. This usually means that the Client configuration is wrong or its service is down. Fix the problem, then select **Resume**.
 
+<details>
+
+<summary>Retrying failed Job Plays</summary>
+
 Multi-Scrobbler does not retry failed Plays from a Job by itself. To retry them, do one of these:
 
 * On the Client page, turn on **Plays from Export jobs** in the **Plays** filters. Set **Played Between** to the Job's range. Then select **Retry All Unsuccessful** in the menu next to **Plays**.
 * Create a new Job with the same Mirror and export to the Client again. The Client sends the failed Plays and skips the Plays it already has.
+
+</details>
 
 ### Export Speed
 
@@ -288,11 +420,15 @@ The same timings are also available from the [Prometheus endpoint](/configuratio
 
 </DetailsAdmo>
 
-#### Transforms
+The below sections detail behavior and options that can affect the export rate for a Job:
+
+<DetailsAdmo summary="Transforms">
 
 Multi-Scrobbler exports Plays one at a time. [Transforms](/configuration/transforms) that call external services (MusicBrainz, Rocksky) wait for each call. If you use Transforms and the metric **Process in the Client** (shown under **Show Metrics**) is a large contributor to timing metrics this may indicate Transforms are slowing down your export.
 
-#### Duplicate Checks
+</DetailsAdmo>
+
+<DetailsAdmo summary="Duplicate Checks">
 
 Before a Client sends a Play, it compares the Play against two lists:
 
@@ -314,7 +450,9 @@ Be careful when disabling this setting if the service has scrobbles in the Job's
 
 </Aside>
 
-#### Downstream Client Scrobble Processing
+</DetailsAdmo>
+
+<DetailsAdmo summary="Downstream Client Scrobble Processing">
 
 Some Clients, like Koito, do extra processing when you send a scrobble request. This extra processing can be a significant contributor to how fast, or slow, the scrobble request response is.
 
@@ -341,3 +479,11 @@ You should be aware that this effectively disables any track/artist/album correc
 
 
 </details>
+
+</DetailsAdmo>
+
+### Rate Limits
+
+The [Teal.fm](/configuration/clients/tealfm#configuration) and [Rocksky](/configuration/clients/rocksky#configuration) Clients write to your PDS. Your PDS has a rate limit for each account, and a large Export can use all of it. Then your other apps, for example Bluesky, cannot write to your account.
+
+These Clients keep a reserve of points free. When the reserve is reached, the Export waits until the limit resets. You can see the points that are used in the Export section of the Job page.
