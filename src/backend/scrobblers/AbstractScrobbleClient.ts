@@ -766,6 +766,19 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
     }
     
+    /**
+     * Scrobbles on the service played before `ms`, at most `max` (fetching stops there). undefined => this Client can't fetch its service's scrobbles.
+     * An export keeping onboarding bursts checks this before sending plays before 2 Jan 1970 without a dupe check.
+     * */
+    async countScrobblesBefore(ms: number, max: number): Promise<number | undefined> {
+        if(!this.upstreamRefresh.refreshEnabled) {
+            return undefined;
+        }
+        // plays before 1970 are not checked, most services reject negative timestamps
+        const fetched = await this.getScrobblesForTimeRange({from: 0, to: Math.floor((ms - 1) / 1000), fetchMax: max});
+        return Math.min(fetched.length, max);
+    }
+
     public async alreadyScrobbled(playObj: PlayObject, log?: boolean): Promise<[boolean, PlayMatchResult]> {
         const result = await this.existingPlay(playObj, await this.getSOTScrobblesForPlay(playObj));
         return [result.match, result];

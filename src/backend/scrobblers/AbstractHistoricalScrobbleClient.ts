@@ -552,6 +552,15 @@ export default abstract class AbstractHistoricalScrobbleClient extends AbstractS
         return this.getMirroredScrobblesForPlay(play);
     }
 
+    /** Counts mirrored scrobbles instead of fetching them. The export mirrors the job's range (ensureCoverage) before it gets here */
+    override async countScrobblesBefore(ms: number, max: number): Promise<number | undefined> {
+        if(this.mirrorId === undefined) {
+            return undefined;
+        }
+        // earliest valid Date, so plays before 1970 count too
+        return (await this.playsHistoricalRepo.findMirrorIds({mirrorId: this.mirrorId, range: [-8_640_000_000_000_000, ms - 1], limit: max})).length;
+    }
+
     protected async getMirroredScrobblesForPlay(play: PlayObject): Promise<PlayObject[]> {
         const closeTemporalPlays = await this.playsHistoricalRepo.getTemporallyClosePlays(play);
         return closeTemporalPlays.map(x => x.play);

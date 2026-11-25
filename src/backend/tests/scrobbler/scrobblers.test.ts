@@ -1533,6 +1533,27 @@ describe('Scrobble Clients Behavior', function() {
     });
 
 });
+describe('Scrobbles before a time', function() {
+    it('fetches up to max scrobbles before the time from the service', async function() {
+        await using testScrobbler = await generateTestScrobbler();
+        let asked: PaginatedTimeRangeOptions | undefined;
+        testScrobbler.getScrobblesForTimeRange = async (opts) => {
+            asked = opts as PaginatedTimeRangeOptions;
+            return [generatePlay(), generatePlay(), generatePlay()];
+        };
+        expect(await testScrobbler.countScrobblesBefore(86_400_000, 2)).eq(2);
+        expect(asked).to.deep.eq({from: 0, to: 86_399, fetchMax: 2});
+        testScrobbler.getScrobblesForTimeRange = async () => [];
+        expect(await testScrobbler.countScrobblesBefore(86_400_000, 2)).eq(0);
+    });
+
+    it('is undefined when the Client does not fetch its service scrobbles', async function() {
+        await using testScrobbler = await generateTestScrobbler();
+        testScrobbler.upstreamRefresh.refreshEnabled = false;
+        expect(await testScrobbler.countScrobblesBefore(86_400_000, 2)).undefined;
+    });
+});
+
 describe('Import job plays', function() {
 
     /** a job (and its mirror) in the scrobbler's db so plays can reference it */

@@ -289,6 +289,18 @@ describe('#tealfm Locked mirror', function () {
         expect(t.coverageHolds.size).eq(0);
     });
 
+    it('counts mirrored scrobbles before a time, up to a max', async function () {
+        const {t} = await buildTeal();
+        expect(await t.countScrobblesBefore(86_400_000, 10)).undefined;
+        await t.useLockedMirror();
+        for (const ts of [1000, 2000, 3000, 86_400_000]) {
+            await seed(t, ts, t.mirrorId);
+        }
+        expect(await t.countScrobblesBefore(86_400_000, 10)).eq(3);
+        expect(await t.countScrobblesBefore(86_400_000, 2)).eq(2);
+        expect(await t.countScrobblesBefore(1000, 10)).eq(0);
+    });
+
     it('after repeated failed passes, checks older plays against what is mirrored with a warning, until a pass works again', async function () {
         const {t} = await buildTeal();
         await t.useLockedMirror();
