@@ -3122,9 +3122,9 @@ or navigate to <code>http://yourMsDomain/next</code></p>
 <p>The publicly-documented API is still <strong>not stable</strong> but it is getting much closer to a stable release.</p>
 <h2 id="v0-21-3" class="astro-k2mlvzcn"><a href="/multi-scrobbler/updating/changelog/version/v0-21-3/" class="astro-k2mlvzcn">v0.21.3</a> <span class="sl-badge note small astro-k2mlvzcn astro-f4zorn72">Latest</span></h2><time datetime="2026-11-25T17:52:09.000Z" class="astro-k2mlvzcn">Nov 25, 2026</time><h1 id="whats-new">What’s New?</h1>
 <h2 id="new-transform-features">New Transform Features</h2>
-<p>Play <a href="https://docs.multi-scrobbler.appconfiguration/transforms/">Transforms</a> includes two new features that enable you to filter out, or flag, Plays that should not be automatically scrobbled.</p>
+<p>Play <a href="https://docs.multi-scrobbler.app/configuration/transforms/">Transforms</a> includes two new features that enable you to filter out, or flag, Plays that should not be automatically scrobbled.</p>
 <h3 id="set-play-state-based-on-stage-outcome">Set Play State Based on Stage Outcome</h3>
-<p><a href="https://docs.multi-scrobbler.appconfiguration/transforms/#play-state-control"><strong>Play State Control</strong></a> adds additional configuration next to <a href="https://docs.multi-scrobbler.appconfiguration/transforms/#flow-control">Stage Flow Control</a> on your stages. It allows you to <strong>set the state of a Play based on the outcome of the Stage.</strong></p>
+<p><a href="https://docs.multi-scrobbler.app/configuration/transforms/#play-state-control"><strong>Play State Control</strong></a> adds additional configuration next to <a href="https://docs.multi-scrobbler.app/configuration/transforms/#flow-control">Stage Flow Control</a> on your stages. It allows you to <strong>set the state of a Play based on the outcome of the Stage.</strong></p>
 <p>In plain terms, you can now do this:</p>
 <ul>
 <li>if the <a href="https://docs.multi-scrobbler.app/configuration/transforms/musicbrainz/">Musicbrainz Stage</a> matches your Play data, use its corrected data (and continue as normal)</li>
@@ -3141,24 +3141,24 @@ or navigate to <code>http://yourMsDomain/next</code></p>
 <p>These can be set for the same types as Stage Control: <code>onSuccessAction</code>, <code>onFailureAction</code>, and <code>onSkipAction</code></p>
 <p>These actions also <em>persist through all Stages</em> so you can, for example, “mark” a Play as <code>review</code> in an earlier Stage then clear it in a later Stage with <code>approve</code>.</p>
 <p>This gives you granular control over what type of Plays end up being processed. Plays set to Discarded and Needs Reviews can be filtered/searched for in the dashboard.</p>
-<p>These actions also apply to <a href="https://docs.multi-scrobbler.apptransfer/overview/">Export Jobs</a>:</p>
+<p>These actions also apply to <a href="https://docs.multi-scrobbler.app/transfer/overview/">Export Jobs</a>:</p>
 <ul>
 <li>A Play that gets <code>discard</code> can be dropped before exporting, or exported directly as Discarded to the Client</li>
 <li>A Play that gets <code>review</code> is exported directly as In Review to the Client</li>
 </ul>
 <h3 id="match-stage">Match Stage</h3>
-<p>The <a href="https://docs.multi-scrobbler.appconfiguration/transforms/match/"><strong>Match Stage</strong></a> is a pure comparison stage that does not make any modifications to your Play data. Use it to match, or compare, different properties of the Play being processed. If your rules match, the Stage succeeds, if it does not match then Stage fails.</p>
+<p>The <a href="https://docs.multi-scrobbler.app/configuration/transforms/match/"><strong>Match Stage</strong></a> is a pure comparison stage that does not make any modifications to your Play data. Use it to match, or compare, different properties of the Play being processed. If your rules match, the Stage succeeds, if it does not match then Stage fails.</p>
 <p>This Stage is particularly useful with the above <strong>Play State Controls</strong>, use it to match on patterns in your Play data and set an action without needing to modify the Play.</p>
-<p>Lastly, You can now match on additional properties in <a href="https://docs.multi-scrobbler.appconfiguration/transforms/#conditional-modification"><code>when</code></a> conditions as well as with Match:</p>
+<p>Lastly, You can now match on additional properties in <a href="https://docs.multi-scrobbler.app/configuration/transforms/#conditional-modification"><code>when</code></a> conditions as well as with Match:</p>
 <ul>
 <li><code>user</code> <code>deviceId</code> <code>library</code> <code>playlist</code> and <code>musicService</code> - if the Play includes these, matched with string/regex</li>
 <li><code>duration</code> (length of a track) and <code>listenedFor</code> (how long you listened to it) - matched with a comparison and time unit IE <code>"duration": "&lt; 45 s"</code> =&gt; match when play length is less than 45 seconds</li>
 </ul>
 <h2 id="atproto-and-mirrors">ATProto and Mirrors</h2>
-<p>ATProto Source/Client (Teal.fm and Rocksky) share code with the new Mirrors concept from <a href="https://docs.multi-scrobbler.apptransfer/overview/">Import/Export Jobs</a> but did not actually leverage them in the last release.</p>
+<p>ATProto Source/Client (Teal.fm and Rocksky) share code with the new Mirrors concept from <a href="https://docs.multi-scrobbler.app/transfer/overview/">Import/Export Jobs</a> but did not actually leverage them in the last release.</p>
 <p>This release converts the historical plays and Sync operations for these Sources/Clients into <strong>locked</strong> Mirrors that are now visible from the Mirrors page.</p>
 <p>Additionally, their usage of repo exports (CAR files) has been improved to reduce the amount of space each Play takes up and, when used for checking for duplicates, now dynamically imports historical Play ranges <em>as needed</em> rather than requiring the entire repository be parsed into the database.</p>
-<p>This requires an automatic migration that will occur after upgrading. If you have a large (10k+ scrobbles) history in teal.fm/rocksky and are using either of these source/clients today you may want to <a href="https://docs.multi-scrobbler.appconfiguration/#reclaiming-disk-space">reclaim disk space</a> after upgrading.</p>
+<p>This requires an automatic migration that will occur after upgrading. If you have a large (10k+ scrobbles) history in teal.fm/rocksky and are using either of these source/clients today you may want to <a href="https://docs.multi-scrobbler.app/configuration/#reclaiming-disk-space">reclaim disk space</a> after upgrading.</p>
 <h2 id="listenbrainz-and-native-transform-improvements">Listenbrainz and Native Transform Improvements</h2>
 <p>Listenbrainz Source/Endpoint, and the Native Transform Stage, share some code that tries to extract artists out of artist/title strings (like <code>Foo feat. Cool Guy</code>).</p>
 <p>That code has now been consolidated and improved so testing is easier, the functionality is more flexible, and extraction decisions are <em>auditable</em>.</p>
@@ -3195,7 +3195,7 @@ or navigate to <code>http://yourMsDomain/next</code></p>
 <li>(dangerously) keep bad timestamps to pad playcounts, collapse all other burst scrobbles into one scrobble</li>
 </ul>
 <img width="501" height="145" alt="image" src="https://github.com/user-attachments/assets/e8afb9c8-92d7-4908-9a2b-5b8cd4283678" />
-<p>Using <strong>skip bad timestamps</strong> and <strong>one play per burst</strong> is recommended. Be sure to read <a href="https://docs.multi-scrobbler.apptransfer/overview/#skipping-data-issues">risks of dangerously keeping bad timestamps</a> in the docs before using that option.</p>
+<p>Using <strong>skip bad timestamps</strong> and <strong>one play per burst</strong> is recommended. Be sure to read <a href="https://docs.multi-scrobbler.app/transfer/overview/#skipping-data-issues">risks of dangerously keeping bad timestamps</a> in the docs before using that option.</p>
 <h1 id="other-changelog-highlights">Other Changelog Highlights</h1>
 <h3 id="️-features">⛰️ Features</h3>
 <ul>
