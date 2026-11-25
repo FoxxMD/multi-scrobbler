@@ -18,7 +18,7 @@ export const issueSummaryText = (summary: MirrorIssueSummaryJson): string => {
     return `${summary.plays.toLocaleString()} Play${summary.plays === 1 ? '' : 's'} (${parts.join(', ')})`;
 }
 
-export const DATA_ISSUES_DOCS = 'docs/transfer/overview/#data-issues';
+export const DATA_ISSUES_DOCS = 'docs/transfer/overview/#skipping-data-issues';
 
 const durationText = (ms: number): string => ms < 60_000 ? `${Math.round(ms / 1000)}s` : `${Math.round(ms / 60_000)}m`;
 
