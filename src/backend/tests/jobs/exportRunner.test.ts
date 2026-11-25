@@ -11,7 +11,7 @@ import { JobTargetRepository } from '../../common/database/drizzle/repositories/
 import { DrizzlePlayHistoricalRepository } from '../../common/database/drizzle/repositories/PlayHistoricalRepository.ts';
 import { components } from '../../common/database/drizzle/schema/schema.ts';
 import { WildcardEmitter } from '../../common/WildcardEmitter.ts';
-import { componentLockKey, type ExportClient, mirrorLockKey, JobRunner, type JobRunnerDeps } from '../../jobs/JobRunner.ts';
+import { componentLockKey, type ExportClient, mirrorLockKey, JobRunner, type JobRunnerDeps, withRootCause } from '../../jobs/JobRunner.ts';
 import { LockRegistry } from '../../jobs/LockRegistry.ts';
 import type { DbConcrete } from '../../common/database/drizzle/drizzleUtils.ts';
 import type { PlayWith } from '../../common/database/drizzle/drizzleTypes.ts';
@@ -164,6 +164,15 @@ const stagesOf = async (metric: prom.Summary<string>, labels: Record<string, str
 }
 
 const titles = (plays: PlayObject[]) => plays.map(x => x.data.track?.name);
+
+describe('withRootCause', function () {
+    it('adds the deepest cause message', function () {
+        expect(withRootCause(new Error('top', {cause: new Error('mid', {cause: {message: 'root'}})}))).eq('top: root');
+    });
+    it('is the message alone without a cause', function () {
+        expect(withRootCause(new Error('top'))).eq('top');
+    });
+});
 
 describe('Job export runner', function () {
 
@@ -374,7 +383,8 @@ describe('Job export runner', function () {
 
         const failed = (await targetRepo.getById(target.id))!;
         expect(failed.status).eq('failed');
-        expect(failed.error?.message).to.include('10 failed scrobbles in a row').and.include('bad auth');
+        expect(failed.error?.message).to.include('10 failed scrobbles in a row');
+        expect((failed.error?.cause as Error | undefined)?.message).eq('bad auth');
         expect(failed.breaker.trippedAt).is.not.undefined;
         expect(client.queued).length(10);
     });

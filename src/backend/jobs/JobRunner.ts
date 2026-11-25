@@ -132,6 +132,16 @@ export const mirrorLockKey = (mirrorId: number) => `mirror:${mirrorId}`;
 /** rows read per pass after a pass that skipped data issues, at least the client's room */
 const EXPORT_SKIP_READ = 500;
 /** Failed scrobbles in a row that stop an export. At least the queue limit, so one bad batch doesn't trip it on its own */
+/** The error's message, plus its deepest cause's message when it has one. A notification can't show the cause chain */
+export const withRootCause = (e: Error): string => {
+    let root: unknown = e;
+    while((root as {cause?: unknown}).cause !== undefined && (root as {cause?: unknown}).cause !== null) {
+        root = (root as {cause: unknown}).cause;
+    }
+    const rootMessage = (root as {message?: unknown}).message;
+    return root !== e && typeof rootMessage === 'string' ? `${e.message}: ${rootMessage}` : e.message;
+}
+
 export const breakerThreshold = (exportQueueLimit: number) => Math.max(exportQueueLimit, 10);
 
 /** Fields of a target sent in jobUpdate events */
@@ -593,7 +603,7 @@ export class JobRunner {
             } else {
                 logger.error(new Error('Export failed', {cause: e}));
                 await this.safely(() => this.setTarget(targetId, {status: 'failed', error: e as Error}, true), 'persist failed export status');
-                await this.safely(() => this.deps.notify?.({title: `Job ${job?.name ?? this.jobId} - Export to ${clientName ?? targetId} Failed`, message: (e as Error).message, priority: 'error'}), 'send notification');
+                await this.safely(() => this.deps.notify?.({title: `Job ${job?.name ?? this.jobId} - Export to ${clientName ?? targetId} Failed`, message: withRootCause(e as Error), priority: 'error'}), 'send notification');
             }
         } finally {
             for(const fn of cleanup) {
@@ -628,7 +638,8 @@ export class JobRunner {
         // read past skipped rows only when the last page had some, a client freeing one slot at a time shouldn't cost 500 rows per play
         let skipping: boolean = true;
         const breaker: JobTargetBreaker = {failedInARow: 0};
-        let lastFailure: string | undefined;
+        // kept whole so the breaker error shows its cause chain, IE a cached fetch error's original failure
+        let lastFailure: unknown;
         let listening: EventEmitter | undefined;
 
         const onClientEvent = (eventName: string) => (payload: {componentId?: number, data?: {jobId?: number | null, state?: string, error?: unknown, queueStates?: {error?: unknown}[]}}) => {
@@ -643,7 +654,7 @@ export class JobRunner {
                     breaker.failedInARow++;
                     // the play's error, else its failed queue state's
                     const err = payload.data.error ?? payload.data.queueStates?.find(x => x.error !== undefined && x.error !== null)?.error;
-                    lastFailure = (err as {message?: string} | null | undefined)?.message ?? lastFailure;
+                    lastFailure = err ?? lastFailure;
                 } else if(payload.data.state === 'scrobbled' || payload.data.state === 'duped') {
                     breaker.failedInARow = 0;
                 }
@@ -703,7 +714,7 @@ export class JobRunner {
             }
             if(breaker.failedInARow >= breakerThreshold(job.exportQueueLimit)) {
                 await this.targetRepo.update(targetId, {breaker: {...breaker, trippedAt: Date.now()}});
-                throw new Error(`Stopped after ${breaker.failedInARow} failed scrobbles in a row${lastFailure !== undefined ? `. Last error: ${lastFailure}` : ''}`);
+                throw new Error(`Stopped after ${breaker.failedInARow} failed scrobbles in a row`, lastFailure !== undefined ? {cause: lastFailure} : undefined);
             }
             // before the running check: a Client paused by its own rate limit reserve is not running
             const budget = await client.writeBudget?.();
