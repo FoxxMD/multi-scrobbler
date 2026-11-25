@@ -213,14 +213,39 @@ On the Job page, **skipped** is the number of imported Plays that were not added
 
 #### Skipping Data Issues
 
-A Job has two options for these Plays. They are in the **Data Issues** part of the **Export** section. Both are off by default. You can change them on the Job page at any time. A change applies to the Plays that the Job exports next.
+A Job has options for these Plays. They are in the **Data Issues** part of the **Export** section. By default, the export sends all Plays. You can change the options on the Job page at any time. A change applies to the Plays that the Job exports next.
 
 * **Skip bad timestamps**: the export does not send Plays with a bad timestamp.
-* **One Play per burst**: the export sends only one Play of each burst. This is the first Play of the burst in the export order: the newest Play for **Newest first**, the oldest for **Oldest first**. The other Plays of the burst are not sent. If **Skip bad timestamps** is also on, the first Play without a bad timestamp is sent.
+* **Bursts**: choose one of these:
+  * **Send them as they are** (default): the export sends every Play of each burst.
+  * **One Play per burst**: the export sends only one Play of each burst. This is the first Play of the burst in the export order: the newest Play for **Newest first**, the oldest for **Oldest first**. The other Plays of the burst are not sent. If **Skip bad timestamps** is also on, the first Play without a bad timestamp is sent.
+  * **One Play per burst, keep bursts before 1970**: the same as **One Play per burst**, but bursts dated before 2 Jan 1970 are sent whole. See [Keeping Onboarding Bursts](#keeping-onboarding-bursts).
 
 The Mirror keeps all of the Plays. On the Job page, each Client shows how many Plays these options did not send.
 
 **One Play per burst** needs a finished import. While an import runs, part of a burst can be missing from the Mirror. Then the Plays that are there do not look like a burst, and the export would send all of them. Plays that are sent cannot be taken back. So, when this option is on, the export waits until the import is finished.
+
+##### Keeping Onboarding Bursts
+
+Some people copied their play counts from older software into Last.fm when they started to use it. These Plays are bursts dated on 1 Jan 1970, one second apart. In this guide they are called **onboarding bursts**. Use **One Play per burst, keep bursts before 1970** to keep these play counts and still send only one Play of each other burst.
+
+Multi-Scrobbler cannot check onboarding bursts for duplicates. The Plays of a burst look like duplicates of each other, and a service can have too many Plays near 1 Jan 1970 to compare. So, with this option, the export sends **every Play dated before 2 Jan 1970 without a duplicate check**. If **Skip bad timestamps** is also on, it still skips Plays before 2 Jan 1970 that are not in a burst.
+
+To prevent duplicates, the export first checks each Client for scrobbles dated before 2 Jan 1970:
+
+* If the Client has none, the export continues.
+* If the Client has some, the export waits. On the Job page, select one of these for that Client:
+  * **Send anyway**: the export sends the Plays from before 2 Jan 1970 without a duplicate check. Plays that the service already has are sent again.
+  * **Skip Plays before 1970**: the export does not send any Plays from before 2 Jan 1970 to that Client.
+* If the Client cannot get its scrobbles from its service, or the check fails, the export also waits for you to select one of these. A failed check is tried again.
+
+The check runs one time for each Client, before the first Play from before 2 Jan 1970 is sent. So turn this option on before the export gets to these Plays. If you export more Mirrors to the same Client, the first Job that sends onboarding bursts continues by itself. The next Jobs find these scrobbles and wait for you to select.
+
+:::caution
+* Some services do not accept Plays dated in 1970. Then each of these Plays fails, and the export stops after too many failures in a row.
+* Koito cannot find a scrobble dated at exactly 00:00:00 on 1 Jan 1970 in this check.
+* If a retried Play was sent without a duplicate check, it is retried without one. In **Retry With...**, you can turn **Check for Duplicate?** on.
+:::
 
 <Aside type="tip">
 
