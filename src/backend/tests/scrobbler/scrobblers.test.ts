@@ -1590,6 +1590,24 @@ describe('Import job plays', function() {
         expect(await testScrobbler.queuePlay(jobPlay(mirrorPlay, 'A'), undefined, {jobId})).length(0);
     });
 
+    it('finds a job play made from the same mirror play at the same time only', async function() {
+        await using testScrobbler = await generateTestScrobbler();
+        const jobId = await createJob(testScrobbler);
+        const t = dayjs('2020-01-01T00:00:00Z');
+        const mirrorPlay = generatePlay({playDate: t});
+        // a burst sibling: same data, a second later
+        const sibling = clone(mirrorPlay);
+        sibling.data.playDate = t.add(1, 's');
+
+        const [first] = await testScrobbler.queuePlay(jobPlay(mirrorPlay, 'A'), undefined, {jobId});
+        const repo = testScrobbler.playRepoTest;
+        expect((await repo.findJobPlayExact(jobPlay(mirrorPlay, 'B'), {jobId, input: mirrorPlay}))?.id).eq(first.id);
+        expect(await repo.findJobPlayExact(jobPlay(sibling, 'A'), {jobId, input: sibling})).is.undefined;
+        expect(await repo.findJobPlayExact(jobPlay(mirrorPlay, 'A'), {jobId: jobId + 1, input: mirrorPlay})).is.undefined;
+        await repo.setStateById('failed', [first.id]);
+        expect(await repo.findJobPlayExact(jobPlay(mirrorPlay, 'A'), {jobId, input: mirrorPlay, notStates: ['failed']})).is.undefined;
+    });
+
     it('counts scrobbled job plays as non-live', async function() {
         await using testScrobbler = await normalizedMonitoringScrobbler();
         const jobId = await createJob(testScrobbler);

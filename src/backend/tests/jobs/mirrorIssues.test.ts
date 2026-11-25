@@ -214,5 +214,40 @@ describe('Mirror data issues', function () {
             // 2 plays left in range is not a burst
             expect(await skipped(repo, {mirrorId: mirror.id, range: [T + 3000, T + 10_000], order: 'asc'})).to.deep.eq([]);
         });
+
+        it('keepEpoch never skips Epoch Plays', async function () {
+            const {mirror, repo, insert} = await setup();
+            // an onboarding burst
+            await insert(seconds(1000, 5));
+            await insert(seconds(T, 4));
+            const range: [number, number] = [0, T + HOUR];
+            expect(await skipped(repo, {mirrorId: mirror.id, range, order: 'asc'})).to.deep.eq([...seconds(2000, 4), ...seconds(T + 1000, 3)]);
+            expect(await skipped(repo, {mirrorId: mirror.id, range, order: 'asc', keepEpoch: true})).to.deep.eq(seconds(T + 1000, 3));
+            expect(await skipped(repo, {mirrorId: mirror.id, range, order: 'desc', keepEpoch: true})).to.deep.eq(seconds(T, 3));
+        });
+
+        it('keepEpoch only keeps the Epoch Plays of a burst that spans the cutoff', async function () {
+            const {mirror, repo, insert} = await setup();
+            await insert(seconds(BAD_TIMESTAMP_BEFORE_MS - 2000, 5));
+            const range: [number, number] = [0, T];
+            expect(await skipped(repo, {mirrorId: mirror.id, range, order: 'asc', keepEpoch: true})).to.deep.eq(seconds(BAD_TIMESTAMP_BEFORE_MS, 3));
+            // desc keeps the newest, the 2 Epoch Plays are kept too
+            expect(await skipped(repo, {mirrorId: mirror.id, range, order: 'desc', keepEpoch: true})).to.deep.eq(seconds(BAD_TIMESTAMP_BEFORE_MS, 2));
+        });
+    });
+
+    describe('epoch burst ids', function () {
+        it('finds Epoch Plays in bursts only', async function () {
+            const {mirror, other, repo, insert} = await setup();
+            await insert(seconds(1000, 5));
+            // a single Epoch Play, a burst after the cutoff, and another mirror's onboarding burst
+            await insert([HOUR], 'Alone');
+            await insert(seconds(T, 4));
+            await insert(seconds(1000, 5), 'Satisfaction', 'The Rolling Stones', other.id);
+            const ids = await repo.epochBurstIds({mirrorId: mirror.id, range: [0, T + HOUR]});
+            expect([...(await repo.getPlaysByIds(ids)).values()].map(x => x.data.playDate!.valueOf()).sort((a, b) => a - b)).to.deep.eq(seconds(1000, 5));
+            // cut by the range
+            expect(await repo.epochBurstIds({mirrorId: mirror.id, range: [3000, T]})).length(3);
+        });
     });
 });

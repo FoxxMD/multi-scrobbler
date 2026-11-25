@@ -836,6 +836,27 @@ export class DrizzlePlayRepository extends DrizzleBaseRepository<'plays'> {
         })
     }
 
+    /**
+     * A play of the job, played at exactly the same ms, made from the same input (IE the same mirror play). For job plays queued without a dupe check:
+     * burst plays a second apart all match each other in checkExisting, this only matches the same mirror play queued again.
+     * shortcut: two mirror plays with the same data at the same ms count as one, match on the mirror row id if such twins turn up
+     * */
+    public findJobPlayExact = async (play: PlayObject, opts: {jobId: number, input: PlayObject, notStates?: PlaySelect['state'][]} & ComponentConstrainedRepoOpts): Promise<PlayWith<'queueStates' | 'parent'> | undefined> => {
+        const {componentId = this.componentId, jobId, input, notStates} = opts;
+        if(play.data.playDate === undefined) {
+            return undefined;
+        }
+        const where: FindWhere<'plays'> = {
+            componentId: componentId ?? EmptyFilter,
+            jobId,
+            playedAt: {eq: play.data.playDate},
+            input: {playHash: hashObject(playContentBasicInvariantTransform(input).data)},
+            state: notStates === undefined ? EmptyFilter : {notIn: notStates},
+        };
+        const res = await this.db.query.plays.findFirst({where, with: {queueStates: true, parent: true}});
+        return res === undefined ? undefined : {...res, play: hydratePlaySelect(res)} as PlayWith<'queueStates' | 'parent'>;
+    }
+
     public getTemporallyClosePlays = async (play: PlayObject, opts: {states?: PlaySelect['state'][], bufferTime?: number} & { with?: WithPlayRelation[], notId?: number } & ComponentConstrainedRepoOpts = {}): Promise<PlayWith<'queueStates'>[]> => {
         const {
             componentId = this.componentId,
