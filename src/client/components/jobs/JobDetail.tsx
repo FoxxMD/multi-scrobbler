@@ -17,7 +17,7 @@ import { baseUrl } from "../../utils";
 import { ErrorAlert } from "../ErrorAlert";
 import { toaster } from "../Toaster";
 import { JobBackButton } from "./JobList";
-import { apiErrorMessage, exportProgress, ExportProgressBar, FILE_FORMAT_NAMES, formatJobDate, formatPlayedDate, ImportProgressBar, importOriginText, importProgress, JobStatusBadge, ProcessRateText, RateLimitText, useProcessRate, useJobEvents, useSetJob } from "./jobUtils";
+import { apiErrorMessage, exportProgress, ExportProgressBar, FILE_FORMAT_NAMES, formatJobDate, formatPlayedDate, importCountsText, ImportProgressBar, importOriginText, importProgress, JobStatusBadge, ProcessRateText, RateLimitText, useProcessRate, useJobEvents, useSetJob } from "./jobUtils";
 import { InfoPopover } from '../ToggleTip';
 
 type ControlAction = 'start' | 'pause' | 'stop';
@@ -286,10 +286,10 @@ export const ImportPanel = (props: { job: JobApiJson }) => {
                     {job.importFrom.kind === 'mirror' ? <Text textStyle="sm">Nothing to import. Exports use the {job.mirrorPlaysInRange.toLocaleString()} Plays already in the mirror.</Text> : <Stack gap="1">
                         <ImportProgressBar job={job}/>
                         <Text textStyle="sm">
-                            {job.imported.toLocaleString()} new of {job.importFetched.toLocaleString()} fetched
-                            {job.importTotal !== null ? ` (${job.importTotal.toLocaleString()} total)` : ''}
+                            {importCountsText(job)}
                             {progress !== undefined ? ` - ${Math.floor(progress * 100)}%` : ''}
                         </Text>
+                        {job.importFetched > job.imported ? <TextMuted textStyle="xs">Skipped Plays were already in the mirror, or were exact duplicates (same second, artist and track) of another Play.</TextMuted> : undefined}
                         <ProcessRateText rate={rate}/>
                     </Stack>}
                     {runtime.waiting !== undefined ? <Text textStyle="sm" color="fg.warning">

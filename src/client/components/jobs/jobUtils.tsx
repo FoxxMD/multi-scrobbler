@@ -59,6 +59,12 @@ export const importProgress = (job: Pick<JobApiJson, 'importStatus' | 'importTot
     return undefined;
 }
 
+/** IE "10 new of 12 fetched, 2 skipped (12 total)" */
+export const importCountsText = (job: Pick<JobApiJson, 'imported' | 'importFetched' | 'importTotal'>): string => {
+    const skipped = job.importFetched - job.imported;
+    return `${job.imported.toLocaleString()} new of ${job.importFetched.toLocaleString()} fetched${skipped > 0 ? `, ${skipped.toLocaleString()} skipped` : ''}${job.importTotal !== null ? ` (${job.importTotal.toLocaleString()} total)` : ''}`;
+}
+
 export const ImportProgressBar = (props: { job: JobApiJson } & Omit<Progress.RootProps, 'value'>) => {
     const {job, ...rest} = props;
     const progress = importProgress(job);

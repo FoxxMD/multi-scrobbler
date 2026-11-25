@@ -6,7 +6,7 @@ import { tanQueries } from "../../queries";
 import { ErrorAlert } from "../ErrorAlert";
 import { MSErrorBoundary } from "../ErrorBoundary";
 import { TextMuted } from "../TextMuted";
-import { ImportProgressBar, importOriginText, JobStatusBadge, useJobEvents } from "./jobUtils";
+import { importCountsText, ImportProgressBar, importOriginText, JobStatusBadge, useJobEvents } from "./jobUtils";
 
 export const JobSummary = (props: { job: JobApiJson }) => {
     const {job} = props;
@@ -29,7 +29,7 @@ export const JobSummary = (props: { job: JobApiJson }) => {
                     <Stack gap="2">
                         {job.importFrom.kind !== 'mirror' ? <>
                             <ImportProgressBar job={job}/>
-                            <Text textStyle="sm">{job.imported.toLocaleString()} new of {job.importFetched.toLocaleString()} fetched{job.importTotal !== null ? ` (${job.importTotal.toLocaleString()} total)` : ''}</Text>
+                            <Text textStyle="sm">{importCountsText(job)}</Text>
                         </> : undefined}
                         {job.runtime.deleting === true ? <Text textStyle="sm" color="fg.warning">Deleting...</Text> : undefined}
                         {waiting !== undefined ? <Text textStyle="sm" color="fg.warning">Waiting: {waiting}</Text> : undefined}
