@@ -300,6 +300,20 @@ SELECT * FROM (
 ) ORDER BY firstPlayedAt, id`);
 
     /**
+     * Ids of every burst play in range except the first one in `order`, IE what an export that collapses bursts skips.
+     * One pass over the mirror's plays (in range), so callers should cache it (see mirrorVersion).
+     * */
+    burstSkipIds = async (args: {mirrorId: number, range: [number, number], order: 'asc' | 'desc'}): Promise<number[]> => {
+        const dir = sql.raw(args.order === 'desc' ? 'DESC' : 'ASC');
+        const rows = await this.db.all<{id: number}>(sql`${this.mirrorIssueRuns(args.mirrorId, args.range)}
+SELECT id FROM (
+    SELECT id, ROW_NUMBER() OVER (PARTITION BY k, run ORDER BY playedAt ${dir}, id ${dir}) AS rn
+    FROM n WHERE runSize >= ${BURST_MIN_PLAYS}
+) WHERE rn > 1`);
+        return rows.map(x => x.id);
+    }
+
+    /**
      * Changes whenever plays are added to or removed from the mirror. Cheap (index only).
      * shortcut: misses deleting the newest play then inserting the same number (rowid reuse), add a mirror write counter if that matters
      * */

@@ -150,4 +150,44 @@ describe('Mirror data issues', function () {
         expect((await service.issueSummary(mirror.id)).bursts).eq(2);
         expect(reads).eq(2);
     });
+
+    describe('burst skip ids', function () {
+        /** playedAt of each skipped play, sorted */
+        const skipped = async (repo: Awaited<ReturnType<typeof setup>>['repo'], args: Parameters<typeof repo.burstSkipIds>[0]) =>
+            [...(await repo.getPlaysByIds(await repo.burstSkipIds(args))).values()].map(x => x.data.playDate!.valueOf()).sort((a, b) => a - b);
+
+        it('skips every burst play except the first in export order', async function () {
+            const {mirror, repo, insert} = await setup();
+            await insert(seconds(T, 5));
+            await insert(seconds(T + HOUR, 3), 'B');
+            // not bursts
+            await insert(seconds(T + 2 * HOUR, 2), 'C');
+            await insert(seconds(T + 3 * HOUR, 3, 240_000), 'D');
+            const range: [number, number] = [0, T + 10 * HOUR];
+            expect(await skipped(repo, {mirrorId: mirror.id, range, order: 'asc'})).to.deep.eq([...seconds(T + 1000, 4), ...seconds(T + HOUR + 1000, 2)]);
+            expect(await skipped(repo, {mirrorId: mirror.id, range, order: 'desc'})).to.deep.eq([...seconds(T, 4), ...seconds(T + HOUR, 2)]);
+        });
+
+        it('keeps the first of tied plays by id, like export paging', async function () {
+            const {mirror, repo, insert} = await setup();
+            await insert([T, T, T]);
+            const asc = await repo.burstSkipIds({mirrorId: mirror.id, range: [0, T], order: 'asc'});
+            const desc = await repo.burstSkipIds({mirrorId: mirror.id, range: [0, T], order: 'desc'});
+            const every = [...new Set([...asc, ...desc])].sort((a, b) => a - b);
+            expect(every).length(3);
+            // asc keeps the lowest id, desc the highest
+            expect(asc).to.have.members([every[1], every[2]]);
+            expect(desc).to.have.members([every[0], every[1]]);
+        });
+
+        it('only looks at plays in range and in the mirror', async function () {
+            const {mirror, other, repo, insert} = await setup();
+            await insert(seconds(T, 5));
+            await insert(seconds(T, 5), 'Satisfaction', 'The Rolling Stones', other.id);
+            // the range cuts the burst to its last 3 plays, so the first of those is kept
+            expect(await skipped(repo, {mirrorId: mirror.id, range: [T + 2000, T + 10_000], order: 'asc'})).to.deep.eq([T + 3000, T + 4000]);
+            // 2 plays left in range is not a burst
+            expect(await skipped(repo, {mirrorId: mirror.id, range: [T + 3000, T + 10_000], order: 'asc'})).to.deep.eq([]);
+        });
+    });
 });
