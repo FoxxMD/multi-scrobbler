@@ -2,7 +2,7 @@ import { Alert, Badge, Button, Card, Link as ChakraLink, DataList, Flex, Heading
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { Link } from "react-router";
-import { BURST_MAX_GAP_MS, BURST_MIN_PLAYS, type JobApiJson, type MirrorIssueGroupJson, type MirrorIssueSummaryJson } from "../../../core/Job";
+import { BAD_TIMESTAMP_BEFORE_MS, BURST_MAX_GAP_MS, BURST_MIN_PLAYS, type JobApiJson, type MirrorIssueGroupJson, type MirrorIssueSummaryJson } from "../../../core/Job";
 import { fetchMirrorIssuePage, tanQueries } from "../../queries";
 import { ActivitySummary } from "../ActivityDetail";
 import { FullDateDisplay } from "../DateDisplay";
@@ -27,8 +27,8 @@ const IssueRow = (props: { group: MirrorIssueGroupJson }) => {
     return (
         <Flex gap="3" alignItems="center" paddingY="2" borderBottomWidth="1px" borderColor="gray.border">
             <ActivitySummary sortBy="played" activity={{play: group.play, updatedAt: `${group.firstPlayedAt}`}}
-                // bad timestamps in UTC, so a 1 Jan 1970 play doesn't show as 31 Dec 1969 west of UTC
-                dateDisplay={<FullDateDisplay date={dayjs(group.firstPlayedAt).toISOString()} prefix="Played" utc={group.tags.includes('badTimestamp')}/>}/>
+                // epoch plays in UTC, so a 1 Jan 1970 play doesn't show as 31 Dec 1969 west of UTC
+                dateDisplay={<FullDateDisplay date={dayjs(group.firstPlayedAt).toISOString()} prefix="Played" utc={group.firstPlayedAt < BAD_TIMESTAMP_BEFORE_MS}/>}/>
             <Stack gap="1" alignItems="flex-end" flexShrink="0">
                 {group.tags.includes('burst') ? <Badge variant="surface" colorPalette="orange">×{group.count.toLocaleString()} within {durationText(group.lastPlayedAt - group.firstPlayedAt)}</Badge> : undefined}
                 {group.tags.includes('badTimestamp') ? <Badge variant="surface" colorPalette="red">Bad timestamp</Badge> : undefined}
@@ -81,7 +81,7 @@ export const MirrorIssues = (props: { mirrorId: number }) => {
                     <DataList.ItemValue>
                         <Stack gap="0">
                             <Text>{data.badTimestamp.toLocaleString()} Plays</Text>
-                            <TextMuted textStyle="xs">Played before 2 Jan 1970 (UTC). Last.fm files Plays it got no date for under 1 Jan 1970.</TextMuted>
+                            <TextMuted textStyle="xs">Played before 2 Jan 1970 (UTC), or more than a day after they were imported. Last.fm files Plays it got no date for under 1 Jan 1970.</TextMuted>
                         </Stack>
                     </DataList.ItemValue>
                 </DataList.Item>

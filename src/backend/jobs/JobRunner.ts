@@ -787,7 +787,7 @@ export class JobRunner {
             let consumed = rows.length;
             for(let i = 0; i < rows.length; i++) {
                 const r = rows[i];
-                if((job.exportSkipBadTimestamps && isBadTimestamp(r.playedAt)) || burstIds?.has(r.id) === true) {
+                if((job.exportSkipBadTimestamps && isBadTimestamp(r.playedAt, r.seenAt)) || burstIds?.has(r.id) === true) {
                     pageSkipped++;
                     continue;
                 }

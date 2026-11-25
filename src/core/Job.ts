@@ -254,15 +254,18 @@ export const BURST_MAX_GAP_MS = 2000;
 /** fewest Plays in a burst */
 export const BURST_MIN_PLAYS = 3;
 
-/** Mirror play timestamp is invalid. Same rule as the data issue detector */
-export const isBadTimestamp = (playedAt: number): boolean => playedAt < BAD_TIMESTAMP_BEFORE_MS;
+/** Mirror Plays timestamped more than this (ms) after their row was created (seenAt, when imported) have an invalid timestamp */
+export const BAD_TIMESTAMP_FUTURE_MS = 86_400_000;
+
+/** Mirror play timestamp is invalid. Same rule as the data issue detector (mirrorIssueRuns) */
+export const isBadTimestamp = (playedAt: number, seenAt: number | null): boolean => playedAt < BAD_TIMESTAMP_BEFORE_MS || (seenAt !== null && playedAt > seenAt + BAD_TIMESTAMP_FUTURE_MS);
 
 export const MIRROR_ISSUE_TAGS = ['badTimestamp', 'burst'] as const;
 export type MirrorIssueTag = typeof MIRROR_ISSUE_TAGS[number];
 
 /** Counts of suspicious Plays in a mirror, found when read. Nothing is changed */
 export interface MirrorIssueSummaryJson {
-    /** Plays timestamped before BAD_TIMESTAMP_BEFORE_MS */
+    /** Plays timestamped before BAD_TIMESTAMP_BEFORE_MS, or more than BAD_TIMESTAMP_FUTURE_MS after they were imported */
     badTimestamp: number
     bursts: number
     /** Plays in bursts */

@@ -502,7 +502,7 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                                         {existingMirror !== '' ? <MirrorIssuesPreview mirrorId={Number.parseInt(existingMirror)} range={issueRange}/> : undefined}
                                         <form.Field
                                             name="exportSkipBadTimestamps"
-                                            children={(field) => <FormCheckbox field={field} label="Skip bad timestamps" helperText="Plays dated 1 Jan 1970 are not sent."/>}
+                                            children={(field) => <FormCheckbox field={field} label="Skip bad timestamps" helperText="Plays dated 1 Jan 1970, or dated after they were imported, are not sent."/>}
                                         />
                                         <form.Field
                                             name="exportCollapseBursts"

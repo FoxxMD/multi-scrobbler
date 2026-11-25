@@ -202,7 +202,7 @@ Before an Export to one of these Clients starts, the Client copies the scrobbles
 
 Imported history can have Plays that look invalid. Multi-Scrobbler imports them as they are, so you keep a full copy of your data. It finds two kinds:
 
-* **Bad timestamp**: the Play is dated before 2 Jan 1970 (UTC). Last.fm files Plays that it got no date for under 1 Jan 1970.
+* **Bad timestamp**: the Play is dated before 2 Jan 1970 (UTC), or more than one day after it was imported. Last.fm files Plays that it got no date for under 1 Jan 1970. A Play dated in the future comes from a wrong clock or a broken source.
 * **Burst**: the same track and artists 3 or more times in a row, each within 2 seconds of the last. Real repeat listens are a track length apart. Bursts are often fake Plays that were added to carry over a play count from another player.
 
 The **Data Issues** section of a Mirror page lists these Plays. Each burst shows as one row with its number of Plays. If the Mirror has issues in a Job's range, the Job page shows a notice with a link to the Mirror.

@@ -393,11 +393,13 @@ describe('Job export runner', function () {
         })));
 
         it('skips plays with a bad timestamp', async function () {
-            const {runner, target, targetRepo, client} = await setup({timestamps: [100, 200, DAY + 100, DAY + 200], rangeTo: DAY + 1000, coverage: [[0, DAY + 1000]], skipBad: true});
+            // imported now, so dated in the future
+            const future = Date.now() + 2 * DAY;
+            const {runner, target, targetRepo, client} = await setup({timestamps: [100, 200, DAY + 100, DAY + 200, future], rangeTo: future + 1000, coverage: [[0, future + 1000]], skipBad: true});
             await runner.startExport(target.id);
             await exportTask(runner, target.id);
             expect(titles(client.queued)).to.deep.eq([`T${DAY + 200}`, `T${DAY + 100}`]);
-            expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', exported: 2, skipped: 2});
+            expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', exported: 2, skipped: 3});
         });
 
         for (const order of ['desc', 'asc'] as const) {

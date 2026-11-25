@@ -11,7 +11,8 @@ import { LockRegistry } from '../../jobs/LockRegistry.ts';
 import { MirrorService } from '../../jobs/MirrorService.ts';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
 import { nameToCredit, namesToCredits } from '../../../core/MusicMetadata.ts';
-import { BAD_TIMESTAMP_BEFORE_MS, MIRROR_SERVICE_MIXED } from '../../../core/Job.ts';
+import { BAD_TIMESTAMP_BEFORE_MS, isBadTimestamp, MIRROR_SERVICE_MIXED } from '../../../core/Job.ts';
+import { sql } from 'drizzle-orm';
 
 const HOUR = 3_600_000;
 // after the bad-timestamp cutoff
@@ -31,7 +32,7 @@ const setup = async () => {
         mirrorId,
         play: generatePlay({track: nameToCredit(track), artists: namesToCredits([artist]), playDate: dayjs(ms)}),
     })));
-    return {mirror, other, repo, service, insert};
+    return {db, mirror, other, repo, service, insert};
 }
 const seconds = (start: number, count: number, step = 1000) => Array.from({length: count}, (_, i) => start + i * step);
 
@@ -75,6 +76,30 @@ describe('Mirror data issues', function () {
             [['badTimestamp'], 1, 5000],
             [['badTimestamp'], 1, 6000],
         ]);
+    });
+
+    it('tags plays dated more than a day after they were imported as bad timestamps', async function () {
+        const {db, mirror, service, insert} = await setup();
+        const now = Date.now();
+        // imported now (seenAt), so these are in the future
+        await insert([now + 2 * 24 * HOUR], 'Future');
+        await insert(seconds(now + 3 * 24 * HOUR, 3), 'Future burst');
+        // within a day of being imported, clock differences
+        await insert([now + HOUR], 'Soon');
+        expect(await service.issueSummary(mirror.id)).to.deep.eq({badTimestamp: 4, bursts: 1, burstPlays: 3, plays: 4});
+        // a row without seenAt can't be checked
+        await db.run(sql`UPDATE plays_historical SET seenAt = NULL WHERE mirrorId = ${mirror.id}`);
+        await insert([T], 'Changes the version');
+        expect(await service.issueSummary(mirror.id)).to.deep.eq({badTimestamp: 0, bursts: 1, burstPlays: 3, plays: 3});
+    });
+
+    it('isBadTimestamp uses the same rule', function () {
+        const seen = Date.UTC(2020, 0, 1);
+        expect(isBadTimestamp(BAD_TIMESTAMP_BEFORE_MS - 1, seen)).is.true;
+        expect(isBadTimestamp(BAD_TIMESTAMP_BEFORE_MS, seen)).is.false;
+        expect(isBadTimestamp(seen + 24 * HOUR, seen)).is.false;
+        expect(isBadTimestamp(seen + 24 * HOUR + 1, seen)).is.true;
+        expect(isBadTimestamp(seen + 48 * HOUR, null)).is.false;
     });
 
     it('scopes to the mirror and range, and pages', async function () {
