@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import type { EventEmitter } from "node:events";
 import { COMPONENT_STATE, type ComponentState } from "../../core/Api.ts";
 import type { LifecycleStep, QueueContext, TransformPlayResult } from "../../core/Atomic.ts";
-import type { JobProcessStatus } from "../../core/Job.ts";
+import { isBadTimestamp, type JobProcessStatus } from "../../core/Job.ts";
 import { policyWindow, type RateLimitStatusJson } from "../../core/RateLimit.ts";
 import { todayAwareFormat } from "../../core/TimeUtils.ts";
 import type { PlayObject } from "../../core/PlaySchema.ts";
@@ -121,6 +121,8 @@ export const componentLockKey = (componentId: number) => `component:${componentI
 export const mirrorLockKey = (mirrorId: number) => `mirror:${mirrorId}`;
 
 /** Failed scrobbles in a row that stop an export. At least the queue limit, so one bad batch doesn't trip it on its own */
+/** rows read per pass while the job skips data issues, at least the client's room */
+const EXPORT_SKIP_READ = 500;
 export const breakerThreshold = (exportQueueLimit: number) => Math.max(exportQueueLimit, 10);
 
 /** Fields of a target sent in jobUpdate events */
@@ -606,7 +608,9 @@ export class JobRunner {
     protected async runExport(initial: JobTargetSelect, stages: StageCommon[] | undefined, signal: AbortSignal, logger: Logger, cleanup: (() => void)[]): Promise<JobTargetSelect> {
         const targetId = initial.id;
         const {componentId} = initial;
-        let {cursor, exported, queued} = initial;
+        let {cursor, exported, queued, skipped} = initial;
+        // burst plays the export skips, read again when the mirror changes
+        let burstSkip: {key: string, ids: Set<number>} | undefined;
         const breaker: JobTargetBreaker = {failedInARow: 0};
         let lastFailure: string | undefined;
         let listening: EventEmitter | undefined;
@@ -732,6 +736,11 @@ export class JobRunner {
 
             const range: TimeRange = [job.rangeFrom?.valueOf() ?? 0, job.rangeTo.valueOf()];
             const importDone = job.importStatus === 'completed' || (job.componentFromId === null && job.importFile === null);
+            if(job.exportCollapseBursts && !importDone) {
+                // a partly imported burst can look like 2 plays (not a burst), and queued plays can't be taken back
+                await wait('Waiting for the import to finish, so bursts are complete');
+                continue;
+            }
             if(!importDone && job.importOverlap === 'replace' && job.importReplacedAt === null) {
                 // the mirror still has the plays the import replaces
                 await wait('Waiting for the import to replace the mirror data in this range');
@@ -744,7 +753,18 @@ export class JobRunner {
                 const covered = contiguousCoveredFrom(job.exportOrder === 'desc' ? range[1] : range[0], job.exportOrder, mirror?.coverage ?? []);
                 frontier = covered === undefined ? undefined : [Math.max(covered[0], range[0]), Math.min(covered[1], range[1])];
             }
-            const rows = frontier === undefined ? [] : await stage('page_read', () => this.historicalRepo.findPageForExport({mirrorId: job.mirrorId, range: frontier, order: job.exportOrder, after: cursor ?? undefined, limit: room}));
+            let burstIds: Set<number> | undefined;
+            if(job.exportCollapseBursts) {
+                const key = `${await this.historicalRepo.mirrorVersion(job.mirrorId)}:${job.exportOrder}`;
+                if(burstSkip?.key !== key) {
+                    burstSkip = {key, ids: new Set(await stage('burst_read', () => this.historicalRepo.burstSkipIds({mirrorId: job.mirrorId, range, order: job.exportOrder})))};
+                }
+                burstIds = burstSkip.ids;
+            }
+            const filtering = job.exportSkipBadTimestamps || burstIds !== undefined;
+            // read past skipped rows so thousands of them don't cost a pass each
+            const limit = filtering ? Math.max(room, EXPORT_SKIP_READ) : room;
+            const rows = frontier === undefined ? [] : await stage('page_read', () => this.historicalRepo.findPageForExport({mirrorId: job.mirrorId, range: frontier, order: job.exportOrder, after: cursor ?? undefined, limit}));
 
             if(rows.length === 0) {
                 if(!importDone) {
@@ -762,7 +782,23 @@ export class JobRunner {
                 return (await this.setTarget(targetId, {status: 'completed', completedAt: dayjs(), stats, breaker}, true))!;
             }
 
-            let plays: PlayObject[] = rows.map(r => ({...r.play, original: {play: r.play}}));
+            const kept: typeof rows = [];
+            let pageSkipped = 0;
+            let consumed = rows.length;
+            for(let i = 0; i < rows.length; i++) {
+                const r = rows[i];
+                if((job.exportSkipBadTimestamps && isBadTimestamp(r.playedAt)) || burstIds?.has(r.id) === true) {
+                    pageSkipped++;
+                    continue;
+                }
+                if(kept.length === room) {
+                    consumed = i;
+                    break;
+                }
+                kept.push(r);
+            }
+
+            let plays: PlayObject[] = kept.map(r => ({...r.play, original: {play: r.play}}));
             let discarded = 0;
             const jobSteps = new Map<PlayObject, LifecycleStep[]>();
             let review = 0;
@@ -792,12 +828,13 @@ export class JobRunner {
                 // a cleanup started while this page was read, the next pass waits for it and reads the page again
                 continue;
             }
-            const created = await stage('queue_play', () => client.queuePlay(plays, job.exportUpstreamCheck ? undefined : {upstreamCheck: false}, {jobId: this.jobId, steps: jobSteps.size > 0 ? jobSteps : undefined}));
-            const last = rows[rows.length - 1];
+            const created = plays.length === 0 ? [] : await stage('queue_play', () => client.queuePlay(plays, job.exportUpstreamCheck ? undefined : {upstreamCheck: false}, {jobId: this.jobId, steps: jobSteps.size > 0 ? jobSteps : undefined}));
+            const last = rows[consumed - 1];
             cursor = {playedAt: last.playedAt, id: last.id} satisfies JobTargetCursor;
-            exported += rows.length;
+            exported += kept.length;
             queued += created.length;
-            const update: Partial<JobTargetNew> = {cursor, exported, queued, breaker};
+            skipped += pageSkipped;
+            const update: Partial<JobTargetNew> = {cursor, exported, queued, skipped, breaker};
             if(Date.now() - statsAt >= this.timings.exportStats) {
                 update.stats = addStats((await stage('stats', () => this.targetRepo.playStats(this.jobId, componentId))).get(componentId), initial.removedStats);
                 statsAt = Date.now();
@@ -806,7 +843,7 @@ export class JobRunner {
             await this.setTarget(targetId, update);
             // only passes that exported a page, waits are in exportWaitSeconds
             exportStageSeconds.observe({job: jobLabel, name: clientLabel, stage: 'pass'}, (performance.now() - passStart) / 1000);
-            logger.verbose(`Exported ${rows.length} scrobbles, ${created.length} new to the client${discarded > 0 ? `, ${discarded} discarded by transforms` : ''}${review > 0 ? `, ${review} set for review by transforms` : ''}`);
+            logger.verbose(`Exported ${kept.length} scrobbles, ${created.length} new to the client${pageSkipped > 0 ? `, ${pageSkipped} skipped as data issues` : ''}${discarded > 0 ? `, ${discarded} discarded by transforms` : ''}${review > 0 ? `, ${review} set for review by transforms` : ''}`);
         }
     }
 

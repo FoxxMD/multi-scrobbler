@@ -254,6 +254,9 @@ export const BURST_MAX_GAP_MS = 2000;
 /** fewest Plays in a burst */
 export const BURST_MIN_PLAYS = 3;
 
+/** Mirror play timestamp is invalid. Same rule as the data issue detector */
+export const isBadTimestamp = (playedAt: number): boolean => playedAt < BAD_TIMESTAMP_BEFORE_MS;
+
 export const MIRROR_ISSUE_TAGS = ['badTimestamp', 'burst'] as const;
 export type MirrorIssueTag = typeof MIRROR_ISSUE_TAGS[number];
 
