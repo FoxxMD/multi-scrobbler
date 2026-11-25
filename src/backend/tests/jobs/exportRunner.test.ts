@@ -601,6 +601,49 @@ describe('Job export runner', function () {
                 expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', epochDecision: 'empty'});
             });
 
+            it('checks once while waiting for a decision', async function () {
+                const {runner, target, targetRepo, client, checks} = await epochSetup({found: 3});
+                await runner.startExport(target.id);
+                await until(() => runner.runtime.exports[target.id]?.epochPlays === 3);
+                // several polls
+                await new Promise(r => setTimeout(r, timings.exportPoll * 5));
+                expect(checks()).eq(1);
+                await targetRepo.update(target.id, {epochDecision: 'send'});
+                runner.wake();
+                await exportTask(runner, target.id);
+                expect(client.queued).length(7);
+                expect(checks()).eq(1);
+            });
+
+            it("keeps the user's decision made while the check ran", async function () {
+                const {runner, target, targetRepo, client} = await epochSetup();
+                client.countScrobblesBefore = async () => {
+                    await targetRepo.setEpochDecisionIfUnset(target.id, 'skip');
+                    return 0;
+                };
+                await runner.startExport(target.id);
+                await exportTask(runner, target.id);
+                expect(titles(client.queued)).to.deep.eq(['C']);
+                expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', epochDecision: 'skip'});
+            });
+
+            it('sends transformed Epoch Plays without a dupe check, and none that were discarded', async function () {
+                const {runner, target, client} = await epochSetup({transformOptions: [{type: 'user', name: 'x'}]});
+                const step = (actionResult: LifecycleStep['actionResult']): LifecycleStep => ({stageName: 'x', stageType: 'user', hook: 'postCompare', source: 'test', actionResult, createdAt: dayjs().toISOString()});
+                client.stepsFor = (p) => p.data.playDate?.valueOf() === 2000 ? [step('discard')] : [];
+                await runner.startExport(target.id);
+                await exportTask(runner, target.id);
+                expect(sent(client)).to.deep.eq([...Array(4).fill(['B (transformed)', false]), ['S (transformed)', false], ['C (transformed)', undefined]]);
+            });
+
+            it('keeps onboarding bursts newest first with bad timestamps skipped', async function () {
+                const {runner, target, targetRepo, client} = await epochSetup({skipBad: true, order: 'desc'});
+                await runner.startExport(target.id);
+                await exportTask(runner, target.id);
+                expect(sent(client)).to.deep.eq([['C', undefined], ...Array(5).fill(['B', false])]);
+                expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', exported: 6, skipped: 3});
+            });
+
             it('does not check again after a decision', async function () {
                 const {runner, target, targetRepo, client, checks} = await epochSetup({found: 3});
                 await targetRepo.update(target.id, {epochDecision: 'send'});

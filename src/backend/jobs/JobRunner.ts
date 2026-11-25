@@ -107,6 +107,11 @@ export interface JobRuntime {
     deleting?: boolean
 }
 
+/** @param found the Client's scrobbles before 2 Jan 1970, null => it can't check */
+const epochWaitReason = (found: number | null): string => found === null
+    ? "This Client can't check its service for scrobbles before 2 Jan 1970. Choose to send this job's Plays from before then without a dupe check, or to skip them"
+    : `The Client already has ${found >= EPOCH_CHECK_MAX ? `${EPOCH_CHECK_MAX}+` : found} scrobbles before 2 Jan 1970. Choose to send this job's Plays from before then without a dupe check (they may be duplicated), or to skip them`;
+
 export class JobConflictError extends Error {
     name = 'JobConflictError';
 }
@@ -614,6 +619,8 @@ export class JobRunner {
         const {componentId} = initial;
         let {cursor, exported, queued, skipped} = initial;
         let epochDecision: EpochDecision | null = initial.epochDecision ?? null;
+        // result of the Epoch Play check while waiting for the user: the Client's count, null => it can't check. undefined => not checked (or it failed)
+        let epochFound: number | null | undefined;
         // burst plays the export skips, read again when the mirror changes
         let burstSkip: {key: string, ids: Set<number>} | undefined;
         // Epoch Plays in bursts, kept when bad timestamps are skipped
@@ -810,6 +817,11 @@ export class JobRunner {
             if(keepEpoch && epochDecision === null && rows.some(r => isEpochPlay(r.playedAt) && !issueSkip(r))) {
                 // the user may have decided while the export waited
                 epochDecision = (await this.targetRepo.getById(targetId))?.epochDecision ?? null;
+                if(epochDecision === null && epochFound !== undefined) {
+                    // checked already, only the user's decision changes this
+                    await wait(epochWaitReason(epochFound), 'Waiting for an Epoch Play decision', epochFound);
+                    continue;
+                }
                 if(epochDecision === null) {
                     let found: number | undefined;
                     try {
@@ -822,13 +834,13 @@ export class JobRunner {
                         continue;
                     }
                     if(found === 0) {
-                        epochDecision = 'empty';
-                        await this.setTarget(targetId, {epochDecision});
+                        // the user may have decided while the check ran, theirs wins
+                        const set = await this.targetRepo.setEpochDecisionIfUnset(targetId, 'empty');
+                        epochDecision = set?.epochDecision ?? (await this.targetRepo.getById(targetId))?.epochDecision ?? null;
+                        this.emitUpdate({targetUpdates: {[targetId]: {epochDecision}}});
                     } else {
-                        const reason = found === undefined
-                            ? "This Client can't check its service for scrobbles before 2 Jan 1970. Choose to send this job's Plays from before then without a dupe check, or to skip them"
-                            : `The Client already has ${found >= EPOCH_CHECK_MAX ? `${EPOCH_CHECK_MAX}+` : found} scrobbles before 2 Jan 1970. Choose to send this job's Plays from before then without a dupe check (they may be duplicated), or to skip them`;
-                        await wait(reason, 'Waiting for an Epoch Play decision', found ?? null);
+                        epochFound = found ?? null;
+                        await wait(epochWaitReason(epochFound), 'Waiting for an Epoch Play decision', epochFound);
                         continue;
                     }
                 }

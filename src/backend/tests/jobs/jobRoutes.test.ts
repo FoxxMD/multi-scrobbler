@@ -397,7 +397,7 @@ describe('Job API', function () {
 
             // keeping onboarding bursts needs collapsing bursts
             const notCollapsed = await createWithTargets(app, {targets: [7], exportKeepEpochBursts: true});
-            expect((notCollapsed.body as JobApiJson).exportKeepEpochBursts).is.false;
+            expect(notCollapsed.status).eq(400);
 
             const listed = (await request(app).get('/api/jobs')).body as JobApiJson[];
             expect(listed[0].targets.map(x => x.componentId)).eql([7]);
@@ -487,8 +487,13 @@ describe('Job API', function () {
             const both = await request(app).patch(`/api/jobs/${job.id}`).send({exportCollapseBursts: true, exportKeepEpochBursts: true});
             expect(both.body).to.deep.include({exportCollapseBursts: true, exportKeepEpochBursts: true});
 
-            // an Epoch Play decision, once
+            expect((await request(app).patch(`/api/jobs/${job.id}`).send({exportCollapseBursts: false, exportKeepEpochBursts: true})).status).eq(400);
+
+            // an Epoch Play decision, once, only when keeping onboarding bursts
             expect((await request(app).patch(`/api/jobs/${job.id}/targets/${targetId}`).send({epochDecision: 'empty'})).status).eq(400);
+            await request(app).patch(`/api/jobs/${job.id}`).send({exportKeepEpochBursts: false});
+            expect((await request(app).patch(`/api/jobs/${job.id}/targets/${targetId}`).send({epochDecision: 'skip'})).status).eq(400);
+            await request(app).patch(`/api/jobs/${job.id}`).send({exportKeepEpochBursts: true});
             const decided = await request(app).patch(`/api/jobs/${job.id}/targets/${targetId}`).send({epochDecision: 'skip'});
             expect(decided.status, JSON.stringify(decided.body)).eq(200);
             expect(decided.body.targets[0].epochDecision).eq('skip');

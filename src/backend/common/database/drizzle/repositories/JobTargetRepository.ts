@@ -1,4 +1,4 @@
-import { and, count, eq, inArray } from "drizzle-orm";
+import { and, count, eq, inArray, isNull } from "drizzle-orm";
 import type { JobTargetStats } from "../../../infrastructure/Job.ts";
 import type { DbConcrete } from "../drizzleUtils.ts";
 import { jobTargets, plays } from "../schema/schema.ts";
@@ -54,6 +54,11 @@ export class JobTargetRepository extends DrizzleBaseRepository<'jobTargets'> {
 
     update = async (id: number, data: Partial<JobTargetNew>): Promise<JobTargetSelect | undefined> => {
         return (await this.db.update(jobTargets).set(data).where(eq(jobTargets.id, id)).returning())[0];
+    }
+
+    /** Sets the Epoch Play decision only if there is none yet, so the export and the user never overwrite each other. undefined => one was already set */
+    setEpochDecisionIfUnset = async (id: number, epochDecision: NonNullable<JobTargetSelect['epochDecision']>): Promise<JobTargetSelect | undefined> => {
+        return (await this.db.update(jobTargets).set({epochDecision}).where(and(eq(jobTargets.id, id), isNull(jobTargets.epochDecision))).returning())[0];
     }
 
     /**

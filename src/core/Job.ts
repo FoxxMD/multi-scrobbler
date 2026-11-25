@@ -434,7 +434,7 @@ export const jobCreateSchema = z.object({
     exportCollapseBursts: z.boolean().default(false).meta({description: 'true => only the first scrobble of each burst (see the mirror data issues), in export order, is sent to the Clients. Exports wait for the import to finish'}),
     exportKeepEpochBursts: z.boolean().default(false).meta({description: 'Only with exportCollapseBursts. true => bursts before 2 Jan 1970 (IE play counts copied from older software) are sent whole and every scrobble before 2 Jan 1970 is sent without a dupe check. Each Client is first checked for scrobbles before 2 Jan 1970, if it has some the export waits for a decision (send or skip) for that Client'}),
     start: z.boolean().default(false).meta({description: 'Start the import and all exports once created'}),
-}).meta({title: 'Create Job'});
+}).refine(x => !x.exportKeepEpochBursts || x.exportCollapseBursts, {message: 'exportKeepEpochBursts needs exportCollapseBursts', path: ['exportKeepEpochBursts']}).meta({title: 'Create Job'});
 export type JobCreate = z.input<typeof jobCreateSchema>;
 
 export const cleanupActionSchema = z.enum(CLEANUP_ACTIONS).meta({description: 'compact removes raw data and keeps the scrobbles, delete removes the scrobbles'});

@@ -406,8 +406,7 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                     exportDiscarded: payload.exportDiscarded,
                     exportSkipBadTimestamps: payload.exportSkipBadTimestamps,
                     exportCollapseBursts: payload.exportCollapseBursts,
-                    // only means something when collapsing bursts
-                    exportKeepEpochBursts: payload.exportCollapseBursts && payload.exportKeepEpochBursts,
+                    exportKeepEpochBursts: payload.exportKeepEpochBursts,
                     ...transforms,
                 });
                 await repos().targetRepo.createForJob(created.id, targetIds);
@@ -442,8 +441,8 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
         }
         const {jobRepo, mirrorRepo} = repos(req);
         const {name, exportQueueLimit, upstreamCheck, exportDiscarded, exportSkipBadTimestamps, exportCollapseBursts} = req.body;
-        // keeping onboarding bursts only means something when collapsing bursts
-        const exportKeepEpochBursts = exportCollapseBursts === false ? false : req.body.exportKeepEpochBursts;
+        // keeping onboarding bursts only means something when collapsing bursts, turning collapse off turns it off too
+        const exportKeepEpochBursts = exportCollapseBursts === false && req.body.exportKeepEpochBursts === undefined ? false : req.body.exportKeepEpochBursts;
         if (exportKeepEpochBursts === true && !(exportCollapseBursts ?? job.exportCollapseBursts)) {
             return res.status(400).json({error: 'exportKeepEpochBursts needs exportCollapseBursts'});
         }
@@ -466,10 +465,12 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
         if (target === undefined || target.jobId !== job.id) {
             return res.status(404).json({error: 'Target not found'});
         }
-        if (target.epochDecision !== null) {
-            return res.status(409).json({error: `This export already decided on Plays before 2 Jan 1970 (${target.epochDecision})`});
+        if (!job.exportKeepEpochBursts) {
+            return res.status(400).json({error: 'Only for jobs that keep bursts before 1970 (exportKeepEpochBursts)'});
         }
-        await targetRepo.update(target.id, {epochDecision: req.body.epochDecision});
+        if (await targetRepo.setEpochDecisionIfUnset(target.id, req.body.epochDecision) === undefined) {
+            return res.status(409).json({error: `This export already decided on Plays before 2 Jan 1970 (${(await targetRepo.getById(target.id))?.epochDecision})`});
+        }
         // a waiting export goes on
         jobs.wake(job.id);
         return res.json(await asApi((await jobRepo.getById(job.id))!, mirrorRepo));
