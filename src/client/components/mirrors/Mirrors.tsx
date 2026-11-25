@@ -15,6 +15,7 @@ import { toaster } from "../Toaster";
 import { CleanupButtons } from "../jobs/CleanupButtons";
 import { apiErrorMessage, formatJobDate } from "../jobs/jobUtils";
 import { CleanupProgress, formatRange, taskText, useMirrorEvents } from "./mirrorUtils";
+import { MirrorIssues } from "./MirrorIssues";
 
 const coverageSummary = (mirror: MirrorApiJson): string => mirror.coverage.length === 0
     ? 'Nothing imported'
@@ -240,6 +241,7 @@ export const MirrorDetail = (props: { mirror: MirrorApiJson }) => {
                     </Stack>
                 </Card.Body>
             </Card.Root>
+            <MirrorIssues mirrorId={mirror.id}/>
             <Card.Root variant="subtle">
                 <Card.Header><Heading size="lg">Clean Up</Heading></Card.Header>
                 <Card.Body>

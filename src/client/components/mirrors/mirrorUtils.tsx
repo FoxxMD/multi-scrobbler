@@ -60,6 +60,8 @@ export const useMirrorEvents = () => {
                 queryClient.invalidateQueries({queryKey: listKey});
                 // jobs show how many mirror scrobbles are in their range
                 queryClient.invalidateQueries({queryKey: tanQueries.jobs._def});
+                queryClient.invalidateQueries({queryKey: tanQueries.mirrors.issues._def});
+                queryClient.invalidateQueries({queryKey: tanQueries.mirrors.issueList._def});
             }
             if (taskResult.error !== undefined) {
                 toaster.create({type: 'error', title: 'Mirror cleanup failed', description: taskResult.error});

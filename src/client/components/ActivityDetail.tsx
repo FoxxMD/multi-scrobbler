@@ -97,7 +97,8 @@ export interface ActivitySummaryProps extends SortPlaysByProps {
     componentType: ComponentType
 }
 
-export const ActivitySummary = (props: ActivitySummaryProps) => {
+/** Only needs the Play, so it can show Plays that are not a Source/Client's, IE mirror Plays */
+export const ActivitySummary = (props: SortPlaysByProps & { activity: Pick<PlayApiCommonDetailed, 'play' | 'updatedAt'> & {isNew?: boolean | Milliseconds} }) => {
     const {
         activity: {
             play,
