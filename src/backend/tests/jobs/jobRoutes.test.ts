@@ -382,13 +382,15 @@ describe('Job API', function () {
         it('creates targets with export options', async function () {
             await using tmp = await createTmpDir('jobExportCreate');
             const {app} = await exportApp(tmp.path);
-            const res = await createWithTargets(app, {targets: [7, 7], exportOrder: 'asc', exportQueueLimit: 5, upstreamCheck: false, exportDiscarded: true});
+            const res = await createWithTargets(app, {targets: [7, 7], exportOrder: 'asc', exportQueueLimit: 5, upstreamCheck: false, exportDiscarded: true, exportSkipBadTimestamps: true, exportCollapseBursts: true});
             expect(res.status, JSON.stringify(res.body)).eq(201);
             const job = res.body as JobApiJson;
             expect(job.exportOrder).eq('asc');
             expect(job.exportQueueLimit).eq(5);
             expect(job.exportUpstreamCheck).is.false;
             expect(job.exportDiscarded).is.true;
+            expect(job.exportSkipBadTimestamps).is.true;
+            expect(job.exportCollapseBursts).is.true;
             expect(job.targets).length(1);
             expect(job.targets[0]).to.deep.include({componentId: 7, name: 'client 7', type: 'maloja', status: 'idle', exported: 0, cursor: null});
 
@@ -469,7 +471,11 @@ describe('Job API', function () {
             const unchecked = await request(app).patch(`/api/jobs/${job.id}`).send({upstreamCheck: false});
             expect(unchecked.body).to.deep.include({exportUpstreamCheck: false, exportQueueLimit: 50, exportDiscarded: false});
             const keepDiscarded = await request(app).patch(`/api/jobs/${job.id}`).send({exportDiscarded: true});
-            expect(keepDiscarded.body).to.deep.include({exportDiscarded: true, exportUpstreamCheck: false});
+            expect(keepDiscarded.body).to.deep.include({exportDiscarded: true, exportUpstreamCheck: false, exportSkipBadTimestamps: false, exportCollapseBursts: false});
+            const issues = await request(app).patch(`/api/jobs/${job.id}`).send({exportSkipBadTimestamps: true, exportCollapseBursts: true});
+            expect(issues.body).to.deep.include({exportSkipBadTimestamps: true, exportCollapseBursts: true, exportDiscarded: true});
+            const collapseOff = await request(app).patch(`/api/jobs/${job.id}`).send({exportCollapseBursts: false});
+            expect(collapseOff.body).to.deep.include({exportSkipBadTimestamps: true, exportCollapseBursts: false});
 
             // the client isn't running in this app so the export keeps waiting
             const started = await request(app).post(`/api/jobs/${job.id}/targets/${targetId}/start`);

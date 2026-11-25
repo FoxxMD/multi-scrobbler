@@ -404,6 +404,8 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                     exportQueueLimit: payload.exportQueueLimit,
                     exportUpstreamCheck: payload.upstreamCheck,
                     exportDiscarded: payload.exportDiscarded,
+                    exportSkipBadTimestamps: payload.exportSkipBadTimestamps,
+                    exportCollapseBursts: payload.exportCollapseBursts,
                     ...transforms,
                 });
                 await repos().targetRepo.createForJob(created.id, targetIds);
@@ -437,9 +439,11 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
             return;
         }
         const {jobRepo, mirrorRepo} = repos(req);
-        const {name, exportQueueLimit, upstreamCheck, exportDiscarded} = req.body;
-        const updated = name !== undefined || exportQueueLimit !== undefined || upstreamCheck !== undefined || exportDiscarded !== undefined ? (await jobRepo.update(job.id, {name, exportQueueLimit, exportUpstreamCheck: upstreamCheck, exportDiscarded}))! : job;
-        if (exportQueueLimit !== undefined) {
+        const {name, exportQueueLimit, upstreamCheck, exportDiscarded, exportSkipBadTimestamps, exportCollapseBursts} = req.body;
+        const changes = {name, exportQueueLimit, exportUpstreamCheck: upstreamCheck, exportDiscarded, exportSkipBadTimestamps, exportCollapseBursts};
+        const updated = Object.values(changes).some(x => x !== undefined) ? (await jobRepo.update(job.id, changes))! : job;
+        // waiting exports check again: a bigger queue limit, or no longer waiting for the import to collapse bursts
+        if (exportQueueLimit !== undefined || exportCollapseBursts !== undefined) {
             jobs.wake(job.id);
         }
         return res.json(await asApi(updated, mirrorRepo));

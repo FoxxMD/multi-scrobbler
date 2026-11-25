@@ -412,6 +412,8 @@ export const jobCreateSchema = z.object({
     exportQueueLimit: z.int().min(1).max(EXPORT_QUEUE_LIMIT_MAX).default(EXPORT_QUEUE_LIMIT_DEFAULT).meta({description: "The export only sends more scrobbles while a Client's queue (live scrobbles included) holds fewer than this"}),
     upstreamCheck: z.boolean().default(true).meta({description: "Clients fetch scrobbles from their service to skip ones it already has. false only skips scrobbles the Client already has in the database, which is much faster for large exports but can duplicate scrobbles that reached the service some other way"}),
     exportDiscarded: z.boolean().default(false).meta({description: "true => scrobbles that the job's transforms discard are added to each Client in the discarded state, without scrobbling them. false => they are not sent to the Clients"}),
+    exportSkipBadTimestamps: z.boolean().default(false).meta({description: 'true => mirror scrobbles with a bad timestamp (see the mirror data issues) are not sent to the Clients'}),
+    exportCollapseBursts: z.boolean().default(false).meta({description: 'true => only the first scrobble of each burst (see the mirror data issues), in export order, is sent to the Clients. Exports wait for the import to finish'}),
     start: z.boolean().default(false).meta({description: 'Start the import and all exports once created'}),
 }).meta({title: 'Create Job'});
 export type JobCreate = z.input<typeof jobCreateSchema>;
@@ -442,4 +444,6 @@ export const jobUpdateSchema = z.object({
     exportQueueLimit: z.int().min(1).max(EXPORT_QUEUE_LIMIT_MAX).optional(),
     upstreamCheck: z.boolean().optional().meta({description: 'See upstreamCheck on Create Job. Applies to scrobbles exported after the change, ones already queued in a Client keep the old setting'}),
     exportDiscarded: z.boolean().optional().meta({description: 'See exportDiscarded on Create Job. Applies to scrobbles exported after the change'}),
+    exportSkipBadTimestamps: z.boolean().optional().meta({description: 'See exportSkipBadTimestamps on Create Job. Applies to scrobbles exported after the change'}),
+    exportCollapseBursts: z.boolean().optional().meta({description: 'See exportCollapseBursts on Create Job. Applies to scrobbles exported after the change'}),
 }).meta({title: 'Update Job'});
