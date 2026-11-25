@@ -22,6 +22,8 @@ import { JobTargetRepository } from '../../common/database/drizzle/repositories/
 import { users } from '../../common/database/drizzle/schema/auth.ts';
 import { components, plays, playsHistorical } from '../../common/database/drizzle/schema/schema.ts';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
+import { nameToCredit, namesToCredits } from '../../../core/MusicMetadata.ts';
+import { DrizzlePlayHistoricalRepository } from '../../common/database/drizzle/repositories/PlayHistoricalRepository.ts';
 import { fixtureCreateComponent, fixtureCreatePlay } from '../utils/databaseFixtures.ts';
 import type { JobApiJson, JobMetricsApiJson, JobOptionsApiJson, MirrorApiJson } from '../../../core/Job.ts';
 import { exportStageSeconds, playStageSeconds } from '../../common/playMetrics.ts';
@@ -380,13 +382,15 @@ describe('Job API', function () {
         it('creates targets with export options', async function () {
             await using tmp = await createTmpDir('jobExportCreate');
             const {app} = await exportApp(tmp.path);
-            const res = await createWithTargets(app, {targets: [7, 7], exportOrder: 'asc', exportQueueLimit: 5, upstreamCheck: false, exportDiscarded: true});
+            const res = await createWithTargets(app, {targets: [7, 7], exportOrder: 'asc', exportQueueLimit: 5, upstreamCheck: false, exportDiscarded: true, exportSkipBadTimestamps: true, exportCollapseBursts: true});
             expect(res.status, JSON.stringify(res.body)).eq(201);
             const job = res.body as JobApiJson;
             expect(job.exportOrder).eq('asc');
             expect(job.exportQueueLimit).eq(5);
             expect(job.exportUpstreamCheck).is.false;
             expect(job.exportDiscarded).is.true;
+            expect(job.exportSkipBadTimestamps).is.true;
+            expect(job.exportCollapseBursts).is.true;
             expect(job.targets).length(1);
             expect(job.targets[0]).to.deep.include({componentId: 7, name: 'client 7', type: 'maloja', status: 'idle', exported: 0, cursor: null});
 
@@ -467,7 +471,11 @@ describe('Job API', function () {
             const unchecked = await request(app).patch(`/api/jobs/${job.id}`).send({upstreamCheck: false});
             expect(unchecked.body).to.deep.include({exportUpstreamCheck: false, exportQueueLimit: 50, exportDiscarded: false});
             const keepDiscarded = await request(app).patch(`/api/jobs/${job.id}`).send({exportDiscarded: true});
-            expect(keepDiscarded.body).to.deep.include({exportDiscarded: true, exportUpstreamCheck: false});
+            expect(keepDiscarded.body).to.deep.include({exportDiscarded: true, exportUpstreamCheck: false, exportSkipBadTimestamps: false, exportCollapseBursts: false});
+            const issues = await request(app).patch(`/api/jobs/${job.id}`).send({exportSkipBadTimestamps: true, exportCollapseBursts: true});
+            expect(issues.body).to.deep.include({exportSkipBadTimestamps: true, exportCollapseBursts: true, exportDiscarded: true});
+            const collapseOff = await request(app).patch(`/api/jobs/${job.id}`).send({exportCollapseBursts: false});
+            expect(collapseOff.body).to.deep.include({exportSkipBadTimestamps: true, exportCollapseBursts: false});
 
             // the client isn't running in this app so the export keeps waiting
             const started = await request(app).post(`/api/jobs/${job.id}/targets/${targetId}/start`);
@@ -536,6 +544,41 @@ describe('Job API', function () {
 
             expect((await request(app).post(`/api/mirrors/${job.mirror.id}/cleanup`).send({action: 'delete', range: {from: dayjs().toISOString(), to: '2000-01-01T00:00:00Z'}})).status).eq(400);
             expect((await request(app).post(`/api/mirrors/${job.mirror.id}/cleanup`).send({action: 'shred'})).status).eq(400);
+        });
+
+        it('reports mirror data issues to the owner only', async function () {
+            await using tmp = await createTmpDir('mirrorIssues');
+            const {app, db} = await buildApp(tmp.path);
+            const owner = await ensureOwner(db);
+            const mirror = await new MirrorRepository(db).findOrCreate({userId: owner.id, service: 'mixed', account: null, name: 'm'});
+            const t = Date.UTC(2020, 0, 1);
+            // a burst at epoch and one in 2020
+            await new DrizzlePlayHistoricalRepository(db).insertIgnoreDuplicates([0, 1000, 2000, t, t + 1000, t + 2000].map((ms, i) => ({
+                uid: `m${mirror.id}:${i}`,
+                mirrorId: mirror.id,
+                play: generatePlay({track: nameToCredit('Satisfaction'), artists: namesToCredits(['The Rolling Stones']), playDate: dayjs(ms)}),
+            })));
+            const summary = await request(app).get(`/api/mirrors/${mirror.id}/issues`);
+            expect(summary.status, JSON.stringify(summary.body)).eq(200);
+            expect(summary.body).eql({badTimestamp: 3, bursts: 2, burstPlays: 6, plays: 6});
+            expect((await request(app).get(`/api/mirrors/${mirror.id}/issues`).query({from: t})).body.bursts).eq(1);
+            expect((await request(app).get(`/api/mirrors/${mirror.id}/issues`).query({from: t, to: 0})).status).eq(400);
+            expect((await request(app).get(`/api/mirrors/${mirror.id}/issues`).query({to: t - 1})).body.bursts).eq(1);
+            // an empty edge is unset, not 0
+            expect((await request(app).get(`/api/mirrors/${mirror.id}/issues?from=&to=${t - 1}`)).body.bursts).eq(1);
+            expect((await request(app).get(`/api/mirrors/${mirror.id}/issues?from=${t}&to=`)).body.bursts).eq(1);
+
+            const list = await request(app).get(`/api/mirrors/${mirror.id}/issues/list`).query({offset: 1, limit: 1});
+            expect(list.status, JSON.stringify(list.body)).eq(200);
+            expect(list.body.meta).eql({offset: 1, limit: 1, total: 2});
+            expect(list.body.data[0]).to.deep.include({tags: ['burst'], count: 3, firstPlayedAt: t, lastPlayedAt: t + 2000});
+            expect(list.body.data[0].play.data.track.name).eq('Satisfaction');
+            expect((await request(app).get(`/api/mirrors/${mirror.id}/issues/list`).query({limit: 500})).status).eq(400);
+
+            const other = (await db.insert(users).values({id: `other-${Date.now()}`, name: 'other', email: `other-${Date.now()}@x.local`, emailVerified: false, createdAt: new Date(), updatedAt: new Date()}).returning())[0];
+            const theirs = await new MirrorRepository(db).findOrCreate({userId: other.id, service: 'mixed', account: null, name: 'theirs'});
+            expect((await request(app).get(`/api/mirrors/${theirs.id}/issues`)).status).eq(404);
+            expect((await request(app).get(`/api/mirrors/${theirs.id}/issues/list`)).status).eq(404);
         });
 
         it('deletes a mirror only once no job uses it', async function () {

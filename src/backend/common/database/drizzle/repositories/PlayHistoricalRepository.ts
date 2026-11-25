@@ -12,6 +12,7 @@ import { EmptyFilter } from "drizzle-orm/relations";
 import { buildDateCompare, type ComponentConstrainedRepoOpts, DrizzleBaseRepository, type DrizzleRepositoryOpts } from "./BaseRepository.ts";
 import type { CompareDateOp } from "../../../../../core/Api.ts";
 import type {PaginatedResponse} from "../../../../../core/Api.ts";
+import { BAD_TIMESTAMP_BEFORE_MS, BAD_TIMESTAMP_FUTURE_MS, BURST_MAX_GAP_MS, BURST_MIN_PLAYS, type MirrorIssueGroupRow } from "../../../../../core/Job.ts";
 import { hashObject } from "../../../../utils/StringUtils.ts";
 import { playContentBasicInvariantTransform, playMbidIdentifier } from "../../../../utils/PlayComparisonUtils.ts";
 import { comparePlayTemporally, hasAcceptableTemporalAccuracy } from "../../../../utils/TimeUtils.ts";
@@ -210,7 +211,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
      * A page of a mirror's plays in `range` (inclusive, ms), in export order, after the keyset `after` (the last row of the previous page).
      * Plays are hydrated without id/uid.
      * */
-    findPageForExport = async (args: {mirrorId: number, range: [number, number], order: 'asc' | 'desc', after?: {playedAt: number, id: number}, limit: number}): Promise<{id: number, playedAt: number, play: PlayObject}[]> => {
+    findPageForExport = async (args: {mirrorId: number, range: [number, number], order: 'asc' | 'desc', after?: {playedAt: number, id: number}, limit: number}): Promise<{id: number, playedAt: number, seenAt: number | null, play: PlayObject}[]> => {
         const {mirrorId, range, order, after, limit} = args;
         const t = playsHistorical;
         const conditions = [eq(t.mirrorId, mirrorId), gte(t.playedAt, dayjs(range[0])), lte(t.playedAt, dayjs(range[1]))];
@@ -220,7 +221,7 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         }
         const dir = order === 'desc' ? desc : asc;
         const rows = await this.db.select().from(t).where(and(...conditions)).orderBy(dir(t.playedAt), dir(t.id)).limit(limit);
-        return rows.map(x => ({id: x.id, playedAt: x.playedAt!.valueOf(), play: hydratePlaySelect(x, [])}));
+        return rows.map(x => ({id: x.id, playedAt: x.playedAt!.valueOf(), seenAt: x.seenAt?.valueOf() ?? null, play: hydratePlaySelect(x, [])}));
     }
 
     /**
@@ -254,6 +255,82 @@ export class DrizzlePlayHistoricalRepository extends DrizzleBaseRepository<'play
         }
         const [row] = await this.db.select({count: count()}).from(t).where(and(...conditions));
         return row?.count ?? 0;
+    }
+
+    /**
+     * CTE `n` of a mirror's plays (in range) with their burst run:
+     * plays of the same track + artists at most BURST_MAX_GAP_MS apart share a run. `runSize` is the number of plays in it, `isFirst` marks its first play.
+     * The key comes from the play JSON, not the uid, because uid formats differ per import origin.
+     * A burst crossing a range edge is cut at that edge.
+     * */
+    protected mirrorIssueRuns = (mirrorId: number, range?: [number, number]) => {
+        const rangeSql = range === undefined ? sql`` : sql` AND playedAt >= ${range[0]} AND playedAt <= ${range[1]}`;
+        return sql`WITH r AS (
+    SELECT id, playedAt,
+        -- a play without a track name gets its own key, so it is never in a burst
+        CASE WHEN trim(coalesce(json_extract(play, '$.data.track.name'), '')) = '' THEN 'id:' || id
+            ELSE lower(trim(json_extract(play, '$.data.track.name'))) || char(0) || lower(coalesce(json_extract(play, '$.data.artists'), '')) END AS k,
+        -- same rule as isBadTimestamp
+        (playedAt < ${BAD_TIMESTAMP_BEFORE_MS} OR (seenAt IS NOT NULL AND playedAt > seenAt + ${BAD_TIMESTAMP_FUTURE_MS})) AS bad
+    FROM plays_historical
+    WHERE mirrorId = ${mirrorId} AND playedAt IS NOT NULL${rangeSql}
+), f AS (
+    SELECT id, playedAt, k, bad,
+        CASE WHEN playedAt - LAG(playedAt) OVER (PARTITION BY k ORDER BY playedAt, id) <= ${BURST_MAX_GAP_MS} THEN 0 ELSE 1 END AS isFirst
+    FROM r
+), g AS (
+    SELECT id, playedAt, k, bad, isFirst,
+        SUM(isFirst) OVER (PARTITION BY k ORDER BY playedAt, id ROWS UNBOUNDED PRECEDING) AS run
+    FROM f
+), n AS (
+    SELECT id, playedAt, k, bad, isFirst, run, COUNT(*) OVER (PARTITION BY k, run) AS runSize
+    FROM g
+)`;
+    }
+
+    /**
+     * Every burst, and every bad-timestamp play not in a burst, of a mirror (in range), oldest first. No play data, see getPlaysByIds.
+     * One pass over the mirror's plays, so callers should cache it (see mirrorVersion).
+     * */
+    mirrorIssueGroupRows = async (args: {mirrorId: number, range?: [number, number]}): Promise<MirrorIssueGroupRow[]> => await this.db.all<MirrorIssueGroupRow>(sql`${this.mirrorIssueRuns(args.mirrorId, args.range)}
+SELECT * FROM (
+    SELECT max(CASE WHEN isFirst = 1 THEN id END) AS id, COUNT(*) AS count, SUM(bad) AS bad, min(playedAt) AS firstPlayedAt, max(playedAt) AS lastPlayedAt
+    FROM n WHERE runSize >= ${BURST_MIN_PLAYS} GROUP BY k, run
+    UNION ALL
+    SELECT id, 1, 1, playedAt, playedAt
+    FROM n WHERE runSize < ${BURST_MIN_PLAYS} AND bad = 1
+) ORDER BY firstPlayedAt, id`);
+
+    /**
+     * Ids of every burst play in range except the first one in `order`, IE what an export that collapses bursts skips.
+     * `keepGood` keeps the first one without a bad timestamp instead, so a burst isn't dropped when bad timestamps are skipped too.
+     * One pass over the mirror's plays (in range), so callers should cache it (see mirrorVersion).
+     * */
+    burstSkipIds = async (args: {mirrorId: number, range: [number, number], order: 'asc' | 'desc', keepGood?: boolean}): Promise<number[]> => {
+        const dir = sql.raw(args.order === 'desc' ? 'DESC' : 'ASC');
+        const rows = await this.db.all<{id: number}>(sql`${this.mirrorIssueRuns(args.mirrorId, args.range)}
+SELECT id FROM (
+    SELECT id, ROW_NUMBER() OVER (PARTITION BY k, run ORDER BY ${args.keepGood === true ? sql`bad, ` : sql``}playedAt ${dir}, id ${dir}) AS rn
+    FROM n WHERE runSize >= ${BURST_MIN_PLAYS}
+) WHERE rn > 1`);
+        return rows.map(x => x.id);
+    }
+
+    /**
+     * Changes whenever plays are added to or removed from the mirror. Cheap (index only).
+     * shortcut: misses deleting the newest play then inserting the same number (rowid reuse), add a mirror write counter if that matters
+     * */
+    mirrorVersion = async (mirrorId: number): Promise<string> => {
+        const [row] = await this.db.all<{c: number, m: number | null}>(sql`SELECT COUNT(*) AS c, max(id) AS m FROM plays_historical WHERE mirrorId = ${mirrorId}`);
+        return `${row.c}:${row.m}`;
+    }
+
+    getPlaysByIds = async (ids: number[]): Promise<Map<number, PlayObject>> => {
+        if (ids.length === 0) {
+            return new Map();
+        }
+        const rows = await this.db.query.playsHistorical.findMany({where: {id: {in: ids}}}) as PlayHistoricalSelect[];
+        return new Map(rows.map(x => [x.id, hydratePlaySelect(x)]));
     }
 
     /** Replace raw upstream data of these plays with a removal note */

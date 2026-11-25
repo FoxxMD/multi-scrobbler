@@ -20,7 +20,7 @@ import type { PlayObject } from '../../../core/PlaySchema.ts';
 import type { StageCommon } from '../../../core/Transform.ts';
 import type { LifecycleStep } from '../../../core/Atomic.ts';
 import { generatePlay } from '../../../core/tests/utils/PlayTestUtils.ts';
-import { nameToCredit } from '../../../core/MusicMetadata.ts';
+import { nameToCredit, namesToCredits } from '../../../core/MusicMetadata.ts';
 import { TestScrobbler } from '../scrobbler/TestScrobbler.ts';
 import type { WriteBudget } from '../../common/vendor/atproto/WriteBudget.ts';
 import { exportStageSeconds, exportWaitSeconds, playStageSeconds } from '../../common/playMetrics.ts';
@@ -91,7 +91,7 @@ class FakeClient implements ExportClient {
     }
 }
 
-const setup = async (opts: {db?: DbConcrete, timestamps?: number[], limit?: number, order?: 'asc' | 'desc', rangeTo?: number, coverage?: [number, number][], importing?: boolean, transformOptions?: unknown[], upstreamCheck?: boolean, exportDiscarded?: boolean, realClient?: ExportClient} = {}) => {
+const setup = async (opts: {db?: DbConcrete, timestamps?: number[], limit?: number, order?: 'asc' | 'desc', rangeTo?: number, coverage?: [number, number][], importing?: boolean, transformOptions?: unknown[], upstreamCheck?: boolean, exportDiscarded?: boolean, skipBad?: boolean, collapse?: boolean, realClient?: ExportClient} = {}) => {
     const db = opts.db ?? await transientDb();
     const mirrors = new MirrorRepository(db);
     const mirror = await mirrors.findOrCreate({userId: null as unknown as string, service: 'lastfm', account: null, name: 'test'});
@@ -117,6 +117,8 @@ const setup = async (opts: {db?: DbConcrete, timestamps?: number[], limit?: numb
         transformOptions: opts.transformOptions,
         exportUpstreamCheck: opts.upstreamCheck,
         exportDiscarded: opts.exportDiscarded,
+        exportSkipBadTimestamps: opts.skipBad,
+        exportCollapseBursts: opts.collapse,
     });
     const componentId = opts.realClient?.componentId ?? (await db.insert(components).values({type: 'test', name: 'fake', mode: 'client', uid: `fake-${Math.random()}`}).returning())[0].id;
     const targetRepo = new JobTargetRepository(db);
@@ -134,7 +136,7 @@ const setup = async (opts: {db?: DbConcrete, timestamps?: number[], limit?: numb
         parseStages: async (raw) => raw as StageCommon[],
     };
     const runner = new JobRunner(job.id, deps);
-    return {db, mirror, mirrors, jobRepo, job, targetRepo, target, client, locks, runner};
+    return {db, mirror, mirrors, historical, jobRepo, job, targetRepo, target, client, locks, runner};
 }
 
 const until = async (fn: () => boolean | Promise<boolean>, ms = 2000) => {
@@ -379,6 +381,136 @@ describe('Job export runner', function () {
         expect(client.transformedWith[0]).to.deep.eq(stages);
         expect(client.queued[0].data.track?.name).eq('T700 (transformed)');
         expect(client.queued[0].original?.play?.data.track?.name).eq('T700');
+    });
+
+    describe('data issue options', function () {
+        const DAY = 86_400_000;
+        /** plays of one track */
+        const insertTrack = (historical: DrizzlePlayHistoricalRepository, mirrorId: number, track: string, timestamps: number[]) => historical.insertIgnoreDuplicates(timestamps.map(ts => ({
+            uid: `m${mirrorId}:${track}:${ts}`,
+            mirrorId,
+            play: generatePlay({playDate: dayjs(ts), track: nameToCredit(track), artists: namesToCredits(['A'])}),
+        })));
+
+        it('skips plays with a bad timestamp', async function () {
+            // imported now, so dated in the future
+            const future = Date.now() + 2 * DAY;
+            const {runner, target, targetRepo, client} = await setup({timestamps: [100, 200, DAY + 100, DAY + 200, future], rangeTo: future + 1000, coverage: [[0, future + 1000]], skipBad: true});
+            await runner.startExport(target.id);
+            await exportTask(runner, target.id);
+            expect(titles(client.queued)).to.deep.eq([`T${DAY + 200}`, `T${DAY + 100}`]);
+            expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', exported: 2, skipped: 3});
+        });
+
+        for (const order of ['desc', 'asc'] as const) {
+            it(`collapses bursts to the first play in ${order} order`, async function () {
+                const {runner, target, targetRepo, client, historical, mirror} = await setup({timestamps: [], rangeTo: 30_000, coverage: [[0, 30_000]], collapse: true, order});
+                await insertTrack(historical, mirror.id, 'B', [5000, 6000, 7000, 8000, 9000]);
+                await insertTrack(historical, mirror.id, 'X', [20_000]);
+                await runner.startExport(target.id);
+                await exportTask(runner, target.id);
+                expect(client.queued.map(x => [x.data.track?.name, x.data.playDate?.valueOf()])).to.deep.eq(order === 'desc' ? [['X', 20_000], ['B', 9000]] : [['B', 5000], ['X', 20_000]]);
+                expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', exported: 2, skipped: 4});
+            });
+        }
+
+        it('waits for the import to finish before collapsing bursts', async function () {
+            const {runner, target, targetRepo, client, jobRepo, job} = await setup({importing: true, collapse: true});
+            await runner.startExport(target.id);
+            await until(() => runner.runtime.exports[target.id]?.waiting === 'Waiting for the import to finish, so bursts are complete');
+            expect(client.queued).length(0);
+            await jobRepo.update(job.id, {importStatus: 'completed'});
+            runner.wake();
+            await exportTask(runner, target.id);
+            expect(client.queued).length(7);
+            expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', skipped: 0});
+        });
+
+        it('stops a page at the queue limit with skipped plays between kept ones', async function () {
+            const {runner, target, targetRepo, client, historical, mirror} = await setup({timestamps: [], rangeTo: 30_000, coverage: [[0, 30_000]], collapse: true, order: 'asc', limit: 2});
+            await insertTrack(historical, mirror.id, 'B', [1000, 2000, 3000]);
+            await insertTrack(historical, mirror.id, 'X', [10_000]);
+            await insertTrack(historical, mirror.id, 'Y', [20_000]);
+            await runner.startExport(target.id);
+            await until(() => runner.runtime.exports[target.id]?.waiting === 'Client queue is full');
+            expect(titles(client.queued)).to.deep.eq(['B', 'X']);
+            expect((await targetRepo.getById(target.id))!).to.deep.include({exported: 2, skipped: 2});
+            expect((await targetRepo.getById(target.id))!.cursor?.playedAt).eq(10_000);
+            client.process();
+            await exportTask(runner, target.id);
+            expect(titles(client.queued)).to.deep.eq(['B', 'X', 'Y']);
+            expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', exported: 3, skipped: 2});
+        });
+
+        it('keeps the first good play of a burst when bad timestamps are skipped too', async function () {
+            const {runner, target, targetRepo, client, historical, mirror} = await setup({timestamps: [], rangeTo: DAY + 10_000, coverage: [[0, DAY + 10_000]], collapse: true, skipBad: true, order: 'asc'});
+            await insertTrack(historical, mirror.id, 'B', [DAY - 1000, DAY, DAY + 1000]);
+            await runner.startExport(target.id);
+            await exportTask(runner, target.id);
+            expect(client.queued.map(x => x.data.playDate?.valueOf())).to.deep.eq([DAY]);
+            expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', exported: 1, skipped: 2});
+        });
+
+        it('finds bursts again when the mirror changes mid-export', async function () {
+            const {runner, target, targetRepo, client, historical, mirror} = await setup({timestamps: [], rangeTo: 40_000, coverage: [[0, 40_000]], collapse: true, limit: 1});
+            await insertTrack(historical, mirror.id, 'X', [30_000]);
+            await insertTrack(historical, mirror.id, 'Y', [20_000]);
+            await runner.startExport(target.id);
+            await until(() => runner.runtime.exports[target.id]?.waiting === 'Client queue is full');
+            await insertTrack(historical, mirror.id, 'C', [25_000, 25_500, 26_000]);
+            client.process();
+            await until(() => client.queued.length === 2);
+            client.process();
+            await until(() => client.queued.length === 3);
+            client.process();
+            await exportTask(runner, target.id);
+            expect(client.queued.map(x => [x.data.track?.name, x.data.playDate?.valueOf()])).to.deep.eq([['X', 30_000], ['C', 26_000], ['Y', 20_000]]);
+            expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', skipped: 2});
+        });
+
+        it('applies an option turned on mid-export to the plays not exported yet', async function () {
+            const {runner, target, targetRepo, client, jobRepo, job} = await setup({timestamps: [100, 200, DAY + 100, DAY + 200], rangeTo: DAY + 1000, coverage: [[0, DAY + 1000]], limit: 1});
+            await runner.startExport(target.id);
+            await until(() => runner.runtime.exports[target.id]?.waiting === 'Client queue is full');
+            await jobRepo.update(job.id, {exportSkipBadTimestamps: true});
+            client.process();
+            await until(() => client.queued.length === 2);
+            client.process();
+            await exportTask(runner, target.id);
+            expect(titles(client.queued)).to.deep.eq([`T${DAY + 200}`, `T${DAY + 100}`]);
+            expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', exported: 2, skipped: 2});
+        });
+
+        it('says when collapsing bursts waits on a halted import', async function () {
+            const {runner, target, jobRepo, job} = await setup({importing: true, collapse: true});
+            await jobRepo.update(job.id, {importStatus: 'failed'});
+            await runner.startExport(target.id);
+            await until(() => runner.runtime.exports[target.id]?.waiting === 'Waiting for the import to finish, so bursts are complete. The import is failed');
+            await runner.stopExport(target.id, 'stopped');
+        });
+
+        it('reads past many skipped plays in few passes, never over the queue limit', async function () {
+            const bad = Array.from({length: 600}, (_, i) => i * 10);
+            const {runner, target, targetRepo, client} = await setup({timestamps: [...bad, DAY + 100, DAY + 200], rangeTo: DAY + 1000, coverage: [[0, DAY + 1000]], order: 'asc', limit: 1, skipBad: true});
+            const repo = (runner as unknown as {historicalRepo: DrizzlePlayHistoricalRepository}).historicalRepo;
+            const read = repo.findPageForExport;
+            let reads = 0;
+            repo.findPageForExport = (args) => {
+                reads++;
+                return read(args);
+            };
+            await runner.startExport(target.id);
+            await until(() => client.queued.length === 1);
+            await until(() => runner.runtime.exports[target.id]?.waiting === 'Client queue is full');
+            expect(client.queuedLength).eq(1);
+            client.process();
+            await until(() => client.queued.length === 2);
+            client.process();
+            await exportTask(runner, target.id);
+            expect(titles(client.queued)).to.deep.eq([`T${DAY + 100}`, `T${DAY + 200}`]);
+            expect((await targetRepo.getById(target.id))!).to.include({status: 'completed', exported: 2, skipped: 600});
+            expect(reads).lessThan(10);
+        });
     });
 
     it('does not send plays that a job transform discarded', async function () {

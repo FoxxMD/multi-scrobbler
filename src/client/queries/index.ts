@@ -8,7 +8,7 @@ import {type AlbumSearchResult, type ArtistSearchResult, type TrackSearchResult,
 import type { SourcePlayerJson } from "../../core/PlaySchema";
 import type { UserSettingKey, UserSettingResponse, UserSettingValue } from "../../core/UserSettings";
 import { queryPlayOptsRefreshableToJson } from "../utils/ComponentUtils";
-import type { ClientJobPlaysSummaryJson, JobApiJson, JobOptionsApiJson, MirrorApiJson } from "../../core/Job";
+import type { ClientJobPlaysSummaryJson, JobApiJson, JobOptionsApiJson, MirrorApiJson, MirrorIssueGroupJson, MirrorIssueSummaryJson } from "../../core/Job";
 const components = createQueryKeys('components', {
     list: () => ({
         queryKey: ['components'],
@@ -197,6 +197,8 @@ const jobs = createQueryKeys('jobs', {
   })
 });
 
+export const fetchMirrorIssuePage = (mirrorId: number, offset: number) => ky.get(`mirrors/${mirrorId}/issues/list`, { baseUrl, searchParams: {offset, limit: 50} }).json<PaginatedResponse<MirrorIssueGroupJson>>();
+
 const mirrors = createQueryKeys('mirrors', {
   list: () => ({
     queryKey: ['list'],
@@ -205,6 +207,15 @@ const mirrors = createQueryKeys('mirrors', {
   detail: (mirrorId: number) => ({
     queryKey: [mirrorId],
     queryFn: () => ky.get(`mirrors/${mirrorId}`, { baseUrl }).json<MirrorApiJson>()
+  }),
+  /** range: inclusive unix ms. A different refreshKey fetches again */
+  issues: (mirrorId: number, range?: [number, number], refreshKey = '') => ({
+    queryKey: [mirrorId, range === undefined ? "all" : `${range[0]}-${range[1]}`, refreshKey],
+    queryFn: () => ky.get(`mirrors/${mirrorId}/issues`, { baseUrl, searchParams: range === undefined ? undefined : {from: range[0], to: range[1]} }).json<MirrorIssueSummaryJson>()
+  }),
+  /** use with useInfiniteQuery and fetchMirrorIssuePage */
+  issueList: (mirrorId: number) => ({
+    queryKey: [mirrorId],
   }),
   clientJobPlays: (componentId: number) => ({
     queryKey: ['clientJobPlays', componentId],

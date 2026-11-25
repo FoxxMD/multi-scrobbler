@@ -59,6 +59,12 @@ export const importProgress = (job: Pick<JobApiJson, 'importStatus' | 'importTot
     return undefined;
 }
 
+/** IE "10 new of 12 fetched, 2 skipped (12 total)" */
+export const importCountsText = (job: Pick<JobApiJson, 'imported' | 'importFetched' | 'importTotal'>): string => {
+    const skipped = job.importFetched - job.imported;
+    return `${job.imported.toLocaleString()} new of ${job.importFetched.toLocaleString()} fetched${skipped > 0 ? `, ${skipped.toLocaleString()} skipped` : ''}${job.importTotal !== null ? ` (${job.importTotal.toLocaleString()} total)` : ''}`;
+}
+
 export const ImportProgressBar = (props: { job: JobApiJson } & Omit<Progress.RootProps, 'value'>) => {
     const {job, ...rest} = props;
     const progress = importProgress(job);
@@ -126,7 +132,7 @@ export const mergeJobUpdate = (old: JobApiJson, data: Record<string, unknown>): 
 }
 
 /** Export progress from 0 to 1, undefined when it can't be known yet */
-export const exportProgress = (job: Pick<JobApiJson, 'importStatus' | 'mirrorPlaysInRange'>, target: Pick<JobTargetApiJson, 'status' | 'exported'>): number | undefined => {
+export const exportProgress = (job: Pick<JobApiJson, 'importStatus' | 'mirrorPlaysInRange'>, target: Pick<JobTargetApiJson, 'status' | 'exported' | 'skipped'>): number | undefined => {
     if (target.status === 'completed') {
         return 1;
     }
@@ -134,7 +140,7 @@ export const exportProgress = (job: Pick<JobApiJson, 'importStatus' | 'mirrorPla
     if (job.importStatus !== 'completed' || job.mirrorPlaysInRange === 0) {
         return undefined;
     }
-    return Math.min(1, target.exported / job.mirrorPlaysInRange);
+    return Math.min(1, (target.exported + target.skipped) / job.mirrorPlaysInRange);
 }
 
 export const ExportProgressBar = (props: { job: JobApiJson, target: JobTargetApiJson } & Omit<Progress.RootProps, 'value'>) => {

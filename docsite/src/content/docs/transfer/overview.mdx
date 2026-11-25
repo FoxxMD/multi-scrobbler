@@ -198,6 +198,42 @@ The Teal.fm and Rocksky Clients each keep a locked Mirror of your account. By de
 
 Before an Export to one of these Clients starts, the Client copies the scrobbles in the Job's range from your PDS into its Mirror. For more information, see the [Teal.fm](/configuration/clients/tealfm#configuration) and [Rocksky](/configuration/clients/rocksky#configuration) pages.
 
+### Data Issues
+
+Imported history can have Plays that look invalid. Multi-Scrobbler imports them as they are, so you keep a full copy of your data. It finds two kinds:
+
+* **Bad timestamp**: the Play is dated before 2 Jan 1970 (UTC), or more than one day after it was imported. Last.fm files Plays that it got no date for under 1 Jan 1970. A Play dated in the future comes from a wrong clock or a broken source.
+* **Burst**: the same track and artists 3 or more times in a row, each within 2 seconds of the last. Real repeat listens are a track length apart. Bursts are often fake Plays that were added to carry over a play count from another player.
+
+The **Data Issues** section of a Mirror page lists these Plays. Each burst shows as one row with its number of Plays. If the Mirror has issues in a Job's range, the Job page shows a notice with a link to the Mirror.
+
+The Mirror is never changed. By default, exports send these Plays as they are. To leave them out of an export, use the Job options in [Skipping Data Issues](#skipping-data-issues).
+
+On the Job page, **skipped** is the number of imported Plays that were not added to the Mirror. Either the Mirror already had them, or they were exact duplicates (same second, artist and track) of another Play in the import.
+
+#### Skipping Data Issues
+
+A Job has two options for these Plays. They are in the **Data Issues** part of the **Export** section. Both are off by default. You can change them on the Job page at any time. A change applies to the Plays that the Job exports next.
+
+* **Skip bad timestamps**: the export does not send Plays with a bad timestamp.
+* **One Play per burst**: the export sends only one Play of each burst. This is the first Play of the burst in the export order: the newest Play for **Newest first**, the oldest for **Oldest first**. The other Plays of the burst are not sent. If **Skip bad timestamps** is also on, the first Play without a bad timestamp is sent.
+
+The Mirror keeps all of the Plays. On the Job page, each Client shows how many Plays these options did not send.
+
+**One Play per burst** needs a finished import. While an import runs, part of a burst can be missing from the Mirror. Then the Plays that are there do not look like a burst, and the export would send all of them. Plays that are sent cannot be taken back. So, when this option is on, the export waits until the import is finished.
+
+<Aside type="tip">
+
+If you are not sure that your data is good, import first and export after you check it:
+
+1. Create a Job with no Clients in **Export To**, so it only imports.
+2. When the import is finished, open the Mirror page and look at **Data Issues**.
+3. Create a new Job with **Import From** set to **Existing mirror**. Select the Clients and the Data Issues options that you want.
+
+You can also create one Job with **Start now** off. Start the import from the Job page. When the import is finished, check the Mirror and set the Data Issues options. Then start the exports.
+
+</Aside>
+
 ### Failed Plays
 
 If many exported Plays fail in a row, the Export stops and shows the last error. The limit is 10, or the Queue Limit if it is higher. This usually means that the Client configuration is wrong or its service is down. Fix the problem, then select **Resume**.

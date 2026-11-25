@@ -97,7 +97,12 @@ export interface ActivitySummaryProps extends SortPlaysByProps {
     componentType: ComponentType
 }
 
-export const ActivitySummary = (props: ActivitySummaryProps) => {
+/** Only needs the Play, so it can show Plays that are not a Source/Client's, IE mirror Plays */
+export const ActivitySummary = (props: SortPlaysByProps & {
+    activity: Pick<PlayApiCommonDetailed, 'play' | 'updatedAt'> & {isNew?: boolean | Milliseconds}
+    /** replaces the short played/seen date */
+    dateDisplay?: React.ReactNode
+}) => {
     const {
         activity: {
             play,
@@ -131,7 +136,7 @@ export const ActivitySummary = (props: ActivitySummaryProps) => {
             </Flex>
             <TextMuted textAlign="left" truncate>{creditsToNames(play.data.artists).join(' / ')}</TextMuted>
             <HStack gap="1">
-                <ShortDateDisplay date={(sortBy === 'played' ? play.data.playDate : play.meta?.seenAt) ?? undefined} prefix={sortBy === 'played' ? 'Played' : 'Seen'} /><Separator orientation="vertical" height="4" />
+                {props.dateDisplay ?? <ShortDateDisplay date={(sortBy === 'played' ? play.data.playDate : play.meta?.seenAt) ?? undefined} prefix={sortBy === 'played' ? 'Played' : 'Seen'} />}<Separator orientation="vertical" height="4" />
                 <TextMuted>{play.meta?.source}</TextMuted>
                 {play.meta?.parsedFrom !== undefined && <><Separator orientation="vertical" height="4" /><TextMuted>{capitalize(play.meta?.parsedFrom)}</TextMuted></>}
             </HStack>

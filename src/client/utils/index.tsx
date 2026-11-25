@@ -40,6 +40,8 @@ export const parseLogLine = (line: string) => {
 export interface DateFormatOptions {
     includeRelative?: boolean
     includeDate?: boolean
+    /** show the time in UTC instead of the browser's timezone, with a UTC suffix */
+    utc?: boolean
 }
 
 
@@ -135,7 +137,8 @@ export const shortTodayAwareFormat = (date: Dayjs): string => {
 export const isoToHuman = (iso?: string | Date | null, opts?: DateFormatOptions) => {
     const {
         includeRelative = false,
-        includeDate
+        includeDate,
+        utc = false,
     } = opts ?? {};
 
     if(iso === undefined || iso === null) {
@@ -144,13 +147,16 @@ export const isoToHuman = (iso?: string | Date | null, opts?: DateFormatOptions)
 
     const parts = [];
 
-    const date = dayjs(iso);
+    const date = utc ? dayjs.utc(iso) : dayjs(iso);
     // by default only show date when not today
     const useDate = includeDate ?? !dayjs().isSame(date, 'day');
     if(useDate) {
         parts.push(formatNumericDate(getDateFormatPref(), {year: date.year(), month: date.month() + 1, day: date.date()}));
     }
     parts.push(date.format(dayjsTimeFormat()));
+    if(utc) {
+        parts.push('UTC');
+    }
 
     if(includeRelative) {
         parts.push(`(${date.fromNow()})`);

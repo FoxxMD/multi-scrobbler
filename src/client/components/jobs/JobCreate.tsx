@@ -17,6 +17,7 @@ import { toaster } from "../Toaster";
 import { JobBackButton } from "./JobList";
 import { apiErrorMessage, useSetJob } from "./jobUtils";
 import { InfoPopover } from '../ToggleTip';
+import { DATA_ISSUES_DOCS, MirrorIssuesPreview } from "../mirrors/MirrorIssues";
 
 type CreatedJob = JobApiJson & { startError?: string };
 type Source = 'component' | 'upload' | 'existing' | 'mirror';
@@ -51,6 +52,8 @@ const formSchema = z.object({
     exportQueueLimit: z.number().int().min(1, 'At least 1').max(EXPORT_QUEUE_LIMIT_MAX, `At most ${EXPORT_QUEUE_LIMIT_MAX}`),
     upstreamCheck: z.boolean(),
     exportDiscarded: z.boolean(),
+    exportSkipBadTimestamps: z.boolean(),
+    exportCollapseBursts: z.boolean(),
     transforms: z.enum(['none', 'preset', 'component']),
     preset: z.string(),
     /** `componentId:hook` */
@@ -133,6 +136,8 @@ const formSchema = z.object({
             exportQueueLimit: v.exportQueueLimit,
             upstreamCheck: v.upstreamCheck,
             exportDiscarded: v.exportDiscarded,
+            exportSkipBadTimestamps: v.exportSkipBadTimestamps,
+            exportCollapseBursts: v.exportCollapseBursts,
             transforms,
             start: v.start,
         },
@@ -225,6 +230,8 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                 exportQueueLimit: EXPORT_QUEUE_LIMIT_DEFAULT,
                 upstreamCheck: true,
                 exportDiscarded: false,
+                exportSkipBadTimestamps: false,
+                exportCollapseBursts: false,
                 transforms: 'none' as TransformsKind,
                 preset: options.presets[0]?.name ?? '',
                 transformComponent: options.componentTransforms[0] !== undefined ? `${options.componentTransforms[0].componentId}:${options.componentTransforms[0].preCompare !== undefined ? 'preCompare' : 'postCompare'}` : '',
@@ -453,6 +460,11 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                             }
                             const rejecting = options.targets.filter(t => t.rejectsOldScrobbles && values.targets.includes(t.componentId));
                             const stages = chosenStages(options, values.transforms, values.preset, values.transformComponent);
+                            const existingMirror = values.source === 'mirror' ? values.exportMirror : values.mirror === 'new' ? '' : values.mirror;
+                            const issueRange: [number, number] | undefined = values.range === 'all' ? undefined : [
+                                values.from === '' ? Number.MIN_SAFE_INTEGER : dayjs(values.from).valueOf(),
+                                values.to === '' ? Number.MAX_SAFE_INTEGER : dayjs(values.to).endOf('minute').valueOf(),
+                            ];
                             return <Stack gap="4">
                                 {rejecting.length > 0 ? <Alert.Root status="warning">
                                     <Alert.Indicator/>
@@ -483,6 +495,22 @@ export const JobCreateForm = (props: JobCreateFormProps) => {
                                     children={(field) => <FormCheckbox field={field} label="Keep discarded Plays in the Client"
                                         helperText={<>If a Stage discards a Play, the Play is added to each Client as Discarded and is not scrobbled. When off, the Play is not sent. Can be changed later. See the <ChakraLink textDecoration="underline" href={JOB_PLAY_STATE_DOCS} target="_blank">docs</ChakraLink>.</>}/>}
                                 /> : undefined}
+                                <Fieldset.Root>
+                                    <Fieldset.Legend>Data Issues</Fieldset.Legend>
+                                    <Fieldset.HelperText>The mirror is never changed. Both can be changed later. See the <ChakraLink textDecoration="underline" href={DATA_ISSUES_DOCS} target="_blank">docs</ChakraLink>.</Fieldset.HelperText>
+                                    <Fieldset.Content gap="2" mt="1">
+                                        {existingMirror !== '' ? <MirrorIssuesPreview mirrorId={Number.parseInt(existingMirror)} range={issueRange}/> : undefined}
+                                        <form.Field
+                                            name="exportSkipBadTimestamps"
+                                            children={(field) => <FormCheckbox field={field} label="Skip bad timestamps" helperText="Plays dated 1 Jan 1970, or dated after they were imported, are not sent."/>}
+                                        />
+                                        <form.Field
+                                            name="exportCollapseBursts"
+                                            children={(field) => <FormCheckbox field={field} label="One Play per burst"
+                                                helperText="Only the first Play of each burst (the same track many times within seconds) is sent. Exports wait for the import to finish."/>}
+                                        />
+                                    </Fieldset.Content>
+                                </Fieldset.Root>
                                 <Collapsible.Root>
                                     <Collapsible.Trigger asChild><Button size="xs" variant="ghost" alignSelf="flex-start">Advanced</Button></Collapsible.Trigger>
                                     <Collapsible.Content>

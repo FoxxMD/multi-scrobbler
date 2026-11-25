@@ -1,6 +1,7 @@
 import * as z from "zod";
 import type { ErrorObject } from "serialize-error";
 import type { RateLimitStatusJson } from "./RateLimit.ts";
+import type { PlayApiCommon } from "./Api.ts";
 
 /**
  * Status of a job process (import, or export to one target).
@@ -72,6 +73,8 @@ export interface JobTargetApiJson {
     exported: number
     /** client plays created from them, the rest were already queued or scrobbled */
     queued: number
+    /** mirror plays not sent because of the job's data issue options */
+    skipped: number
     /** the job's client plays by state, including ones a cleanup deleted. Frozen once completed */
     stats: Partial<Record<string, number>> | null
     /** the job's client plays in the Client right now */
@@ -110,6 +113,10 @@ export interface JobApiJson {
     exportUpstreamCheck: boolean
     /** true => plays a job transform discarded are kept in clients in the discarded state, false => they are not sent */
     exportDiscarded: boolean
+    /** true => plays with a bad timestamp are not sent */
+    exportSkipBadTimestamps: boolean
+    /** true => only the first play of each burst (in export order) is sent. Waits for the import to finish */
+    exportCollapseBursts: boolean
     targets: JobTargetApiJson[]
     /** mirror plays in the job's range, what an export will go through */
     mirrorPlaysInRange: number
@@ -240,6 +247,94 @@ export interface MirrorApiJson {
     updatedAt: string
 }
 
+/** Mirror Plays timestamped before this (unix ms, 1970-01-02) have an invalid timestamp. Last.fm files them under 01 Jan 1970 when it got no date */
+export const BAD_TIMESTAMP_BEFORE_MS = 86_400_000;
+/** Plays of the same track and artists at most this far apart (ms) are in one burst. Real repeat listens are a track length apart */
+export const BURST_MAX_GAP_MS = 2000;
+/** fewest Plays in a burst */
+export const BURST_MIN_PLAYS = 3;
+
+/** Mirror Plays timestamped more than this (ms) after their row was created (seenAt, when imported) have an invalid timestamp */
+export const BAD_TIMESTAMP_FUTURE_MS = 86_400_000;
+
+/** Mirror play timestamp is invalid. Same rule as the data issue detector (mirrorIssueRuns) */
+export const isBadTimestamp = (playedAt: number, seenAt: number | null): boolean => playedAt < BAD_TIMESTAMP_BEFORE_MS || (seenAt !== null && playedAt > seenAt + BAD_TIMESTAMP_FUTURE_MS);
+
+export const MIRROR_ISSUE_TAGS = ['badTimestamp', 'burst'] as const;
+export type MirrorIssueTag = typeof MIRROR_ISSUE_TAGS[number];
+
+/** Counts of suspicious Plays in a mirror, found when read. Nothing is changed */
+export interface MirrorIssueSummaryJson {
+    /** Plays timestamped before BAD_TIMESTAMP_BEFORE_MS, or more than BAD_TIMESTAMP_FUTURE_MS after they were imported */
+    badTimestamp: number
+    bursts: number
+    /** Plays in bursts */
+    burstPlays: number
+    /** distinct Plays with any issue */
+    plays: number
+}
+
+/** A MirrorIssueGroup as read from the database */
+export interface MirrorIssueGroupRow {
+    /** id of the group's first Play */
+    id: number
+    count: number
+    /** Plays in the group with a bad timestamp */
+    bad: number
+    firstPlayedAt: number
+    lastPlayedAt: number
+}
+
+/** Tags and summary of issue groups. Pure, so the backend can cache the rows */
+export const issueGroupTags = (row: Pick<MirrorIssueGroupRow, 'count' | 'bad'>): MirrorIssueTag[] => [
+    ...(row.bad > 0 ? ['badTimestamp' as const] : []),
+    ...(row.count >= BURST_MIN_PLAYS ? ['burst' as const] : []),
+];
+
+export const summarizeIssueGroups = (rows: Pick<MirrorIssueGroupRow, 'count' | 'bad'>[]): MirrorIssueSummaryJson => {
+    const summary: MirrorIssueSummaryJson = {badTimestamp: 0, bursts: 0, burstPlays: 0, plays: 0};
+    for (const row of rows) {
+        summary.badTimestamp += row.bad;
+        summary.plays += row.count;
+        if (row.count >= BURST_MIN_PLAYS) {
+            summary.bursts++;
+            summary.burstPlays += row.count;
+        }
+    }
+    return summary;
+}
+
+/** One burst, or one Play with a bad timestamp that is not in a burst */
+export interface MirrorIssueGroup<P = unknown> {
+    tags: MirrorIssueTag[]
+    count: number
+    /** unix ms */
+    firstPlayedAt: number
+    /** unix ms */
+    lastPlayedAt: number
+    /** the first Play of the group */
+    play: P
+}
+
+export type MirrorIssueGroupJson = MirrorIssueGroup<PlayApiCommon['play']>;
+
+// '' (IE `from=`) would coerce to 0
+const optionalMs = z.preprocess(x => x === '' ? undefined : x, z.coerce.number().int().optional());
+const issueRangeSchema = z.object({
+    from: optionalMs.meta({description: 'Only Plays played at or after this unix ms timestamp'}),
+    to: optionalMs.meta({description: 'Only Plays played at or before this unix ms timestamp'}),
+});
+export const mirrorIssuesQuerySchema = issueRangeSchema.refine(x => x.from === undefined || x.to === undefined || x.from <= x.to, {message: 'from must not be after to'});
+export const mirrorIssueListQuerySchema = issueRangeSchema.extend({
+    offset: z.coerce.number().int().min(0).default(0),
+    limit: z.coerce.number().int().min(1).max(200).default(50),
+}).refine(x => x.from === undefined || x.to === undefined || x.from <= x.to, {message: 'from must not be after to'});
+
+/** undefined when neither edge is given */
+export const issueQueryRange = (q: {from?: number, to?: number}): [number, number] | undefined => q.from === undefined && q.to === undefined
+    ? undefined
+    : [q.from ?? Number.MIN_SAFE_INTEGER, q.to ?? Number.MAX_SAFE_INTEGER];
+
 /** Plays import jobs created in a Client */
 export interface ClientJobPlaysSummaryJson {
     total: number
@@ -320,6 +415,8 @@ export const jobCreateSchema = z.object({
     exportQueueLimit: z.int().min(1).max(EXPORT_QUEUE_LIMIT_MAX).default(EXPORT_QUEUE_LIMIT_DEFAULT).meta({description: "The export only sends more scrobbles while a Client's queue (live scrobbles included) holds fewer than this"}),
     upstreamCheck: z.boolean().default(true).meta({description: "Clients fetch scrobbles from their service to skip ones it already has. false only skips scrobbles the Client already has in the database, which is much faster for large exports but can duplicate scrobbles that reached the service some other way"}),
     exportDiscarded: z.boolean().default(false).meta({description: "true => scrobbles that the job's transforms discard are added to each Client in the discarded state, without scrobbling them. false => they are not sent to the Clients"}),
+    exportSkipBadTimestamps: z.boolean().default(false).meta({description: 'true => mirror scrobbles with a bad timestamp (see the mirror data issues) are not sent to the Clients'}),
+    exportCollapseBursts: z.boolean().default(false).meta({description: 'true => only the first scrobble of each burst (see the mirror data issues), in export order, is sent to the Clients. Exports wait for the import to finish'}),
     start: z.boolean().default(false).meta({description: 'Start the import and all exports once created'}),
 }).meta({title: 'Create Job'});
 export type JobCreate = z.input<typeof jobCreateSchema>;
@@ -350,4 +447,6 @@ export const jobUpdateSchema = z.object({
     exportQueueLimit: z.int().min(1).max(EXPORT_QUEUE_LIMIT_MAX).optional(),
     upstreamCheck: z.boolean().optional().meta({description: 'See upstreamCheck on Create Job. Applies to scrobbles exported after the change, ones already queued in a Client keep the old setting'}),
     exportDiscarded: z.boolean().optional().meta({description: 'See exportDiscarded on Create Job. Applies to scrobbles exported after the change'}),
+    exportSkipBadTimestamps: z.boolean().optional().meta({description: 'See exportSkipBadTimestamps on Create Job. Applies to scrobbles exported after the change'}),
+    exportCollapseBursts: z.boolean().optional().meta({description: 'See exportCollapseBursts on Create Job. Applies to scrobbles exported after the change'}),
 }).meta({title: 'Update Job'});

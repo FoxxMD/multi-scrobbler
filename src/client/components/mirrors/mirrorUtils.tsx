@@ -1,7 +1,7 @@
 import { Progress, Text } from '@chakra-ui/react';
 import { useSSEAnyEvent, useSSEContext } from "@flamefrontend/sse-runtime-react";
 import { useQueryClient } from '@tanstack/react-query';
-import { asCleanupSseEvent, type MsSseEvent } from "../../../core/Api";
+import { asCleanupSseEvent, asJobSseEvent, type MsSseEvent } from "../../../core/Api";
 import type { JobCleanupProgressJson, MirrorApiJson, MirrorTaskJson } from "../../../core/Job";
 import { tanQueries } from "../../queries";
 import { toaster } from "../Toaster";
@@ -38,6 +38,16 @@ export const useMirrorEvents = () => {
     const queryClient = useQueryClient();
     const client = useSSEContext<MsSseEvent>();
     useSSEAnyEvent(client, (payload) => {
+        const jobEvent = asJobSseEvent(payload.data);
+        if (jobEvent !== undefined) {
+            // an import stopped: mirror plays changed. Not on every imported batch, each issue read scans the mirror
+            const status = jobEvent.data.importStatus;
+            if (typeof status === 'string' && status !== 'running') {
+                queryClient.invalidateQueries({queryKey: tanQueries.mirrors.issues._def});
+                queryClient.invalidateQueries({queryKey: tanQueries.mirrors.issueList._def});
+            }
+            return;
+        }
         const event = asCleanupSseEvent(payload.data);
         if (event === undefined || (event.event !== 'mirrorUpdate' && event.event !== 'mirrorDeleted')) {
             return;
@@ -60,6 +70,8 @@ export const useMirrorEvents = () => {
                 queryClient.invalidateQueries({queryKey: listKey});
                 // jobs show how many mirror scrobbles are in their range
                 queryClient.invalidateQueries({queryKey: tanQueries.jobs._def});
+                queryClient.invalidateQueries({queryKey: tanQueries.mirrors.issues._def});
+                queryClient.invalidateQueries({queryKey: tanQueries.mirrors.issueList._def});
             }
             if (taskResult.error !== undefined) {
                 toaster.create({type: 'error', title: 'Mirror cleanup failed', description: taskResult.error});
