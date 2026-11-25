@@ -10,6 +10,7 @@ import { type CleanupAction, EXPORT_QUEUE_LIMIT_MAX, type JobApiJson, type JobMe
 import { ChakraClip } from "../ChakraClipboard";
 import { capitalize } from "../../../core/StringUtils";
 import { TextMuted } from "../TextMuted";
+import { JobIssuesAlert } from "../mirrors/MirrorIssues";
 import { CleanupProgress, taskText, useMirrorEvents } from "../mirrors/mirrorUtils";
 import { CleanupButtons } from "./CleanupButtons";
 import { tanQueries } from "../../queries";
@@ -559,6 +560,7 @@ export const JobDetail = (props: { job: JobApiJson }) => {
                 </HStack>
             </Flex>
             {job.runtime.deleting === true ? <Text color="fg.warning">This job is being deleted.</Text> : undefined}
+            <JobIssuesAlert job={job}/>
             <ImportPanel job={job}/>
             {job.targets.length > 0 ? <ExportPanel job={job}/> : undefined}
             {job.mirror.locked && job.targets.length === 0 ? undefined : <CleanupPanel job={job}/>}

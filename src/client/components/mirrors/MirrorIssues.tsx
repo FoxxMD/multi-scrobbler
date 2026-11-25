@@ -1,6 +1,8 @@
-import { Badge, Button, Card, DataList, Flex, Heading, HStack, SkeletonText, Stack, Text } from '@chakra-ui/react';
+import { Alert, Badge, Button, Card, Link as ChakraLink, DataList, Flex, Heading, HStack, SkeletonText, Stack, Text } from '@chakra-ui/react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { BURST_MAX_GAP_MS, BURST_MIN_PLAYS, type MirrorIssueGroupJson, type MirrorIssueSummaryJson } from "../../../core/Job";
+import dayjs from 'dayjs';
+import { Link } from "react-router";
+import { BURST_MAX_GAP_MS, BURST_MIN_PLAYS, type JobApiJson, type MirrorIssueGroupJson, type MirrorIssueSummaryJson } from "../../../core/Job";
 import { fetchMirrorIssuePage, tanQueries } from "../../queries";
 import { ActivitySummary } from "../ActivityDetail";
 import { ErrorAlert } from "../ErrorAlert";
@@ -96,5 +98,27 @@ export const MirrorIssues = (props: { mirrorId: number }) => {
             <Card.Header><Heading size="lg">Data Issues</Heading></Card.Header>
             <Card.Body><Stack gap="3">{content}</Stack></Card.Body>
         </Card.Root>
+    );
+}
+
+/** Shown on a job when its range of the mirror has data issues */
+export const JobIssuesAlert = (props: { job: Pick<JobApiJson, 'mirror' | 'rangeFrom' | 'rangeTo' | 'importStatus'> }) => {
+    const {job} = props;
+    const range: [number, number] = [job.rangeFrom === null ? Number.MIN_SAFE_INTEGER : dayjs(job.rangeFrom).valueOf(), dayjs(job.rangeTo).valueOf()];
+    // fetched again when the import changes status, not on every imported batch (each fetch reads the whole range)
+    const {data} = useQuery(tanQueries.mirrors.issues(job.mirror.id, range, job.importStatus));
+    if (data === undefined || data.plays === 0) {
+        return null;
+    }
+    return (
+        <Alert.Root status="info">
+            <Alert.Indicator/>
+            <Alert.Content>
+                <Alert.Description>
+                    {issueSummaryText(data)} in this job's range look invalid. Exports send them as they are.
+                    See them in Mirror <ChakraLink asChild textDecoration="underline"><Link to={`/mirrors/${job.mirror.id}`}>{job.mirror.name}</Link></ChakraLink>.
+                </Alert.Description>
+            </Alert.Content>
+        </Alert.Root>
     );
 }

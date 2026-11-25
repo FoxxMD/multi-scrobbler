@@ -208,9 +208,9 @@ const mirrors = createQueryKeys('mirrors', {
     queryKey: [mirrorId],
     queryFn: () => ky.get(`mirrors/${mirrorId}`, { baseUrl }).json<MirrorApiJson>()
   }),
-  /** range: inclusive unix ms */
-  issues: (mirrorId: number, range?: [number, number]) => ({
-    queryKey: [mirrorId, range === undefined ? "all" : `${range[0]}-${range[1]}`],
+  /** range: inclusive unix ms. A different refreshKey fetches again */
+  issues: (mirrorId: number, range?: [number, number], refreshKey = '') => ({
+    queryKey: [mirrorId, range === undefined ? "all" : `${range[0]}-${range[1]}`, refreshKey],
     queryFn: () => ky.get(`mirrors/${mirrorId}/issues`, { baseUrl, searchParams: range === undefined ? undefined : {from: range[0], to: range[1]} }).json<MirrorIssueSummaryJson>()
   }),
   /** use with useInfiniteQuery and fetchMirrorIssuePage */
