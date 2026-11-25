@@ -10,5 +10,5 @@ export const asideIcons: Record<string, string> = {
 asideIcons.caution = asideIcons.warning;
 
 export const asideTitles: Record<string, string> = {
-	note: 'Note', info: 'Info', tip: 'Tip', important: 'Important', warning: 'Warning', caution: 'Caution', danger: 'Danger',
+	note: 'Note', info: 'Info', tip: 'Tip', important: 'Important', warning: 'Warning', caution: 'Caution', danger: 'Danger', aside: 'Aside',
 };

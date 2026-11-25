@@ -22,6 +22,25 @@
 	--galaxy-aside-bg: rgba(245, 158, 11, 0.08);
 }
 
+/* "aside" type: neutral, like a plain <details>. No tint, no shadow, gray border, normal text color */
+.starlight-aside.starlight-aside--aside {
+	--galaxy-aside-accent: var(--sl-color-gray-4);
+	--galaxy-aside-bg: transparent;
+	--galaxy-aside-border: var(--sl-color-gray-5);
+	--galaxy-aside-text: var(--sl-color-text);
+	--galaxy-aside-code-bg: var(--sl-color-gray-6);
+	box-shadow: none;
+}
+.starlight-aside.starlight-aside--aside:hover {
+	box-shadow: none;
+}
+.starlight-aside.starlight-aside--aside .starlight-aside__title {
+	color: var(--sl-color-white);
+}
+.starlight-aside.starlight-aside--aside a {
+	color: var(--sl-color-text-accent);
+}
+
 /* collapsible asides */
 details.details-admo > summary {
 	cursor: pointer;

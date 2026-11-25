@@ -6,7 +6,7 @@ export default function DetailsAdmo({ type, summary, render = true, children }: 
 	if (!render) return null;
 	const icon = type === undefined ? undefined : asideIcons[type];
 	return (
-		<details className={['starlight-aside', 'details-admo', type ? `starlight-aside--${type}` : 'details-admo--plain'].join(' ')}>
+		<details className={['starlight-aside', 'details-admo', type && type !== 'aside' ? `starlight-aside--${type}` : 'details-admo--plain'].join(' ')}>
 			<summary className="starlight-aside__title">
 				{icon && <svg className="starlight-aside__icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d={icon} /></svg>}
 				{summary}
