@@ -467,3 +467,7 @@ export const jobUpdateSchema = z.object({
     exportCollapseBursts: z.boolean().optional().meta({description: 'See exportCollapseBursts on Create Job. Applies to scrobbles exported after the change'}),
     exportKeepEpochBursts: z.boolean().optional().meta({description: 'See exportKeepEpochBursts on Create Job. Applies to scrobbles exported after the change'}),
 }).meta({title: 'Update Job'});
+
+export const jobTargetUpdateSchema = z.object({
+    epochDecision: z.enum(['send', 'skip']).meta({description: "With exportKeepEpochBursts, when the Client already has scrobbles before 2 Jan 1970: send the job's scrobbles from before then without a dupe check (they may be duplicated), or skip them. Only while the export has not decided yet"}),
+}).meta({title: 'Update Job Export'});

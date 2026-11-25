@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { lstat, mkdir, readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import * as z from "zod";
-import { cleanupBodySchema, deriveJobStatus, isLockedMirror, MIRROR_SERVICE_MIXED, jobCreateSchema, jobDeleteQuerySchema, jobUpdateSchema, type JobApiJson, type JobMetricsApiJson, type JobOptionsApiJson } from "../../core/Job.ts";
+import { cleanupBodySchema, deriveJobStatus, isLockedMirror, MIRROR_SERVICE_MIXED, jobCreateSchema, jobDeleteQuerySchema, jobTargetUpdateSchema, jobUpdateSchema, type JobApiJson, type JobMetricsApiJson, type JobOptionsApiJson } from "../../core/Job.ts";
 import { eq } from "drizzle-orm";
 import { plays } from "../common/database/drizzle/schema/schema.ts";
 import { exportStageSeconds, exportWaitSeconds, playStageSeconds } from "../common/playMetrics.ts";
@@ -406,6 +406,8 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
                     exportDiscarded: payload.exportDiscarded,
                     exportSkipBadTimestamps: payload.exportSkipBadTimestamps,
                     exportCollapseBursts: payload.exportCollapseBursts,
+                    // only means something when collapsing bursts
+                    exportKeepEpochBursts: payload.exportCollapseBursts && payload.exportKeepEpochBursts,
                     ...transforms,
                 });
                 await repos().targetRepo.createForJob(created.id, targetIds);
@@ -440,13 +442,37 @@ export const setupJobRoutes = (router: Router, jobs: JobManager, sources: Scrobb
         }
         const {jobRepo, mirrorRepo} = repos(req);
         const {name, exportQueueLimit, upstreamCheck, exportDiscarded, exportSkipBadTimestamps, exportCollapseBursts} = req.body;
-        const changes = {name, exportQueueLimit, exportUpstreamCheck: upstreamCheck, exportDiscarded, exportSkipBadTimestamps, exportCollapseBursts};
+        // keeping onboarding bursts only means something when collapsing bursts
+        const exportKeepEpochBursts = exportCollapseBursts === false ? false : req.body.exportKeepEpochBursts;
+        if (exportKeepEpochBursts === true && !(exportCollapseBursts ?? job.exportCollapseBursts)) {
+            return res.status(400).json({error: 'exportKeepEpochBursts needs exportCollapseBursts'});
+        }
+        const changes = {name, exportQueueLimit, exportUpstreamCheck: upstreamCheck, exportDiscarded, exportSkipBadTimestamps, exportCollapseBursts, exportKeepEpochBursts};
         const updated = Object.values(changes).some(x => x !== undefined) ? (await jobRepo.update(job.id, changes))! : job;
-        // waiting exports check again: a bigger queue limit, or no longer waiting for the import to collapse bursts
-        if (exportQueueLimit !== undefined || exportCollapseBursts !== undefined) {
+        // waiting exports check again: a bigger queue limit, no longer waiting for the import to collapse bursts or for an Epoch Play decision
+        if (exportQueueLimit !== undefined || exportCollapseBursts !== undefined || exportKeepEpochBursts !== undefined) {
             jobs.wake(job.id);
         }
         return res.json(await asApi(updated, mirrorRepo));
+    });
+
+    router.patch('/jobs/:id/targets/:targetId', {docs: {operationId: 'update-job-export'}, paramsSchema: targetParams, middleware: [jsonParser], bodySchema: jobTargetUpdateSchema, tags: ['Jobs'], summary: 'Update Job Export'}, async (req, res) => {
+        const job = await userJob(req, res, req.params.id);
+        if (job === undefined) {
+            return;
+        }
+        const {jobRepo, mirrorRepo, targetRepo} = repos(req);
+        const target = await targetRepo.getById(req.params.targetId);
+        if (target === undefined || target.jobId !== job.id) {
+            return res.status(404).json({error: 'Target not found'});
+        }
+        if (target.epochDecision !== null) {
+            return res.status(409).json({error: `This export already decided on Plays before 2 Jan 1970 (${target.epochDecision})`});
+        }
+        await targetRepo.update(target.id, {epochDecision: req.body.epochDecision});
+        // a waiting export goes on
+        jobs.wake(job.id);
+        return res.json(await asApi((await jobRepo.getById(job.id))!, mirrorRepo));
     });
 
     router.delete('/jobs/:id', {

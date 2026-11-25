@@ -382,7 +382,7 @@ describe('Job API', function () {
         it('creates targets with export options', async function () {
             await using tmp = await createTmpDir('jobExportCreate');
             const {app} = await exportApp(tmp.path);
-            const res = await createWithTargets(app, {targets: [7, 7], exportOrder: 'asc', exportQueueLimit: 5, upstreamCheck: false, exportDiscarded: true, exportSkipBadTimestamps: true, exportCollapseBursts: true});
+            const res = await createWithTargets(app, {targets: [7, 7], exportOrder: 'asc', exportQueueLimit: 5, upstreamCheck: false, exportDiscarded: true, exportSkipBadTimestamps: true, exportCollapseBursts: true, exportKeepEpochBursts: true});
             expect(res.status, JSON.stringify(res.body)).eq(201);
             const job = res.body as JobApiJson;
             expect(job.exportOrder).eq('asc');
@@ -391,8 +391,13 @@ describe('Job API', function () {
             expect(job.exportDiscarded).is.true;
             expect(job.exportSkipBadTimestamps).is.true;
             expect(job.exportCollapseBursts).is.true;
+            expect(job.exportKeepEpochBursts).is.true;
             expect(job.targets).length(1);
-            expect(job.targets[0]).to.deep.include({componentId: 7, name: 'client 7', type: 'maloja', status: 'idle', exported: 0, cursor: null});
+            expect(job.targets[0]).to.deep.include({componentId: 7, name: 'client 7', type: 'maloja', status: 'idle', exported: 0, cursor: null, epochDecision: null});
+
+            // keeping onboarding bursts needs collapsing bursts
+            const notCollapsed = await createWithTargets(app, {targets: [7], exportKeepEpochBursts: true});
+            expect((notCollapsed.body as JobApiJson).exportKeepEpochBursts).is.false;
 
             const listed = (await request(app).get('/api/jobs')).body as JobApiJson[];
             expect(listed[0].targets.map(x => x.componentId)).eql([7]);
@@ -474,8 +479,21 @@ describe('Job API', function () {
             expect(keepDiscarded.body).to.deep.include({exportDiscarded: true, exportUpstreamCheck: false, exportSkipBadTimestamps: false, exportCollapseBursts: false});
             const issues = await request(app).patch(`/api/jobs/${job.id}`).send({exportSkipBadTimestamps: true, exportCollapseBursts: true});
             expect(issues.body).to.deep.include({exportSkipBadTimestamps: true, exportCollapseBursts: true, exportDiscarded: true});
+            const keepEpoch = await request(app).patch(`/api/jobs/${job.id}`).send({exportKeepEpochBursts: true});
+            expect(keepEpoch.body).to.deep.include({exportCollapseBursts: true, exportKeepEpochBursts: true});
             const collapseOff = await request(app).patch(`/api/jobs/${job.id}`).send({exportCollapseBursts: false});
-            expect(collapseOff.body).to.deep.include({exportSkipBadTimestamps: true, exportCollapseBursts: false});
+            expect(collapseOff.body).to.deep.include({exportSkipBadTimestamps: true, exportCollapseBursts: false, exportKeepEpochBursts: false});
+            expect((await request(app).patch(`/api/jobs/${job.id}`).send({exportKeepEpochBursts: true})).status).eq(400);
+            const both = await request(app).patch(`/api/jobs/${job.id}`).send({exportCollapseBursts: true, exportKeepEpochBursts: true});
+            expect(both.body).to.deep.include({exportCollapseBursts: true, exportKeepEpochBursts: true});
+
+            // an Epoch Play decision, once
+            expect((await request(app).patch(`/api/jobs/${job.id}/targets/${targetId}`).send({epochDecision: 'empty'})).status).eq(400);
+            const decided = await request(app).patch(`/api/jobs/${job.id}/targets/${targetId}`).send({epochDecision: 'skip'});
+            expect(decided.status, JSON.stringify(decided.body)).eq(200);
+            expect(decided.body.targets[0].epochDecision).eq('skip');
+            expect((await request(app).patch(`/api/jobs/${job.id}/targets/${targetId}`).send({epochDecision: 'send'})).status).eq(409);
+            expect((await request(app).patch(`/api/jobs/${job.id}/targets/9999`).send({epochDecision: 'send'})).status).eq(404);
 
             // the client isn't running in this app so the export keeps waiting
             const started = await request(app).post(`/api/jobs/${job.id}/targets/${targetId}/start`);
