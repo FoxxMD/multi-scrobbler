@@ -198,6 +198,19 @@ The Teal.fm and Rocksky Clients each keep a locked Mirror of your account. By de
 
 Before an Export to one of these Clients starts, the Client copies the scrobbles in the Job's range from your PDS into its Mirror. For more information, see the [Teal.fm](/configuration/clients/tealfm#configuration) and [Rocksky](/configuration/clients/rocksky#configuration) pages.
 
+### Data Issues
+
+Imported history can have Plays that look invalid. Multi-Scrobbler imports them as they are, so you keep a full copy of your data. It finds two kinds:
+
+* **Bad timestamp**: the Play is dated before 2 Jan 1970 (UTC). Last.fm files Plays that it got no date for under 1 Jan 1970.
+* **Burst**: the same track and artists 3 or more times in a row, each within 2 seconds of the last. Real repeat listens are a track length apart. Bursts are often fake Plays that were added to carry over a play count from another player.
+
+The **Data Issues** section of a Mirror page lists these Plays. Each burst shows as one row with its number of Plays. If the Mirror has issues in a Job's range, the Job page shows a notice with a link to the Mirror.
+
+Nothing is changed or removed. Exports send these Plays as they are.
+
+On the Job page, **skipped** is the number of imported Plays that were not added to the Mirror. Either the Mirror already had them, or they were exact duplicates (same second, artist and track) of another Play in the import.
+
 ### Failed Plays
 
 If many exported Plays fail in a row, the Export stops and shows the last error. The limit is 10, or the Queue Limit if it is higher. This usually means that the Client configuration is wrong or its service is down. Fix the problem, then select **Resume**.
