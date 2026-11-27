@@ -1,8 +1,9 @@
-import { loggerDebug } from "@foxxmd/logging";
+import { loggerDebug, loggerTest } from "@foxxmd/logging";
 import EventEmitter from "events";
 import { describe, it } from 'mocha';
 import { expect } from 'chai';
 import type {SonosState} from "@svrooij/sonos/lib/models/sonos-state.js";
+import type {SonosManager} from "@svrooij/sonos";
 import type {SonosData} from "../../common/infrastructure/config/source/sonos.ts";
 import { SonosSource, formatPlayObj } from "../../sources/SonosSource.ts";
 import * as dotenv from 'dotenv';
@@ -104,6 +105,53 @@ describe('#Sonos Play Formatting', function() {
         const play = formatPlayObj(bluetoothState({TrackDuration: '0:03:37', RelTime: '0:00:14'}));
         expect(play.data.duration).to.eq(217);
         expect(play.meta.trackProgressPosition).to.eq(14);
+    });
+
+});
+
+const fakeDevice = (name: string, uuid: string, state: SonosState) => ({
+    Name: name,
+    GroupName: name,
+    Uuid: uuid,
+    Host: '192.168.0.1',
+    GetState: async () => state
+});
+
+describe('#Sonos Players', function() {
+
+    it('tracks devices playing at the same time as separate players', async function() {
+        using source = new SonosSource('Test', {
+            id: `test-${Date.now()}`,
+            data: {host: '192.168.0.1'},
+            options: {}
+        }, { localUrl: new URL('http://test'), configDir: 'test', dataDir: 'test', logger: loggerTest, version: 'test' }, new EventEmitter());
+        await source.buildInitData();
+
+        const streaming = bluetoothState({
+            TrackDuration: '0:03:37',
+            RelTime: '0:00:14',
+            TrackMetaData: {
+                Artist: 'Darude',
+                Title: 'Feel the Beat',
+                UpnpClass: 'object.item.audioItem.musicTrack'
+            },
+            TrackURI: 'x-sonos-http:track.flac'
+        });
+
+        source.manager = {
+            Devices: [
+                fakeDevice('Office', 'RINCON_000000000000001400', bluetoothState()),
+                fakeDevice('Living Room', 'RINCON_000000000000002400', streaming)
+            ]
+        } as unknown as SonosManager;
+
+        // more than one poll so a player created by one device cannot replace another
+        await source.getRecentlyPlayed();
+        await source.getRecentlyPlayed();
+
+        expect(source.players.size).to.eq(2);
+        const tracks = Array.from(source.players.values()).map(x => x.getApiState().play?.data.track?.name).sort();
+        expect(tracks).to.eql(['Broken Boy', 'Feel the Beat']);
     });
 
 });
