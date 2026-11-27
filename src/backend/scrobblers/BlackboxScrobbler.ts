@@ -71,7 +71,7 @@ export default class BlackboxScrobbler extends AbstractScrobbleClient {
 
     public playToClientPayload(playObj: PlayObject, type: 'scrobble' | 'nowPlaying' = 'scrobble'): SubmitPayload | BlackboxScrobblePayload  {
         if(this.config.data.payloadStyle === 'listenbrainz') {
-            return playToSubmitPayload(playObj, {listenType: type === 'scrobble' ? 'single' : 'playing_now'});
+            return playToSubmitPayload(playObj, {listenType: type === 'scrobble' ? 'single' : 'playing_now', includePlayPosition: true});
         }
         return {play: toPublicPlay(playObj), type: 'scrobble'};
     }
