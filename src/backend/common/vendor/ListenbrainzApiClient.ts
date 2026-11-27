@@ -191,7 +191,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
     async checkKoito(): Promise<boolean> {
         try {
             const resp = await this.callApi(() => request.get(`${joinedUrl(getBaseFromUrl(this.url.url), 'apis/web/v1/stats')}`), {retries: 0, logFailure: false});
-            return true;
+            return resp.header['content-type']?.includes('json');
         } catch (e) {
             return false;
         }
